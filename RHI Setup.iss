@@ -3,10 +3,24 @@
 ; Non-commercial use only
 
 #define MyAppName "RHI"
+#ifndef MyAppVersion
 #define MyAppVersion "2.0.1"
+#endif
 #define MyAppPublisher "RankFTW"
 #define MyAppURL "www.github.com/rankftw"
 #define MyAppExeName "RHI.exe"
+
+; Path overrides for CI: defaults keep the maintainer's local layout.
+; Inno Setup passes these as ISCC /DPublishDir=... /DInstallerOutputDir=... /DSetupIconPath=...
+#ifndef PublishDir
+#define PublishDir "C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI"
+#endif
+#ifndef InstallerOutputDir
+#define InstallerOutputDir "C:\Users\Mark\OneDrive\Documents\RDXC\Installers"
+#endif
+#ifndef SetupIconPath
+#define SetupIconPath "C:\Users\Mark\OneDrive\Documents\RDXC\icon.ico"
+#endif
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -32,9 +46,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputDir=C:\Users\Mark\OneDrive\Documents\RDXC\Installers
+OutputDir={#InstallerOutputDir}
 OutputBaseFilename=RHI-Setup
-SetupIconFile=C:\Users\Mark\OneDrive\Documents\RDXC\icon.ico
+SetupIconFile={#SetupIconPath}
 SolidCompression=yes
 WizardStyle=modern dynamic
 
@@ -45,8 +59,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PublishDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
