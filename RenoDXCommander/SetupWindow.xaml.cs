@@ -26,8 +26,9 @@ public sealed partial class SetupWindow : Window
     public SetupWindow()
     {
         InitializeComponent();
+        Loc.Apply(this);
 
-        Title = "RHI Setup";
+        Title = Loc.Tr("RHI Setup");
 
         // Size and position — scale by display DPI so window is correct at any Windows scaling setting
         var hwndForDpi = WindowNative.GetWindowHandle(this);
@@ -97,7 +98,7 @@ public sealed partial class SetupWindow : Window
         // ── Title ──
         root.Children.Add(new TextBlock
         {
-            Text = "Welcome to RHI",
+            Text = Loc.Tr("Welcome to RHI"),
             FontSize = 22,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
@@ -140,7 +141,7 @@ public sealed partial class SetupWindow : Window
         // "Manage ReShade for me" — accent blue style
         var manageBtn = new Button
         {
-            Content = "Manage ReShade for me",
+            Content = Loc.Tr("Manage ReShade for me"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             FontSize = 14,
             Padding = new Thickness(12, 10, 12, 10),
@@ -153,7 +154,7 @@ public sealed partial class SetupWindow : Window
 
         var selfBtn = new Button
         {
-            Content = "I'll manage it myself",
+            Content = Loc.Tr("I'll manage it myself"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             FontSize = 14,
             Padding = new Thickness(12, 10, 12, 10),

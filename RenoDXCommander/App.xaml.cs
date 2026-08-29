@@ -23,6 +23,10 @@ public partial class App : Application
         // This catches AppDomain, TaskScheduler, and WinUI exceptions.
         CrashReporter.Register(this);
 
+        // Resolve UI language (auto zh detection + language.txt override)
+        // before any UI strings are created.
+        Loc.Initialize();
+
         // Configure DI container
         var services = new ServiceCollection();
 

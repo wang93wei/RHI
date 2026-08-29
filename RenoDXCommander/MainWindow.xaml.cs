@@ -60,6 +60,7 @@ public sealed partial class MainWindow : Window
         _optiScalerService = App.Services.GetRequiredService<IOptiScalerService>();
         _addonPackService = viewModel.AddonPackServiceInstance;
         InitializeComponent();
+        Loc.Apply(this);
         // Hide immediately if starting minimized — must be before any Activate() call
         if (App._startMinimized)
             AppWindow.Hide();
@@ -86,7 +87,7 @@ public sealed partial class MainWindow : Window
         AuxInstallService.EnsureReShadeStaging(); // create staging dir (DLLs downloaded by ReShadeUpdateService)
         App.Services.GetRequiredService<CustomReShadeHashService>().EnsureInitialized(); // seed hash file on first run
         App.Services.GetRequiredService<IOptiScalerService>().SeedUserInis(); // seed OptiScaler INIs if missing
-        Title = "RHI";
+        Title = Loc.Tr("RHI");
         // Fire-and-forget: check/download shader packs in the background
         // When CacheAllShaders is off, skip the bulk download — packs will be fetched on demand.
         Task shaderTask;
@@ -508,7 +509,7 @@ public sealed partial class MainWindow : Window
                 };
                 var pickerDialog = new ContentDialog
                 {
-                    Title = "Install Luma Mod",
+                    Title = Loc.Tr("Install Luma Mod"),
                     Content = new StackPanel
                     {
                         Spacing = 8,
@@ -518,8 +519,8 @@ public sealed partial class MainWindow : Window
                             combo,
                         }
                     },
-                    PrimaryButtonText = "Install",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.Tr("Install"),
+                    CloseButtonText = Loc.Tr("Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                 };

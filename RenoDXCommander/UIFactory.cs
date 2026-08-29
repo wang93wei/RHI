@@ -79,7 +79,7 @@ public static class UIFactory
         });
         panel.Children.Add(new TextBlock
         {
-            Text = label,
+            Text = Loc.Tr(label),
             FontSize = 11,
             Foreground = GetBrush("#A0AABB"),
             VerticalAlignment = VerticalAlignment.Center,
@@ -110,7 +110,7 @@ public static class UIFactory
     {
         return new TextBlock
         {
-            Text = text,
+            Text = Loc.Tr(text),
             FontSize = fontSize,
             Foreground = Brush(foregroundKey),
         };
@@ -133,7 +133,7 @@ public static class UIFactory
     {
         return new Button
         {
-            Content = content,
+            Content = Loc.Tr(content),
             Tag = tag,
             FontSize = 11,
             Padding = new Thickness(8, 3, 8, 3),
