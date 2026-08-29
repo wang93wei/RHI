@@ -1,0 +1,6643 @@
+{
+ "total_occurrences": 1208,
+ "unique_values": 823,
+ "values": [
+  {
+   "value": "  ·  BSD 3-Clause Licence",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2714"
+  },
+  {
+   "value": "  ·  LGPL + BSD 3-Clause",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2746"
+  },
+  {
+   "value": "  ·  MIT Licence",
+   "count": 5,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2698"
+  },
+  {
+   "value": "  ·  Source-available",
+   "count": 3,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2730"
+  },
+  {
+   "value": "  ·  Zlib Licence",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2842"
+  },
+  {
+   "value": " by clshortfuse & contributors",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2697"
+  },
+  {
+   "value": " by Crosire",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2713"
+  },
+  {
+   "value": " by doitsujin & contributors",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2841"
+  },
+  {
+   "value": " by falahati",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2857"
+  },
+  {
+   "value": " by Igor Pavlov",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2745"
+  },
+  {
+   "value": " by Lazorr",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2873"
+  },
+  {
+   "value": " by Microsoft",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2777"
+  },
+  {
+   "value": " by OptiScaler contributors",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2825"
+  },
+  {
+   "value": " by pmnox",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2793"
+  },
+  {
+   "value": " by praydog",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2809"
+  },
+  {
+   "value": " by Pumbo (Filoppi)",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2729"
+  },
+  {
+   "value": " by RankFTW",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2904"
+  },
+  {
+   "value": " by ZZZ Projects",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2761"
+  },
+  {
+   "value": "(bitness, graphics API, game name, etc.) before generating a report. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:33"
+  },
+  {
+   "value": ".NET wrapper for NVIDIA's NvAPI used for all driver profile management — DLSS presets, render scale, ReBAR, VSync, Smooth Motion, and more.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2861"
+  },
+  {
+   "value": "0 installed",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:272"
+  },
+  {
+   "value": "0 shown",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:270"
+  },
+  {
+   "value": "1GB is optimal for most games. Decrease to 512MB if experiencing ReBAR-related stutters.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:552"
+  },
+  {
+   "value": "32-bit",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:503"
+  },
+  {
+   "value": "64-bit",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:508"
+  },
+  {
+   "value": "7-Zip",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2744"
+  },
+  {
+   "value": "7-Zip Not Found",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:35"
+  },
+  {
+   "value": "7-zip.org  ·  LGPL-2.1 / BSD-3-Clause",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2751"
+  },
+  {
+   "value": "About",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:119"
+  },
+  {
+   "value": "Add Game",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Exe.cs:97"
+  },
+  {
+   "value": "Additional Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2310"
+  },
+  {
+   "value": "Addon service is not yet wired. Complete Task 9.1 to enable addon selection.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:111"
+  },
+  {
+   "value": "Addon Watch Folder",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2296"
+  },
+  {
+   "value": "Addons",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:166"
+  },
+  {
+   "value": "Addons can modify game rendering behaviour and may cause instability. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:1096"
+  },
+  {
+   "value": "Adjust Digital Vibrance (color saturation) per-display. Saved values are restored on app startup.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1975"
+  },
+  {
+   "value": "Adjust NVIDIA Digital Vibrance (color saturation) per-display. Saved values are automatically restored on app startup.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1972"
+  },
+  {
+   "value": "Admin Mode",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:592"
+  },
+  {
+   "value": "Administrator Privileges Required",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:911"
+  },
+  {
+   "value": "All Games",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:221"
+  },
+  {
+   "value": "All session logs have been archived and copied to your clipboard. Paste directly into Discord to share.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:735"
+  },
+  {
+   "value": "Allowed APIs",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:236"
+  },
+  {
+   "value": "Also install the required shaders and textures?",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:210"
+  },
+  {
+   "value": "Also uninstall all RHI-managed components from game folder",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:1050"
+  },
+  {
+   "value": "and modifying system registry keys, which needs administrator privileges.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:917"
+  },
+  {
+   "value": "Another application (e.g. Vortex or MO2) is already registered as the nxm:// handler. Registering RHI will replace it. Continue?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1967"
+  },
+  {
+   "value": "API Key",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1604"
+  },
+  {
+   "value": "AppData Folder",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2569"
+  },
+  {
+   "value": "Applied!",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:246"
+  },
+  {
+   "value": "Apply",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:229"
+  },
+  {
+   "value": "Apply this preset to the current game",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2591"
+  },
+  {
+   "value": "Apply to All Games",
+   "count": 4,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1439"
+  },
+  {
+   "value": "Apply to All Vulkan Games",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:329"
+  },
+  {
+   "value": "Apply to presets:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1509"
+  },
+  {
+   "value": "Apply your configured DLSS/Streamline default versions, presets, and render scales to this game. Downloads versions on-demand if not cached.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:421"
+  },
+  {
+   "value": "Apply your saved default preset to the sliders",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1414"
+  },
+  {
+   "value": "Archive Extraction Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:84"
+  },
+  {
+   "value": "Archive utility used to extract ReShade DLLs from the NSIS installer. 7z.exe and 7z.dll are bundled under the LGPL licence. Copyright © Igor Pavlov.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2749"
+  },
+  {
+   "value": "Auto",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:533"
+  },
+  {
+   "value": "Auto-apply peak nits on deploy",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1494"
+  },
+  {
+   "value": "Auto-compiles shaders in the background when idle. Higher = more CPU usage during idle, faster first-time game loads.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1866"
+  },
+  {
+   "value": "Auto-create NVIDIA profiles",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:141"
+  },
+  {
+   "value": "Auto-detect (or paste path)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:302"
+  },
+  {
+   "value": "Auto-Update",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1797"
+  },
+  {
+   "value": "Automatic Updates",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1259"
+  },
+  {
+   "value": "Automatically install ReShade, RenoDX, ReLimiter, DC, OptiScaler, RE Framework, Luma, DXVK and DOF Fix updates silently in the background",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1265"
+  },
+  {
+   "value": "Automatically swap to the newest version when a new release appears. Only affects games currently on the previous latest — manually chosen older versions are left alone.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1801"
+  },
+  {
+   "value": "Batch Deploy",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1756"
+  },
+  {
+   "value": "Batch Deploy Complete",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:443"
+  },
+  {
+   "value": "Batch DLSS & Streamline Deploy",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:185"
+  },
+  {
+   "value": "Before installing OptiScaler, please configure your GPU type and DLSS input (AMD/Intel only) settings in the OptiScaler Settings section on the Settings page.\\n\\nThis ensures OptiScaler is configured correctly for your hardware.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:201"
+  },
+  {
+   "value": "Before you submit",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:29"
+  },
+  {
+   "value": "Bitness",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:839"
+  },
+  {
+   "value": "Browse",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:357"
+  },
+  {
+   "value": "Browse for a game executable to use as the launch target.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:394"
+  },
+  {
+   "value": "Browse the RenoDX Mod Wiki",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.FaqBuilder.cs:520"
+  },
+  {
+   "value": "Cache All Shaders",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2268"
+  },
+  {
+   "value": "Calculate Middle Grey from Peak Brightness and Gamma using the ITU formula",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1287"
+  },
+  {
+   "value": "Cancel",
+   "count": 56,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonPopupHelper.cs:295"
+  },
+  {
+   "value": "Cannot extract archive — 7-Zip was not found. Please reinstall RDXC.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:36"
+  },
+  {
+   "value": "Change install folder",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:269"
+  },
+  {
+   "value": "Change the install folder for this game. Use when auto-detection picked the wrong directory.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:281"
+  },
+  {
+   "value": "Changing the channel for this game will change it for ALL Vulkan games.",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:328"
+  },
+  {
+   "value": "Check all components and the app for available updates",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1249"
+  },
+  {
+   "value": "Check For Updates",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1238"
+  },
+  {
+   "value": "Checking app version...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:85"
+  },
+  {
+   "value": "Checking components...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:81"
+  },
+  {
+   "value": "Checking for updates...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:68"
+  },
+  {
+   "value": "Choose which components are included in Update All for this game.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:555"
+  },
+  {
+   "value": "Clear",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:991"
+  },
+  {
+   "value": "Clear NVIDIA Shader Cache",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:989"
+  },
+  {
+   "value": "Clear Shader Cache",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2035"
+  },
+  {
+   "value": "Clear the launch executable override and revert to auto-detection.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:416"
+  },
+  {
+   "value": "Clearing caches...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:1144"
+  },
+  {
+   "value": "Clears all caches and re-scans everything from disk. Use as a last resort if games are missing, paths have changed, DLSS has been added to a game, or the DLSS section is missing from a game card.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2445"
+  },
+  {
+   "value": "Click here then press your desired key. Written to all reshade*.ini files for this game.",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:207"
+  },
+  {
+   "value": "Click then press a key...",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:203"
+  },
+  {
+   "value": "Click to cycle engine version (affects DOF Fix eligibility)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.cs:134"
+  },
+  {
+   "value": "Close",
+   "count": 16,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:39"
+  },
+  {
+   "value": "Close to Tray",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2528"
+  },
+  {
+   "value": "CommunityToolkit.Mvvm",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2776"
+  },
+  {
+   "value": "Compatibility Settings",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:602"
+  },
+  {
+   "value": "Component Settings",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2053"
+  },
+  {
+   "value": "Component Updates",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1222"
+  },
+  {
+   "value": "Components",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Skeleton.cs:613"
+  },
+  {
+   "value": "Config",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:567"
+  },
+  {
+   "value": "Configure Defaults",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1717"
+  },
+  {
+   "value": "Configure NVIDIA Multi Frame Generation: mode, frame count multiplier, and dynamic target frame rate. Requires 50 Series GPU.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:139"
+  },
+  {
+   "value": "Configure preferred DLSS/Streamline versions, presets, and render scales. Use 'Quick Apply' in the Nvidia Profile section to stamp these onto any game.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1716"
+  },
+  {
+   "value": "Configure which presets receive the global peak nits value.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1379"
+  },
+  {
+   "value": "Confirm",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:131"
+  },
+  {
+   "value": "Confirm Mass Deployment",
+   "count": 4,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDeployHandler.cs:30"
+  },
+  {
+   "value": "Connect",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1886"
+  },
+  {
+   "value": "Continue",
+   "count": 7,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:202"
+  },
+  {
+   "value": "Control how RHI manages shader files across your games.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2255"
+  },
+  {
+   "value": "Controls EnableHDR and DisplayMode in the [Luma] section of reshade.ini.\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:199"
+  },
+  {
+   "value": "Controls G-Sync/FreeSync variable refresh rate. Fullscreen and Windowed recommended for seamless experience.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1887"
+  },
+  {
+   "value": "Controls how aggressively DXVK upgrades render targets for HDR.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:215"
+  },
+  {
+   "value": "Controls how shaders are displayed in the ReShade overlay. Tabs groups effect files into named tabs; Tree shows a collapsible hierarchy.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1483"
+  },
+  {
+   "value": "Controls the DLSS text overlay NVIDIA shows in the corner of games. Global system setting — affects all games. Requires admin.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1780"
+  },
+  {
+   "value": "Copied to clipboard",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:816"
+  },
+  {
+   "value": "Copy a diagnostic report for this game to the clipboard. Useful for Discord or GitHub support.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:356"
+  },
+  {
+   "value": "Copy Game Report",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:60"
+  },
+  {
+   "value": "Copy Logs",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2585"
+  },
+  {
+   "value": "Copy ReLimiter log to clipboard",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1545"
+  },
+  {
+   "value": "Copy Report",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:338"
+  },
+  {
+   "value": "Copy ReShade.log to clipboard",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:137"
+  },
+  {
+   "value": "Copy to Clipboard",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:77"
+  },
+  {
+   "value": "Could not determine a filename from the dropped URL.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:488"
+  },
+  {
+   "value": "Could not revert Display Commander to its default name — the filename is occupied by another file. DC was kept under its current name.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:502"
+  },
+  {
+   "value": "Could not revert ReShade to dxgi.dll — the filename is occupied by another file. ReShade was renamed to a fallback name instead.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:497"
+  },
+  {
+   "value": "Create a new profile from the current shader selection. You'll be prompted to enter a name.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:734"
+  },
+  {
+   "value": "Create Missing Profiles",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:542"
+  },
+  {
+   "value": "Creates a scheduled task to launch RHI with elevated privileges. Required for ReBAR, Low Latency Ultra, and Smooth Motion driver settings. The Drop Helper enables Discord drag-and-drop when running elevated.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2485"
+  },
+  {
+   "value": "Creates a zip archive of all logs and copies it to clipboard — paste directly into Discord",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2589"
+  },
+  {
+   "value": "Creates NVIDIA driver profiles for all games that don't have one yet. Ensures global settings like Power Mode and VSync apply to every game.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1988"
+  },
+  {
+   "value": "Credits & Acknowledgements",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2687"
+  },
+  {
+   "value": "Custom",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2276"
+  },
+  {
+   "value": "Custom Addons",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:90"
+  },
+  {
+   "value": "Custom DMFG Target FPS",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:434"
+  },
+  {
+   "value": "Custom filenames enabled",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:120"
+  },
+  {
+   "value": "Custom Folder",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2577"
+  },
+  {
+   "value": "Custom FPS Limit",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:345"
+  },
+  {
+   "value": "Custom ReShade Not Found",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:236"
+  },
+  {
+   "value": "Custom Target FPS",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1380"
+  },
+  {
+   "value": "Data & Custom Files",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2564"
+  },
+  {
+   "value": "DC.ini",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2398"
+  },
+  {
+   "value": "Debanding",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1359"
+  },
+  {
+   "value": "Default = application controls frame generation. Fixed = always generate a fixed multiplier of frames. Dynamic = generate up to a target frame rate.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:122"
+  },
+  {
+   "value": "Defaults",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1712"
+  },
+  {
+   "value": "Delete",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:922"
+  },
+  {
+   "value": "Delete nvngx_dlssnr.dll from the game folder.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:232"
+  },
+  {
+   "value": "Deletes cached DLSS, Streamline, and component staging files to free disk space. Shaders, installed addons, and version metadata are preserved. Files are re-downloaded automatically when needed.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2455"
+  },
+  {
+   "value": "Deletes cached DLSS, Streamline, and download files to free disk space. Shaders are preserved.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2463"
+  },
+  {
+   "value": "Deletes the NVIDIA DXCache and GLCache folders. Forces shaders to recompile on next launch.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2037"
+  },
+  {
+   "value": "Deploy",
+   "count": 9,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonPopupHelper.cs:294"
+  },
+  {
+   "value": "Deploy DisplayCommander.ini",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1907"
+  },
+  {
+   "value": "Deploy DLL",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:205"
+  },
+  {
+   "value": "Deploy DLSS and Streamline DLL versions and DLSS presets to multiple games at once. Backs up originals automatically. Pre-populated with your configured defaults.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1760"
+  },
+  {
+   "value": "Deploy dxvk.conf",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2792"
+  },
+  {
+   "value": "Deploy INI files or ReShade presets to multiple games at once. Custom hotkey and screenshot path settings are preserved.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2366"
+  },
+  {
+   "value": "Deploy OptiScaler.ini",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2709"
+  },
+  {
+   "value": "Deploy relimiter.ini",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1490"
+  },
+  {
+   "value": "Deploy relimiter.ini to enable these settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1809"
+  },
+  {
+   "value": "Deploy ReShade.ini",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:31"
+  },
+  {
+   "value": "Deploy ReShadePreset.ini",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:72"
+  },
+  {
+   "value": "Deploying to selected games...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:242"
+  },
+  {
+   "value": "Deploying...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:271"
+  },
+  {
+   "value": "Deploys Engine.ini with HDR flags for games that don't have an ingame HDR option. Disable for SDR.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:785"
+  },
+  {
+   "value": "Deploys Streamline and DLSS Enabler to the game's OptiScaler folder. Required for DLSS Frame Generation with OptiScaler.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2185"
+  },
+  {
+   "value": "Describe the issue (optional)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:51"
+  },
+  {
+   "value": "Deselect All",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDeployHandler.cs:218"
+  },
+  {
+   "value": "Desktop resolution to switch to before a game launches. Restored on game exit.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1528"
+  },
+  {
+   "value": "Digital Vibrance",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:706"
+  },
+  {
+   "value": "Digital Vibrance (0 = desaturated, 50 = neutral, 100 = maximum)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:754"
+  },
+  {
+   "value": "DirectX-to-Vulkan translation layer for DX8/DX9/DX10 games. Includes Lilium HDR fork by EndlesslyFlowering for scRGB HDR output.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2845"
+  },
+  {
+   "value": "Disable update checks for individual components. When disabled, the component will not be checked during startup or Update All.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2352"
+  },
+  {
+   "value": "Disabled",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1785"
+  },
+  {
+   "value": "Disconnect",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1679"
+  },
+  {
+   "value": "Discord",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:116"
+  },
+  {
+   "value": "Dismiss",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1720"
+  },
+  {
+   "value": "Display Commander",
+   "count": 5,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:646"
+  },
+  {
+   "value": "Display Commander Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1930"
+  },
+  {
+   "value": "DLL naming overrides",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:117"
+  },
+  {
+   "value": "DLSS",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:30"
+  },
+  {
+   "value": "DLSS & Streamline Defaults",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:131"
+  },
+  {
+   "value": "DLSS / Streamline Settings",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1695"
+  },
+  {
+   "value": "DLSS Hooks",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1832"
+  },
+  {
+   "value": "DLSS Inputs",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2169"
+  },
+  {
+   "value": "DLSS On-Screen Indicator",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1776"
+  },
+  {
+   "value": "DLSS Ray Reconstruction render preset.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2344"
+  },
+  {
+   "value": "DLSS Super Resolution render preset. J-M are the recommended modern presets.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2337"
+  },
+  {
+   "value": "DMFG Defaults",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1728"
+  },
+  {
+   "value": "Do not close RHI while the refresh is in progress — closing early will result in a missing library and the scan will need to be repeated.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:40"
+  },
+  {
+   "value": "DOF Fix",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:826"
+  },
+  {
+   "value": "DOF Fix Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:389"
+  },
+  {
+   "value": "Don't show again",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:880"
+  },
+  {
+   "value": "Don't show this again",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:566"
+  },
+  {
+   "value": "Don't show this warning again",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:53"
+  },
+  {
+   "value": "Download and copy nvngx_dlssnr.dll to the game folder. Works with any DLSS-compatible game on 50 Series GPUs. Can also be deployed automatically via the RenoDX DLSS5 addon in the Addons picker.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:215"
+  },
+  {
+   "value": "Downloading...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:240"
+  },
+  {
+   "value": "Downloads Folder",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2573"
+  },
+  {
+   "value": "Downloads folder (default)",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2309"
+  },
+  {
+   "value": "Driver override is active — disable it in NVIDIA App or Profile Inspector to manage this DLL in RHI.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dlss.cs:118"
+  },
+  {
+   "value": "Driver override is active — the NVIDIA driver is injecting its own DLL. Disable 'Latest DLL' in NVIDIA App or Profile Inspector to manage versions manually.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dlss.cs:36"
+  },
+  {
+   "value": "Driver-level settings applied globally via the base NVIDIA profile. Per-game settings are in the Nvidia Profile section of each game's overrides panel.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1848"
+  },
+  {
+   "value": "Drop Helper",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2503"
+  },
+  {
+   "value": "DX11 modding framework adding HDR support and graphics improvements via the ReShade addon system. Mods are downloaded from official GitHub releases. Drag-and-drop install with auto-detection, update checking, and per-game toggle.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2733"
+  },
+  {
+   "value": "DXVK",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:154"
+  },
+  {
+   "value": "DXVK as Native",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2839"
+  },
+  {
+   "value": "DXVK Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2902"
+  },
+  {
+   "value": "DXVK Variant Changed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1670"
+  },
+  {
+   "value": "e.g. 165",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1373"
+  },
+  {
+   "value": "Effect list style",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1478"
+  },
+  {
+   "value": "Enable",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:186"
+  },
+  {
+   "value": "Enable Admin Mode",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:921"
+  },
+  {
+   "value": "Enable Admin Mode — RHI will always launch elevated (no UAC prompt after setup).\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:918"
+  },
+  {
+   "value": "Enable RTX HDR",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1107"
+  },
+  {
+   "value": "Enabled",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1784"
+  },
+  {
+   "value": "Engine Version Override",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:505"
+  },
+  {
+   "value": "Engine.ini Settings",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:755"
+  },
+  {
+   "value": "Enter a custom FPS value (20-1000):",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1368"
+  },
+  {
+   "value": "Enter the game name:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:999"
+  },
+  {
+   "value": "Exact wiki name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:67"
+  },
+  {
+   "value": "Expand All",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:91"
+  },
+  {
+   "value": "Export",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:573"
+  },
+  {
+   "value": "Export Complete",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:591"
+  },
+  {
+   "value": "Export Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:603"
+  },
+  {
+   "value": "Export Presets",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:870"
+  },
+  {
+   "value": "Export Profiles",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2004"
+  },
+  {
+   "value": "Export saves all per-game NVIDIA driver settings to a backup file. Import restores them — useful before updating drivers.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1995"
+  },
+  {
+   "value": "Favourite",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.cs:219"
+  },
+  {
+   "value": "Favourites",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:229"
+  },
+  {
+   "value": "Fetches the latest manifest data and checks all components for available updates. Bypasses the 4-hour cooldown.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1241"
+  },
+  {
+   "value": "Fetching manifest...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:61"
+  },
+  {
+   "value": "FG",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:212"
+  },
+  {
+   "value": "FG Mode",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:101"
+  },
+  {
+   "value": "Filter games...",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:182"
+  },
+  {
+   "value": "Filter name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:819"
+  },
+  {
+   "value": "Fixed: exact frame multiplier (2x-6x). Dynamic: maximum frames the driver may generate (Up to 3x-6x). 50 Series GPUs only for 3x+.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:142"
+  },
+  {
+   "value": "Fixes depth-of-field stepping and tiling artifacts in Unreal Engine 5 games.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2892"
+  },
+  {
+   "value": "Flip Pacing",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:267"
+  },
+  {
+   "value": "Flip Pacing — Off: prioritize lower latency. On: prioritize smoother frame pacing. Sets both fullscreen and windowed modes together.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:283"
+  },
+  {
+   "value": "for the game and may provide better results.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:876"
+  },
+  {
+   "value": "FPS cap for this game. Select a VRR preset or Custom for a manual value.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1605"
+  },
+  {
+   "value": "FPS Limit",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1898"
+  },
+  {
+   "value": "Frame Count",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:129"
+  },
+  {
+   "value": "Frame Generation",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:74"
+  },
+  {
+   "value": "Frame Generation Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2166"
+  },
+  {
+   "value": "Frame Limiter",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1585"
+  },
+  {
+   "value": "Frame rate limiter addon available as an alternative to ReLimiter. The LITE variant is downloaded from GitHub on demand.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2797"
+  },
+  {
+   "value": "Framerate limit using Reflex whenever possible. 'Off' disables the limit.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1997"
+  },
+  {
+   "value": "FSR2: r.FidelityFX.FSR2.UseNativeDX12=1\\nFSR3: r.FidelityFX.FSR3.UseNativeDX12=1\\nFSR3.1: above + r.FidelityFX.FSR3.UseRHI=0",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2434"
+  },
+  {
+   "value": "Full Refresh",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:31"
+  },
+  {
+   "value": "G-Sync",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:340"
+  },
+  {
+   "value": "G-Sync Mode",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1884"
+  },
+  {
+   "value": "G-Sync On-Screen Indicator",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1788"
+  },
+  {
+   "value": "Game Already Exists",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Exe.cs:58"
+  },
+  {
+   "value": "Game name (editable)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:57"
+  },
+  {
+   "value": "Game name:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Exe.cs:82"
+  },
+  {
+   "value": "Game Overrides",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:48"
+  },
+  {
+   "value": "Games without an NVIDIA profile don't benefit from global driver settings. Create profiles for all games in your library to ensure global settings apply.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1985"
+  },
+  {
+   "value": "github.com/clshortfuse/renodx",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2703"
+  },
+  {
+   "value": "github.com/CommunityToolkit/dotnet",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2783"
+  },
+  {
+   "value": "github.com/doitsujin/dxvk  ·  github.com/EndlesslyFlowering/dxvk",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2847"
+  },
+  {
+   "value": "github.com/falahati/NvAPIWrapper",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2863"
+  },
+  {
+   "value": "github.com/Filoppi/Luma-Framework",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2735"
+  },
+  {
+   "value": "github.com/optiscaler/OptiScaler",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2831"
+  },
+  {
+   "value": "github.com/pmnoxx/display-commander",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2799"
+  },
+  {
+   "value": "github.com/praydog/REFramework-nightly",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2815"
+  },
+  {
+   "value": "github.com/RankFTW",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2909"
+  },
+  {
+   "value": "github.com/RankFTW/rhi-repo",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2894"
+  },
+  {
+   "value": "github.com/zzzprojects/html-agility-pack",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2767"
+  },
+  {
+   "value": "Global = use global addon set. Select = pick per-game addons. Off = no addons for this game.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:67"
+  },
+  {
+   "value": "Global = use global shader selection. Custom = use custom shader directories. Select = pick per-game packs. Off = no shaders.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:731"
+  },
+  {
+   "value": "Global DMFG max frame count. Games using Dynamic mode inherit this unless overridden per-game.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1742"
+  },
+  {
+   "value": "Global DMFG target frame rate. Off = no target. Max Refresh Rate = match display. Or pick a specific FPS.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1749"
+  },
+  {
+   "value": "Global Dynamic Multi Frame Generation defaults. Set these once — then just enable Dynamic mode on each game's MFG dialog.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1732"
+  },
+  {
+   "value": "Global FPS cap via NVIDIA driver. VRR-optimal presets cap just below refresh rate to stay in VRR range.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1901"
+  },
+  {
+   "value": "Global FPS cap written to all relimiter.ini files. Select a VRR preset or Custom for a manual value.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2138"
+  },
+  {
+   "value": "Global NVIDIA Driver Settings",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1835"
+  },
+  {
+   "value": "Global power management mode — applies to all games without a per-game override.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1929"
+  },
+  {
+   "value": "Global Resizable BAR — enables large GPU memory transfers for all games. Requires admin and compatible hardware (RTX 30 Series+).",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1950"
+  },
+  {
+   "value": "Global Shaders",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:76"
+  },
+  {
+   "value": "Global Update Checks",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2348"
+  },
+  {
+   "value": "Global update inclusion",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:563"
+  },
+  {
+   "value": "Global Update Inclusion",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1466"
+  },
+  {
+   "value": "Global VSync mode — applies to all games without a per-game override.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1922"
+  },
+  {
+   "value": "Globally enables or disables G-Sync/FreeSync variable refresh rate.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1880"
+  },
+  {
+   "value": "Go back",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:40"
+  },
+  {
+   "value": "GPU Type",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2155"
+  },
+  {
+   "value": "GPU type, DLSS input settings, and overlay hotkey for OptiScaler installations.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2087"
+  },
+  {
+   "value": "Graphics API",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:945"
+  },
+  {
+   "value": "Guide",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:117"
+  },
+  {
+   "value": "Have you corrected everything you can?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:35"
+  },
+  {
+   "value": "HDR",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.cs:251"
+  },
+  {
+   "value": "HDR & Peak Brightness",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1311"
+  },
+  {
+   "value": "HDR Auto-Toggle",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1453"
+  },
+  {
+   "value": "HDR mod framework powering 800+ games. The entire reason this app exists.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2701"
+  },
+  {
+   "value": "HDR on First Boot",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:187"
+  },
+  {
+   "value": "HDR Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:773"
+  },
+  {
+   "value": "Heads up — you're installing both RenoDX and Luma on this game.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:573"
+  },
+  {
+   "value": "Help",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:109"
+  },
+  {
+   "value": "Hidden",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:233"
+  },
+  {
+   "value": "Hide this game from the sidebar (find it again in the Hidden filter)",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:545"
+  },
+  {
+   "value": "Highest available forces your max refresh rate. App Setting lets games choose their own refresh rate.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1908"
+  },
+  {
+   "value": "How to use",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:201"
+  },
+  {
+   "value": "HTML parser used to scrape game data from the RenoDX wiki. Copyright © ZZZ Projects Inc.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2765"
+  },
+  {
+   "value": "HtmlAgilityPack",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2760"
+  },
+  {
+   "value": "https://github.com/lazorr410",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2878"
+  },
+  {
+   "value": "HUD Fix: enables hudless resource tracking for Frame Generation. On = HUDFix=true in [OptiFG].",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2213"
+  },
+  {
+   "value": "I'll manage it myself",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SetupWindow.xaml.cs:156"
+  },
+  {
+   "value": "If something doesn't look right, uninstalling one of them is the first thing to try. We can't offer support for issues that come from running both together.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:575"
+  },
+  {
+   "value": "If the game crashes with both ReShade and OptiScaler installed, try renaming ReShade to d3d12.dll (or another DLL name) using DLL Naming Overrides in the Overrides panel.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2722"
+  },
+  {
+   "value": "If the game has a named RenoDX mod, that mod is specifically tailored ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:875"
+  },
+  {
+   "value": "Import",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:622"
+  },
+  {
+   "value": "Import a shader profile from a .zip archive exported by RHI.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:850"
+  },
+  {
+   "value": "Import Complete",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:689"
+  },
+  {
+   "value": "Import Presets",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:937"
+  },
+  {
+   "value": "Import Profiles",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:643"
+  },
+  {
+   "value": "Importing profiles...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:660"
+  },
+  {
+   "value": "Importing...",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:671"
+  },
+  {
+   "value": "Include components in Update All globally:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1456"
+  },
+  {
+   "value": "Include this game in Update All for:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/UpdateInclusionHelper.cs:124"
+  },
+  {
+   "value": "Included = this game is looked up on the RenoDX and Luma wikis. Excluded = skip wiki lookups for this game.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:600"
+  },
+  {
+   "value": "Info",
+   "count": 9,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:629"
+  },
+  {
+   "value": "Install",
+   "count": 6,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:139"
+  },
+  {
+   "value": "Install Luma Mod",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:533"
+  },
+  {
+   "value": "Installed",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:225"
+  },
+  {
+   "value": "Installing both RenoDX and Luma",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:588"
+  },
+  {
+   "value": "Installing the Vulkan ReShade layer requires writing to C:\\\\ProgramData\\\\ReShade\\\\ ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:916"
+  },
+  {
+   "value": "Invalid API key or network error.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1924"
+  },
+  {
+   "value": "Invalid archive — not an RHI shader profile.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:892"
+  },
+  {
+   "value": "It may belong to another mod (e.g. DXVK, Special K, ENB).\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:32"
+  },
+  {
+   "value": "It may belong to another mod or DLL injector.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:62"
+  },
+  {
+   "value": "It works at the GPU level without injecting DLLs into the game, making it compatible with anti-cheat systems.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:261"
+  },
+  {
+   "value": "Join the Ultra+ Discord (main community)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.FaqBuilder.cs:494"
+  },
+  {
+   "value": "Keep ReShade.ini Updated",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:360"
+  },
+  {
+   "value": "Ko-fi",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:118"
+  },
+  {
+   "value": "Later",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:66"
+  },
+  {
+   "value": "Launch arguments",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:323"
+  },
+  {
+   "value": "Launch this game",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:383"
+  },
+  {
+   "value": "Leave all unchecked to change resolution on the primary display only.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1330"
+  },
+  {
+   "value": "Leave all unchecked to enable HDR on the primary display only.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1147"
+  },
+  {
+   "value": "Lilium HDR Preset",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:196"
+  },
+  {
+   "value": "Links",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:95"
+  },
+  {
+   "value": "Loading...",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:150"
+  },
+  {
+   "value": "Logs Copied",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:734"
+  },
+  {
+   "value": "Logs Folder",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2581"
+  },
+  {
+   "value": "Low Latency",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:139"
+  },
+  {
+   "value": "Luma",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:255"
+  },
+  {
+   "value": "Luma Framework",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2728"
+  },
+  {
+   "value": "Luma Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:288"
+  },
+  {
+   "value": "Luma Wiki",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:103"
+  },
+  {
+   "value": "LUT Update Every Frame",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:815"
+  },
+  {
+   "value": "Manage",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Skeleton.cs:930"
+  },
+  {
+   "value": "Manage global shaders and ReShade addons",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:73"
+  },
+  {
+   "value": "Manage ReShade for me",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SetupWindow.xaml.cs:143"
+  },
+  {
+   "value": "Manually add a game",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:212"
+  },
+  {
+   "value": "Mass INI Deployment",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MassDeployHandler.cs:170"
+  },
+  {
+   "value": "Mass Preset Install",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2406"
+  },
+  {
+   "value": "Maximum BAR transfer size. 1GB is optimal for most games. Decrease to 512MB if experiencing ReBAR-related stutters.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1957"
+  },
+  {
+   "value": "Maximum disk space for compiled shader cache. Larger = fewer stutters on revisits. 16GB is the driver default.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1859"
+  },
+  {
+   "value": "Minimize to system tray on close. Right-click the tray icon or pinned taskbar icon to quickly launch recent games.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2519"
+  },
+  {
+   "value": "Minimum driver requirements:\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:42"
+  },
+  {
+   "value": "Modding framework required for ReShade injection on RE Engine games. Downloaded from nightly builds on GitHub.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2813"
+  },
+  {
+   "value": "Mode",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:46"
+  },
+  {
+   "value": "Monitor",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:730"
+  },
+  {
+   "value": "Multi Frame Gen",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:127"
+  },
+  {
+   "value": "Multi Frame Generation",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:440"
+  },
+  {
+   "value": "Multi Frame Generation (MFG) and Dynamic MFG are only supported on NVIDIA 50 Series GPUs (Blackwell architecture).\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:41"
+  },
+  {
+   "value": "MVVM helpers (ObservableObject, RelayCommand, etc.) used throughout the app. Copyright © .NET Foundation.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2781"
+  },
+  {
+   "value": "Name This Game",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:992"
+  },
+  {
+   "value": "Need More Help?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.FaqBuilder.cs:470"
+  },
+  {
+   "value": "Neural Rendering",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:100"
+  },
+  {
+   "value": "New",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:716"
+  },
+  {
+   "value": "New Mods Available",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1718"
+  },
+  {
+   "value": "New RenoDX mods have been added to the wiki",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:53"
+  },
+  {
+   "value": "Next",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:249"
+  },
+  {
+   "value": "Nexus",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:417"
+  },
+  {
+   "value": "Nexus Mods",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1904"
+  },
+  {
+   "value": "nits",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:482"
+  },
+  {
+   "value": "No",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:212"
+  },
+  {
+   "value": "No additional Luma notes for this game.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:505"
+  },
+  {
+   "value": "No additional RenoDX notes for this game.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:351"
+  },
+  {
+   "value": "No Addon Found",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:105"
+  },
+  {
+   "value": "No addons available.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonPopupHelper.cs:46"
+  },
+  {
+   "value": "No addons available. Try refreshing.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:35"
+  },
+  {
+   "value": "No configurable settings available for this component.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:392"
+  },
+  {
+   "value": "No custom profile settings found to export.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:574"
+  },
+  {
+   "value": "No custom ReShade DLLs found.\\n\\nPlace your .dll files in:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:229"
+  },
+  {
+   "value": "No defaults configured yet.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:174"
+  },
+  {
+   "value": "No DLSS/Streamline Games",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:46"
+  },
+  {
+   "value": "No Game Selected",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:262"
+  },
+  {
+   "value": "No games are currently detected. Add a game first.",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:174"
+  },
+  {
+   "value": "No Games Available",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:173"
+  },
+  {
+   "value": "No games with DLSS or Streamline DLLs were detected.\\nRun a Full Refresh to scan for them.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:47"
+  },
+  {
+   "value": "No games with ReShade installed were found. Install ReShade on at least one game first.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDeployHandler.cs:196"
+  },
+  {
+   "value": "No NVIDIA displays detected. Digital Vibrance requires an NVIDIA GPU with compatible drivers.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:707"
+  },
+  {
+   "value": "No OptiScaler compatibility data available for this game.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:576"
+  },
+  {
+   "value": "No preset files found.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/PresetPopupHelper.cs:61"
+  },
+  {
+   "value": "No RenoDX mod available for this game",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1076"
+  },
+  {
+   "value": "No reshade.ini found in game folder.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:742"
+  },
+  {
+   "value": "No ReShadePreset.ini found in RHI config folder",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:91"
+  },
+  {
+   "value": "No RHI-RenoDX-Preset.txt file found. Export first.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:991"
+  },
+  {
+   "value": "No shader packs available.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:40"
+  },
+  {
+   "value": "Not all Unreal Engine games are compatible with UE-Extended.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:872"
+  },
+  {
+   "value": "Not available",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:247"
+  },
+  {
+   "value": "Not connected",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1883"
+  },
+  {
+   "value": "Not registered",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1664"
+  },
+  {
+   "value": "NvAPIWrapper.Net",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2856"
+  },
+  {
+   "value": "NVIDIA Smooth Motion — driver-level frame generation. Adds interpolated frames for smoother visuals. RTX 40 Series+ required.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:180"
+  },
+  {
+   "value": "NXM Protocol Handler",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1966"
+  },
+  {
+   "value": "NXM Registration Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1985"
+  },
+  {
+   "value": "Off",
+   "count": 17,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:220"
+  },
+  {
+   "value": "Off = DXVK disabled.\\nDevelopment/Stable/Lilium HDR = DXVK variant selection.\\nDXVK translates DirectX to Vulkan — enables compute shaders.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:86"
+  },
+  {
+   "value": "Off: r.NGX.DLSS.DilateMotionVectors=0 + r.Streamline.DilateMotionVectors=0",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2432"
+  },
+  {
+   "value": "OK",
+   "count": 59,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:238"
+  },
+  {
+   "value": "OK, I understand",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:879"
+  },
+  {
+   "value": "On",
+   "count": 16,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:219"
+  },
+  {
+   "value": "On: DisableFlipMetering=true — fixes thick frametime graph with NukemFG + fakenvapi.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2352"
+  },
+  {
+   "value": "On: r.AntiAliasingMethod=4 + r.TemporalAA.Upscaler=1",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2440"
+  },
+  {
+   "value": "On: r.FidelityFX.FI.OverrideSwapChainDX12=1",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2438"
+  },
+  {
+   "value": "Only proceed if you are comfortable managing ReShade addons.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:1097"
+  },
+  {
+   "value": "Only relevant when FG Output = DLSSG. Enabler requires Deploy Streamline + Deploy DLSS Enabler.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2224"
+  },
+  {
+   "value": "Open",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1341"
+  },
+  {
+   "value": "Open Folder",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/PresetPopupHelper.cs:75"
+  },
+  {
+   "value": "Open game config folder in Explorer",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:566"
+  },
+  {
+   "value": "Open game folder in Explorer",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:576"
+  },
+  {
+   "value": "Open Nexus Mods page",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:416"
+  },
+  {
+   "value": "Open PCGamingWiki page",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:427"
+  },
+  {
+   "value": "Open ReLimiter log",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1526"
+  },
+  {
+   "value": "Open ReShade.ini",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:97"
+  },
+  {
+   "value": "Open ReShade.log",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:117"
+  },
+  {
+   "value": "Open settings",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:137"
+  },
+  {
+   "value": "Open the screenshot folder in Explorer",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1345"
+  },
+  {
+   "value": "Open Ultra+ page for this game",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:449"
+  },
+  {
+   "value": "Open ultrawide fix page",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:438"
+  },
+  {
+   "value": "OptiScaler",
+   "count": 6,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:647"
+  },
+  {
+   "value": "OptiScaler Hotkey",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1598"
+  },
+  {
+   "value": "OptiScaler Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2776"
+  },
+  {
+   "value": "OptiScaler.ini",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2402"
+  },
+  {
+   "value": "OSD Key",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2104"
+  },
+  {
+   "value": "Other",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:305"
+  },
+  {
+   "value": "Overlay Key",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:176"
+  },
+  {
+   "value": "Overlay key",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1395"
+  },
+  {
+   "value": "Override DLL filenames",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:121"
+  },
+  {
+   "value": "Override the auto-detected bitness for this game. Auto uses PE header detection. 32-bit or 64-bit forces the value.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:861"
+  },
+  {
+   "value": "Override the detected graphics API for this game.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:949"
+  },
+  {
+   "value": "Override the detected graphics API for this game.\\nAuto uses PE header scanning. Reset Overrides reverts to auto-detection.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:986"
+  },
+  {
+   "value": "Override the DLSS render resolution scale. Off = game controls the scale.\\nNamed presets set a fixed percentage. Custom lets you enter any value from 33-100%.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dlss.cs:213"
+  },
+  {
+   "value": "Override the executable used when launching this game. Leave blank for auto-detection (largest exe in install folder).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:306"
+  },
+  {
+   "value": "Override the filenames ReShade is installed as. When enabled, existing RS files are renamed to the custom filenames.",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:125"
+  },
+  {
+   "value": "Override the global ReShade build channel for this game.\\nVulkan games: changing this affects ALL Vulkan games.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:30"
+  },
+  {
+   "value": "Override the internal render resolution. Off = use in-game quality preset as-is.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2378"
+  },
+  {
+   "value": "Override the name used to look up this game on the RenoDX/Luma wiki. Leave blank to use the game name. Press Enter to save.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:72"
+  },
+  {
+   "value": "Override the ReShade build channel for this game.\\nVulkan games: changing this affects ALL Vulkan games.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:76"
+  },
+  {
+   "value": "Override the ReShade DLL name. OptiScaler is installed — RHI will rename ReShade to this filename after OptiScaler is uninstalled.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:140"
+  },
+  {
+   "value": "Overrides",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Skeleton.cs:818"
+  },
+  {
+   "value": "Overwrite",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:35"
+  },
+  {
+   "value": "Overwriting it may break the existing mod. Do you want to proceed?",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:33"
+  },
+  {
+   "value": "Paste API key here...",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1634"
+  },
+  {
+   "value": "Paste it directly into Discord or attach it to a GitHub issue.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:69"
+  },
+  {
+   "value": "Paste your Nexus Mods personal API key. Premium users get one-click downloads and silent auto-updates. Free users get one-click browser downloads.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1608"
+  },
+  {
+   "value": "Patch Notes",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:3026"
+  },
+  {
+   "value": "PCGW",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:428"
+  },
+  {
+   "value": "Peak brightness (nits) written to reshade.ini presets. HDR auto-toggle enables Windows HDR on game launch and disables on exit.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1315"
+  },
+  {
+   "value": "Peak Nits",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:501"
+  },
+  {
+   "value": "Peak nits is not configured or is disabled.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:502"
+  },
+  {
+   "value": "Peak Nits Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1532"
+  },
+  {
+   "value": "Per-game G-Sync control. Disabled forces G-Sync off for this game regardless of global setting.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:350"
+  },
+  {
+   "value": "Pick .ini preset files to copy to this game's folder. Place presets in the reshade-presets folder.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:191"
+  },
+  {
+   "value": "Pick a folder for screenshots",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1336"
+  },
+  {
+   "value": "Place .ini files in:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/PresetPopupHelper.cs:67"
+  },
+  {
+   "value": "Place custom .addon64/.addon32 files here",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:57"
+  },
+  {
+   "value": "Please enter a filter name.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:860"
+  },
+  {
+   "value": "Please paste your API key first. You can find it at nexusmods.com → Settings → API Keys.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1905"
+  },
+  {
+   "value": "Please select a game to install the addon to.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:263"
+  },
+  {
+   "value": "Please select a game to install the preset to.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:146"
+  },
+  {
+   "value": "Please use the overrides on this panel to correct any wrong values ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:32"
+  },
+  {
+   "value": "Post-processing injection framework. Downloaded with full addon support from reshade.me and cached locally. Copyright © Crosire.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2717"
+  },
+  {
+   "value": "Power Management — Adaptive: GPU clocks down at idle. Maximum: locks GPU to highest clocks. Optimal: balanced (NVIDIA recommended).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:325"
+  },
+  {
+   "value": "Power management, G-Sync control, and profile reset.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:306"
+  },
+  {
+   "value": "Power Mode",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:311"
+  },
+  {
+   "value": "Prefer DXGI Swapchain",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2814"
+  },
+  {
+   "value": "Preferred Refresh Rate",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1905"
+  },
+  {
+   "value": "Preparing...",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:24"
+  },
+  {
+   "value": "Preset",
+   "count": 6,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dlss.cs:141"
+  },
+  {
+   "value": "Preset 1",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1515"
+  },
+  {
+   "value": "Preset 2",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1516"
+  },
+  {
+   "value": "Preset 3",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1517"
+  },
+  {
+   "value": "Presets",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2479"
+  },
+  {
+   "value": "Presets from: ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/PresetPopupHelper.cs:103"
+  },
+  {
+   "value": "Profile name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:415"
+  },
+  {
+   "value": "Profiles",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:395"
+  },
+  {
+   "value": "Profiles Reset",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:964"
+  },
+  {
+   "value": "Purge",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:754"
+  },
+  {
+   "value": "Purge Staging Files",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2457"
+  },
+  {
+   "value": "Quick Apply",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:410"
+  },
+  {
+   "value": "Quick Start",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:54"
+  },
+  {
+   "value": "Quick Start Guide",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:59"
+  },
+  {
+   "value": "Ray Reconstruction",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:52"
+  },
+  {
+   "value": "RE Framework",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1453"
+  },
+  {
+   "value": "Re-connect",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1879"
+  },
+  {
+   "value": "Reads your monitor's peak brightness automatically.",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:540"
+  },
+  {
+   "value": "Ready",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Components.cs:161"
+  },
+  {
+   "value": "ReBAR",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:425"
+  },
+  {
+   "value": "ReBAR Size Limit",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1954"
+  },
+  {
+   "value": "Recent Games",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2537"
+  },
+  {
+   "value": "Refresh",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:63"
+  },
+  {
+   "value": "Register",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1667"
+  },
+  {
+   "value": "Register RHI",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1968"
+  },
+  {
+   "value": "Register RHI as the nxm:// handler so Nexus \"Mod Manager Download\" buttons open directly in RHI.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1622"
+  },
+  {
+   "value": "ReLimiter",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1450"
+  },
+  {
+   "value": "ReLimiter GitHub",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:105"
+  },
+  {
+   "value": "ReLimiter OSD hotkey and global feature settings applied to all games.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2073"
+  },
+  {
+   "value": "ReLimiter Settings",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1892"
+  },
+  {
+   "value": "relimiter.ini",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2394"
+  },
+  {
+   "value": "Remove",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:1060"
+  },
+  {
+   "value": "Remove Display Commander",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:962"
+  },
+  {
+   "value": "Remove DOF Fix",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:857"
+  },
+  {
+   "value": "Remove DXVK",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1067"
+  },
+  {
+   "value": "Remove Game",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:1058"
+  },
+  {
+   "value": "Remove Luma mod",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:796"
+  },
+  {
+   "value": "Remove OptiScaler",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1022"
+  },
+  {
+   "value": "Remove RE Framework",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:645"
+  },
+  {
+   "value": "Remove ReLimiter",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:917"
+  },
+  {
+   "value": "Remove RenoDX mod",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:750"
+  },
+  {
+   "value": "Remove ReShade",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:690"
+  },
+  {
+   "value": "Removes ALL per-game NVIDIA profile overrides. The global profile will be like new.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2029"
+  },
+  {
+   "value": "Render Scale",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dlss.cs:185"
+  },
+  {
+   "value": "RenoDX",
+   "count": 5,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1449"
+  },
+  {
+   "value": "RenoDX Discord (mod development)",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.FaqBuilder.cs:507"
+  },
+  {
+   "value": "RenoDX Presets",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:861"
+  },
+  {
+   "value": "RenoDX Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1117"
+  },
+  {
+   "value": "RenoDX Wiki",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:102"
+  },
+  {
+   "value": "Repository",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:269"
+  },
+  {
+   "value": "Requires admin mode to change",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1365"
+  },
+  {
+   "value": "Requires NVIDIA App with Overlay and Game Filters enabled.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1009"
+  },
+  {
+   "value": "Requires: NVIDIA App installed, Game Filter/Freestyle enabled, RTX GPU, driver 550+.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:262"
+  },
+  {
+   "value": "RES",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.cs:272"
+  },
+  {
+   "value": "Rescan game library and fetch latest mod info",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:68"
+  },
+  {
+   "value": "Reset",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:81"
+  },
+  {
+   "value": "Reset / Remove game",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:291"
+  },
+  {
+   "value": "Reset All",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:889"
+  },
+  {
+   "value": "Reset all game profiles?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:882"
+  },
+  {
+   "value": "Reset all per-game overrides back to defaults (DLL names, channels, shaders, addons, DXVK, launch settings, update inclusion).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:329"
+  },
+  {
+   "value": "Reset Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:976"
+  },
+  {
+   "value": "Reset game name back to auto-detected and clear wiki name mapping.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:89"
+  },
+  {
+   "value": "Reset Nvidia Profiles",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2027"
+  },
+  {
+   "value": "Reset Overrides",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:313"
+  },
+  {
+   "value": "Reset the install folder to auto-detected, or remove a manually added game entirely.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dxvk.cs:303"
+  },
+  {
+   "value": "Reset to 50",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:801"
+  },
+  {
+   "value": "Reset to Print Screen",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1422"
+  },
+  {
+   "value": "Resetting global settings...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:942"
+  },
+  {
+   "value": "Resetting...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:917"
+  },
+  {
+   "value": "ReShade",
+   "count": 5,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:645"
+  },
+  {
+   "value": "ReShade & Display",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1279"
+  },
+  {
+   "value": "ReShade & shader packs · RenoDX HDR mods · Luma Framework · DLSS/Streamline version swaps & presets · NVIDIA driver profile settings (VSync, Low Latency, ReBAR, Smooth Motion, Power) · OptiScaler · ReLimiter & Display Commander frame limiters · RE Framework · DXVK · UE-Extended native HDR · Per-game overrides for everything.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2665"
+  },
+  {
+   "value": "ReShade Addon Manager",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonManagerDialog.cs:32"
+  },
+  {
+   "value": "ReShade Addons",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:77"
+  },
+  {
+   "value": "ReShade addons are advanced features intended for experienced users who understand what they are.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:1095"
+  },
+  {
+   "value": "ReShade Build Channel Changed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1824"
+  },
+  {
+   "value": "ReShade Channel",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:26"
+  },
+  {
+   "value": "ReShade Hotkeys",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1053"
+  },
+  {
+   "value": "ReShade Screenshot Hotkey",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1145"
+  },
+  {
+   "value": "ReShade Settings",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:391"
+  },
+  {
+   "value": "ReShade UI Hotkey",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:999"
+  },
+  {
+   "value": "reshade.ini",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2390"
+  },
+  {
+   "value": "reshade.me  ·  github.com/crosire/reshade",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2719"
+  },
+  {
+   "value": "Resizable BAR — allows the CPU to access full GPU VRAM at once. Can improve performance by 5-10% in some titles. RTX 30+ and BIOS support required.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:426"
+  },
+  {
+   "value": "Resolution Auto-Toggle",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1538"
+  },
+  {
+   "value": "Resolution Control",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1509"
+  },
+  {
+   "value": "Restart as Admin",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:922"
+  },
+  {
+   "value": "Restart as Admin — one-time elevated restart to complete this install.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:919"
+  },
+  {
+   "value": "Restore",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:391"
+  },
+  {
+   "value": "Restore all DLSS and Streamline DLLs to their original game versions and reset presets to Default.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:511"
+  },
+  {
+   "value": "Restore Complete",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:530"
+  },
+  {
+   "value": "Restore Defaults",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:366"
+  },
+  {
+   "value": "Restore DLSS/SL",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.NvidiaProfile.cs:358"
+  },
+  {
+   "value": "Restore driver settings?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:384"
+  },
+  {
+   "value": "Restore per-game NVIDIA profile settings from a previous export.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2014"
+  },
+  {
+   "value": "Restore presets from the exported backup file into reshade.ini.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:993"
+  },
+  {
+   "value": "Restore this game's NVIDIA driver profile to factory defaults. Removes all custom settings (presets, render scale, MFG, driver overrides). This action is irreversible.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:377"
+  },
+  {
+   "value": "Restoring selected games...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:462"
+  },
+  {
+   "value": "Restoring...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:483"
+  },
+  {
+   "value": "RHI",
+   "count": 5,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml.cs:89"
+  },
+  {
+   "value": "RHI cannot identify this file as Display Commander. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:61"
+  },
+  {
+   "value": "RHI cannot identify this file as ReShade or Display Commander. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:31"
+  },
+  {
+   "value": "RHI GitHub",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:104"
+  },
+  {
+   "value": "RHI GitHub — Report issues or request features",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.FaqBuilder.cs:533"
+  },
+  {
+   "value": "RHI installs ReShade with full addon support, OptiScaler, and can swap DLSS/Streamline DLLs. These modifications may be flagged by anti-cheat in online or multiplayer games. Uninstall ReShade, OptiScaler, and restore DLSS/Streamline defaults before playing online.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2677"
+  },
+  {
+   "value": "RHI Managed",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2275"
+  },
+  {
+   "value": "RHI Managed: deploy built-in shader packs to all games.\nCustom: use your own shader directory.\nOff: RHI never touches shaders on any game.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2272"
+  },
+  {
+   "value": "RHI Setup",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SetupWindow.xaml.cs:30"
+  },
+  {
+   "value": "RHI watches this folder for RenoDX addon files (.addon64/.addon32) and archives. Defaults to your Downloads folder.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2299"
+  },
+  {
+   "value": "RR",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:202"
+  },
+  {
+   "value": "RTX HDR",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1002"
+  },
+  {
+   "value": "RTX HDR Enabled",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:251"
+  },
+  {
+   "value": "RTX HDR Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1455"
+  },
+  {
+   "value": "RTX HDR uses NVIDIA's driver-level HDR injection to upgrade SDR games to HDR. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:260"
+  },
+  {
+   "value": "Run the game once with RenoDX installed to generate settings.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:730"
+  },
+  {
+   "value": "Save",
+   "count": 10,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:133"
+  },
+  {
+   "value": "Save all per-game NVIDIA profile settings to a backup file.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2006"
+  },
+  {
+   "value": "Save all RenoDX presets to a file and copy to clipboard for sharing.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:932"
+  },
+  {
+   "value": "Save as Default",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1382"
+  },
+  {
+   "value": "Save current cog settings into this slot",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2519"
+  },
+  {
+   "value": "Save current search as a custom filter",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:200"
+  },
+  {
+   "value": "Save current slider values as your default RTX HDR preset",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1387"
+  },
+  {
+   "value": "Save Custom Filter",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:831"
+  },
+  {
+   "value": "Save the current shader selection into the highlighted profile. If no profile is selected, a new one is created automatically.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:713"
+  },
+  {
+   "value": "Saved!",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1415"
+  },
+  {
+   "value": "Screenshot Key",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:267"
+  },
+  {
+   "value": "Screenshot key",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1398"
+  },
+  {
+   "value": "Screenshot save path and ReShade key bindings applied to all managed reshade.ini files.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1301"
+  },
+  {
+   "value": "Screenshots & Hotkeys",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:464"
+  },
+  {
+   "value": "Select a game...",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:187"
+  },
+  {
+   "value": "Select addon to install...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:129"
+  },
+  {
+   "value": "Select Addons",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/AddonPopupHelper.cs:43"
+  },
+  {
+   "value": "Select All",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDeployHandler.cs:211"
+  },
+  {
+   "value": "Select Custom ReShade",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:289"
+  },
+  {
+   "value": "Select DC DLL name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:162"
+  },
+  {
+   "value": "Select Folder",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Luma.cs:133"
+  },
+  {
+   "value": "Select HDR Monitors",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1155"
+  },
+  {
+   "value": "Select Legacy ReShade Version",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:129"
+  },
+  {
+   "value": "Select OptiScaler DLL name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:201"
+  },
+  {
+   "value": "Select ReShade DLL name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:131"
+  },
+  {
+   "value": "Select ReShade Preset",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:180"
+  },
+  {
+   "value": "Select ReShade Presets",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/PresetPopupHelper.cs:53"
+  },
+  {
+   "value": "Select Resolution Monitors",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1338"
+  },
+  {
+   "value": "Select Shader Packs",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:37"
+  },
+  {
+   "value": "Select the target desktop resolution. Populated from your monitor's supported modes.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1549"
+  },
+  {
+   "value": "Select which graphics API's upscaler to configure.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2080"
+  },
+  {
+   "value": "Select which monitors to change resolution on. Empty = primary display only.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1575"
+  },
+  {
+   "value": "Select which monitors to enable HDR on. Empty = primary display only.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1469"
+  },
+  {
+   "value": "Set",
+   "count": 5,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1653"
+  },
+  {
+   "value": "Set Default",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1390"
+  },
+  {
+   "value": "Set Maximum Nits",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:468"
+  },
+  {
+   "value": "Sets Vulkan/OpenGL Present Method to 'Preferred layered on DXGI Swapchain' in the NVIDIA driver profile. Recommended for DXVK — improves compatibility and HDR support.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2819"
+  },
+  {
+   "value": "Settings",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:132"
+  },
+  {
+   "value": "Shader Cache Cleared",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1038"
+  },
+  {
+   "value": "Shader Cache Size",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1856"
+  },
+  {
+   "value": "Shader Management",
+   "count": 2,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2252"
+  },
+  {
+   "value": "Shader Pre-Compile",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1863"
+  },
+  {
+   "value": "Shaders",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:45"
+  },
+  {
+   "value": "Shaders & Addons",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2240"
+  },
+  {
+   "value": "Shaders and Addons",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:30"
+  },
+  {
+   "value": "Shaders/Addons",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:69"
+  },
+  {
+   "value": "Shared Presets",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2107"
+  },
+  {
+   "value": "Shows DLSS quality mode, render resolution, and active features on the ReLimiter OSD. Disable if experiencing crashes.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2131"
+  },
+  {
+   "value": "Shows DLSS version/preset info on the ReLimiter OSD. Disable if causing crashes.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1842"
+  },
+  {
+   "value": "Simplified PC Gaming",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:41"
+  },
+  {
+   "value": "Single-player only",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2674"
+  },
+  {
+   "value": "Size Limit",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:525"
+  },
+  {
+   "value": "Skipped — v1.x DLSS/Streamline not compatible with newer versions",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MassDlssDeployDialog.cs:73"
+  },
+  {
+   "value": "SL",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:221"
+  },
+  {
+   "value": "Smooth Motion",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:179"
+  },
+  {
+   "value": "Smooth Motion APIs — which graphics APIs Smooth Motion is allowed to hook. None = disabled for all APIs.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:252"
+  },
+  {
+   "value": "Smooth Motion Enable — Off: disabled. On: enables driver-level frame generation (RTX 40 Series+ only).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:201"
+  },
+  {
+   "value": "Somehow I have become a UI guy in multiple aspects of life lol.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2876"
+  },
+  {
+   "value": "Stable uses the official OptiScaler release. Nightly uses the latest daily build.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2027"
+  },
+  {
+   "value": "Standard (0x000802A5): Treat DXVK as Native\\nAlternative (0x00080004): Allow DXVK Promotion + DirectFlip",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2855"
+  },
+  {
+   "value": "Standard = conservative. Optimized = aggressive driver scheduling (used by NVIDIA-whitelisted titles).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:509"
+  },
+  {
+   "value": "Standard: Treat DXVK as Native (0x000802A5). Alternative: Allow DXVK Promotion + DirectFlip (0x00080004). Only active when Prefer DXGI Swapchain is Yes.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2844"
+  },
+  {
+   "value": "Start with Windows",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2546"
+  },
+  {
+   "value": "Starting download...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:84"
+  },
+  {
+   "value": "Streamline",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DlssDefaultsDialog.cs:120"
+  },
+  {
+   "value": "Subfolders",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1401"
+  },
+  {
+   "value": "Support and help resources",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:113"
+  },
+  {
+   "value": "Support is available on Discord — join the community for help, mod updates, and discussion.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.FaqBuilder.cs:478"
+  },
+  {
+   "value": "Switch between using UE-Extended or the game specific mod/generic Unreal RenoDX mod.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:438"
+  },
+  {
+   "value": "System & Maintenance",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2424"
+  },
+  {
+   "value": "System Tray",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2516"
+  },
+  {
+   "value": "TAA Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:234"
+  },
+  {
+   "value": "Tabs",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1485"
+  },
+  {
+   "value": "Target FPS",
+   "count": 3,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1597"
+  },
+  {
+   "value": "Target Frame Rate",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:149"
+  },
+  {
+   "value": "Target Resolution",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1524"
+  },
+  {
+   "value": "Tear Control",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:110"
+  },
+  {
+   "value": "The all-in-one game enhancement toolkit for PC. Auto-detects games from 8 storefronts and provides one-click management for ReShade, HDR mods, shaders, DLSS/Streamline, frame limiters, NVIDIA driver profiles, and more — all from one place.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2656"
+  },
+  {
+   "value": "The display name for this game. Edit and press Enter to rename. Reset reverts to the auto-detected store name.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:62"
+  },
+  {
+   "value": "The download timed out. Please check your connection and try again.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:718"
+  },
+  {
+   "value": "The downloaded file is not a valid addon binary. The server may have returned an error page.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:741"
+  },
+  {
+   "value": "The drop helper window enables Discord drag-and-drop in admin mode. Disable if you don't need it. Restart required.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2508"
+  },
+  {
+   "value": "The dropped URL could not be parsed. Please check the link and try again.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:471"
+  },
+  {
+   "value": "The key that toggles the ReLimiter OSD overlay in-game.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2120"
+  },
+  {
+   "value": "The next couple of restarts may take a few seconds longer while caches are rebuilt.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:39"
+  },
+  {
+   "value": "The target output frame rate for dynamic frame generation. Only active in Dynamic mode.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:162"
+  },
+  {
+   "value": "There's no guarantee they'll work well together. If you're using RenoDX for HDR and just want Luma for DLAA, make sure to disable HDR in the Luma mod settings to avoid conflicts.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:574"
+  },
+  {
+   "value": "These settings will have no effect on 40 Series or older hardware.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:45"
+  },
+  {
+   "value": "This app would not exist without the work of the following people and projects.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2690"
+  },
+  {
+   "value": "This archive contains multiple game folders.\\nSelect the folder to install:",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Luma.cs:141"
+  },
+  {
+   "value": "This file is not a recognised ReShade preset. A valid preset must contain a Techniques= line with at least one @.fx entry.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:47"
+  },
+  {
+   "value": "This helps us update the manifest faster.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:34"
+  },
+  {
+   "value": "This saves a report file and copies it to your clipboard. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:68"
+  },
+  {
+   "value": "This toggles the engine version to Unreal Engine 5.0–5.6, making this game eligible for the DOF Fix addon.\\n\\nUse this when RHI cannot detect the UE version automatically (e.g. Game Pass games).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:497"
+  },
+  {
+   "value": "This will clear all caches and re-scan everything from scratch:\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:32"
+  },
+  {
+   "value": "This will delete cached DLSS, Streamline, and component staging files to free disk space.\\n\\nShaders, installed RenoDX addons, and version metadata are preserved.\\n\\nThese files will be re-downloaded automatically when needed.\\n\\nContinue?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:753"
+  },
+  {
+   "value": "This will permanently delete the NVIDIA DXCache and GLCache folders. This cannot be undone.\\n\\nAll games will need to rebuild their shader caches on next launch, which may cause brief stuttering or longer load times the first time. This can fix shader corruption, persistent stuttering, or graphical issues after driver updates.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:990"
+  },
+  {
+   "value": "This will remove ALL per-game NVIDIA driver profile overrides (DLSS/Streamline versions, presets, render scales, ReBAR, VSync, Smooth Motion, Low Latency, Power Mode — everything) AND reset global settings (Shader Cache, G-Sync, Refresh Rate, ReBAR) to defaults.\\n\\nAll profiles will return to NVIDIA factory defaults. This cannot be undone.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:885"
+  },
+  {
+   "value": "Toggle between Detail and Simple view",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:131"
+  },
+  {
+   "value": "Toggle favourite",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:555"
+  },
+  {
+   "value": "Toggle per-game HDR auto-switch. Purple = HDR enabled on launch, disabled on exit.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:393"
+  },
+  {
+   "value": "Toggle per-game resolution switch. Purple = resolution changes on launch, restores on exit.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:404"
+  },
+  {
+   "value": "Tree",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1486"
+  },
+  {
+   "value": "Try a normal Refresh first — it handles most issues without the full rescan. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:37"
+  },
+  {
+   "value": "Type or choose screenshot folder",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1326"
+  },
+  {
+   "value": "UE DOF Fix — Release Notes",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:367"
+  },
+  {
+   "value": "UE-Extended",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:430"
+  },
+  {
+   "value": "UE-Extended Settings",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:415"
+  },
+  {
+   "value": "UE-Extended uses a generic injection method that works with most ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:873"
+  },
+  {
+   "value": "UI Design",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2872"
+  },
+  {
+   "value": "Ultra+",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:450"
+  },
+  {
+   "value": "Unchecked presets keep their existing per-preset values.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Settings.cs:1524"
+  },
+  {
+   "value": "Unity",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:243"
+  },
+  {
+   "value": "Universal UE DOF Fix",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2888"
+  },
+  {
+   "value": "Unofficial companion app. Not affiliated with RenoDX, Crosire, or pmnoxx.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2907"
+  },
+  {
+   "value": "Unreal",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:239"
+  },
+  {
+   "value": "Unreal Engine games but may cause crashes or visual issues with others. ",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:874"
+  },
+  {
+   "value": "Update & Deployment",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2332"
+  },
+  {
+   "value": "Update All",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:84"
+  },
+  {
+   "value": "Update Inclusion",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/UpdateInclusionHelper.cs:90"
+  },
+  {
+   "value": "Update Now",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:65"
+  },
+  {
+   "value": "Updating All Components",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:42"
+  },
+  {
+   "value": "Updating Display Commander...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:70"
+  },
+  {
+   "value": "Updating DOF Fix...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:87"
+  },
+  {
+   "value": "Updating DXVK...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:83"
+  },
+  {
+   "value": "Updating Luma...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:85"
+  },
+  {
+   "value": "Updating OptiScaler...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:75"
+  },
+  {
+   "value": "Updating RE Framework...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:80"
+  },
+  {
+   "value": "Updating ReLimiter...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:65"
+  },
+  {
+   "value": "Updating RenoDX...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:60"
+  },
+  {
+   "value": "Updating ReShade...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:55"
+  },
+  {
+   "value": "Upscaler for the selected API. 'Auto' lets OptiScaler choose based on your GPU.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:2081"
+  },
+  {
+   "value": "Upscaler redirection layer enabling DLSS, FSR, and XeSS across different GPU vendors. Downloaded from GitHub releases.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2829"
+  },
+  {
+   "value": "Use Full Refresh as a last resort if games are missing, paths have changed, DLSS has been added to a game, or the DLSS section is missing from a game card.\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:38"
+  },
+  {
+   "value": "Useful links and resources",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:99"
+  },
+  {
+   "value": "UW Fix",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:439"
+  },
+  {
+   "value": "Validating...",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:1914"
+  },
+  {
+   "value": "Version",
+   "count": 6,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.Dlss.cs:34"
+  },
+  {
+   "value": "Vertical Sync settings — controls how the driver synchronizes frame rendering with your display's refresh rate.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:41"
+  },
+  {
+   "value": "View details",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:642"
+  },
+  {
+   "value": "View recent patch notes",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:3031"
+  },
+  {
+   "value": "VSync",
+   "count": 2,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:40"
+  },
+  {
+   "value": "VSync Tear Control — Standard: normal VSync behavior. Adaptive: VSync on when FPS ≥ refresh rate, off when below (reduces stuttering at low FPS).",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.DriverSettings.cs:124"
+  },
+  {
+   "value": "Vulkan games share a global ReShade layer.\\n\\n",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:327"
+  },
+  {
+   "value": "Vulkan ReShade Channel Override",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:326"
+  },
+  {
+   "value": "Welcome to RHI",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SetupWindow.xaml.cs:100"
+  },
+  {
+   "value": "What RHI manages",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2662"
+  },
+  {
+   "value": "When enabled, RHI silently installs component updates in the background after each update check. Games that are running when an update is detected will be retried automatically once they close. Does not apply to app updates.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1262"
+  },
+  {
+   "value": "When No, RHI will not automatically update this game's reshade.ini on ReShade install, update, or Apply to All Games.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:373"
+  },
+  {
+   "value": "When On, all games share the same OSD presets file. When Off, each game has its own presets.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2124"
+  },
+  {
+   "value": "When On, all shader packs are downloaded and cached at startup. When Off, packs are downloaded on demand when needed.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:2280"
+  },
+  {
+   "value": "When On, each game gets its own screenshot subfolder.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1430"
+  },
+  {
+   "value": "When On, switches desktop resolution on game launch and restores on exit.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1564"
+  },
+  {
+   "value": "When On, switches to the target resolution on game launch and restores it on exit.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1542"
+  },
+  {
+   "value": "When On, Windows HDR is automatically enabled when launching a game through RHI and disabled when the game exits.",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1458"
+  },
+  {
+   "value": "Wiki mod name",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.cs:66"
+  },
+  {
+   "value": "Would you like to update now?",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:61"
+  },
+  {
+   "value": "Writes r.DefaultFeature.AntiAliasing=2 and r.PostProcessAAQuality=4 to Engine.ini.\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:245"
+  },
+  {
+   "value": "Writes r.LUT.UpdateEveryFrame=1 to Engine.ini. Ensures the game recalculates LUTs each frame for accurate HDR color.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:827"
+  },
+  {
+   "value": "X",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:642"
+  },
+  {
+   "value": "Yes",
+   "count": 4,
+   "kinds": [
+    "cs",
+    "xaml"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:211"
+  },
+  {
+   "value": "Yes, continue",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/GameReportEncoder.cs:39"
+  },
+  {
+   "value": "Zip the currently selected shader files and copy the archive to your clipboard. Paste directly into Discord to share.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ShaderPopupHelper.cs:838"
+  },
+  {
+   "value": "— Admin required",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1944"
+  },
+  {
+   "value": "——  Frame limiters — Choose one  ——",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Skeleton.cs:672"
+  },
+  {
+   "value": "——  Recommended  ——",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:811"
+  },
+  {
+   "value": "———  Frame limiters — Choose one  ———",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:872"
+  },
+  {
+   "value": "———  HDR Mods — Install one or both  ———",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:705"
+  },
+  {
+   "value": "• DMFG (Dynamic): Driver 595.97+\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:44"
+  },
+  {
+   "value": "• MFG (Fixed): Driver 572.16+\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:43"
+  },
+  {
+   "value": "• Re-detects all games from every storefront\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:33"
+  },
+  {
+   "value": "• Re-detects graphics APIs and engine types\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:35"
+  },
+  {
+   "value": "• Re-scans DLSS/Streamline DLL paths\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:34"
+  },
+  {
+   "value": "• Rebuilds shader and addon deployment state\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:36"
+  },
+  {
+   "value": "ℹ Discussion / Instructions",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:638"
+  },
+  {
+   "value": "ℹ DXVK Info",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Install.cs:215"
+  },
+  {
+   "value": "← Back to Games",
+   "count": 3,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:1203"
+  },
+  {
+   "value": "──  Optional  ──",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:977"
+  },
+  {
+   "value": "── Optional ──",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Skeleton.cs:731"
+  },
+  {
+   "value": "▶ Launch",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:384"
+  },
+  {
+   "value": "⚠ ADVANCED FEATURE — USE AT YOUR OWN RISK\\n\\n",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ViewModels/MainViewModel.Dxvk.cs:41"
+  },
+  {
+   "value": "⚠ Confirm Addon Install",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:301"
+  },
+  {
+   "value": "⚠ DXVK Warning",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/ViewModels/MainViewModel.Dxvk.cs:63"
+  },
+  {
+   "value": "⚠ Hardware Requirement",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MfgDialog.cs:61"
+  },
+  {
+   "value": "⚠ High values may look unnatural",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1153"
+  },
+  {
+   "value": "⚠ High values may look washed out",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.Components.cs:1261"
+  },
+  {
+   "value": "⚠ Older ReShade versions may not support newer addons.\\nThe game will be excluded from automatic ReShade updates.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.RsChannel.cs:120"
+  },
+  {
+   "value": "⚠ OptiScaler Setup",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/InstallEventHandler.cs:200"
+  },
+  {
+   "value": "⚠ Purge Staging Files",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:752"
+  },
+  {
+   "value": "⚠ ReShade Addons",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:1092"
+  },
+  {
+   "value": "⚠ ReShade, OptiScaler, and DLSS/Streamline modifications may trigger anti-cheat in online/multiplayer games",
+   "count": 1,
+   "kinds": [
+    "xaml"
+   ],
+   "where": "RenoDXCommander/MainWindow.xaml:3020"
+  },
+  {
+   "value": "⚠ UE-Extended Compatibility Warning",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:867"
+  },
+  {
+   "value": "⚠ Unknown dxgi.dll Detected",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:23"
+  },
+  {
+   "value": "⚠ Unknown winmm.dll Detected",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:53"
+  },
+  {
+   "value": "✅ Addon Installed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:433"
+  },
+  {
+   "value": "✅ Cache Purged",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:874"
+  },
+  {
+   "value": "✅ DLSS / FSR",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:406"
+  },
+  {
+   "value": "✅ HDR",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Game.cs:414"
+  },
+  {
+   "value": "❌ Deploy Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:170"
+  },
+  {
+   "value": "❌ Download Failed",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:647"
+  },
+  {
+   "value": "❌ Download failed. Please try again later or download manually from GitHub.",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:144"
+  },
+  {
+   "value": "❌ Download Timed Out",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:717"
+  },
+  {
+   "value": "❌ Install Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:446"
+  },
+  {
+   "value": "❌ Invalid Addon File",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:740"
+  },
+  {
+   "value": "❌ Invalid URL",
+   "count": 2,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:470"
+  },
+  {
+   "value": "❌ Not a ReShade Preset",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:46"
+  },
+  {
+   "value": "❌ Purge Failed",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/SettingsHandler.cs:887"
+  },
+  {
+   "value": "❌ Read Error",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:31"
+  },
+  {
+   "value": "❌ Storage Error",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:69"
+  },
+  {
+   "value": "❌ Unsupported File Type",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:581"
+  },
+  {
+   "value": "➕ Add Dropped Game",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Exe.cs:95"
+  },
+  {
+   "value": "⬇ Downloading Addon",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:616"
+  },
+  {
+   "value": "⬇ Downloading Update",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:99"
+  },
+  {
+   "value": "🎨 Install ReShade Preset",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Preset.cs:130"
+  },
+  {
+   "value": "💬 View Notes",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:654"
+  },
+  {
+   "value": "📂 Open Folder",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/MainWindow.Events.cs:616"
+  },
+  {
+   "value": "📋 Patch Notes — What's New",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:261"
+  },
+  {
+   "value": "📢 Message from RHI",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:294"
+  },
+  {
+   "value": "📦 Install RenoDX Addon",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DragDropHandler.Addon.cs:247"
+  },
+  {
+   "value": "🔄 Update Available",
+   "count": 1,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DialogService.Update.cs:47"
+  },
+  {
+   "value": "🔧 Install Shaders?",
+   "count": 3,
+   "kinds": [
+    "cs"
+   ],
+   "where": "RenoDXCommander/DetailPanelBuilder.Overrides.ShadersAddons.cs:209"
+  }
+ ]
+}
