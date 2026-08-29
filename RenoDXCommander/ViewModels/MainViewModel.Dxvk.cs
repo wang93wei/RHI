@@ -30,7 +30,7 @@ public partial class MainViewModel
         {
             var dontShowAgain = new CheckBox
             {
-                Content = "Don't show this warning again",
+                Content = Loc.Tr("Don't show this warning again"),
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0),
             };
@@ -38,7 +38,7 @@ public partial class MainViewModel
             var contentPanel = new StackPanel();
             contentPanel.Children.Add(new TextBlock
             {
-                Text = "⚠ ADVANCED FEATURE — USE AT YOUR OWN RISK\n\n"
+                Text = Loc.Tr("⚠ ADVANCED FEATURE — USE AT YOUR OWN RISK\n\n")
                     + "DXVK is an unofficial DirectX-to-Vulkan translation layer.\n"
                     + "No support will be provided if a game is not compatible.\n\n"
                     + "WHO SHOULD USE THIS:\n"
@@ -60,10 +60,10 @@ public partial class MainViewModel
 
             var warningDialog = new ContentDialog
             {
-                Title = "⚠ DXVK Warning",
+                Title = Loc.Tr("⚠ DXVK Warning"),
                 Content = contentPanel,
-                PrimaryButtonText = "Continue",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.Tr("Continue"),
+                CloseButtonText = Loc.Tr("Cancel"),
                 XamlRoot = xamlRoot,
                 RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
             };

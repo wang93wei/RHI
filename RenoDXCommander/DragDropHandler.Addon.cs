@@ -32,9 +32,9 @@ public partial class DragDropHandler
         {
             var errDialog = new ContentDialog
             {
-                Title = "7-Zip Not Found",
-                Content = "Cannot extract archive — 7-Zip was not found. Please reinstall RDXC.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("7-Zip Not Found"),
+                Content = Loc.Tr("Cannot extract archive — 7-Zip was not found. Please reinstall RDXC."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -81,9 +81,9 @@ public partial class DragDropHandler
                 _crashReporter.Log($"[DragDropHandler.ProcessDroppedArchive] 7z exit code {proc.ExitCode}");
                 var failDialog = new ContentDialog
                 {
-                    Title = "Archive Extraction Failed",
+                    Title = Loc.Tr("Archive Extraction Failed"),
                     Content = $"Failed to extract '{archiveName}'. The file may be corrupt or in an unsupported format.",
-                    CloseButtonText = "OK",
+                    CloseButtonText = Loc.Tr("OK"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -102,9 +102,9 @@ public partial class DragDropHandler
                 _crashReporter.Log($"[DragDropHandler.ProcessDroppedArchive] No addon files found in '{archiveName}'");
                 var noAddonDialog = new ContentDialog
                 {
-                    Title = "No Addon Found",
+                    Title = Loc.Tr("No Addon Found"),
                     Content = $"No .addon64 or .addon32 files were found inside '{archiveName}'.",
-                    CloseButtonText = "OK",
+                    CloseButtonText = Loc.Tr("OK"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -126,7 +126,7 @@ public partial class DragDropHandler
                 var combo = new ComboBox
                 {
                     HorizontalAlignment = HorizontalAlignment.Stretch,
-                    PlaceholderText = "Select addon to install...",
+                    PlaceholderText = Loc.Tr("Select addon to install..."),
                 };
                 foreach (var af in addonFiles)
                     combo.Items.Add(new ComboBoxItem { Content = Path.GetFileName(af), Tag = af });
@@ -136,8 +136,8 @@ public partial class DragDropHandler
                 {
                     Title = $"Multiple Addons in '{archiveName}'",
                     Content = combo,
-                    PrimaryButtonText = "Install",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.Tr("Install"),
+                    CloseButtonText = Loc.Tr("Cancel"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -170,9 +170,9 @@ public partial class DragDropHandler
         {
             var noGamesDialog = new ContentDialog
             {
-                Title = "No Games Available",
-                Content = "No games are currently detected. Add a game first.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("No Games Available"),
+                Content = Loc.Tr("No games are currently detected. Add a game first."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -184,7 +184,7 @@ public partial class DragDropHandler
         var combo = new ComboBox
         {
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            PlaceholderText = "Select a game...",
+            PlaceholderText = Loc.Tr("Select a game..."),
         };
 
         // Sort alphabetically and populate
@@ -244,10 +244,10 @@ public partial class DragDropHandler
 
         var pickDialog = new ContentDialog
         {
-            Title = "📦 Install RenoDX Addon",
+            Title = Loc.Tr("📦 Install RenoDX Addon"),
             Content = panel,
-            PrimaryButtonText = "Next",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Next"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -259,9 +259,9 @@ public partial class DragDropHandler
         {
             var noSelection = new ContentDialog
             {
-                Title = "No Game Selected",
-                Content = "Please select a game to install the addon to.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("No Game Selected"),
+                Content = Loc.Tr("Please select a game to install the addon to."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -298,15 +298,15 @@ public partial class DragDropHandler
 
         var confirmDialog = new ContentDialog
         {
-            Title = "⚠ Confirm Addon Install",
+            Title = Loc.Tr("⚠ Confirm Addon Install"),
             Content = new TextBlock
             {
                 Text = warningText,
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 13,
             },
-            PrimaryButtonText = "Install",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Install"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -430,9 +430,9 @@ public partial class DragDropHandler
 
             var successDialog = new ContentDialog
             {
-                Title = "✅ Addon Installed",
+                Title = Loc.Tr("✅ Addon Installed"),
                 Content = $"{addonFileName} has been installed for {gameName}.",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -443,9 +443,9 @@ public partial class DragDropHandler
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedAddon] Install failed — {ex.Message}");
             var errDialog = new ContentDialog
             {
-                Title = "❌ Install Failed",
+                Title = Loc.Tr("❌ Install Failed"),
                 Content = $"Failed to install addon: {ex.Message}",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -467,9 +467,9 @@ public partial class DragDropHandler
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Invalid URL: {url}");
             var errDialog = new ContentDialog
             {
-                Title = "❌ Invalid URL",
-                Content = "The dropped URL could not be parsed. Please check the link and try again.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("❌ Invalid URL"),
+                Content = Loc.Tr("The dropped URL could not be parsed. Please check the link and try again."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -484,9 +484,9 @@ public partial class DragDropHandler
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Could not extract filename from URL: {url}");
             var errDialog = new ContentDialog
             {
-                Title = "❌ Invalid URL",
-                Content = "Could not determine a filename from the dropped URL.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("❌ Invalid URL"),
+                Content = Loc.Tr("Could not determine a filename from the dropped URL."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -530,7 +530,7 @@ public partial class DragDropHandler
                         };
                         var pickerDialog = new ContentDialog
                         {
-                            Title = "Install Luma Mod",
+                            Title = Loc.Tr("Install Luma Mod"),
                             Content = new StackPanel
                             {
                                 Spacing = 8,
@@ -540,8 +540,8 @@ public partial class DragDropHandler
                                     combo,
                                 }
                             },
-                            PrimaryButtonText = "Install",
-                            CloseButtonText = "Cancel",
+                            PrimaryButtonText = Loc.Tr("Install"),
+                            CloseButtonText = Loc.Tr("Cancel"),
                             XamlRoot = _window.Content.XamlRoot,
                             RequestedTheme = ElementTheme.Dark,
                         };
@@ -578,9 +578,9 @@ public partial class DragDropHandler
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Unsupported extension '{ext}' for file '{filename}' from URL: {url}");
             var errDialog = new ContentDialog
             {
-                Title = "❌ Unsupported File Type",
+                Title = Loc.Tr("❌ Unsupported File Type"),
                 Content = $"Only .addon64 and .addon32 files are supported.\n\nThe URL points to: {filename}",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -613,7 +613,7 @@ public partial class DragDropHandler
         };
         var progressDialog = new ContentDialog
         {
-            Title = "⬇ Downloading Addon",
+            Title = Loc.Tr("⬇ Downloading Addon"),
             Content = new StackPanel
             {
                 Spacing = 12,
@@ -644,9 +644,9 @@ public partial class DragDropHandler
                     progressDialog.Hide();
                     var errDialog = new ContentDialog
                     {
-                        Title = "❌ Download Failed",
+                        Title = Loc.Tr("❌ Download Failed"),
                         Content = $"The server returned HTTP {(int)response.StatusCode}.\n\nURL: {url}",
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.Tr("OK"),
                         XamlRoot = _window.Content.XamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     };
@@ -699,9 +699,9 @@ public partial class DragDropHandler
                 progressDialog.Hide();
                 var errDialog = new ContentDialog
                 {
-                    Title = "❌ Download Failed",
+                    Title = Loc.Tr("❌ Download Failed"),
                     Content = $"A network error occurred while downloading the addon.\n\n{ex.Message}",
-                    CloseButtonText = "OK",
+                    CloseButtonText = Loc.Tr("OK"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -714,9 +714,9 @@ public partial class DragDropHandler
                 progressDialog.Hide();
                 var errDialog = new ContentDialog
                 {
-                    Title = "❌ Download Timed Out",
-                    Content = "The download timed out. Please check your connection and try again.",
-                    CloseButtonText = "OK",
+                    Title = Loc.Tr("❌ Download Timed Out"),
+                    Content = Loc.Tr("The download timed out. Please check your connection and try again."),
+                    CloseButtonText = Loc.Tr("OK"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -737,9 +737,9 @@ public partial class DragDropHandler
                 progressDialog.Hide();
                 var errDialog = new ContentDialog
                 {
-                    Title = "❌ Invalid Addon File",
-                    Content = "The downloaded file is not a valid addon binary. The server may have returned an error page.",
-                    CloseButtonText = "OK",
+                    Title = Loc.Tr("❌ Invalid Addon File"),
+                    Content = Loc.Tr("The downloaded file is not a valid addon binary. The server may have returned an error page."),
+                    CloseButtonText = Loc.Tr("OK"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };

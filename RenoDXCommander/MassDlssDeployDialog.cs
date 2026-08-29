@@ -43,9 +43,9 @@ public class MassDlssDeployDialog
         {
             var emptyDialog = new ContentDialog
             {
-                Title = "No DLSS/Streamline Games",
-                Content = "No games with DLSS or Streamline DLLs were detected.\nRun a Full Refresh to scan for them.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("No DLSS/Streamline Games"),
+                Content = Loc.Tr("No games with DLSS or Streamline DLLs were detected.\nRun a Full Refresh to scan for them."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = _xamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -70,14 +70,14 @@ public class MassDlssDeployDialog
                     : Windows.UI.Color.FromArgb(255, 220, 220, 220)),
             };
             if (isV1)
-                ToolTipService.SetToolTip(cb, "Skipped — v1.x DLSS/Streamline not compatible with newer versions");
+                ToolTipService.SetToolTip(cb, Loc.Tr("Skipped — v1.x DLSS/Streamline not compatible with newer versions"));
             checkBoxes.Add(cb);
             gameListPanel.Children.Add(cb);
         }
 
         var selectAllBtn = new Button
         {
-            Content = "Select All", FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
+            Content = Loc.Tr("Select All"), FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             CornerRadius = new CornerRadius(6),
@@ -86,7 +86,7 @@ public class MassDlssDeployDialog
 
         var deselectAllBtn = new Button
         {
-            Content = "Deselect All", FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
+            Content = Loc.Tr("Deselect All"), FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             CornerRadius = new CornerRadius(6),
@@ -138,7 +138,7 @@ public class MassDlssDeployDialog
         // Auto-create profiles checkbox
         var autoCreateCheck = new CheckBox
         {
-            Content = "Auto-create NVIDIA profiles",
+            Content = Loc.Tr("Auto-create NVIDIA profiles"),
             IsChecked = true,
             FontSize = 11,
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
@@ -182,11 +182,11 @@ public class MassDlssDeployDialog
         // ── Dialog ──
         var dialog = new ContentDialog
         {
-            Title = "Batch DLSS & Streamline Deploy",
+            Title = Loc.Tr("Batch DLSS & Streamline Deploy"),
             Content = mainGrid,
-            PrimaryButtonText = "Deploy",
-            SecondaryButtonText = "Restore",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Deploy"),
+            SecondaryButtonText = Loc.Tr("Restore"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -239,7 +239,7 @@ public class MassDlssDeployDialog
         // Show progress
         var progressText = new TextBlock
         {
-            Text = "Deploying to selected games...",
+            Text = Loc.Tr("Deploying to selected games..."),
             FontSize = 12,
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
             TextWrapping = TextWrapping.Wrap,
@@ -268,7 +268,7 @@ public class MassDlssDeployDialog
 
         var progressDialog = new ContentDialog
         {
-            Title = "Deploying...",
+            Title = Loc.Tr("Deploying..."),
             Content = progressContainer,
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -440,9 +440,9 @@ public class MassDlssDeployDialog
 
         var resultDialog = new ContentDialog
         {
-            Title = "Batch Deploy Complete",
+            Title = Loc.Tr("Batch Deploy Complete"),
             Content = new TextBlock { Text = report.ToString().TrimEnd(), TextWrapping = TextWrapping.Wrap, FontSize = 12 },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.Tr("OK"),
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -459,7 +459,7 @@ public class MassDlssDeployDialog
         // Show progress
         var progressText = new TextBlock
         {
-            Text = "Restoring selected games...",
+            Text = Loc.Tr("Restoring selected games..."),
             FontSize = 12,
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
             TextWrapping = TextWrapping.Wrap,
@@ -480,7 +480,7 @@ public class MassDlssDeployDialog
 
         var progressDialog = new ContentDialog
         {
-            Title = "Restoring...",
+            Title = Loc.Tr("Restoring..."),
             Content = progressContainer,
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -527,14 +527,14 @@ public class MassDlssDeployDialog
 
         var resultDialog = new ContentDialog
         {
-            Title = "Restore Complete",
+            Title = Loc.Tr("Restore Complete"),
             Content = new TextBlock
             {
                 Text = reportText.ToString().TrimEnd(),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.Tr("OK"),
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };

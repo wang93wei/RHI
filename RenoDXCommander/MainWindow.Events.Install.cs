@@ -21,7 +21,7 @@ public sealed partial class MainWindow
         // Build the progress dialog
         var statusText = new TextBlock
         {
-            Text = "Preparing...",
+            Text = Loc.Tr("Preparing..."),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
@@ -39,7 +39,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Updating All Components",
+            Title = Loc.Tr("Updating All Components"),
             Content = panel,
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -52,39 +52,39 @@ public sealed partial class MainWindow
         {
             if (!ViewModel.Settings.GlobalSkipRsUpdates)
             {
-                statusText.Text = "Updating ReShade...";
+                statusText.Text = Loc.Tr("Updating ReShade...");
                 await ViewModel.UpdateAllReShadeAsync();
             }
             if (!ViewModel.Settings.GlobalSkipRdxUpdates)
             {
-                statusText.Text = "Updating RenoDX...";
+                statusText.Text = Loc.Tr("Updating RenoDX...");
                 await ViewModel.UpdateAllRenoDxAsync();
             }
             if (!ViewModel.Settings.GlobalSkipUlUpdates)
             {
-                statusText.Text = "Updating ReLimiter...";
+                statusText.Text = Loc.Tr("Updating ReLimiter...");
                 await ViewModel.UpdateAllUlAsync();
             }
             if (!ViewModel.Settings.GlobalSkipDcUpdates)
             {
-                statusText.Text = "Updating Display Commander...";
+                statusText.Text = Loc.Tr("Updating Display Commander...");
                 await ViewModel.UpdateAllDcAsync();
             }
             if (!ViewModel.Settings.GlobalSkipOsUpdates)
             {
-                statusText.Text = "Updating OptiScaler...";
+                statusText.Text = Loc.Tr("Updating OptiScaler...");
                 await ViewModel.UpdateAllOsAsync();
             }
             if (!ViewModel.Settings.GlobalSkipRefUpdates)
             {
-                statusText.Text = "Updating RE Framework...";
+                statusText.Text = Loc.Tr("Updating RE Framework...");
                 await ViewModel.UpdateAllRefAsync();
             }
-            statusText.Text = "Updating DXVK...";
+            statusText.Text = Loc.Tr("Updating DXVK...");
             await ViewModel.UpdateAllDxvkAsync();
-            statusText.Text = "Updating Luma...";
+            statusText.Text = Loc.Tr("Updating Luma...");
             await ViewModel.UpdateAllLumaAsync();
-            statusText.Text = "Updating DOF Fix...";
+            statusText.Text = Loc.Tr("Updating DOF Fix...");
             await ViewModel.UpdateAllDofFixAsync();
         }
         catch (Exception ex)
@@ -212,7 +212,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "ℹ DXVK Info",
+            Title = Loc.Tr("ℹ DXVK Info"),
             Content = new TextBlock
             {
                 Text = content,
@@ -220,7 +220,7 @@ public sealed partial class MainWindow
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.Tr("OK"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -364,7 +364,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "UE DOF Fix — Release Notes",
+            Title = Loc.Tr("UE DOF Fix — Release Notes"),
             Content = new ScrollViewer
             {
                 Content = new TextBlock
@@ -375,7 +375,7 @@ public sealed partial class MainWindow
                 },
                 MaxHeight = 400,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.Tr("OK"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -386,13 +386,13 @@ public sealed partial class MainWindow
     {
         var dialog = new ContentDialog
         {
-            Title = "DOF Fix Settings",
+            Title = Loc.Tr("DOF Fix Settings"),
             Content = new TextBlock
             {
-                Text = "No configurable settings available for this component.",
+                Text = Loc.Tr("No configurable settings available for this component."),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.Tr("OK"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -487,14 +487,14 @@ public sealed partial class MainWindow
         {
             var dontShowCheck = new CheckBox
             {
-                Content = "Don't show this again",
+                Content = Loc.Tr("Don't show this again"),
                 FontSize = 12,
                 Margin = new Thickness(0, 8, 0, 0),
             };
             var panel = new StackPanel { Spacing = 8 };
             panel.Children.Add(new TextBlock
             {
-                Text = "This toggles the engine version to Unreal Engine 5.0–5.6, making this game eligible for the DOF Fix addon.\n\nUse this when RHI cannot detect the UE version automatically (e.g. Game Pass games).",
+                Text = Loc.Tr("This toggles the engine version to Unreal Engine 5.0–5.6, making this game eligible for the DOF Fix addon.\n\nUse this when RHI cannot detect the UE version automatically (e.g. Game Pass games)."),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 12,
             });
@@ -502,10 +502,10 @@ public sealed partial class MainWindow
 
             var dialog = new ContentDialog
             {
-                Title = "Engine Version Override",
+                Title = Loc.Tr("Engine Version Override"),
                 Content = panel,
-                PrimaryButtonText = "Continue",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.Tr("Continue"),
+                CloseButtonText = Loc.Tr("Cancel"),
                 XamlRoot = Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -1047,7 +1047,7 @@ public sealed partial class MainWindow
 
                 var uninstallCheck = new CheckBox
                 {
-                    Content = "Also uninstall all RHI-managed components from game folder",
+                    Content = Loc.Tr("Also uninstall all RHI-managed components from game folder"),
                     FontSize = 12,
                     IsChecked = false,
                 };
@@ -1055,10 +1055,10 @@ public sealed partial class MainWindow
 
                 var dialog = new ContentDialog
                 {
-                    Title = "Remove Game",
+                    Title = Loc.Tr("Remove Game"),
                     Content = panel,
-                    PrimaryButtonText = "Remove",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.Tr("Remove"),
+                    CloseButtonText = Loc.Tr("Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -1071,15 +1071,15 @@ public sealed partial class MainWindow
                 // No components installed — simple confirm
                 var dialog = new ContentDialog
                 {
-                    Title = "Remove Game",
+                    Title = Loc.Tr("Remove Game"),
                     Content = new TextBlock
                     {
                         Text = $"Remove {card.GameName} from RHI?",
                         FontSize = 12,
                         TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                     },
-                    PrimaryButtonText = "Remove",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.Tr("Remove"),
+                    CloseButtonText = Loc.Tr("Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -1141,14 +1141,14 @@ public sealed partial class MainWindow
         var progressPanel = new StackPanel { Spacing = 8 };
         var progressRow = new StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 12 };
         var progressRing = new ProgressRing { IsActive = true, Width = 20, Height = 20 };
-        var progressText = new TextBlock { Text = "Clearing caches...", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
+        var progressText = new TextBlock { Text = Loc.Tr("Clearing caches..."), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
         progressRow.Children.Add(progressRing);
         progressRow.Children.Add(progressText);
         progressPanel.Children.Add(progressRow);
 
         var progressDialog = new ContentDialog
         {
-            Title = "Full Refresh",
+            Title = Loc.Tr("Full Refresh"),
             Content = progressPanel,
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,

@@ -1036,8 +1036,8 @@ public partial class MainViewModel
             {
                 Title = $"⚠ Install Note — {gameName}",
                 Content = message,
-                PrimaryButtonText = "Continue",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.Tr("Continue"),
+                CloseButtonText = Loc.Tr("Cancel"),
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
                 XamlRoot = xamlRoot,
             };

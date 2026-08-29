@@ -131,7 +131,7 @@ public partial class DetailPanelBuilder
             _window.DetailEngineText.TextDecorations = isClickable ? Windows.UI.Text.TextDecorations.Underline : Windows.UI.Text.TextDecorations.None;
             _window.DetailEngineBadge.Tag = isClickable ? card : null;
             if (isClickable)
-                ToolTipService.SetToolTip(_window.DetailEngineBadge, "Click to cycle engine version (affects DOF Fix eligibility)");
+                ToolTipService.SetToolTip(_window.DetailEngineBadge, Loc.Tr("Click to cycle engine version (affects DOF Fix eligibility)"));
             else
                 ToolTipService.SetToolTip(_window.DetailEngineBadge, null);
         }
@@ -216,7 +216,7 @@ public partial class DetailPanelBuilder
 
         // Utility buttons — set Tag for event handlers
         _window.DetailFavBtn.Tag = card;
-        _window.DetailFavIcon.Text = "Favourite";
+        _window.DetailFavIcon.Text = Loc.Tr("Favourite");
         var favColor = card.IsFavourite
             ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
             : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
@@ -248,7 +248,7 @@ public partial class DetailPanelBuilder
         bool hdrActive = hdrOverride != null
             ? string.Equals(hdrOverride, "On", StringComparison.OrdinalIgnoreCase)
             : _window.ViewModel.Settings.HdrAutoToggle;
-        _window.DetailHdrToggleText.Text = "HDR";
+        _window.DetailHdrToggleText.Text = Loc.Tr("HDR");
         _window.DetailHdrToggleBtn.Background = hdrActive
             ? UIFactory.Brush(ResourceKeys.AccentPurpleBgBrush)
             : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
@@ -269,7 +269,7 @@ public partial class DetailPanelBuilder
             bool resActive = resOverride != null
                 ? string.Equals(resOverride, "On", StringComparison.OrdinalIgnoreCase)
                 : _window.ViewModel.Settings.ResolutionAutoToggle;
-            _window.DetailResToggleText.Text = "RES";
+            _window.DetailResToggleText.Text = Loc.Tr("RES");
             _window.DetailResToggleBtn.Background = resActive
                 ? UIFactory.Brush(ResourceKeys.AccentPurpleBgBrush)
                 : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);

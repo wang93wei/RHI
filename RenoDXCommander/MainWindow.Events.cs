@@ -28,18 +28,18 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Full Refresh",
-            Content = "This will clear all caches and re-scan everything from scratch:\n\n" +
-                      "• Re-detects all games from every storefront\n" +
-                      "• Re-scans DLSS/Streamline DLL paths\n" +
-                      "• Re-detects graphics APIs and engine types\n" +
-                      "• Rebuilds shader and addon deployment state\n\n" +
-                      "Try a normal Refresh first — it handles most issues without the full rescan. " +
-                      "Use Full Refresh as a last resort if games are missing, paths have changed, DLSS has been added to a game, or the DLSS section is missing from a game card.\n\n" +
-                      "The next couple of restarts may take a few seconds longer while caches are rebuilt.\n\n" +
-                      "Do not close RHI while the refresh is in progress — closing early will result in a missing library and the scan will need to be repeated.",
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            Title = Loc.Tr("Full Refresh"),
+            Content = Loc.Tr("This will clear all caches and re-scan everything from scratch:\n\n") +
+                      Loc.Tr("• Re-detects all games from every storefront\n") +
+                      Loc.Tr("• Re-scans DLSS/Streamline DLL paths\n") +
+                      Loc.Tr("• Re-detects graphics APIs and engine types\n") +
+                      Loc.Tr("• Rebuilds shader and addon deployment state\n\n") +
+                      Loc.Tr("Try a normal Refresh first — it handles most issues without the full rescan. ") +
+                      Loc.Tr("Use Full Refresh as a last resort if games are missing, paths have changed, DLSS has been added to a game, or the DLSS section is missing from a game card.\n\n") +
+                      Loc.Tr("The next couple of restarts may take a few seconds longer while caches are rebuilt.\n\n") +
+                      Loc.Tr("Do not close RHI while the refresh is in progress — closing early will result in a missing library and the scan will need to be repeated."),
+            PrimaryButtonText = Loc.Tr("Continue"),
+            CloseButtonText = Loc.Tr("Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot,
         };
@@ -58,14 +58,14 @@ public sealed partial class MainWindow
         var progressPanel = new StackPanel { Spacing = 8 };
         var progressRow = new StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 12 };
         var progressRing = new ProgressRing { IsActive = true, Width = 20, Height = 20 };
-        var progressText = new TextBlock { Text = "Fetching manifest...", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
+        var progressText = new TextBlock { Text = Loc.Tr("Fetching manifest..."), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
         progressRow.Children.Add(progressRing);
         progressRow.Children.Add(progressText);
         progressPanel.Children.Add(progressRow);
 
         var progressDialog = new ContentDialog
         {
-            Title = "Checking for updates...",
+            Title = Loc.Tr("Checking for updates..."),
             Content = progressPanel,
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -78,11 +78,11 @@ public sealed partial class MainWindow
             ViewModel.ForceNextUpdateCheck();
 
             // Trigger a Refresh (which fetches manifests + wiki + runs update checks)
-            DispatcherQueue?.TryEnqueue(() => progressText.Text = "Checking components...");
+            DispatcherQueue?.TryEnqueue(() => progressText.Text = Loc.Tr("Checking components..."));
             await ViewModel.RefreshAsync();
 
             // Check app update
-            DispatcherQueue?.TryEnqueue(() => progressText.Text = "Checking app version...");
+            DispatcherQueue?.TryEnqueue(() => progressText.Text = Loc.Tr("Checking app version..."));
             await _dialogService.CheckForAppUpdateAsync();
 
             progressDialog.Hide();
@@ -169,7 +169,7 @@ public sealed partial class MainWindow
         {
             content.Children.Add(new TextBlock
             {
-                Text = "Engine.ini Settings",
+                Text = Loc.Tr("Engine.ini Settings"),
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 Margin = new Thickness(0, 0, 0, 4),
@@ -184,7 +184,7 @@ public sealed partial class MainWindow
             // ── HDR on First Boot ──────────────────────────────────────────────
             var hdrLabel = new TextBlock
             {
-                Text = "HDR on First Boot",
+                Text = Loc.Tr("HDR on First Boot"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -197,7 +197,7 @@ public sealed partial class MainWindow
             hdrCombo.Items.Add("Off");
             hdrCombo.Items.Add("On");
             ToolTipService.SetToolTip(hdrCombo,
-                "Controls EnableHDR and DisplayMode in the [Luma] section of reshade.ini.\n" +
+                Loc.Tr("Controls EnableHDR and DisplayMode in the [Luma] section of reshade.ini.\n") +
                 "Default: leaves both keys as-is (Luma controls them).\n" +
                 "Off: sets EnableHDR=0 and DisplayMode=0.\n" +
                 "On: sets EnableHDR=1 and DisplayMode=1.");
@@ -231,7 +231,7 @@ public sealed partial class MainWindow
             // ── TAA Settings ───────────────────────────────────────────────────
             var taaLabel = new TextBlock
             {
-                Text = "TAA Settings",
+                Text = Loc.Tr("TAA Settings"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -243,7 +243,7 @@ public sealed partial class MainWindow
             taaCombo.Items.Add("Off");
             taaCombo.Items.Add("On");
             ToolTipService.SetToolTip(taaCombo,
-                "Writes r.DefaultFeature.AntiAliasing=2 and r.PostProcessAAQuality=4 to Engine.ini.\n" +
+                Loc.Tr("Writes r.DefaultFeature.AntiAliasing=2 and r.PostProcessAAQuality=4 to Engine.ini.\n") +
                 "Forces TAA with high quality for Luma HDR compatibility.");
 
             bool taaActive = ViewModel.IsLumaTaaEnabled(card.GameName);
@@ -285,9 +285,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Luma Settings",
+            Title = Loc.Tr("Luma Settings"),
             Content = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.Tr("Close"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = this.Content.XamlRoot,
         };
@@ -579,7 +579,7 @@ public sealed partial class MainWindow
         // Also refresh the detail panel icon if this is the selected game
         if (card == ViewModel.SelectedGame)
         {
-            DetailFavIcon.Text = "Favourite";
+            DetailFavIcon.Text = Loc.Tr("Favourite");
             var favColor = card.IsFavourite
                 ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
                 : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
@@ -613,7 +613,7 @@ public sealed partial class MainWindow
         // ── Open Folder ──
         var openFolderItem = new MenuFlyoutItem
         {
-            Text = "📂 Open Folder",
+            Text = Loc.Tr("📂 Open Folder"),
             Tag = card,
         };
         openFolderItem.Click += CardOpenFolder_Click;
@@ -635,7 +635,7 @@ public sealed partial class MainWindow
         {
             var discussionItem = new MenuFlyoutItem
             {
-                Text = "ℹ Discussion / Instructions",
+                Text = Loc.Tr("ℹ Discussion / Instructions"),
                 Tag = card,
             };
             discussionItem.Click += async (s, ev) =>
@@ -651,7 +651,7 @@ public sealed partial class MainWindow
         {
             var notesItem = new MenuFlyoutItem
             {
-                Text = "💬 View Notes",
+                Text = Loc.Tr("💬 View Notes"),
                 Tag = card,
             };
             notesItem.Click += async (s, ev) =>
@@ -816,7 +816,7 @@ public sealed partial class MainWindow
         var currentQuery = SearchBox.Text?.Trim() ?? "";
         if (string.IsNullOrEmpty(currentQuery)) return;
 
-        var nameBox = new TextBox { PlaceholderText = "Filter name", Text = currentQuery, Width = 350 };
+        var nameBox = new TextBox { PlaceholderText = Loc.Tr("Filter name"), Text = currentQuery, Width = 350 };
         var errorText = new TextBlock
         {
             Text = "",
@@ -828,7 +828,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Save Custom Filter",
+            Title = Loc.Tr("Save Custom Filter"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -844,8 +844,8 @@ public sealed partial class MainWindow
                     errorText,
                 }
             },
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Save"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = Content.XamlRoot,
             Background = Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme = ElementTheme.Dark,
@@ -857,7 +857,7 @@ public sealed partial class MainWindow
             var name = nameBox.Text?.Trim() ?? "";
             if (string.IsNullOrEmpty(name))
             {
-                errorText.Text = "Please enter a filter name.";
+                errorText.Text = Loc.Tr("Please enter a filter name.");
                 errorText.Visibility = Visibility.Visible;
                 args.Cancel = true;
                 return;
@@ -919,7 +919,7 @@ public sealed partial class MainWindow
 
             // Right-click context menu with "Delete" option (Req 5.1–5.5)
             var flyout = new MenuFlyout();
-            var deleteItem = new MenuFlyoutItem { Text = "Delete" };
+            var deleteItem = new MenuFlyoutItem { Text = Loc.Tr("Delete") };
             deleteItem.Click += (s, args) =>
             {
                 ViewModel.Filter.RemoveCustomFilter(chipName);
@@ -989,19 +989,19 @@ public sealed partial class MainWindow
         nameBox.SelectAll();
         var nameDialog = new ContentDialog
         {
-            Title           = "Name This Game",
+            Title           = Loc.Tr("Name This Game"),
             Content         = new StackPanel
             {
                 Spacing = 10,
                 Children =
                 {
                     new TextBlock { Text = $"Selected: {filePath}", TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush), FontSize = 11 },
-                    new TextBlock { Text = "Enter the game name:", TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush) },
+                    new TextBlock { Text = Loc.Tr("Enter the game name:"), TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush) },
                     nameBox
                 }
             },
-            PrimaryButtonText   = "Add Game",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.Tr("Add Game"),
+            CloseButtonText     = Loc.Tr("Cancel"),
             XamlRoot            = Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme      = ElementTheme.Dark,
@@ -1035,7 +1035,7 @@ public sealed partial class MainWindow
         ViewModel.ToggleFavouriteCommand.Execute(card);
 
         // Refresh the detail panel icon to reflect the new state
-        DetailFavIcon.Text = "Favourite";
+        DetailFavIcon.Text = Loc.Tr("Favourite");
         var favColor = card.IsFavourite
             ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
             : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
@@ -1089,17 +1089,17 @@ public sealed partial class MainWindow
             {
                 var warningDialog = new ContentDialog
                 {
-                    Title = "⚠ ReShade Addons",
+                    Title = Loc.Tr("⚠ ReShade Addons"),
                     Content = new TextBlock
                     {
-                        Text = "ReShade addons are advanced features intended for experienced users who understand what they are.\n\n" +
-                               "Addons can modify game rendering behaviour and may cause instability. " +
-                               "Only proceed if you are comfortable managing ReShade addons.",
+                        Text = Loc.Tr("ReShade addons are advanced features intended for experienced users who understand what they are.\n\n") +
+                               Loc.Tr("Addons can modify game rendering behaviour and may cause instability. ") +
+                               Loc.Tr("Only proceed if you are comfortable managing ReShade addons."),
                         TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                         MaxWidth = 450,
                     },
-                    PrimaryButtonText = "Continue",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.Tr("Continue"),
+                    CloseButtonText = Loc.Tr("Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };

@@ -44,7 +44,7 @@ public partial class DialogService
     {
         var dlg = new ContentDialog
         {
-            Title   = "🔄 Update Available",
+            Title   = Loc.Tr("🔄 Update Available"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -58,12 +58,12 @@ public partial class DialogService
                         Text         = $"A new version of RHI is available!\n\n" +
                                        $"Installed:  v{updateInfo.CurrentVersion}\n" +
                                        $"Available:  v{updateInfo.DisplayVersion ?? updateInfo.RemoteVersion.ToString()}\n\n" +
-                                       "Would you like to update now?",
+                                       Loc.Tr("Would you like to update now?"),
                     },
                 },
             },
-            PrimaryButtonText   = "Update Now",
-            CloseButtonText     = "Later",
+            PrimaryButtonText   = Loc.Tr("Update Now"),
+            CloseButtonText     = Loc.Tr("Later"),
             XamlRoot            = _window.Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceRaisedBrush),
             RequestedTheme      = ElementTheme.Dark,
@@ -81,7 +81,7 @@ public partial class DialogService
         // Create a non-dismissable progress dialog
         var progressText = new TextBlock
         {
-            Text         = "Starting download...",
+            Text         = Loc.Tr("Starting download..."),
             TextWrapping = TextWrapping.Wrap,
             Foreground   = Brush(ResourceKeys.TextSecondaryBrush),
             FontSize     = 13,
@@ -96,7 +96,7 @@ public partial class DialogService
         };
         var downloadDlg = new ContentDialog
         {
-            Title   = "⬇ Downloading Update",
+            Title   = Loc.Tr("⬇ Downloading Update"),
             Content = new StackPanel
             {
                 Spacing = 12,
@@ -141,9 +141,9 @@ public partial class DialogService
             // Download failed — update dialog to show error with a Close button
             _dispatcherQueue.TryEnqueue(() =>
             {
-                progressText.Text = "❌ Download failed. Please try again later or download manually from GitHub.";
+                progressText.Text = Loc.Tr("❌ Download failed. Please try again later or download manually from GitHub.");
                 progressBar.Value = 0;
-                downloadDlg.CloseButtonText = "Close";
+                downloadDlg.CloseButtonText = Loc.Tr("Close");
             });
             return;
         }
@@ -258,9 +258,9 @@ public partial class DialogService
 
         var dlg = new ContentDialog
         {
-            Title              = "📋 Patch Notes — What's New",
+            Title              = Loc.Tr("📋 Patch Notes — What's New"),
             Content            = scrollViewer,
-            CloseButtonText    = "Close",
+            CloseButtonText    = Loc.Tr("Close"),
             XamlRoot           = _window.Content.XamlRoot,
             Background         = Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme     = ElementTheme.Dark,
@@ -291,7 +291,7 @@ public partial class DialogService
                 {
                     var dlg = new ContentDialog
                     {
-                        Title = "📢 Message from RHI",
+                        Title = Loc.Tr("📢 Message from RHI"),
                         Content = new ScrollViewer
                         {
                             Content = new TextBlock
@@ -302,7 +302,7 @@ public partial class DialogService
                             },
                             MaxHeight = 400,
                         },
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.Tr("OK"),
                         XamlRoot = _window.Content.XamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     };

@@ -84,7 +84,7 @@ public partial class DetailPanelBuilder
                 ToolTipService.SetToolTip(dxvkModeCombo, card.DxvkToggleTooltip);
             else
                 ToolTipService.SetToolTip(dxvkModeCombo,
-                    "Off = DXVK disabled.\nDevelopment/Stable/Lilium HDR = DXVK variant selection.\nDXVK translates DirectX to Vulkan — enables compute shaders.");
+                    Loc.Tr("Off = DXVK disabled.\nDevelopment/Stable/Lilium HDR = DXVK variant selection.\nDXVK translates DirectX to Vulkan — enables compute shaders."));
 
             var dxvkToggle = new ToggleSwitch { IsOn = card.DxvkEnabled, Visibility = Visibility.Collapsed };
             dxvkToggleResult = dxvkToggle;
@@ -151,7 +151,7 @@ public partial class DetailPanelBuilder
             var dxvkColumn = new StackPanel { Spacing = 6 };
             dxvkColumn.Children.Add(new TextBlock
             {
-                Text = "DXVK",
+                Text = Loc.Tr("DXVK"),
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 Margin = new Thickness(0, 0, 0, 4),
@@ -193,7 +193,7 @@ public partial class DetailPanelBuilder
                 var liliumPresetCol = new StackPanel { Spacing = 6 };
                 liliumPresetCol.Children.Add(new TextBlock
                 {
-                    Text = "Lilium HDR Preset",
+                    Text = Loc.Tr("Lilium HDR Preset"),
                     FontSize = 12,
                     Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                     Margin = new Thickness(0, 0, 0, 4),
@@ -213,7 +213,7 @@ public partial class DetailPanelBuilder
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                 };
                 ToolTipService.SetToolTip(liliumPresetCombo,
-                    "Controls how aggressively DXVK upgrades render targets for HDR.\n\n" +
+                    Loc.Tr("Controls how aggressively DXVK upgrades render targets for HDR.\n\n") +
                     "Safest = swap chain only (near 100% compatible).\n" +
                     "Higher tiers upgrade back buffers and render targets — better HDR but may cause visual issues.");
 
@@ -266,7 +266,7 @@ public partial class DetailPanelBuilder
 
         var changeFolderBtn = new Button
         {
-            Content = "Change install folder",
+            Content = Loc.Tr("Change install folder"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -278,7 +278,7 @@ public partial class DetailPanelBuilder
             Tag = card,
         };
         changeFolderBtn.Click += (s, ev) => _window.BrowseFolder_Click(s, ev);
-        ToolTipService.SetToolTip(changeFolderBtn, "Change the install folder for this game. Use when auto-detection picked the wrong directory.");
+        ToolTipService.SetToolTip(changeFolderBtn, Loc.Tr("Change the install folder for this game. Use when auto-detection picked the wrong directory."));
         Grid.SetColumn(changeFolderBtn, 0);
         mgmtRow.Children.Add(changeFolderBtn);
 
@@ -288,7 +288,7 @@ public partial class DetailPanelBuilder
 
         var removeGameBtn = new Button
         {
-            Content = "Reset / Remove game",
+            Content = Loc.Tr("Reset / Remove game"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -300,7 +300,7 @@ public partial class DetailPanelBuilder
             Tag = card,
         };
         removeGameBtn.Click += (s, ev) => _window.RemoveManualGame_Click(s, ev);
-        ToolTipService.SetToolTip(removeGameBtn, "Reset the install folder to auto-detected, or remove a manually added game entirely.");
+        ToolTipService.SetToolTip(removeGameBtn, Loc.Tr("Reset the install folder to auto-detected, or remove a manually added game entirely."));
         Grid.SetColumn(removeGameBtn, 2);
         mgmtRow.Children.Add(removeGameBtn);
 
@@ -310,7 +310,7 @@ public partial class DetailPanelBuilder
 
         var mgmtResetOverridesBtn = new Button
         {
-            Content = "Reset Overrides",
+            Content = Loc.Tr("Reset Overrides"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -326,7 +326,7 @@ public partial class DetailPanelBuilder
             ctx.ResetAction?.Invoke();
         };
         Grid.SetColumn(mgmtResetOverridesBtn, 4);
-        ToolTipService.SetToolTip(mgmtResetOverridesBtn, "Reset all per-game overrides back to defaults (DLL names, channels, shaders, addons, DXVK, launch settings, update inclusion).");
+        ToolTipService.SetToolTip(mgmtResetOverridesBtn, Loc.Tr("Reset all per-game overrides back to defaults (DLL names, channels, shaders, addons, DXVK, launch settings, update inclusion)."));
         mgmtRow.Children.Add(mgmtResetOverridesBtn);
 
         var sep3 = new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(8, 4, 8, 4) };
@@ -335,7 +335,7 @@ public partial class DetailPanelBuilder
 
         var reportBtn = new Button
         {
-            Content = "Copy Report",
+            Content = Loc.Tr("Copy Report"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -353,7 +353,7 @@ public partial class DetailPanelBuilder
                 await GameReportEncoder.ShowAndCopyAsync(_window.Content.XamlRoot, targetCard, _window.ViewModel);
         };
         Grid.SetColumn(reportBtn, 6);
-        ToolTipService.SetToolTip(reportBtn, "Copy a diagnostic report for this game to the clipboard. Useful for Discord or GitHub support.");
+        ToolTipService.SetToolTip(reportBtn, Loc.Tr("Copy a diagnostic report for this game to the clipboard. Useful for Discord or GitHub support."));
         mgmtRow.Children.Add(reportBtn);
 
         _window.ManagementPanel.Children.Add(mgmtRow);

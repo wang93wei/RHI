@@ -55,9 +55,9 @@ public partial class DragDropHandler
         {
             var dupDialog = new ContentDialog
             {
-                Title           = "Game Already Exists",
+                Title           = Loc.Tr("Game Already Exists"),
                 Content         = $"\"{existingCard.GameName}\" is already in your library at:\n{existingCard.InstallPath}",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot        = _window.Content.XamlRoot,
                 Background      = UIFactory.Brush(ResourceKeys.SurfaceToolbarBrush),
                 RequestedTheme  = ElementTheme.Dark,
@@ -79,7 +79,7 @@ public partial class DragDropHandler
         var confirmPanel = new StackPanel { Spacing = 8 };
         confirmPanel.Children.Add(new TextBlock
         {
-            Text = "Game name:", Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            Text = Loc.Tr("Game name:"), Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         });
         confirmPanel.Children.Add(nameBox);
         confirmPanel.Children.Add(new TextBlock
@@ -92,10 +92,10 @@ public partial class DragDropHandler
 
         var confirmDialog = new ContentDialog
         {
-            Title             = "➕ Add Dropped Game",
+            Title             = Loc.Tr("➕ Add Dropped Game"),
             Content           = confirmPanel,
-            PrimaryButtonText = "Add Game",
-            CloseButtonText   = "Cancel",
+            PrimaryButtonText = Loc.Tr("Add Game"),
+            CloseButtonText   = Loc.Tr("Cancel"),
             XamlRoot          = _window.Content.XamlRoot,
             Background        = UIFactory.Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme    = ElementTheme.Dark,

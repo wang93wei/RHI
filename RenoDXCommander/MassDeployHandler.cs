@@ -27,10 +27,10 @@ public class MassDeployHandler
         var eligible = _window.ViewModel.AllCards.Where(c => c.RsStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
         var confirmDialog = new ContentDialog
         {
-            Title = "Confirm Mass Deployment",
+            Title = Loc.Tr("Confirm Mass Deployment"),
             Content = $"This will deploy reshade.ini to {eligible.Count} game(s) with ReShade installed.\n\nCustom hotkey and screenshot path settings are preserved.\n\nContinue?",
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Deploy"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -64,10 +64,10 @@ public class MassDeployHandler
         var eligible = _window.ViewModel.AllCards.Where(c => c.UlStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
         var confirmDialog = new ContentDialog
         {
-            Title = "Confirm Mass Deployment",
+            Title = Loc.Tr("Confirm Mass Deployment"),
             Content = $"This will deploy relimiter.ini to {eligible.Count} game(s) with ReLimiter installed.\n\nContinue?",
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Deploy"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -95,10 +95,10 @@ public class MassDeployHandler
         var eligible = _window.ViewModel.AllCards.Where(c => c.DcStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
         var confirmDialog = new ContentDialog
         {
-            Title = "Confirm Mass Deployment",
+            Title = Loc.Tr("Confirm Mass Deployment"),
             Content = $"This will deploy DisplayCommander.ini to {eligible.Count} game(s) with Display Commander installed.\n\nContinue?",
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Deploy"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -135,10 +135,10 @@ public class MassDeployHandler
         var eligible = _window.ViewModel.AllCards.Where(c => c.OsStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
         var confirmDialog = new ContentDialog
         {
-            Title = "Confirm Mass Deployment",
+            Title = Loc.Tr("Confirm Mass Deployment"),
             Content = $"This will deploy OptiScaler.ini to {eligible.Count} game(s) with OptiScaler installed.\n\nContinue?",
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Deploy"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -167,9 +167,9 @@ public class MassDeployHandler
             : $"No games found with the corresponding component installed.";
         var dialog = new ContentDialog
         {
-            Title = "Mass INI Deployment",
+            Title = Loc.Tr("Mass INI Deployment"),
             Content = message,
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.Tr("OK"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -192,9 +192,9 @@ public class MassDeployHandler
         {
             var noGamesDialog = new ContentDialog
             {
-                Title = "No Games Available",
-                Content = "No games with ReShade installed were found. Install ReShade on at least one game first.",
-                CloseButtonText = "OK",
+                Title = Loc.Tr("No Games Available"),
+                Content = Loc.Tr("No games with ReShade installed were found. Install ReShade on at least one game first."),
+                CloseButtonText = Loc.Tr("OK"),
                 XamlRoot = xamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -208,14 +208,14 @@ public class MassDeployHandler
         // Select All / Deselect All buttons
         var selectAllBtn = new Button
         {
-            Content = "Select All",
+            Content = Loc.Tr("Select All"),
             FontSize = 11,
             Padding = new Thickness(8, 4, 8, 4),
             Margin = new Thickness(0, 0, 8, 8),
         };
         var deselectAllBtn = new Button
         {
-            Content = "Deselect All",
+            Content = Loc.Tr("Deselect All"),
             FontSize = 11,
             Padding = new Thickness(8, 4, 8, 4),
             Margin = new Thickness(0, 0, 0, 8),
@@ -253,9 +253,9 @@ public class MassDeployHandler
         {
             Title = $"Select Games — {string.Join(", ", selectedPresets)}",
             Content = gameScrollViewer,
-            PrimaryButtonText = "Deploy",
+            PrimaryButtonText = Loc.Tr("Deploy"),
             IsPrimaryButtonEnabled = false,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
             MinWidth = 500,
@@ -297,10 +297,10 @@ public class MassDeployHandler
         // ── 4. Offer shader installation ─────────────────────────────────────
         var shaderDialog = new ContentDialog
         {
-            Title = "🔧 Install Shaders?",
+            Title = Loc.Tr("🔧 Install Shaders?"),
             Content = $"Presets deployed to {selectedGames.Count} game(s).\n\nAlso install the required shader packs for these games?",
-            PrimaryButtonText = "Yes",
-            CloseButtonText = "No",
+            PrimaryButtonText = Loc.Tr("Yes"),
+            CloseButtonText = Loc.Tr("No"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };

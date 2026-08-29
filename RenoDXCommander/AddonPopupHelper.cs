@@ -40,14 +40,14 @@ public static class AddonPopupHelper
         {
             var emptyDlg = new ContentDialog
             {
-                Title = "Select Addons",
+                Title = Loc.Tr("Select Addons"),
                 Content = new TextBlock
                 {
-                    Text = "No addons available.",
+                    Text = Loc.Tr("No addons available."),
                     FontSize = 13,
                     Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                 },
-                CloseButtonText = "Close",
+                CloseButtonText = Loc.Tr("Close"),
                 XamlRoot = xamlRoot,
                 Background = Brush(ResourceKeys.SurfaceOverlayBrush),
                 MinWidth = 750,
@@ -68,7 +68,7 @@ public static class AddonPopupHelper
             "RHI", "Custom", "Addons");
         var folderLink = new HyperlinkButton
         {
-            Content = "Place custom .addon64/.addon32 files here",
+            Content = Loc.Tr("Place custom .addon64/.addon32 files here"),
             FontSize = 11,
             Foreground = Brush(ResourceKeys.AccentBlueBrush),
             Padding = new Thickness(0),
@@ -139,8 +139,8 @@ public static class AddonPopupHelper
             var toggle = new ToggleSwitch
             {
                 IsOn = isSelected,
-                OnContent = "On",
-                OffContent = "Off",
+                OnContent = Loc.Tr("On"),
+                OffContent = Loc.Tr("Off"),
                 VerticalAlignment = VerticalAlignment.Center,
             };
 
@@ -204,7 +204,7 @@ public static class AddonPopupHelper
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "Custom Addons",
+                Text = Loc.Tr("Custom Addons"),
                 FontSize = 12,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -253,8 +253,8 @@ public static class AddonPopupHelper
                 var toggle = new ToggleSwitch
                 {
                     IsOn = isSelected,
-                    OnContent = "On",
-                    OffContent = "Off",
+                    OnContent = Loc.Tr("On"),
+                    OffContent = Loc.Tr("Off"),
                     VerticalAlignment = VerticalAlignment.Center,
                 };
                 toggle.Toggled += (s, ev) => { if (suppressToggle) return; };
@@ -289,10 +289,10 @@ public static class AddonPopupHelper
 
         var dlg = new ContentDialog
         {
-            Title = "Select Addons",
+            Title = Loc.Tr("Select Addons"),
             Content = scrollViewer,
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.Tr("Deploy"),
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = xamlRoot,
             Background = Brush(ResourceKeys.SurfaceOverlayBrush),
             MinWidth = 750,

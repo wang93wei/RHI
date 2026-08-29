@@ -50,7 +50,7 @@ public static class PresetPopupHelper
 
             var emptyDlg = new ContentDialog
             {
-                Title = "Select ReShade Presets",
+                Title = Loc.Tr("Select ReShade Presets"),
                 Content = new StackPanel
                 {
                     Spacing = 8,
@@ -58,13 +58,13 @@ public static class PresetPopupHelper
                     {
                         new TextBlock
                         {
-                            Text = "No preset files found.",
+                            Text = Loc.Tr("No preset files found."),
                             FontSize = 13,
                             Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                         },
                         new TextBlock
                         {
-                            Text = "Place .ini files in:",
+                            Text = Loc.Tr("Place .ini files in:"),
                             FontSize = 11,
                             Opacity = 0.6,
                             Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -72,8 +72,8 @@ public static class PresetPopupHelper
                         emptyPathLink,
                     },
                 },
-                PrimaryButtonText = "Open Folder",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.Tr("Open Folder"),
+                CloseButtonText = Loc.Tr("Cancel"),
                 XamlRoot = xamlRoot,
                 Background = Brush(ResourceKeys.SurfaceOverlayBrush),
                 RequestedTheme = ElementTheme.Dark,
@@ -100,7 +100,7 @@ public static class PresetPopupHelper
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 6),
         };
-        pathLink.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = "Presets from: " });
+        pathLink.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = Loc.Tr("Presets from: ") });
         var linkRun = new Microsoft.UI.Xaml.Documents.Hyperlink();
         linkRun.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = PresetsDir });
         linkRun.Click += (s, e) =>
@@ -136,11 +136,11 @@ public static class PresetPopupHelper
 
         var dlg = new ContentDialog
         {
-            Title = "Select ReShade Presets",
+            Title = Loc.Tr("Select ReShade Presets"),
             Content = scrollViewer,
-            PrimaryButtonText = "Deploy",
+            PrimaryButtonText = Loc.Tr("Deploy"),
             IsPrimaryButtonEnabled = false,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.Tr("Cancel"),
             XamlRoot = xamlRoot,
             Background = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme = ElementTheme.Dark,

@@ -20,7 +20,7 @@ public partial class DialogService
 
         var dlg = new ContentDialog
         {
-            Title               = "⚠ Unknown dxgi.dll Detected",
+            Title               = Loc.Tr("⚠ Unknown dxgi.dll Detected"),
             Content             = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
@@ -28,12 +28,12 @@ public partial class DialogService
                 FontSize     = 13,
                 Text         = $"A dxgi.dll file was found in:\n{card.InstallPath}\n\n" +
                                $"File size: {sizeKB:N0} KB\n\n" +
-                               "RHI cannot identify this file as ReShade or Display Commander. " +
-                               "It may belong to another mod (e.g. DXVK, Special K, ENB).\n\n" +
-                               "Overwriting it may break the existing mod. Do you want to proceed?",
+                               Loc.Tr("RHI cannot identify this file as ReShade or Display Commander. ") +
+                               Loc.Tr("It may belong to another mod (e.g. DXVK, Special K, ENB).\n\n") +
+                               Loc.Tr("Overwriting it may break the existing mod. Do you want to proceed?"),
             },
-            PrimaryButtonText   = "Overwrite",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.Tr("Overwrite"),
+            CloseButtonText     = Loc.Tr("Cancel"),
             XamlRoot            = _window.Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme      = ElementTheme.Dark,
@@ -50,7 +50,7 @@ public partial class DialogService
 
         var dlg = new ContentDialog
         {
-            Title               = "⚠ Unknown winmm.dll Detected",
+            Title               = Loc.Tr("⚠ Unknown winmm.dll Detected"),
             Content             = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
@@ -58,12 +58,12 @@ public partial class DialogService
                 FontSize     = 13,
                 Text         = $"A winmm.dll file was found in:\n{card.InstallPath}\n\n" +
                                $"File size: {sizeKB:N0} KB\n\n" +
-                               "RHI cannot identify this file as Display Commander. " +
-                               "It may belong to another mod or DLL injector.\n\n" +
-                               "Overwriting it may break the existing mod. Do you want to proceed?",
+                               Loc.Tr("RHI cannot identify this file as Display Commander. ") +
+                               Loc.Tr("It may belong to another mod or DLL injector.\n\n") +
+                               Loc.Tr("Overwriting it may break the existing mod. Do you want to proceed?"),
             },
-            PrimaryButtonText   = "Overwrite",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.Tr("Overwrite"),
+            CloseButtonText     = Loc.Tr("Cancel"),
             XamlRoot            = _window.Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme      = ElementTheme.Dark,
@@ -192,7 +192,7 @@ public partial class DialogService
             {
                 Title           = $"{addonName} — {card.GameName}",
                 Content         = scrollContent,
-                CloseButtonText = "Close",
+                CloseButtonText = Loc.Tr("Close"),
                 XamlRoot        = _window.Content.XamlRoot,
                 Background      = Brush(ResourceKeys.SurfaceToolbarBrush),
                 RequestedTheme  = ElementTheme.Dark,
@@ -248,7 +248,7 @@ public partial class DialogService
                 BorderThickness     = new Thickness(1),
                 Child = new TextBlock
                 {
-                    Text       = "RTX HDR Enabled",
+                    Text       = Loc.Tr("RTX HDR Enabled"),
                     FontSize   = 12,
                     Foreground = Brush(ResourceKeys.AccentGreenBrush),
                 }
@@ -257,9 +257,9 @@ public partial class DialogService
 
             panel.Children.Add(new TextBlock
             {
-                Text = "RTX HDR uses NVIDIA's driver-level HDR injection to upgrade SDR games to HDR. " +
-                       "It works at the GPU level without injecting DLLs into the game, making it compatible with anti-cheat systems.\n\n" +
-                       "Requires: NVIDIA App installed, Game Filter/Freestyle enabled, RTX GPU, driver 550+.",
+                Text = Loc.Tr("RTX HDR uses NVIDIA's driver-level HDR injection to upgrade SDR games to HDR. ") +
+                       Loc.Tr("It works at the GPU level without injecting DLLs into the game, making it compatible with anti-cheat systems.\n\n") +
+                       Loc.Tr("Requires: NVIDIA App installed, Game Filter/Freestyle enabled, RTX GPU, driver 550+."),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground   = textColour,
                 FontSize     = 13,
@@ -348,7 +348,7 @@ public partial class DialogService
         {
             panel.Children.Add(new TextBlock
             {
-                Text       = "No additional RenoDX notes for this game.",
+                Text       = Loc.Tr("No additional RenoDX notes for this game."),
                 Foreground = dimColour,
                 FontSize   = 13,
             });
@@ -403,7 +403,7 @@ public partial class DialogService
             if (card.LumaDlssFsrSupported)
                 flagPanel.Children.Add(new TextBlock
                 {
-                    Text = "✅ DLSS / FSR",
+                    Text = Loc.Tr("✅ DLSS / FSR"),
                     FontSize = 12,
                     Foreground = Brush(ResourceKeys.AccentGreenBrush),
                 });
@@ -411,7 +411,7 @@ public partial class DialogService
             if (card.LumaHdrSupported)
                 flagPanel.Children.Add(new TextBlock
                 {
-                    Text = "✅ HDR",
+                    Text = Loc.Tr("✅ HDR"),
                     FontSize = 12,
                     Foreground = Brush(ResourceKeys.AccentGreenBrush),
                 });
@@ -502,7 +502,7 @@ public partial class DialogService
             {
                 panel.Children.Add(new TextBlock
                 {
-                    Text       = "No additional Luma notes for this game.",
+                    Text       = Loc.Tr("No additional Luma notes for this game."),
                     Foreground = dimColour,
                     FontSize   = 13,
                 });
@@ -573,7 +573,7 @@ public partial class DialogService
         {
             panel.Children.Add(new TextBlock
             {
-                Text       = "No OptiScaler compatibility data available for this game.",
+                Text       = Loc.Tr("No OptiScaler compatibility data available for this game."),
                 Foreground = dimColour,
                 FontSize   = 13,
             });
@@ -639,7 +639,7 @@ public partial class DialogService
             };
             link.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run
             {
-                Text     = "View details",
+                Text     = Loc.Tr("View details"),
                 FontSize = 13,
             });
             var para = new Microsoft.UI.Xaml.Documents.Paragraph();
@@ -864,20 +864,20 @@ public partial class DialogService
 
             var dlg = new ContentDialog
             {
-                Title               = "⚠ UE-Extended Compatibility Warning",
+                Title               = Loc.Tr("⚠ UE-Extended Compatibility Warning"),
                 Content             = new TextBlock
                 {
                     TextWrapping = TextWrapping.Wrap,
                     FontSize     = 13,
-                    Text         = "Not all Unreal Engine games are compatible with UE-Extended.\n\n" +
-                                   "UE-Extended uses a generic injection method that works with most " +
-                                   "Unreal Engine games but may cause crashes or visual issues with others. " +
-                                   "If the game has a named RenoDX mod, that mod is specifically tailored " +
-                                   "for the game and may provide better results." +
+                    Text         = Loc.Tr("Not all Unreal Engine games are compatible with UE-Extended.\n\n") +
+                                   Loc.Tr("UE-Extended uses a generic injection method that works with most ") +
+                                   Loc.Tr("Unreal Engine games but may cause crashes or visual issues with others. ") +
+                                   Loc.Tr("If the game has a named RenoDX mod, that mod is specifically tailored ") +
+                                   Loc.Tr("for the game and may provide better results.") +
                                    notesHint,
                 },
-                PrimaryButtonText   = "OK, I understand",
-                SecondaryButtonText = "Don't show again",
+                PrimaryButtonText   = Loc.Tr("OK, I understand"),
+                SecondaryButtonText = Loc.Tr("Don't show again"),
                 XamlRoot            = _window.Content.XamlRoot,
                 Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
                 RequestedTheme      = ElementTheme.Dark,
@@ -908,19 +908,19 @@ public partial class DialogService
 
             var dlg = new ContentDialog
             {
-                Title = "Administrator Privileges Required",
+                Title = Loc.Tr("Administrator Privileges Required"),
                 Content = new TextBlock
                 {
                     TextWrapping = TextWrapping.Wrap,
                     FontSize = 13,
-                    Text = "Installing the Vulkan ReShade layer requires writing to C:\\ProgramData\\ReShade\\ " +
-                           "and modifying system registry keys, which needs administrator privileges.\n\n" +
-                           "Enable Admin Mode — RHI will always launch elevated (no UAC prompt after setup).\n\n" +
-                           "Restart as Admin — one-time elevated restart to complete this install.",
+                    Text = Loc.Tr("Installing the Vulkan ReShade layer requires writing to C:\\ProgramData\\ReShade\\ ") +
+                           Loc.Tr("and modifying system registry keys, which needs administrator privileges.\n\n") +
+                           Loc.Tr("Enable Admin Mode — RHI will always launch elevated (no UAC prompt after setup).\n\n") +
+                           Loc.Tr("Restart as Admin — one-time elevated restart to complete this install."),
                 },
-                PrimaryButtonText = "Enable Admin Mode",
-                SecondaryButtonText = "Restart as Admin",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.Tr("Enable Admin Mode"),
+                SecondaryButtonText = Loc.Tr("Restart as Admin"),
+                CloseButtonText = Loc.Tr("Cancel"),
                 XamlRoot = _window.Content.XamlRoot,
                 Background = Brush(ResourceKeys.SurfaceOverlayBrush),
                 RequestedTheme = ElementTheme.Dark,
