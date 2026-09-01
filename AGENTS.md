@@ -22,12 +22,12 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 
 # RHI — Agent Guide
 
-Windows-only desktop app (WinUI 3, .NET 8, `net8.0-windows10.0.19041.0`). AssemblyName `RHI`, `AllowUnsafeBlocks=true`, `Nullable enable`, `ImplicitUsings enable`. No `opencode.json` at root — opencode config lives in `.opencode/`.
+Windows-only desktop app (WinUI 3, .NET 8, `net8.0-windows10.0.19041.0`). AssemblyName `RHI`, `AllowUnsafeBlocks=true`, `Nullable enable`, `ImplicitUsings enable`. No `opencode.json` at root — opencode config lives in `.opencode/`. ZCode platform config (SessionStart/UserPromptSubmit/PreToolUse hooks + trellis skills) lives in `.zcode/`; Trellis skills are mirrored across `.zcode/skills/`, `.agents/skills/`, `.opencode/skills/` — edit the source once via Trellis, not the mirrors.
 
 ## Solution Layout
 
 - `RenoDXCommander/` — main WinExe (`RenoDXCommander.csproj:1-24`), ~125 `Services/*.cs`, `ViewModels/` (Main/GameCard/Filter/Settings + `*.{Capability}.cs` partials), `Models/` (pure DTOs), `Collections/`, `Controls/`, `Converters/`, `Themes/DarkTheme.xaml`, `Assets/` + loose handlers (`DetailPanelBuilder*.cs`, `DragDropHandler*.cs`, `UIFactory.cs`, `HotkeyManager.cs`)
-- `RenoDXCommander.Tests/` — xUnit, pure-logic only (`CoreLogicTests.cs` — no FS/network/DI)
+- `RenoDXCommander.Tests/` — xUnit, pure-logic only (no FS/network/DI): `CoreLogicTests.cs` + `LocalizationTests.cs` (catalogs injected in-memory via `SetCatalogForTesting`)
 - `RHI.DropHelper/` — non-elevated helper for drag-drop when main app is elevated
 - `tools/RHI-Stats/`, `tools/RHI-ManifestEditor/` — auxiliary tools
 - `Directory.Build.props:2` defaults `Platform=x64` when `AnyCPU`; primary platform is `x64` (`win-x64`)
@@ -53,12 +53,23 @@ dotnet publish RenoDXCommander/RenoDXCommander.csproj -c Release -r win-x64 -p:P
 - **VMs**: `CommunityToolkit.Mvvm`, `[ObservableProperty]` — never hand-write `INotifyPropertyChanged`.
 - **Logging**: No Serilog/ILogger — use `Services/CrashReporter.Log("[Service] msg")` (ring buffer 300 + `%LocalAppData%\RHI\logs\` rotation 10). `VerboseLogging` switch in `SettingsViewModel`.
 - **Entrypoint**: `App.xaml.cs` → `MainWindow.xaml` + `MainWindow.*.cs` (5 partials) + `ViewModels/MainViewModel*.cs`.
+- **i18n**: `ILocalizationService`/`LocalizationService` (singleton, `App.xaml.cs`) with `LanguageChanged` event for live switching. Read `.trellis/spec/app/i18n.md` before touching any user-visible text.
+
+## Internationalization (i18n)
+
+- **Catalogs**: `RenoDXCommander/Assets/Languages/{en-US,zh-CN,zh-TW,ja-JP,ko-KR}.json` — flat `key -> value`, packaged as `Content`. `en-US.json` is the authoritative baseline; every other language must have the same keys present (1:1). Keys must be unique **case-insensitively** per file — duplicates break the runtime catalog loader and fail CI (`28cc1ee`).
+- **Key naming**: `Area.Component.Key` with `.Tooltip` / `.Placeholder` / `.Button` suffixes, placeholders as `{0}` (`string.Format`), e.g. `Dialog.UnknownDxgi.Content`.
+- **XAML**: `Text="{Binding [Settings.Title], Source={StaticResource Loc}}"` (indexer binding). `StaticResource Loc` is a design-time placeholder in `App.xaml` replaced with the singleton in `App.xaml.cs` before `MainWindow` loads. Never `x:Bind` and never hard-code user-visible text (`Text="Settings"` fails the coverage scan).
+- **C#**: `ILocalizationService.GetString(key, args)` — fallback is current language → en-US → raw key, never throws; missing key logs once via `CrashReporter`. `LocConverter` (`Converters/LocConverter.cs`) for `ConverterParameter` cases.
+- **Persistence**: `settings.json` key `Language`, values `System|en-US|zh-CN|zh-TW|ja-JP|ko-KR`, default `System`; `ResolveSystemLanguage()` maps aliases/prefixes (`zh-Hans→zh-CN`, `en-GB→en-US` …) → `en-US`.
+- **Validation**: CI runs `python tools/check-i18n-coverage.py --strict` (`.github/workflows/build.yml`) — exits 1 on case-insensitive duplicate keys, missing files, or any language < 50% coverage; also reports hard-coded XAML strings (whitelist: `RHI`, `by `, `Licence`, `github.com`, `▶`/`↺` etc.).
+- **Tests**: `RenoDXCommander.Tests/LocalizationTests.cs` — `dotnet test --filter Localization`.
 
 ## Spec & Workflow
 
-- Read `.trellis/spec/app/index.md` and the relevant guide before coding: `directory-structure.md`, `service-patterns.md`, `viewmodel-patterns.md`, `error-handling.md`, `logging-guidelines.md`, `quality-guidelines.md`. Guides are in English and backed by real file:line refs.
+- Read `.trellis/spec/app/index.md` and the relevant guide before coding: `directory-structure.md`, `service-patterns.md`, `viewmodel-patterns.md`, `error-handling.md`, `logging-guidelines.md`, `quality-guidelines.md`, `i18n.md` (mandatory before adding/changing any user-visible text).
 - Trellis phases: `workflow.md` — Plan (`prd.md`/`design.md`/`implement.md`) → Execute (only after `task.py start` → `in_progress`) → Finish (verify → spec update → commit).
-- Before- dev: `.opencode/skills/trellis-before-dev`; after-edit check: `trellis-check`.
+- Before-dev: `trellis-before-dev`; after-edit check: `trellis-check` (available under `.zcode/skills/`, `.agents/skills/`, `.opencode/skills/`).
 
 ## Conventions & Gotchas
 
@@ -69,3 +80,4 @@ dotnet publish RenoDXCommander/RenoDXCommander.csproj -c Release -r win-x64 -p:P
 - `SavedGameLibrary` collections need `StringComparer.OrdinalIgnoreCase`; `GameDetectionService` must reuse `MaxScanDepth=4` / `_engineCache`.
 - `app.manifest` is `asInvoker` (admin via Task Scheduler, not manifest). `NoWarn NU1902` is suppressed.
 - `.gitignore` excludes `bin/obj`, `.vs`, `publish.bat` (local path), `tools/*.md`.
+- No hard-coded user-visible strings in XAML (`Text="..."`) or C# (dialog titles/status text) — always Loc keys (see i18n section); adding a new key means updating all 5 language JSONs or CI coverage check fails.
