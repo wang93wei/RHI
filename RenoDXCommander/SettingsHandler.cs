@@ -589,20 +589,10 @@ public class SettingsHandler
         if (sender is not ComboBox combo) return;
         if (combo.SelectedItem is not ComboBoxItem cbi || cbi.Tag is not string tag) return;
         CrashReporter.Log($"[SettingsHandler.LanguageCombo] Selected {tag}");
+        // SettingsViewModel.OnLanguageChanged already calls ApplyPreference; avoid duplicate.
         ViewModel.Settings.Language = tag;
         ViewModel.SaveSettingsPublic();
         RefreshLanguageCoverage();
-        // Force UI to re-evaluate bindings (LocalizationService notifies, but ensure window updates)
-        try
-        {
-            var loc = App.Services.GetRequiredService<ILocalizationService>();
-            // CurrentLanguage already set via SettingsViewModel.OnLanguageChanged, but ensure
-            loc.ApplyPreference(tag);
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[SettingsHandler.LanguageCombo] Apply failed — {ex.Message}");
-        }
     }
 
     private void RefreshLanguageCoverage()

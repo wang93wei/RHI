@@ -58,9 +58,14 @@ if xaml.exists():
     hard = []
     for m in pattern.finditer(text):
         val = m.group(2)
-        if "{Binding" in val or "{x:Bind" in val or val.strip() in ("RHI", "+", "✕", "⚙", "◀", ""):
+        stripped = val.strip()
+        if "{Binding" in val or "{x:Bind" in val or stripped in ("RHI", "+", "✕", "⚙", "◀", "▶", "↺", ""):
             continue
-        if val.strip().startswith(" by ") or "Licence" in val or "·" in val:
+        # Attribution / licence / brand fragments are intentionally not translated per R3.4
+        if stripped.startswith("by ") or stripped.startswith(" by ") or "Licence" in val or "·" in val or "github.com" in val or "Copyright" in val:
+            continue
+        # Pure symbols / single-char decorative
+        if len(stripped) <= 2 and not stripped[0].isalpha():
             continue
         hard.append(val)
     if hard:

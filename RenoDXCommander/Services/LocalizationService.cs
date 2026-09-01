@@ -174,9 +174,8 @@ public partial class LocalizationService : ObservableObject, ILocalizationServic
         if (!_catalogs.TryGetValue(lang, out var dict))
             return 0;
         var total = fallbackDict.Count;
-        var present = dict.Count(kv => !string.IsNullOrWhiteSpace(kv.Value));
-        // Only count keys that exist in fallback
-        var covered = fallbackDict.Keys.Count(k => dict.ContainsKey(k) && !string.IsNullOrWhiteSpace(dict[k]));
+        // Only count keys that exist in fallback and have non-whitespace value
+        var covered = fallbackDict.Keys.Count(k => dict.TryGetValue(k, out var v) && !string.IsNullOrWhiteSpace(v));
         return total == 0 ? 0 : (double)covered / total;
     }
 
