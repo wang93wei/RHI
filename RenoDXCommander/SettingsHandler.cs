@@ -1422,12 +1422,12 @@ public class SettingsHandler
             var panel = new StackPanel { Spacing = 8 };
             panel.Children.Add(new TextBlock
             {
-                Text = "Enter a custom FPS value (20-1000):",
+                Text = Loc.GetString("Dialog.EnterACustomFpsValue"),
                 FontSize = 12,
             });
             var inputBox = new TextBox
             {
-                PlaceholderText = "e.g. 165",
+                PlaceholderText = Loc.GetString("Dialog.EG165"),
                 FontSize = 12,
             };
             panel.Children.Add(inputBox);
@@ -1436,7 +1436,7 @@ public class SettingsHandler
             {
                 Title = Loc.GetString("Dialog.CustomTargetFps"),
                 Content = panel,
-                PrimaryButtonText = "Set",
+                PrimaryButtonText = Loc.GetString("Dialog.Set"),
                 CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,

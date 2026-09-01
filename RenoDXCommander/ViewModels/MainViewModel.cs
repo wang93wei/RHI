@@ -84,7 +84,7 @@ public partial class MainViewModel : ObservableObject
         set => _settingsViewModel.LastSeenVersion = value;
     }
 
-    public string UpdateButtonTooltip => "Update ReShade, RenoDX, ReLimiter, Display Commander, and RE Framework for all games";
+    public string UpdateButtonTooltip => Loc.GetString("Xaml.UpdateButtonTooltip");
 
     /// <summary>
     /// The global shader picker button is disabled while custom shaders are active.
@@ -139,10 +139,16 @@ public partial class MainViewModel : ObservableObject
 
     public string LayoutToggleLabel => CurrentViewLayout switch
     {
-        ViewLayout.Detail => "Detail View",
-        ViewLayout.Compact => "Simple View",
-        _ => "Detail View",
+        ViewLayout.Detail => Loc.GetString("View.Detail"),
+        ViewLayout.Compact => Loc.GetString("View.Simple"),
+        _ => Loc.GetString("View.Detail"),
     };
+
+    public void RefreshLocalizedChrome()
+    {
+        OnPropertyChanged(nameof(LayoutToggleLabel));
+        OnPropertyChanged(nameof(UpdateButtonTooltip));
+    }
 
     partial void OnCurrentViewLayoutChanged(ViewLayout value)
     {

@@ -272,6 +272,7 @@ public sealed partial class MainWindow : Window
                 {
                     DispatcherQueue.TryEnqueue(() =>
                     {
+                        ViewModel.RefreshLocalizedChrome();
                         if (ViewModel.SelectedGame != null)
                         {
                             if (ViewModel.CurrentViewLayout == ViewLayout.Detail)
