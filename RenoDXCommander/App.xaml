@@ -3,7 +3,8 @@
     x:Class="RenoDXCommander.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:converters="using:RenoDXCommander.Converters">
+    xmlns:converters="using:RenoDXCommander.Converters"
+    xmlns:services="using:RenoDXCommander.Services">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -12,6 +13,8 @@
             </ResourceDictionary.MergedDictionaries>
             <!-- Loc converter for XAML key translation -->
             <converters:LocConverter x:Key="LocConverter" />
+            <!-- Design-time Loc placeholder (replaced at runtime with DI singleton) -->
+            <services:LocalizationService x:Key="Loc" />
 
             <!-- Title-bar colours (extracted from hardcoded values for easy theming) -->
             <Color x:Key="TitleBarBackground">#FF0F1318</Color>

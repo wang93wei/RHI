@@ -1,5 +1,6 @@
 // DetailPanelBuilder.cs — Core scaffolding: class declaration, constructor, current detail card state, and detail panel population.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
