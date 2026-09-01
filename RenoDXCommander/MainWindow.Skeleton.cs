@@ -1,4 +1,4 @@
-// MainWindow.Skeleton.cs — Skeleton loading screen creation, animation, and cleanup.
+﻿// MainWindow.Skeleton.cs — Skeleton loading screen creation, animation, and cleanup.
 
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -6,7 +6,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
+using RenoDXCommander.Services;
 using Windows.UI;
 
 namespace RenoDXCommander;
@@ -669,7 +671,7 @@ public sealed partial class MainWindow
         // "── Frame limiters — Choose one ──" separator
         tableContent.Children.Add(new TextBlock
         {
-            Text = Loc.GetString("Detail.FrameLimiters"),
+            Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Detail.FrameLimiters"),
             FontSize = 10,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -728,7 +730,7 @@ public sealed partial class MainWindow
         // "── Optional ──" separator (matches real detail panel separator above OptiScaler)
         tableContent.Children.Add(new TextBlock
         {
-            Text = Loc.GetString("Detail.Optional"),
+            Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Detail.Optional"),
             FontSize = 10,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
             HorizontalAlignment = HorizontalAlignment.Center,
