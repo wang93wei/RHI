@@ -54,23 +54,21 @@ public partial class DetailPanelBuilder
         // ── Game name + Wiki name ────────────────────────────────────────────────
         var detectedBox = new TextBox
         {
-            Header = "Game name (editable)",
+            Header = Loc.GetString("Overrides.GameName.Header"),
             Text = gameName,
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(detectedBox,
-            "The display name for this game. Edit and press Enter to rename. Reset reverts to the auto-detected store name.");
+        ToolTipService.SetToolTip(detectedBox, Loc.GetString("Overrides.GameName.Tooltip"));
         var wikiBox = new TextBox
         {
-            Header = "Wiki mod name",
+            Header = Loc.GetString("Overrides.WikiName.Header"),
             PlaceholderText = Loc.GetString("Dialog.ExactWikiName"),
             Text = _window.ViewModel.GetUserNameMapping(gameName) ?? "",
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(wikiBox,
-            "Override the name used to look up this game on the RenoDX/Luma wiki. Leave blank to use the game name. Press Enter to save.");
+        ToolTipService.SetToolTip(wikiBox, Loc.GetString("Overrides.WikiName.Tooltip"));
         var originalStoreName = _window.ViewModel.GetOriginalStoreName(gameName);
 
         // Mutable captured name so rename handler can update it for subsequent handlers
@@ -86,7 +84,7 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
         };
-        ToolTipService.SetToolTip(resetBtn, "Reset game name back to auto-detected and clear wiki name mapping.");
+        ToolTipService.SetToolTip(resetBtn, Loc.GetString("Overrides.ResetName.Tooltip"));
         resetBtn.Click += (s, ev) =>
         {
             var resetName = (originalStoreName ?? gameName).Trim();
@@ -114,7 +112,7 @@ public partial class DetailPanelBuilder
 
         var dllOverrideToggle = new ToggleSwitch
         {
-            Header = "DLL naming overrides",
+            Header = Loc.GetString("Overrides.DllNaming.Header"),
             IsOn = isDllOverride,
             IsEnabled = true,
             OnContent = Loc.GetString("Dialog.CustomFilenamesEnabled"),
@@ -122,8 +120,7 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             FontSize = 12,
         };
-        ToolTipService.SetToolTip(dllOverrideToggle,
-            "Override the filenames ReShade is installed as. When enabled, existing RS files are renamed to the custom filenames.");
+        ToolTipService.SetToolTip(dllOverrideToggle, Loc.GetString("Overrides.DllNaming.Tooltip"));
         var existingRsName = existingCfg?.ReShadeFileName ?? "";
 
         var rsNameBox = new ComboBox
@@ -137,8 +134,7 @@ public partial class DetailPanelBuilder
         };
         if (card.IsOsInstalled)
         {
-            ToolTipService.SetToolTip(rsNameBox,
-                "Override the ReShade DLL name. OptiScaler is installed — RHI will rename ReShade to this filename after OptiScaler is uninstalled.");
+            ToolTipService.SetToolTip(rsNameBox, Loc.GetString("Overrides.RsName.Tooltip"));
         }
         if (!string.IsNullOrEmpty(existingRsName))
         {
@@ -494,19 +490,16 @@ public partial class DetailPanelBuilder
                 // Set tooltips for partial revert failures
                 if (!result.RsReverted)
                 {
-                    ToolTipService.SetToolTip(dllOverrideToggle,
-                        "Could not revert ReShade to dxgi.dll — the filename is occupied by another file. ReShade was renamed to a fallback name instead.");
+                    ToolTipService.SetToolTip(dllOverrideToggle, Loc.GetString("Overrides.DllNaming.RevertFailedRs"));
                 }
                 else if (!result.DcReverted)
                 {
-                    ToolTipService.SetToolTip(dllOverrideToggle,
-                        "Could not revert Display Commander to its default name — the filename is occupied by another file. DC was kept under its current name.");
+                    ToolTipService.SetToolTip(dllOverrideToggle, Loc.GetString("Overrides.DllNaming.RevertFailedDc"));
                 }
                 else
                 {
                     // Both reverted successfully — reset tooltip to default
-                    ToolTipService.SetToolTip(dllOverrideToggle,
-                        "Override the filenames ReShade is installed as. When enabled, existing RS files are renamed to the custom filenames.");
+                    ToolTipService.SetToolTip(dllOverrideToggle, Loc.GetString("Overrides.DllNaming.Tooltip"));
                 }
             }
         };
@@ -589,20 +582,19 @@ public partial class DetailPanelBuilder
         resetWikiRow.Children.Add(resetBtn);
 
         // Wiki lookup ComboBox (replaces ToggleSwitch)
-        var wikiExcludeItems = new[] { "Included", "Excluded" };
+        var wikiExcludeRaw = new[] { "Included", "Excluded" };
+        var wikiExcludeItems = wikiExcludeRaw.Select(LocOpt.T).ToArray();
         var wikiExcludeCombo = new ComboBox
         {
             ItemsSource = wikiExcludeItems,
-            SelectedItem = _window.ViewModel.IsWikiExcluded(gameName) ? "Excluded" : "Included",
+            SelectedIndex = _window.ViewModel.IsWikiExcluded(gameName) ? 1 : 0,
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(wikiExcludeCombo,
-            "Included = this game is looked up on the RenoDX and Luma wikis. Excluded = skip wiki lookups for this game.");
+        ToolTipService.SetToolTip(wikiExcludeCombo, Loc.GetString("Overrides.WikiExclude.Tooltip"));
         wikiExcludeCombo.SelectionChanged += (s, ev) =>
         {
-            var selected = wikiExcludeCombo.SelectedItem as string;
-            bool shouldExclude = selected == "Excluded";
+            bool shouldExclude = wikiExcludeCombo.SelectedIndex == 1;
             if (shouldExclude != _window.ViewModel.IsWikiExcluded(capturedName))
                 _window.ViewModel.ToggleWikiExclusion(capturedName);
         };
@@ -717,39 +709,41 @@ public partial class DetailPanelBuilder
                 effectiveShaderDisplay = "Custom";
         }
 
-        var shaderModeItems = new[] { "Global", "Custom", "Select", "Off" };
+        var shaderModeRaw = new[] { "Global", "Custom", "Select", "Off" };
+        var shaderModeItems = shaderModeRaw.Select(LocOpt.T).ToArray();
         bool shaderComboInitializing = true;
 
         var shaderModeCombo = new ComboBox
         {
             ItemsSource = shaderModeItems,
-            SelectedItem = effectiveShaderDisplay,
+            SelectedIndex = Array.IndexOf(shaderModeRaw, effectiveShaderDisplay),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsEnabled = !card.UseNormalReShade,
         };
-        ToolTipService.SetToolTip(shaderModeCombo,
-            "Global = use global shader selection. Custom = use custom shader directories. Select = pick per-game packs. Off = no shaders.");
+        ToolTipService.SetToolTip(shaderModeCombo, Loc.GetString("Overrides.ShaderMode.Tooltip"));
 
         // Allow re-opening the Select picker when already on Select
         shaderModeCombo.DropDownClosed += (s, ev) =>
         {
             if (shaderComboInitializing) return;
-            var current = shaderModeCombo.SelectedItem as string;
+            int curIdx = shaderModeCombo.SelectedIndex;
+            var current = curIdx >= 0 && curIdx < shaderModeRaw.Length ? shaderModeRaw[curIdx] : null;
             if (current == "Select" && _window.ViewModel.GetPerGameShaderMode(capturedName) == "Select")
             {
                 shaderComboInitializing = true;
-                shaderModeCombo.SelectedItem = "Global";
+                shaderModeCombo.SelectedIndex = Array.IndexOf(shaderModeRaw, "Global");
                 shaderComboInitializing = false;
-                shaderModeCombo.SelectedItem = "Select";
+                shaderModeCombo.SelectedIndex = Array.IndexOf(shaderModeRaw, "Select");
             }
         };
 
         shaderModeCombo.SelectionChanged += async (s, ev) =>
         {
             if (shaderComboInitializing) return;
-            var selected = shaderModeCombo.SelectedItem as string;
-            if (string.IsNullOrEmpty(selected)) return;
+            int selIdx = shaderModeCombo.SelectedIndex;
+            if (selIdx < 0 || selIdx >= shaderModeRaw.Length) return;
+            var selected = shaderModeRaw[selIdx]; // logical value
             CrashReporter.Log($"[DetailPanelBuilder.ShaderMode] '{capturedName}' selection changed to: '{selected}'");
 
             if (selected == "Select")
@@ -778,7 +772,7 @@ public partial class DetailPanelBuilder
                     var currentMode = _window.ViewModel.GetPerGameShaderMode(capturedName);
                     var revertTo = currentMode == "Select" ? "Select" : (currentMode == "Off" ? "Off" : (currentMode == "Custom" ? "Custom" : "Global"));
                     shaderComboInitializing = true;
-                    shaderModeCombo.SelectedItem = revertTo;
+                    shaderModeCombo.SelectedIndex = Array.IndexOf(shaderModeRaw, revertTo);
                     shaderComboInitializing = false;
                 }
                 return;
@@ -842,7 +836,8 @@ public partial class DetailPanelBuilder
             Margin = new Thickness(0, 0, 0, 8),
         };
 
-        var bitnessItems = new[] { "Auto", "32-bit", "64-bit" };
+        var bitnessRaw = new[] { "Auto", "32-bit", "64-bit" };
+        var bitnessItems = bitnessRaw.Select(LocOpt.T).ToArray();
         var currentBitnessOverride = _window.ViewModel.GetBitnessOverride(gameName, card.Source);
         var defaultBitnessSelection = currentBitnessOverride switch
         {
@@ -854,21 +849,20 @@ public partial class DetailPanelBuilder
         var bitnessCombo = new ComboBox
         {
             ItemsSource = bitnessItems,
-            SelectedItem = defaultBitnessSelection,
+            SelectedIndex = Array.IndexOf(bitnessRaw, defaultBitnessSelection),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(bitnessCombo,
-            "Override the auto-detected bitness for this game. Auto uses PE header detection. 32-bit or 64-bit forces the value.");
+        ToolTipService.SetToolTip(bitnessCombo, Loc.GetString("Overrides.Bitness.Tooltip"));
 
         bitnessCombo.SelectionChanged += (s, e) =>
         {
-            var selected = bitnessCombo.SelectedItem as string;
-            string? overrideValue = selected switch
+            int selIdx = bitnessCombo.SelectedIndex;
+            string? overrideValue = selIdx switch
             {
-                "32-bit" => "32",
-                "64-bit" => "64",
-                _ => null,
+                1 => "32", // "32-bit"
+                2 => "64", // "64-bit"
+                _ => null,  // "Auto"
             };
 
             _window.ViewModel.SetBitnessOverride(capturedName, overrideValue, card.Source);
@@ -946,13 +940,9 @@ public partial class DetailPanelBuilder
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         };
-        ToolTipService.SetToolTip(apiLabel,
-            "Override the detected graphics API for this game.\n\n" +
-            "Auto uses the auto-detected value from PE header scanning.\n" +
-            "User overrides set here take precedence over manifest and auto-detected values.\n" +
-            "Reset Overrides reverts to auto-detection.");
+        ToolTipService.SetToolTip(apiLabel, Loc.GetString("Overrides.Api.Tooltip"));
 
-        var apiDropdownItems = new[] { "Auto", "DirectX8", "DirectX9", "DirectX10", "DirectX11", "DirectX12", "Vulkan", "OpenGL" };
+        var apiDropdownItems = new[] { "Auto", "DirectX8", "DirectX9", "DirectX10", "DirectX11", "DirectX12", "Vulkan", "OpenGL" }.Select(LocOpt.T).ToArray();
         var existingApiOverride = _window.ViewModel.GetApiOverride(gameName, card.Source);
 
         // Determine current selection
@@ -976,19 +966,20 @@ public partial class DetailPanelBuilder
                 defaultApiSelection = "DirectX8";
         }
 
+        var apiRawItems = new[] { "Auto", "DirectX8", "DirectX9", "DirectX10", "DirectX11", "DirectX12", "Vulkan", "OpenGL" };
         var apiCombo = new ComboBox
         {
             ItemsSource = apiDropdownItems,
-            SelectedItem = defaultApiSelection,
+            SelectedIndex = Array.IndexOf(apiRawItems, defaultApiSelection),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(apiCombo,
-            "Override the detected graphics API for this game.\nAuto uses PE header scanning. Reset Overrides reverts to auto-detection.");
+        ToolTipService.SetToolTip(apiCombo, Loc.GetString("Overrides.Api.Tooltip2"));
 
         apiCombo.SelectionChanged += (s, ev) =>
         {
-            var selected = apiCombo.SelectedItem as string;
+            int selIdx = apiCombo.SelectedIndex;
+            var selected = selIdx >= 0 && selIdx < apiRawItems.Length ? apiRawItems[selIdx] : null;
 
             // Map dropdown label to enum names for persistence
             List<string>? apiEnumNames = selected switch

@@ -312,8 +312,7 @@ public sealed partial class MainWindow
         if (_shaderCacheComboInit) return;
         if (sender is not ComboBox combo || combo.SelectedIndex < 0) return;
 
-        var selectedText = combo.SelectedItem as string;
-        if (selectedText == "Custom...")
+        if (combo.SelectedIndex == combo.Items.Count - 1) // "Custom..." is always last
         {
             FpsLimitCombo_Custom(combo);
             return;
@@ -375,7 +374,7 @@ public sealed partial class MainWindow
 
             // Add the custom value to the combo and select it
             _shaderCacheComboInit = true;
-            var items = DlssPresetService.FpsLimiterPresets.Select(o => o.Name).ToList();
+            var items = DlssPresetService.FpsLimiterPresets.Select(o => LocOpt.T(o.Name)).ToList();
             items.Add($"{fps} FPS (Custom)");
             combo.ItemsSource = items.ToArray();
             combo.SelectedIndex = items.Count - 1;
@@ -426,8 +425,7 @@ public sealed partial class MainWindow
         if (_shaderCacheComboInit) return;
         if (sender is not ComboBox combo || combo.SelectedIndex < 0) return;
 
-        var selectedText = combo.SelectedItem as string;
-        if (selectedText == "Custom...")
+        if (combo.SelectedIndex == combo.Items.Count - 1) // "Custom..." is always last
         {
             DmfgTargetFpsCombo_Custom(combo);
             return;
@@ -460,7 +458,7 @@ public sealed partial class MainWindow
             presetService.SetGlobalDmfgTargetFps(fps);
 
             _shaderCacheComboInit = true;
-            var items = DlssPresetService.DmfgTargetFpsOptions.Select(o => o.Name).ToList();
+            var items = DlssPresetService.DmfgTargetFpsOptions.Select(o => LocOpt.T(o.Name)).ToList();
             items.Insert(items.Count - 1, $"{fps} FPS (Custom)");
             combo.ItemsSource = items.ToArray();
             combo.SelectedIndex = items.Count - 2;
@@ -1512,8 +1510,8 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center,
         });
         var enableCombo = new ComboBox { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        enableCombo.Items.Add("Off");
-        enableCombo.Items.Add("On");
+        enableCombo.Items.Add(LocOpt.T("Off"));
+        enableCombo.Items.Add(LocOpt.T("On"));
         enableCombo.SelectedIndex = settings.PeakNitsEnabled ? 1 : 0;
         enablePanel.Children.Add(enableCombo);
         content.Children.Add(enablePanel);

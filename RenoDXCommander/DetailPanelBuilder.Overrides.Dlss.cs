@@ -33,16 +33,18 @@ public partial class DetailPanelBuilder
         // Version ComboBox
         var versionLabel = new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) };
         if (driverOverrideActive)
-            ToolTipService.SetToolTip(versionLabel, "Driver override is active — the NVIDIA driver is injecting its own DLL. Disable 'Latest DLL' in NVIDIA App or Profile Inspector to manage versions manually.");
+            ToolTipService.SetToolTip(versionLabel, Loc.GetString("Overrides.Dlss.DriverOverride.LabelTooltip"));
         col.Children.Add(versionLabel);
 
-        // Build items list with (Default) marker on the game's original/default version
-        var items = new List<string>();
+        // Version entries: Display = localized UI text, MatchKey = value used to match the
+        // installed version (bare version string), Value = what onVersionSelected receives
+        // ("Default" for (Default)-marked entries).
+        var entries = new List<(string Display, string MatchKey, string Value)>();
 
         if (!isPresent && installedVersion == null)
         {
             // Game truly doesn't have this component — show "None"
-            items.Add("None");
+            entries.Add((LocOpt.T("None"), "None", "None"));
         }
         else
         {
@@ -57,18 +59,20 @@ public partial class DetailPanelBuilder
                     || ver.StartsWith(formattedOriginal, StringComparison.OrdinalIgnoreCase)
                     || formattedOriginal.StartsWith(ver, StringComparison.OrdinalIgnoreCase)))
                 {
-                    items.Add($"{ver} (Default)");
+                    entries.Add((Loc.GetString("Option.VersionDefaultFormat", ver), ver, "Default"));
                     defaultInList = true;
                 }
                 else
-                    items.Add(ver);
+                    entries.Add((ver, ver, ver));
             }
-            items.Add("Custom");
+            entries.Add((LocOpt.T("Custom"), "Custom", "Custom"));
 
             // If original version isn't in the managed list, insert it at top with (Default)
             if (!defaultInList && formattedOriginal != null)
-                items.Insert(0, $"{formattedOriginal} (Default)");
+                entries.Insert(0, (Loc.GetString("Option.VersionDefaultFormat", formattedOriginal), formattedOriginal, "Default"));
         }
+
+        var items = entries.Select(e => e.Display).ToList();
 
         // Find selected index based on installed version
         int selectedIndex = 0;
@@ -76,14 +80,14 @@ public partial class DetailPanelBuilder
         {
             if (installedVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
             {
-                selectedIndex = items.Count - 1;
+                selectedIndex = entries.Count - 1;
             }
             else
             {
                 bool matched = false;
                 for (int i = 0; i < items.Count; i++)
                 {
-                    var itemBase = items[i].Replace(" (Default)", "");
+                    var itemBase = entries[i].MatchKey;
                     if (installedVersion.Equals(itemBase, StringComparison.OrdinalIgnoreCase)
                         || itemBase.StartsWith(installedVersion, StringComparison.OrdinalIgnoreCase)
                         || installedVersion.StartsWith(itemBase, StringComparison.OrdinalIgnoreCase))
@@ -98,8 +102,8 @@ public partial class DetailPanelBuilder
                 // Insert it before "Custom" so it shows correctly rather than falling back to (Default)
                 if (!matched)
                 {
-                    var insertIdx = items.Count - 1; // before "Custom"
-                    items.Insert(insertIdx, installedVersion);
+                    var insertIdx = entries.Count - 1; // before "Custom"
+                    entries.Insert(insertIdx, (installedVersion, installedVersion, installedVersion));
                     selectedIndex = insertIdx;
                 }
             }
@@ -107,7 +111,7 @@ public partial class DetailPanelBuilder
 
         var versionCombo = new ComboBox
         {
-            ItemsSource = driverOverrideActive ? new List<string> { "Driver Override Active" } : items,
+            ItemsSource = driverOverrideActive ? new List<string> { LocOpt.T("Driver Override Active") } : items,
             SelectedIndex = driverOverrideActive ? 0 : selectedIndex,
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -115,7 +119,7 @@ public partial class DetailPanelBuilder
             Opacity = driverOverrideActive ? 0.4 : 1.0,
         };
         if (driverOverrideActive)
-            ToolTipService.SetToolTip(versionCombo, "Driver override is active — disable it in NVIDIA App or Profile Inspector to manage this DLL in RHI.");
+            ToolTipService.SetToolTip(versionCombo, Loc.GetString("Overrides.Dlss.DriverOverride.ComboTooltip"));
 
         // When driver override is active, tooltip is already on the combo — no extra text needed
         col.Children.Add(versionCombo);
@@ -124,14 +128,9 @@ public partial class DetailPanelBuilder
         versionCombo.SelectionChanged += async (s, ev) =>
         {
             if (versionInit) return;
-            var selected = versionCombo.SelectedItem as string;
-            if (string.IsNullOrEmpty(selected)) return;
-
-            // If it's the (Default) item, treat as "Default" (restore original)
-            if (selected.EndsWith(" (Default)"))
-                await onVersionSelected("Default");
-            else
-                await onVersionSelected(selected);
+            int i = versionCombo.SelectedIndex;
+            if (i < 0 || i >= entries.Count) return;
+            await onVersionSelected(entries[i].Value);
         };
         versionInit = false;
 
@@ -140,7 +139,7 @@ public partial class DetailPanelBuilder
         {
             col.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
 
-            var presetItems = presets.Select(p => p.Name).ToList();
+            var presetItems = presets.Select(p => LocOpt.T(p.Name)).ToList();
             int presetIdx = 0;
             for (int i = 0; i < presets.Length; i++)
             {
@@ -159,9 +158,9 @@ public partial class DetailPanelBuilder
             // Add tooltip explaining presets
             string presetTooltip = label switch
             {
-                "DLSS Super Resolution" => "Override the DLSS upscaling model. J/K use the 1st-gen transformer (DLSS 4.0). L/M use the 2nd-gen transformer (DLSS 4.5) with better temporal stability. NVIDIA Recommended uses NVIDIA's per-resolution preset selection.",
-                "Ray Reconstruction" => "Override the Ray Reconstruction denoising model. Higher presets are newer model iterations. NVIDIA Recommended uses NVIDIA's per-resolution preset selection.",
-                "Frame Generation" => "Override the Frame Generation interpolation model. Higher presets are newer model iterations. NVIDIA Recommended uses NVIDIA's per-resolution preset selection.",
+                "DLSS Super Resolution" => Loc.GetString("Overrides.Dlss.PresetTooltip.Sr"),
+                "Ray Reconstruction" => Loc.GetString("Overrides.Dlss.PresetTooltip.Rr"),
+                "Frame Generation" => Loc.GetString("Overrides.Dlss.PresetTooltip.Fg"),
                 _ => ""
             };
             if (!string.IsNullOrEmpty(presetTooltip))
@@ -184,7 +183,7 @@ public partial class DetailPanelBuilder
         {
             col.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.RenderScale"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
             var rsOptions = DlssPresetService.RenderScaleOptions;
-            var rsItems = rsOptions.Select(o => o.Name).ToList();
+            var rsItems = rsOptions.Select(o => LocOpt.T(o.Name)).ToList();
 
             // Determine current selection
             int rsIdx = 0; // Off
@@ -200,7 +199,7 @@ public partial class DetailPanelBuilder
 
             // If Custom is selected, show the percentage in the item text
             if (rsIdx == rsItems.Count - 1 && currentRenderScale > 0)
-                rsItems[^1] = $"Custom ({currentRenderScale}%)";
+                rsItems[^1] = Loc.GetString("Option.CustomPercentFormat", currentRenderScale);
 
             var rsCombo = new ComboBox
             {
@@ -210,8 +209,7 @@ public partial class DetailPanelBuilder
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 IsEnabled = isPresent,
             };
-            ToolTipService.SetToolTip(rsCombo,
-                "Override the DLSS render resolution scale. Off = game controls the scale.\nNamed presets set a fixed percentage. Custom lets you enter any value from 33-100%.");
+            ToolTipService.SetToolTip(rsCombo, Loc.GetString("Overrides.Dlss.RenderScale.Tooltip"));
 
             bool rsInit = true;
             rsCombo.SelectionChanged += (s, ev) =>

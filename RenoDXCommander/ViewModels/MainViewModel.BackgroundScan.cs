@@ -22,7 +22,7 @@ public partial class MainViewModel
     private async Task RunBackgroundScanAndMergeAsync(SavedGameLibrary savedLib, bool isStartup = false)
     {
         IsBackgroundScanning = true;
-        BackgroundScanStatusText = "Scanning for changes...";
+        BackgroundScanStatusText = Loc.GetString("Dialog.ScanningForChanges");
         _crashReporter.Log("[MainViewModel.RunBackgroundScanAndMergeAsync] Starting background scan...");
 
         try
@@ -341,8 +341,8 @@ public partial class MainViewModel
             DispatcherQueue?.TryEnqueue(() =>
             {
                 StatusText = offlineMode
-                    ? $"{detectedGames.Count} games detected · offline mode (mod info unavailable)"
-                    : $"{detectedGames.Count} games detected · {InstalledCount} mods installed";
+                    ? Loc.GetString("Status.GamesDetectedOffline", detectedGames.Count)
+                    : Loc.GetString("Status.GamesDetected", detectedGames.Count, InstalledCount);
                 SubStatusText = "";
 
                 // Re-scroll to selected game after merge (cards may have shifted)

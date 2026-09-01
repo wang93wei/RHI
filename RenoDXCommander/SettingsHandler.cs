@@ -191,29 +191,29 @@ public class SettingsHandler
         var presetSvc = App.Services.GetRequiredService<DlssPresetService>();
         if (presetSvc.IsSupported)
         {
-            _window.ShaderCacheSizeCombo.ItemsSource = DlssPresetService.ShaderCacheSizeOptions.Select(o => o.Name).ToArray();
+            _window.ShaderCacheSizeCombo.ItemsSource = DlssPresetService.ShaderCacheSizeOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var cacheSize = presetSvc.GetShaderCacheSize();
             var cacheIdx = Array.FindIndex(DlssPresetService.ShaderCacheSizeOptions, o => o.Value == cacheSize);
             _window.ShaderCacheSizeCombo.SelectedIndex = cacheIdx >= 0 ? cacheIdx : 0;
 
-            _window.ShaderPrecompileCombo.ItemsSource = DlssPresetService.ShaderPrecompileOptions.Select(o => o.Name).ToArray();
+            _window.ShaderPrecompileCombo.ItemsSource = DlssPresetService.ShaderPrecompileOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var precompile = presetSvc.GetShaderPrecompile();
             var precompIdx = Array.FindIndex(DlssPresetService.ShaderPrecompileOptions, o => o.Value == precompile);
             _window.ShaderPrecompileCombo.SelectedIndex = precompIdx >= 0 ? precompIdx : 0;
 
             // G-Sync Enable
-            _window.GSyncEnableCombo.ItemsSource = DlssPresetService.GSyncEnableOptions.Select(o => o.Name).ToArray();
+            _window.GSyncEnableCombo.ItemsSource = DlssPresetService.GSyncEnableOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var gsyncEnable = presetSvc.GetGlobalGSyncEnabled();
             var gsyncEnableIdx = Array.FindIndex(DlssPresetService.GSyncEnableOptions, o => o.Value == gsyncEnable);
             _window.GSyncEnableCombo.SelectedIndex = gsyncEnableIdx >= 0 ? gsyncEnableIdx : 0;
 
-            _window.GSyncModeCombo.ItemsSource = DlssPresetService.GSyncModeOptions.Select(o => o.Name).ToArray();
+            _window.GSyncModeCombo.ItemsSource = DlssPresetService.GSyncModeOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var gsync = presetSvc.GetGSyncMode();
             var gsyncIdx = Array.FindIndex(DlssPresetService.GSyncModeOptions, o => o.Value == gsync);
             _window.GSyncModeCombo.SelectedIndex = gsyncIdx >= 0 ? gsyncIdx : 1; // Default: Fullscreen only
 
             // FPS Limit
-            var fpsItems = DlssPresetService.FpsLimiterPresets.Select(o => o.Name).ToList();
+            var fpsItems = DlssPresetService.FpsLimiterPresets.Select(o => LocOpt.T(o.Name)).ToList();
             var fpsLimit = presetSvc.GetGlobalFpsLimit();
             var fpsIdx = Array.FindIndex(DlssPresetService.FpsLimiterPresets, o => o.Value == fpsLimit);
             if (fpsIdx < 0 && fpsLimit > 0)
@@ -225,18 +225,18 @@ public class SettingsHandler
             _window.FpsLimitCombo.ItemsSource = fpsItems.ToArray();
             _window.FpsLimitCombo.SelectedIndex = fpsIdx >= 0 ? fpsIdx : 0;
 
-            _window.PreferredRefreshRateCombo.ItemsSource = DlssPresetService.PreferredRefreshRateOptions.Select(o => o.Name).ToArray();
+            _window.PreferredRefreshRateCombo.ItemsSource = DlssPresetService.PreferredRefreshRateOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var refreshRate = presetSvc.GetPreferredRefreshRate();
             var refreshIdx = Array.FindIndex(DlssPresetService.PreferredRefreshRateOptions, o => o.Value == refreshRate);
             _window.PreferredRefreshRateCombo.SelectedIndex = refreshIdx >= 0 ? refreshIdx : 0; // Default: App Setting
 
             // DMFG Defaults (global base profile)
-            _window.DmfgFrameCountCombo.ItemsSource = DlssPresetService.DmfgFrameCountOptions.Select(o => o.Name).ToArray();
+            _window.DmfgFrameCountCombo.ItemsSource = DlssPresetService.DmfgFrameCountOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var dmfgCount = presetSvc.GetGlobalDmfgFrameCount();
             var dmfgCountIdx = Array.FindIndex(DlssPresetService.DmfgFrameCountOptions, o => o.Value == dmfgCount);
             _window.DmfgFrameCountCombo.SelectedIndex = dmfgCountIdx >= 0 ? dmfgCountIdx : 0;
 
-            var dmfgFpsItems = DlssPresetService.DmfgTargetFpsOptions.Select(o => o.Name).ToList();
+            var dmfgFpsItems = DlssPresetService.DmfgTargetFpsOptions.Select(o => LocOpt.T(o.Name)).ToList();
             var dmfgFps = presetSvc.GetGlobalDmfgTargetFps();
             var dmfgFpsIdx = Array.FindIndex(DlssPresetService.DmfgTargetFpsOptions, o => o.Value == dmfgFps);
             if (dmfgFpsIdx < 0 && dmfgFps > 0 && dmfgFps != 0x01000000)
@@ -250,13 +250,13 @@ public class SettingsHandler
 
             // Global ReBAR
             var isAdminForReBar = VulkanLayerService.IsRunningAsAdmin();
-            _window.GlobalReBarEnableCombo.ItemsSource = new[] { "Off", "On" };
+            _window.GlobalReBarEnableCombo.ItemsSource = new[] { LocOpt.T("Off"), LocOpt.T("On") };
             var globalReBar = presetSvc.GetGlobalReBarEnabled();
             _window.GlobalReBarEnableCombo.SelectedIndex = globalReBar == true ? 1 : 0;
             _window.GlobalReBarEnableCombo.IsEnabled = isAdminForReBar;
             _window.GlobalReBarEnableCombo.Opacity = isAdminForReBar ? 1.0 : 0.4;
 
-            _window.GlobalReBarSizeCombo.ItemsSource = DlssPresetService.ReBarSizeLimits.Select(o => o.Name).ToArray();
+            _window.GlobalReBarSizeCombo.ItemsSource = DlssPresetService.ReBarSizeLimits.Select(o => LocOpt.T(o.Name)).ToArray();
             var globalReBarSize = presetSvc.GetGlobalReBarSizeLimit();
             var rebarSizeIdx = Array.FindIndex(DlssPresetService.ReBarSizeLimits, o => o.Value == globalReBarSize);
             _window.GlobalReBarSizeCombo.SelectedIndex = rebarSizeIdx >= 0 ? rebarSizeIdx : 1; // Default: 1GB
@@ -269,7 +269,7 @@ public class SettingsHandler
                 : Microsoft.UI.Xaml.Visibility.Visible;
 
             // Global VSync
-            _window.GlobalVSyncCombo.ItemsSource = DlssPresetService.VSyncModeOptions.Select(o => o.Name).ToArray();
+            _window.GlobalVSyncCombo.ItemsSource = DlssPresetService.VSyncModeOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var globalVSync = presetSvc.GetGlobalVSyncMode();
             var vsyncIdx = globalVSync.HasValue
                 ? Array.FindIndex(DlssPresetService.VSyncModeOptions, o => o.Value == globalVSync.Value)
@@ -277,7 +277,7 @@ public class SettingsHandler
             _window.GlobalVSyncCombo.SelectedIndex = vsyncIdx >= 0 ? vsyncIdx : 0;
 
             // Global Power Mode
-            _window.GlobalPowerModeCombo.ItemsSource = DlssPresetService.PowerManagementOptions.Select(o => o.Name).ToArray();
+            _window.GlobalPowerModeCombo.ItemsSource = DlssPresetService.PowerManagementOptions.Select(o => LocOpt.T(o.Name)).ToArray();
             var globalPower = presetSvc.GetGlobalPowerMode();
             var powerIdx = globalPower.HasValue
                 ? Array.FindIndex(DlssPresetService.PowerManagementOptions, o => o.Value == globalPower.Value)
@@ -337,7 +337,7 @@ public class SettingsHandler
         _window.GSyncEnableCombo.SelectedIndex = gsyncEnableIdx >= 0 ? gsyncEnableIdx : 0;
 
         var fpsLimit = presetSvc.GetGlobalFpsLimit();
-        var fpsItems = DlssPresetService.FpsLimiterPresets.Select(o => o.Name).ToList();
+        var fpsItems = DlssPresetService.FpsLimiterPresets.Select(o => LocOpt.T(o.Name)).ToList();
         var fpsIdx = Array.FindIndex(DlssPresetService.FpsLimiterPresets, o => o.Value == fpsLimit);
         if (fpsIdx < 0 && fpsLimit > 0)
         {
@@ -1380,7 +1380,7 @@ public class SettingsHandler
         var combo = _window.UlTargetFpsCombo;
         combo.Items.Clear();
 
-        combo.Items.Add("Off");
+        combo.Items.Add(LocOpt.T("Off"));
         foreach (var preset in _ulTargetFpsPresets)
             combo.Items.Add(preset.Label);
 
@@ -1389,7 +1389,7 @@ public class SettingsHandler
         if (currentFps > 0 && !_ulTargetFpsPresetValues.Contains(currentFps))
             combo.Items.Add($"{currentFps} FPS (Custom)");
 
-        combo.Items.Add("Custom...");
+        combo.Items.Add(LocOpt.T("Custom..."));
 
         // Select based on current value
         if (currentFps == 0)
@@ -1416,8 +1416,8 @@ public class SettingsHandler
 
         var selectedText = combo.SelectedItem as string ?? "";
 
-        // "Custom..." opens a dialog for manual entry
-        if (selectedText == "Custom...")
+        // "Custom..." opens a dialog for manual entry (always the last item)
+        if (combo.SelectedIndex == combo.Items.Count - 1)
         {
             var panel = new StackPanel { Spacing = 8 };
             panel.Children.Add(new TextBlock

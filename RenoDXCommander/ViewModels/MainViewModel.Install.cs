@@ -704,7 +704,7 @@ public partial class MainViewModel
                 // Set up a synthetic Mod so the RenoDX row shows an install button
                 card.Mod = new GameMod
                 {
-                    Name = "Ryubing (9 games)",
+                    Name = Loc.GetString("Wiki.RyubingBundle"),
                     Maintainer = "Souperman9",
                     SnapshotUrl = "emulator-bundle", // Sentinel — triggers bundle install
                     Status = "✅",

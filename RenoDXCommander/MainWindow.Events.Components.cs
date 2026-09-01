@@ -371,8 +371,8 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         ToolTipService.SetToolTip(keepUpdatedCombo, Loc.GetString("Dialog.KeepReshadeIniUpdated.Tooltip"));
-        keepUpdatedCombo.Items.Add("Yes");
-        keepUpdatedCombo.Items.Add("No");
+        keepUpdatedCombo.Items.Add(LocOpt.T("Yes"));
+        keepUpdatedCombo.Items.Add(LocOpt.T("No"));
 
         bool keepUpdatedInitializing = true;
         var capturedKeepGameName = card.GameName;
@@ -433,8 +433,8 @@ public sealed partial class MainWindow
             topGrid.Children.Add(ueLabel);
 
             var ueCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
-            ueCombo.Items.Add("Off");
-            ueCombo.Items.Add("On");
+            ueCombo.Items.Add(LocOpt.T("Off"));
+            ueCombo.Items.Add(LocOpt.T("On"));
             ToolTipService.SetToolTip(ueCombo, Loc.GetString("Dialog.UeExtended.Tooltip"));
             ueCombo.SelectedIndex = card.UseUeExtended ? 1 : 0;
             ueCombo.SelectionChanged += (s, ev) =>
@@ -638,9 +638,9 @@ public sealed partial class MainWindow
 
                         var combo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
 
-                        if (isSetPath) { combo.Items.Add("HDR / Off"); combo.Items.Add("SDR / On"); }
-                        else if (isDumpLut) { combo.Items.Add("Off"); combo.Items.Add("On"); }
-                        else { combo.Items.Add("Off"); combo.Items.Add("Output size"); combo.Items.Add("Output ratio"); combo.Items.Add("Any size"); }
+                        if (isSetPath) { combo.Items.Add(LocOpt.T("HDR / Off")); combo.Items.Add(LocOpt.T("SDR / On")); }
+                        else if (isDumpLut) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("On")); }
+                        else { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("Output size")); combo.Items.Add(LocOpt.T("Output ratio")); combo.Items.Add(LocOpt.T("Any size")); }
 
                         int.TryParse(kv.Value, out var currentVal);
                         combo.SelectedIndex = isBinaryToggle
@@ -780,8 +780,8 @@ public sealed partial class MainWindow
                 engineIniGrid.Children.Add(hdrLabel);
 
                 var hdrCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
-                hdrCombo.Items.Add("Off");
-                hdrCombo.Items.Add("On");
+                hdrCombo.Items.Add(LocOpt.T("Off"));
+                hdrCombo.Items.Add(LocOpt.T("On"));
                 ToolTipService.SetToolTip(hdrCombo, Loc.GetString("Dialog.EngineIni.HdrTooltip"));
                 bool hdrActive = card.InstalledRecord?.EngineIniHdr ?? true;
                 hdrCombo.SelectedIndex = hdrActive ? 1 : 0;
@@ -822,8 +822,8 @@ public sealed partial class MainWindow
             engineIniGrid.Children.Add(lutLabel);
 
             var lutCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
-            lutCombo.Items.Add("Off");
-            lutCombo.Items.Add("On");
+            lutCombo.Items.Add(LocOpt.T("Off"));
+            lutCombo.Items.Add(LocOpt.T("On"));
             ToolTipService.SetToolTip(lutCombo, Loc.GetString("Dialog.EngineIni.LutTooltip"));
             bool lutActive = card.InstalledRecord?.EngineIniLut ?? true;
             lutCombo.SelectedIndex = lutActive ? 1 : 0;
@@ -1014,8 +1014,8 @@ public sealed partial class MainWindow
         });
 
         var rtxHdrCombo = new ComboBox { FontSize = 11, MinWidth = 100 };
-        rtxHdrCombo.Items.Add("Off");
-        rtxHdrCombo.Items.Add("On");
+        rtxHdrCombo.Items.Add(LocOpt.T("Off"));
+        rtxHdrCombo.Items.Add(LocOpt.T("On"));
 
         var gameNameService = App.Services.GetRequiredService<IGameNameService>();
         // Read live driver state — reflects changes made outside RHI (e.g. NVIDIA App, driver update)
@@ -1656,7 +1656,7 @@ public sealed partial class MainWindow
 
         // Populate combo
         bool suppressFpsChange = true;
-        targetFpsCombo.Items.Add("Off");
+        targetFpsCombo.Items.Add(LocOpt.T("Off"));
         foreach (var preset in vrrPresets)
             targetFpsCombo.Items.Add(preset.Label);
 
@@ -1664,7 +1664,7 @@ public sealed partial class MainWindow
         if (currentTargetFps > 0 && !vrrFpsSet.Contains(currentTargetFps))
             targetFpsCombo.Items.Add($"{currentTargetFps} (Custom)");
 
-        targetFpsCombo.Items.Add("Custom...");
+        targetFpsCombo.Items.Add(LocOpt.T("Custom..."));
 
         // Select based on current value
         if (currentTargetFps == 0)
@@ -1688,12 +1688,12 @@ public sealed partial class MainWindow
             suppressFpsChange = true;
             currentTargetFps = newFps;
             targetFpsCombo.Items.Clear();
-            targetFpsCombo.Items.Add("Off");
+            targetFpsCombo.Items.Add(LocOpt.T("Off"));
             foreach (var preset in vrrPresets)
                 targetFpsCombo.Items.Add(preset.Label);
             if (newFps > 0 && !vrrFpsSet.Contains(newFps))
                 targetFpsCombo.Items.Add($"{newFps} (Custom)");
-            targetFpsCombo.Items.Add("Custom...");
+            targetFpsCombo.Items.Add(LocOpt.T("Custom..."));
 
             if (newFps == 0)
                 targetFpsCombo.SelectedIndex = 0;
@@ -1714,10 +1714,8 @@ public sealed partial class MainWindow
             if (suppressFpsChange) return;
             if (string.IsNullOrEmpty(card.InstallPath)) return;
 
-            var selectedText = targetFpsCombo.SelectedItem as string ?? "";
-
-            // "Custom..." shows inline TextBox for manual entry
-            if (selectedText == "Custom...")
+            // "Custom..." shows inline TextBox for manual entry (always the last item)
+            if (targetFpsCombo.SelectedIndex == targetFpsCombo.Items.Count - 1)
             {
                 customFpsPanel.Visibility = Visibility.Visible;
                 customFpsBox.Text = "";
@@ -1837,8 +1835,8 @@ public sealed partial class MainWindow
         Grid.SetColumn(dlssHooksLabel, 0);
         dlssHooksPanel.Children.Add(dlssHooksLabel);
         var dlssHooksCombo = new ComboBox { FontSize = 12, MinWidth = 80, HorizontalAlignment = HorizontalAlignment.Right };
-        dlssHooksCombo.Items.Add("Off");
-        dlssHooksCombo.Items.Add("On");
+        dlssHooksCombo.Items.Add(LocOpt.T("Off"));
+        dlssHooksCombo.Items.Add(LocOpt.T("On"));
         ToolTipService.SetToolTip(dlssHooksCombo, Loc.GetString("Dialog.DlssHooks.Tooltip"));
         Grid.SetColumn(dlssHooksCombo, 1);
         dlssHooksPanel.Children.Add(dlssHooksCombo);
@@ -1992,7 +1990,8 @@ public sealed partial class MainWindow
             (416f, "416 (480Hz VRR)"),
             (431f, "431 (500Hz VRR)"),
         };
-        var fpsLabels = new[] { "Off" }.Concat(vrrPresetsOs.Select(p => p.Label)).ToArray();
+        var fpsRawLabels = new[] { "Off" }.Concat(vrrPresetsOs.Select(p => p.Label)).ToArray();
+        var fpsLabels = fpsRawLabels.Select(LocOpt.T).ToArray();
         var fpsLimitCombo = new ComboBox { ItemsSource = fpsLabels, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         ToolTipService.SetToolTip(fpsLimitCombo, Loc.GetString("Dialog.OptiScaler.FpsLimitTooltip"));
 
@@ -2017,10 +2016,14 @@ public sealed partial class MainWindow
                 }
             }
         }
-        fpsLimitCombo.SelectedItem = currentFpsStr;
+        fpsLimitCombo.SelectedIndex = Array.IndexOf(fpsRawLabels, currentFpsStr);
 
+        var osVariantRaw = new[] { "Stable", "Nightly" };
+        var osVariantCombo = new ComboBox { ItemsSource = osVariantRaw.Select(LocOpt.T).ToArray(), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var currentVariant = ViewModel.GetOsVariant(card.GameName, card.Source ?? "");
+        if (currentVariant != null) osVariantCombo.SelectedIndex = Array.IndexOf(osVariantRaw, currentVariant);
         AddRow(unifiedGrid, 0, Loc.GetString("Dialog.OptiScaler.Version"),
-            new ComboBox { ItemsSource = new[] { "Stable", "Nightly" }, SelectedItem = ViewModel.GetOsVariant(card.GameName, card.Source ?? ""), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch },
+            osVariantCombo,
             Loc.GetString("Dialog.OptiScaler.FramerateLimit"), fpsLimitCombo);
         // Grab the variant combo we just added
         var variantCombo = (ComboBox)unifiedGrid.Children.Cast<UIElement>().Where(c => c is ComboBox).First();
@@ -2028,8 +2031,9 @@ public sealed partial class MainWindow
 
         fpsLimitCombo.SelectionChanged += (s, ev) =>
         {
-            var sel = fpsLimitCombo.SelectedItem as string;
-            if (sel == null || !card.IsOsInstalled || string.IsNullOrEmpty(card.InstallPath)) return;
+            int fpsSelIdx = fpsLimitCombo.SelectedIndex;
+            if (fpsSelIdx < 0 || !card.IsOsInstalled || string.IsNullOrEmpty(card.InstallPath)) return;
+            var sel = fpsRawLabels[fpsSelIdx]; // logical value
             if (sel == "Off")
                 OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "Framerate", "FramerateLimit", "0");
             else
@@ -2115,7 +2119,8 @@ public sealed partial class MainWindow
         ContentDialog? osCogDialog = null;
         variantCombo.SelectionChanged += (s, ev) =>
         {
-            var selected = variantCombo.SelectedItem as string ?? "Stable";
+            int varIdx = variantCombo.SelectedIndex;
+            var selected = varIdx >= 0 && varIdx < osVariantRaw.Length ? osVariantRaw[varIdx] : "Stable";
             ViewModel.SetOsVariant(card.GameName, selected == "Stable" ? null : selected, card.Source ?? "");
             if (card.IsOsInstalled && !string.IsNullOrEmpty(card.InstallPath))
             {
@@ -2821,8 +2826,8 @@ public sealed partial class MainWindow
         presentGrid.Children.Add(presentLabel);
 
         var presentCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
-        presentCombo.Items.Add("No");   // 0x00000002 — Auto
-        presentCombo.Items.Add("Yes");  // 0x00000001 — Preferred layered on DXGI Swapchain
+        presentCombo.Items.Add(LocOpt.T("No"));   // 0x00000002 — Auto
+        presentCombo.Items.Add(LocOpt.T("Yes"));  // 0x00000001 — Preferred layered on DXGI Swapchain
         var currentPresentMethod = _dlssPresetService.GetVulkanPresentMethod(card.GameName, card.InstallPath ?? "");
         presentCombo.SelectedIndex = currentPresentMethod == 0x00000001 ? 1 : 0;
         presentCombo.SelectionChanged += (s, ev) =>

@@ -133,7 +133,7 @@ public partial class DetailPanelBuilder
             _window.DetailEngineText.TextDecorations = isClickable ? Windows.UI.Text.TextDecorations.Underline : Windows.UI.Text.TextDecorations.None;
             _window.DetailEngineBadge.Tag = isClickable ? card : null;
             if (isClickable)
-                ToolTipService.SetToolTip(_window.DetailEngineBadge, "Click to cycle engine version (affects DOF Fix eligibility)");
+                ToolTipService.SetToolTip(_window.DetailEngineBadge, Loc.GetString("Detail.EngineBadge.Tooltip"));
             else
                 ToolTipService.SetToolTip(_window.DetailEngineBadge, null);
         }
@@ -187,11 +187,11 @@ public partial class DetailPanelBuilder
                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                     badge.PointerEntered += (s, e) => cursorProp?.SetValue(badge, handCursor);
                     badge.PointerExited += (s, e) => cursorProp?.SetValue(badge, arrowCursor);
-                    ToolTipService.SetToolTip(badge, $"Mod author: {author} — click to open Ko-fi donation page");
+                    ToolTipService.SetToolTip(badge, Loc.GetString("Detail.AuthorBadge.Tooltip", author));
                 }
                 else
                 {
-                    ToolTipService.SetToolTip(badge, $"Mod author: {author}");
+                    ToolTipService.SetToolTip(badge, Loc.GetString("Detail.AuthorBadge.SimpleTooltip", author));
                 }
                 _window.DetailAuthorBadgePanel.Children.Add(badge);
             }
@@ -297,7 +297,7 @@ public partial class DetailPanelBuilder
         if (card.HasUwFixUrl)
         {
             var source = card.UwFixSource ?? "creator";
-            ToolTipService.SetToolTip(_window.DetailUwFixBtn, $"Open {source}'s ultrawide fix page");
+            ToolTipService.SetToolTip(_window.DetailUwFixBtn, Loc.GetString("Detail.UwFix.Tooltip", source));
         }
 
         // Ultra+ link button

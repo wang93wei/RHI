@@ -52,9 +52,9 @@ public partial class DetailPanelBuilder
                 if (globalVSync.HasValue)
                 {
                     var globalName = options.FirstOrDefault(o => o.Value == globalVSync.Value).Name ?? "App Controlled";
-                    itemsList.Add($"Global ({globalName})");
+                    itemsList.Add(LocOpt.Global(LocOpt.T(globalName)));
                 }
-                itemsList.AddRange(options.Select(o => o.Name));
+                itemsList.AddRange(options.Select(o => LocOpt.T(o.Name)));
                 var items = itemsList.ToArray();
 
                 // Determine selected index
@@ -88,8 +88,7 @@ public partial class DetailPanelBuilder
                     if (init) return;
                     int i = combo.SelectedIndex;
                     if (i < 0 || i >= items.Length) return;
-                    var selected = items[i];
-                    if (selected.StartsWith("Global"))
+                    if (globalVSync.HasValue && i == 0) // "Global (...)" entry
                     {
                         // Inherit from global — write the global value
                         nvidiaPresetService.SetVSyncMode(card.GameName, installPathSafe, globalVSync ?? options[0].Value);
@@ -110,7 +109,7 @@ public partial class DetailPanelBuilder
                 vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.TearControl"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.VSyncTearControlOptions;
                 uint current = nvidiaPresetService.GetVSyncTearControl(card.GameName, installPathSafe);
-                var items = options.Select(o => o.Name).ToArray();
+                var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 var combo = new ComboBox
@@ -139,7 +138,7 @@ public partial class DetailPanelBuilder
                 vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.LowLatency"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.LowLatencyModeOptions;
                 uint current = nvidiaPresetService.GetLowLatencyMode(card.GameName, installPathSafe);
-                var items = options.Select(o => o.Name).ToArray();
+                var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 // Locked to Ultra while Smooth Motion is enabled — must turn off Smooth Motion first
@@ -187,7 +186,7 @@ public partial class DetailPanelBuilder
                 var options = DlssPresetService.SmoothMotionEnableOptions;
                 uint current = nvidiaPresetService.GetSmoothMotionEnable(card.GameName, installPathSafe);
                 smoothMotionEnabled = current != 0;
-                var items = options.Select(o => o.Name).ToArray();
+                var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 var combo = new ComboBox
@@ -236,7 +235,7 @@ public partial class DetailPanelBuilder
                 smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.AllowedApis"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionApisOptions;
                 uint current = nvidiaPresetService.GetSmoothMotionApis(card.GameName, installPathSafe);
-                var items = options.Select(o => o.Name).ToArray();
+                var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 var combo = new ComboBox
@@ -267,7 +266,7 @@ public partial class DetailPanelBuilder
                 smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.FlipPacing"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionFlipPacingFsOptions;
                 uint current = nvidiaPresetService.GetSmoothMotionFlipPacingFs(card.GameName, installPathSafe);
-                var items = options.Select(o => o.Name).ToArray();
+                var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 var combo = new ComboBox
@@ -311,7 +310,7 @@ public partial class DetailPanelBuilder
                 powerCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.PowerMode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.PowerManagementOptions;
                 uint current = nvidiaPresetService.GetPowerManagementMode(card.GameName, installPathSafe);
-                var items = options.Select(o => o.Name).ToArray();
+                var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 var combo = new ComboBox
@@ -435,9 +434,9 @@ public partial class DetailPanelBuilder
                 rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Enable"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var enableItems = new List<string>();
                 if (globalReBarState.HasValue)
-                    enableItems.Add($"Global ({(globalReBarState.Value ? "On" : "Off")})");
-                enableItems.Add("Off");
-                enableItems.Add("On");
+                    enableItems.Add(LocOpt.Global(LocOpt.T(globalReBarState.Value ? "On" : "Off")));
+                enableItems.Add(LocOpt.T("Off"));
+                enableItems.Add(LocOpt.T("On"));
 
                 // Determine selected index
                 int enableIdx;
@@ -467,8 +466,9 @@ public partial class DetailPanelBuilder
                 rebarEnableCombo.SelectionChanged += (s, ev) =>
                 {
                     if (rebarComboInit) return;
-                    var selected = rebarEnableCombo.SelectedItem as string;
-                    if (selected != null && selected.StartsWith("Global"))
+                    int selIdx = rebarEnableCombo.SelectedIndex;
+                    if (selIdx < 0) return;
+                    if (globalReBarState.HasValue && selIdx == 0) // "Global (...)" entry
                     {
                         // Remove per-game override — inherit from global
                         // Delete the per-game setting by setting it to match global
@@ -477,7 +477,8 @@ public partial class DetailPanelBuilder
                     }
                     else
                     {
-                        bool enabling = selected == "On";
+                        // Global=0, Off=1, On=2 when global is set; otherwise Off=0, On=1
+                        bool enabling = globalReBarState.HasValue ? selIdx == 2 : selIdx == 1;
                         nvidiaPresetService.SetReBarEnabled(card.GameName, installPathSafe, enabling, 2);
                     }
                     _window.DispatcherQueue?.TryEnqueue(() => BuildOverridesPanel(card));
@@ -490,7 +491,7 @@ public partial class DetailPanelBuilder
             {
                 rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Mode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 uint rebarMode = nvidiaPresetService.GetReBarMode(card.GameName, installPathSafe);
-                var modeItems = DlssPresetService.ReBarModes.Select(m => m.Name).ToList();
+                var modeItems = DlssPresetService.ReBarModes.Select(m => LocOpt.T(m.Name)).ToList();
 
                 // Select current effective mode: per-game value, or default to Standard (index 0)
                 int modeIdx = Array.FindIndex(DlssPresetService.ReBarModes, m => m.Value == rebarMode);
@@ -528,7 +529,7 @@ public partial class DetailPanelBuilder
                 var sizeValues = new List<ulong>();
                 foreach (var sl in DlssPresetService.ReBarSizeLimits)
                 {
-                    sizeItems.Add(sl.Name);
+                    sizeItems.Add(LocOpt.T(sl.Name));
                     sizeValues.Add(sl.Value);
                 }
 

@@ -66,10 +66,11 @@ public partial class DetailPanelBuilder
             };
         }
 
+        // channelItemsList holds raw logical values ("Stable", "Nightly", ...); the combo displays localized text.
         var channelCombo = new ComboBox
         {
-            ItemsSource = channelItemsList,
-            SelectedItem = defaultChannelSelection,
+            ItemsSource = channelItemsList.Select(LocOpt.T).ToList(),
+            SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
@@ -83,21 +84,23 @@ public partial class DetailPanelBuilder
         channelCombo.DropDownClosed += async (s, ev) =>
         {
             if (channelComboInitializing) return;
-            var current = channelCombo.SelectedItem as string;
+            int curIdx = channelCombo.SelectedIndex;
+            var current = curIdx >= 0 && curIdx < channelItemsList.Count ? channelItemsList[curIdx] : null;
             if (current == "Custom" && string.Equals(_window.ViewModel.GetReShadeChannelOverride(ctx.CapturedName, ctx.Card.Source), "Custom", StringComparison.OrdinalIgnoreCase))
             {
                 channelComboInitializing = true;
-                channelCombo.SelectedItem = "Stable";
+                channelCombo.SelectedIndex = channelItemsList.IndexOf("Stable");
                 channelComboInitializing = false;
-                channelCombo.SelectedItem = "Custom";
+                channelCombo.SelectedIndex = channelItemsList.IndexOf("Custom");
             }
         };
 
         channelCombo.SelectionChanged += async (s, ev) =>
         {
-            var selected = channelCombo.SelectedItem as string;
             if (channelComboInitializing || ctx.ChannelComboInitializing) return;
-            if (string.IsNullOrEmpty(selected)) return;
+            int selIdx = channelCombo.SelectedIndex;
+            if (selIdx < 0 || selIdx >= channelItemsList.Count) return;
+            var selected = channelItemsList[selIdx]; // logical value
             CrashReporter.Log($"[DetailPanelBuilder.RSChannel] '{ctx.CapturedName}' selection changed to: '{selected}'");
 
             // ── "Legacy..." opens the version picker dialog ──
@@ -106,7 +109,7 @@ public partial class DetailPanelBuilder
                 var legacyVersions = _window.ViewModel.Manifest?.LegacyReShadeAvailable;
                 if (legacyVersions == null || legacyVersions.Count == 0)
                 {
-                    channelCombo.SelectedItem = defaultChannelSelection;
+                    channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                     return;
                 }
 
@@ -137,7 +140,7 @@ public partial class DetailPanelBuilder
                 var pickerResult = await DialogService.ShowSafeAsync(pickerDialog);
                 if (pickerResult != ContentDialogResult.Primary || radioButtons.SelectedItem is not string pickedVersion)
                 {
-                    channelCombo.SelectedItem = defaultChannelSelection;
+                    channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                     return;
                 }
 
@@ -146,7 +149,7 @@ public partial class DetailPanelBuilder
                     var success = await AuxInstallService.DownloadLegacyReShadeAsync(pickedVersion, _window.ViewModel.HttpClient);
                     if (!success)
                     {
-                        channelCombo.SelectedItem = defaultChannelSelection;
+                        channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                         return;
                     }
                 }
@@ -164,8 +167,8 @@ public partial class DetailPanelBuilder
                 if (oldLegacy != null) channelItemsList.Remove(oldLegacy);
                 if (!channelItemsList.Contains(pickedVersion))
                     channelItemsList.Insert(3, pickedVersion);
-                channelCombo.ItemsSource = channelItemsList;
-                channelCombo.SelectedItem = pickedVersion;
+                channelCombo.ItemsSource = channelItemsList.Select(LocOpt.T).ToList();
+                channelCombo.SelectedIndex = channelItemsList.IndexOf(pickedVersion);
                 defaultChannelSelection = pickedVersion;
 
                 var targetCard2 = _window.ViewModel.AllCards.FirstOrDefault(c =>
@@ -240,7 +243,7 @@ public partial class DetailPanelBuilder
                         RequestedTheme = ElementTheme.Dark,
                     };
                     await DialogService.ShowSafeAsync(warnDialog);
-                    channelCombo.SelectedItem = defaultChannelSelection;
+                    channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                     return;
                 }
 
@@ -298,14 +301,14 @@ public partial class DetailPanelBuilder
                 var pickerResult = await DialogService.ShowSafeAsync(pickerDialog);
                 if (pickerResult != ContentDialogResult.Primary)
                 {
-                    channelCombo.SelectedItem = defaultChannelSelection;
+                    channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                     return;
                 }
 
                 // Find selected DLL
                 if (radioButtons.SelectedItem is not string selectedFilename || string.IsNullOrEmpty(selectedFilename))
                 {
-                    channelCombo.SelectedItem = defaultChannelSelection;
+                    channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                     return;
                 }
 
@@ -333,7 +336,7 @@ public partial class DetailPanelBuilder
                     var vResult = await DialogService.ShowSafeAsync(vDialog);
                     if (vResult != ContentDialogResult.Primary)
                     {
-                        channelCombo.SelectedItem = defaultChannelSelection;
+                        channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                         return;
                     }
 
@@ -451,7 +454,7 @@ public partial class DetailPanelBuilder
                     var result = await DialogService.ShowSafeAsync(dialog);
                     if (result != ContentDialogResult.Primary)
                     {
-                        channelCombo.SelectedItem = defaultChannelSelection;
+                        channelCombo.SelectedIndex = channelItemsList.IndexOf(defaultChannelSelection);
                         return;
                     }
                 }

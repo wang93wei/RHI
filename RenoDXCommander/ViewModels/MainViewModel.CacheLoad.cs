@@ -31,7 +31,7 @@ public partial class MainViewModel
         if (isNativeHdr)
         {
             var parts = new List<string>();
-            parts.Add("⚠ In-game HDR must be turned ON for UE-Extended to work correctly in this title.");
+            parts.Add(Loc.GetString("Wiki.Notes.InGameHdrWarning"));
 
             // Include wiki tooltip if present (from a specific mod entry)
             if (fallback == null && !string.IsNullOrWhiteSpace(effectiveMod.Notes))
@@ -57,7 +57,7 @@ public partial class MainViewModel
             var specific = GetGenericNote(gameName, genericNotes);
             if (!string.IsNullOrEmpty(specific))
             {
-                notesParts.Add("📋 Game-specific settings:");
+                notesParts.Add(Loc.GetString("Wiki.Notes.GameSpecific"));
                 notesParts.Add(specific);
             }
             notesParts.Add(UnrealWarnings);
@@ -67,7 +67,7 @@ public partial class MainViewModel
             var specific = GetGenericNote(gameName, genericNotes);
             if (!string.IsNullOrEmpty(specific))
             {
-                notesParts.Add("📋 Game-specific settings:");
+                notesParts.Add(Loc.GetString("Wiki.Notes.GameSpecific"));
                 notesParts.Add(specific);
             }
         }
@@ -623,7 +623,7 @@ public partial class MainViewModel
                     newCard.EmulatorAddonNames = emuConfigCache.Addons;
                     newCard.Mod = new GameMod
                     {
-                        Name = "Ryubing (9 games)",
+                        Name = Loc.GetString("Wiki.RyubingBundle"),
                         Maintainer = "Souperman9",
                         SnapshotUrl = "emulator-bundle",
                         Status = "✅",

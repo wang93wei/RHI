@@ -395,7 +395,7 @@ public partial class DialogService
             if (card.LumaDlssFsrSupported)
                 flagPanel.Children.Add(new TextBlock
                 {
-                    Text = "✅ DLSS / FSR",
+                    Text = Loc.GetString("Dialog.DlssFsr"),
                     FontSize = 12,
                     Foreground = Brush(ResourceKeys.AccentGreenBrush),
                 });
@@ -403,7 +403,7 @@ public partial class DialogService
             if (card.LumaHdrSupported)
                 flagPanel.Children.Add(new TextBlock
                 {
-                    Text = "✅ HDR",
+                    Text = Loc.GetString("Dialog.Hdr2"),
                     FontSize = 12,
                     Foreground = Brush(ResourceKeys.AccentGreenBrush),
                 });

@@ -53,13 +53,14 @@ public partial class DetailPanelBuilder
 
         // ── Per-game Addon mode ComboBox ─────────────────────────────────────
         string currentAddonMode = _window.ViewModel.GetPerGameAddonMode(gameName, card.Source);
-        var addonModeItems = new[] { "Global", "Select", "Off" };
+        var addonModeRaw = new[] { "Global", "Select", "Off" };
+        var addonModeItems = addonModeRaw.Select(LocOpt.T).ToArray();
         bool addonComboInitializing = true;
 
         var addonModeCombo = new ComboBox
         {
             ItemsSource = addonModeItems,
-            SelectedItem = currentAddonMode == "Off" ? "Off" : (currentAddonMode == "Select" ? "Select" : "Global"),
+            SelectedIndex = Array.IndexOf(addonModeRaw, currentAddonMode == "Off" ? "Off" : (currentAddonMode == "Select" ? "Select" : "Global")),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsEnabled = !card.UseNormalReShade,
@@ -71,21 +72,23 @@ public partial class DetailPanelBuilder
         addonModeCombo.DropDownClosed += (s, ev) =>
         {
             if (addonComboInitializing) return;
-            var current = addonModeCombo.SelectedItem as string;
+            int curIdx = addonModeCombo.SelectedIndex;
+            var current = curIdx >= 0 && curIdx < addonModeRaw.Length ? addonModeRaw[curIdx] : null;
             if (current == "Select" && _window.ViewModel.GetPerGameAddonMode(ctx.CapturedName, ctx.Card.Source) == "Select")
             {
                 addonComboInitializing = true;
-                addonModeCombo.SelectedItem = "Global";
+                addonModeCombo.SelectedIndex = Array.IndexOf(addonModeRaw, "Global");
                 addonComboInitializing = false;
-                addonModeCombo.SelectedItem = "Select";
+                addonModeCombo.SelectedIndex = Array.IndexOf(addonModeRaw, "Select");
             }
         };
 
         addonModeCombo.SelectionChanged += async (s, ev) =>
         {
             if (addonComboInitializing) return;
-            var selected = addonModeCombo.SelectedItem as string;
-            if (string.IsNullOrEmpty(selected)) return;
+            int selIdx = addonModeCombo.SelectedIndex;
+            if (selIdx < 0 || selIdx >= addonModeRaw.Length) return;
+            var selected = addonModeRaw[selIdx]; // logical value
             CrashReporter.Log($"[DetailPanelBuilder.AddonMode] '{ctx.CapturedName}' selection changed to: '{selected}'");
 
             if (selected == "Select")
@@ -120,7 +123,7 @@ public partial class DetailPanelBuilder
                     await DialogService.ShowSafeAsync(infoDlg);
                     var warnRevertMode = _window.ViewModel.GetPerGameAddonMode(ctx.CapturedName, ctx.Card.Source);
                     addonComboInitializing = true;
-                    addonModeCombo.SelectedItem = warnRevertMode == "Select" ? "Select" : (warnRevertMode == "Off" ? "Off" : "Global");
+                    addonModeCombo.SelectedIndex = Array.IndexOf(addonModeRaw, warnRevertMode == "Select" ? "Select" : (warnRevertMode == "Off" ? "Off" : "Global"));
                     addonComboInitializing = false;
                     return;
                 }
@@ -142,7 +145,7 @@ public partial class DetailPanelBuilder
                     var actualMode = _window.ViewModel.GetPerGameAddonMode(ctx.CapturedName, ctx.Card.Source);
                     var revertTo = actualMode == "Select" ? "Select" : (actualMode == "Off" ? "Off" : "Global");
                     addonComboInitializing = true;
-                    addonModeCombo.SelectedItem = revertTo;
+                    addonModeCombo.SelectedIndex = Array.IndexOf(addonModeRaw, revertTo);
                     addonComboInitializing = false;
                 }
                 return;
@@ -443,10 +446,10 @@ public partial class DetailPanelBuilder
             ctx.DetectedBox.Text = ctx.OriginalStoreName ?? gameName;
             ctx.WikiBox.Text = "";
             ctx.ShaderComboInitializing = true;
-            ctx.ShaderModeCombo.SelectedItem = "Global";
+            ctx.ShaderModeCombo.SelectedItem = LocOpt.T("Global");
             ctx.ShaderComboInitializing = false;
             addonComboInitializing = true;
-            addonModeCombo.SelectedItem = "Global";
+            addonModeCombo.SelectedItem = LocOpt.T("Global");
             addonComboInitializing = false;
             if (ctx.RenderPathCombo != null) ctx.RenderPathCombo.SelectedItem = "DirectX";
             ctx.DllOverrideToggle.IsOn = false;
@@ -462,7 +465,7 @@ public partial class DetailPanelBuilder
             if (_window.ViewModel.IsUpdateAllExcludedOs(ctx.CapturedName, card.Source))
                 _window.ViewModel.ToggleUpdateAllExclusionOs(ctx.CapturedName, card.Source);
             UpdateInclusionHelper.RefreshSummary(ctx.UpdateSummaryText, _window.ViewModel, ctx.CapturedName, card.IsREEngineGame, card.DxvkEnabled, card.Source ?? "");
-            ctx.WikiExcludeCombo.SelectedItem = "Included";
+            ctx.WikiExcludeCombo.SelectedItem = LocOpt.T("Included");
 
             // Persist all reset values immediately
             var resetName = (ctx.OriginalStoreName ?? gameName).Trim();
@@ -543,17 +546,17 @@ public partial class DetailPanelBuilder
                 _window.ViewModel.ToggleUpdateAllExclusionDxvk(ctx.CapturedName, card.Source);
 
             // Reset bitness override to Auto
-            ctx.BitnessCombo.SelectedItem = "Auto";
+            ctx.BitnessCombo.SelectedItem = LocOpt.T("Auto");
             _window.ViewModel.SetBitnessOverride(ctx.CapturedName, null, ctx.Card.Source);
 
             // Reset API overrides
-            ctx.ApiCombo.SelectedItem = "Auto";
+            ctx.ApiCombo.SelectedItem = LocOpt.T("Auto");
             _window.ViewModel.SetApiOverride(ctx.CapturedName, null, ctx.Card.Source);
 
             // Reset ReShade channel override — if ReShade is installed and channel was overridden, reinstall with Stable
             var previousChannel = _window.ViewModel.GetReShadeChannelOverride(ctx.CapturedName, ctx.Card.Source);
             ctx.ChannelComboInitializing = true;
-            ctx.ChannelCombo.SelectedItem = "Stable";
+            ctx.ChannelCombo.SelectedItem = LocOpt.T("Stable");
             ctx.ChannelComboInitializing = false;
             _window.ViewModel.SetReShadeChannelOverride(ctx.CapturedName, null, ctx.Card.Source);
 

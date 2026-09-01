@@ -136,7 +136,7 @@ public partial class DetailPanelBuilder
                 IsEnabled = fgEnabled && presetService.IsSupported,
                 Opacity = (fgEnabled && presetService.IsSupported) ? 1.0 : 0.4,
             };
-            ToolTipService.SetToolTip(mfgBtn, "Configure NVIDIA Multi Frame Generation: mode, frame count multiplier, and dynamic target frame rate. Requires 50 Series GPU.");
+            ToolTipService.SetToolTip(mfgBtn, Loc.GetString("Overrides.Mfg.Tooltip"));
             mfgBtn.Click += async (s, ev) =>
             {
                 var xamlRoot = (s as FrameworkElement)?.XamlRoot ?? _window.Content.XamlRoot;
@@ -214,7 +214,7 @@ public partial class DetailPanelBuilder
                 if (!hasDlssnr)
                 {
                     var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0), Opacity = 0 };
-                    var presetPlaceholderCombo = new ComboBox { ItemsSource = new[] { "Default" }, SelectedIndex = 0, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false, Opacity = 0 };
+                    var presetPlaceholderCombo = new ComboBox { ItemsSource = new[] { LocOpt.T("Default") }, SelectedIndex = 0, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false, Opacity = 0 };
                     nrCol.Children.Add(presetPlaceholderLabel);
                     nrCol.Children.Add(presetPlaceholderCombo);
                 }
@@ -235,7 +235,7 @@ public partial class DetailPanelBuilder
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                 };
-                ToolTipService.SetToolTip(deployNrBtn, "Download and copy nvngx_dlssnr.dll to the game folder. Supports RTX 40 and 50 Series GPUs. Can also be deployed automatically via the RenoDX DLSS5 addon in the Addons picker.");
+                ToolTipService.SetToolTip(deployNrBtn, Loc.GetString("Overrides.Nr.Deploy.Tooltip"));
 
                 var deleteNrBtn = new Button
                 {
@@ -252,7 +252,7 @@ public partial class DetailPanelBuilder
                     IsHitTestVisible = hasDlssnr,
                     Content = new TextBlock { Text = "✕", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush) },
                 };
-                ToolTipService.SetToolTip(deleteNrBtn, "Delete nvngx_dlssnr.dll from the game folder.");
+                ToolTipService.SetToolTip(deleteNrBtn, Loc.GetString("Overrides.Nr.Delete.Tooltip"));
 
                 deployNrBtn.Click += async (s, ev) =>
                 {
@@ -523,7 +523,7 @@ public partial class DetailPanelBuilder
                 CornerRadius = new CornerRadius(8),
                 IsEnabled = hasDefaults && card.HasAnyDlssStreamline,
             };
-            ToolTipService.SetToolTip(applyBtn, "Apply your configured DLSS/Streamline default versions, presets, and render scales to this game. Downloads versions on-demand if not cached.");
+            ToolTipService.SetToolTip(applyBtn, Loc.GetString("Overrides.DlssDefaults.Apply.Tooltip"));
             applyBtn.Click += async (s, ev) =>
             {
                 var targetCard = _window.ViewModel.AllCards.FirstOrDefault(c =>
@@ -613,7 +613,7 @@ public partial class DetailPanelBuilder
                         child.Opacity = 0.4;
                 }
             }
-            ToolTipService.SetToolTip(dlssRestoreBtn, "Restore all DLSS and Streamline DLLs to their original game versions and reset presets to Default.");
+            ToolTipService.SetToolTip(dlssRestoreBtn, Loc.GetString("Overrides.DlssDefaults.Restore.Tooltip"));
 
             Grid.SetColumn(slCol, slColumn);
             dlssRowGrid.Children.Add(slCol);

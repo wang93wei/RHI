@@ -475,7 +475,7 @@ public sealed partial class MainWindow
 
         stack.Children.Add(new TextBlock
         {
-            Text = "Support is available on Discord — join the community for help, mod updates, and discussion.",
+            Text = Loc.GetString("Dialog.SupportIsAvailableOnDiscord"),
             TextWrapping = TextWrapping.Wrap,
             FontSize = 12,
             Foreground = (Brush)Application.Current.Resources["TextSecondaryBrush"],

@@ -178,20 +178,24 @@ public static class DlssDefaultsDialog
 
     private static ComboBox BuildCombo(IReadOnlyList<string> versions, string currentDefault)
     {
-        var items = new List<string> { "Default" };
+        var items = new List<string> { LocOpt.T("Default") };
         items.AddRange(versions);
-        items.Add("Custom");
+        items.Add(LocOpt.T("Custom"));
 
         int selectedIdx = 0;
         if (!string.IsNullOrEmpty(currentDefault))
         {
-            var idx = items.IndexOf(currentDefault);
-            if (idx > 0) selectedIdx = idx;
+            if (string.Equals(currentDefault, "Custom", StringComparison.OrdinalIgnoreCase))
+            {
+                selectedIdx = items.Count - 1;
+            }
             else
             {
-                for (int i = 1; i < items.Count; i++)
+                // versions occupy indexes 1..Count-2 (Default at 0, Custom at the end)
+                for (int i = 1; i < items.Count - 1; i++)
                 {
-                    if (items[i].StartsWith(currentDefault, StringComparison.OrdinalIgnoreCase))
+                    if (versions[i - 1].Equals(currentDefault, StringComparison.Ordinal)
+                        || versions[i - 1].StartsWith(currentDefault, StringComparison.OrdinalIgnoreCase))
                     { selectedIdx = i; break; }
                 }
             }
@@ -209,7 +213,7 @@ public static class DlssDefaultsDialog
 
     private static ComboBox BuildPresetComboBox((string Name, uint Value)[] presets, uint currentDefault)
     {
-        var items = presets.Select(p => p.Name).ToList();
+        var items = presets.Select(p => LocOpt.T(p.Name)).ToList();
 
         int selectedIdx = 0;
         if (currentDefault != 0)
@@ -231,7 +235,7 @@ public static class DlssDefaultsDialog
     private static ComboBox BuildRenderScaleComboBox(uint currentDefault)
     {
         var options = DlssPresetService.RenderScaleOptions;
-        var items = options.Select(o => o.Name).ToList();
+        var items = options.Select(o => LocOpt.T(o.Name)).ToList();
 
         int selectedIdx = 0;
         if (currentDefault != 0)
@@ -253,7 +257,8 @@ public static class DlssDefaultsDialog
     private static string GetSelectedVersion(ComboBox combo)
     {
         if (combo.SelectedIndex <= 0) return ""; // "Default" = empty = don't change
-        return combo.SelectedItem as string ?? "";
+        if (combo.SelectedIndex == combo.Items.Count - 1) return "Custom"; // last item is Custom
+        return combo.SelectedItem as string ?? ""; // version numbers are untranslated
     }
 
     private static uint GetSelectedPreset(ComboBox combo, (string Name, uint Value)[] presets)

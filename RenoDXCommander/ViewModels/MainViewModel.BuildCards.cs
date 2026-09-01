@@ -728,7 +728,7 @@ public partial class MainViewModel
                     newCard.EmulatorAddonNames = emuConfigBc.Addons;
                     newCard.Mod = new GameMod
                     {
-                        Name = "Ryubing (9 games)",
+                        Name = Loc.GetString("Wiki.RyubingBundle"),
                         Maintainer = "Souperman9",
                         SnapshotUrl = "emulator-bundle",
                         Status = "✅",

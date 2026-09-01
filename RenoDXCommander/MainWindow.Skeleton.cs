@@ -669,7 +669,7 @@ public sealed partial class MainWindow
         // "── Frame limiters — Choose one ──" separator
         tableContent.Children.Add(new TextBlock
         {
-            Text = "——  Frame limiters — Choose one  ——",
+            Text = Loc.GetString("Detail.FrameLimiters"),
             FontSize = 10,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -728,7 +728,7 @@ public sealed partial class MainWindow
         // "── Optional ──" separator (matches real detail panel separator above OptiScaler)
         tableContent.Children.Add(new TextBlock
         {
-            Text = "── Optional ──",
+            Text = Loc.GetString("Detail.Optional"),
             FontSize = 10,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
             HorizontalAlignment = HorizontalAlignment.Center,

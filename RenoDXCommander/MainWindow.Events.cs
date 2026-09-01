@@ -185,9 +185,9 @@ public sealed partial class MainWindow
             cogGrid.Children.Add(hdrLabel);
 
             var hdrCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
-            hdrCombo.Items.Add("Default");
-            hdrCombo.Items.Add("Off");
-            hdrCombo.Items.Add("On");
+            hdrCombo.Items.Add(LocOpt.T("Default"));
+            hdrCombo.Items.Add(LocOpt.T("Off"));
+            hdrCombo.Items.Add(LocOpt.T("On"));
             ToolTipService.SetToolTip(hdrCombo, Loc.GetString("Dialog.Luma.HdrTooltip"));
 
             var currentHdr = AuxInstallService.GetLumaReshadeIniValue(card.InstallPath, "EnableHDR");
@@ -228,8 +228,8 @@ public sealed partial class MainWindow
             cogGrid.Children.Add(taaLabel);
 
             var taaCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
-            taaCombo.Items.Add("Off");
-            taaCombo.Items.Add("On");
+            taaCombo.Items.Add(LocOpt.T("Off"));
+            taaCombo.Items.Add(LocOpt.T("On"));
             ToolTipService.SetToolTip(taaCombo, Loc.GetString("Dialog.Luma.TaaTooltip"));
 
             bool taaActive = ViewModel.IsLumaTaaEnabled(card.GameName);
@@ -599,7 +599,7 @@ public sealed partial class MainWindow
         // ── Open Folder ──
         var openFolderItem = new MenuFlyoutItem
         {
-            Text = "📂 Open Folder",
+            Text = Loc.GetString("Dialog.OpenFolder2"),
             Tag = card,
         };
         openFolderItem.Click += CardOpenFolder_Click;
@@ -621,7 +621,7 @@ public sealed partial class MainWindow
         {
             var discussionItem = new MenuFlyoutItem
             {
-                Text = "ℹ Discussion / Instructions",
+                Text = Loc.GetString("Dialog.DiscussionInstructions"),
                 Tag = card,
             };
             discussionItem.Click += async (s, ev) =>
@@ -637,7 +637,7 @@ public sealed partial class MainWindow
         {
             var notesItem = new MenuFlyoutItem
             {
-                Text = "💬 View Notes",
+                Text = Loc.GetString("Dialog.ViewNotes"),
                 Tag = card,
             };
             notesItem.Click += async (s, ev) =>

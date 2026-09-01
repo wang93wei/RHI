@@ -33,7 +33,9 @@ public partial class DetailPanelBuilder
             dxvkRowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             // Left column — DXVK ComboBox (Off / Development / Stable / Lilium HDR)
-            var dxvkModeItems = new[] { "Off", "Development", "Stable", "Lilium HDR" };
+            // Raw values drive logic (overrides, switch below); display strings are localized.
+            var dxvkRawItems = new[] { "Off", "Development", "Stable", "Lilium HDR" };
+            var dxvkModeItems = dxvkRawItems.Select(LocOpt.T).ToArray();
             string defaultDxvkSelection;
             if (!card.DxvkEnabled)
             {
@@ -75,7 +77,7 @@ public partial class DetailPanelBuilder
             var dxvkModeCombo = new ComboBox
             {
                 ItemsSource = dxvkModeItems,
-                SelectedItem = defaultDxvkSelection,
+                SelectedIndex = Array.IndexOf(dxvkRawItems, defaultDxvkSelection),
                 FontSize = 12,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 IsEnabled = card.IsDxvkToggleEnabled && card.DxvkInstallEnabled,
@@ -83,8 +85,7 @@ public partial class DetailPanelBuilder
             if (card.DxvkToggleTooltip != null)
                 ToolTipService.SetToolTip(dxvkModeCombo, card.DxvkToggleTooltip);
             else
-                ToolTipService.SetToolTip(dxvkModeCombo,
-                    "Off = DXVK disabled.\nDevelopment/Stable/Lilium HDR = DXVK variant selection.\nDXVK translates DirectX to Vulkan — enables compute shaders.");
+                ToolTipService.SetToolTip(dxvkModeCombo, Loc.GetString("Overrides.DxvkMode.Tooltip"));
 
             var dxvkToggle = new ToggleSwitch { IsOn = card.DxvkEnabled, Visibility = Visibility.Collapsed };
             dxvkToggleResult = dxvkToggle;
@@ -93,8 +94,9 @@ public partial class DetailPanelBuilder
             dxvkModeCombo.SelectionChanged += async (s, ev) =>
             {
                 if (dxvkComboInitializing) return;
-                var selected = dxvkModeCombo.SelectedItem as string;
-                if (string.IsNullOrEmpty(selected)) return;
+                int selIdx = dxvkModeCombo.SelectedIndex;
+                if (selIdx < 0 || selIdx >= dxvkRawItems.Length) return;
+                var selected = dxvkRawItems[selIdx];
                 // Use card directly — re-finding by name can return a stale/wrong card
                 var targetCard = card;
 
@@ -203,7 +205,7 @@ public partial class DetailPanelBuilder
                 var isDx9Api = dxvkRec?.InstalledDlls?.Any(d => d.Equals("d3d9.dll", StringComparison.OrdinalIgnoreCase)) == true
                                || card.GraphicsApi is GraphicsApiType.DirectX8 or GraphicsApiType.DirectX9;
                 var presetArray = isDx9Api ? DxvkService.LiliumD3d9Presets : DxvkService.LiliumD3d11Presets;
-                var presetNames = presetArray.Select(p => p.Name).ToList();
+                var presetNames = presetArray.Select(p => LocOpt.T(p.Name)).ToList();
                 int currentPreset = _window.ViewModel.GetLiliumPreset(gameName, card.Source);
                 var liliumPresetCombo = new ComboBox
                 {
@@ -212,10 +214,7 @@ public partial class DetailPanelBuilder
                     FontSize = 12,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                 };
-                ToolTipService.SetToolTip(liliumPresetCombo,
-                    "Controls how aggressively DXVK upgrades render targets for HDR.\n\n" +
-                    "Safest = swap chain only (near 100% compatible).\n" +
-                    "Higher tiers upgrade back buffers and render targets — better HDR but may cause visual issues.");
+                ToolTipService.SetToolTip(liliumPresetCombo, Loc.GetString("Overrides.LiliumPreset.Tooltip"));
 
                 var liliumComboInit = true;
                 liliumPresetCombo.SelectionChanged += async (s, ev) =>
@@ -278,7 +277,7 @@ public partial class DetailPanelBuilder
             Tag = card,
         };
         changeFolderBtn.Click += (s, ev) => _window.BrowseFolder_Click(s, ev);
-        ToolTipService.SetToolTip(changeFolderBtn, "Change the install folder for this game. Use when auto-detection picked the wrong directory.");
+        ToolTipService.SetToolTip(changeFolderBtn, Loc.GetString("Overrides.ChangeFolder.Tooltip"));
         Grid.SetColumn(changeFolderBtn, 0);
         mgmtRow.Children.Add(changeFolderBtn);
 
@@ -300,7 +299,7 @@ public partial class DetailPanelBuilder
             Tag = card,
         };
         removeGameBtn.Click += (s, ev) => _window.RemoveManualGame_Click(s, ev);
-        ToolTipService.SetToolTip(removeGameBtn, "Reset the install folder to auto-detected, or remove a manually added game entirely.");
+        ToolTipService.SetToolTip(removeGameBtn, Loc.GetString("Overrides.RemoveGame.Tooltip"));
         Grid.SetColumn(removeGameBtn, 2);
         mgmtRow.Children.Add(removeGameBtn);
 
@@ -326,7 +325,7 @@ public partial class DetailPanelBuilder
             ctx.ResetAction?.Invoke();
         };
         Grid.SetColumn(mgmtResetOverridesBtn, 4);
-        ToolTipService.SetToolTip(mgmtResetOverridesBtn, "Reset all per-game overrides back to defaults (DLL names, channels, shaders, addons, DXVK, launch settings, update inclusion).");
+        ToolTipService.SetToolTip(mgmtResetOverridesBtn, Loc.GetString("Overrides.ResetOverrides.Tooltip"));
         mgmtRow.Children.Add(mgmtResetOverridesBtn);
 
         var sep3 = new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(8, 4, 8, 4) };
@@ -353,7 +352,7 @@ public partial class DetailPanelBuilder
                 await GameReportEncoder.ShowAndCopyAsync(_window.Content.XamlRoot, targetCard, _window.ViewModel);
         };
         Grid.SetColumn(reportBtn, 6);
-        ToolTipService.SetToolTip(reportBtn, "Copy a diagnostic report for this game to the clipboard. Useful for Discord or GitHub support.");
+        ToolTipService.SetToolTip(reportBtn, Loc.GetString("Overrides.CopyReport.Tooltip"));
         mgmtRow.Children.Add(reportBtn);
 
         _window.ManagementPanel.Children.Add(mgmtRow);

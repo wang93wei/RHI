@@ -196,11 +196,11 @@ public static class MfgDialog
             }
             else if (selectedModeIndex == 2) // Dynamic
             {
-                countCombo.Items.Add("Up to 2x");
-                countCombo.Items.Add("Up to 3x");
-                countCombo.Items.Add("Up to 4x");
-                countCombo.Items.Add("Up to 5x");
-                countCombo.Items.Add("Up to 6x");
+                countCombo.Items.Add(LocOpt.T("Up to 2x"));
+                countCombo.Items.Add(LocOpt.T("Up to 3x"));
+                countCombo.Items.Add(LocOpt.T("Up to 4x"));
+                countCombo.Items.Add(LocOpt.T("Up to 5x"));
+                countCombo.Items.Add(LocOpt.T("Up to 6x"));
                 countCombo.IsEnabled = true;
 
                 // Select based on current dynamic max count
