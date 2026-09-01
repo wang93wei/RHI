@@ -15,6 +15,8 @@ public static class ShaderPopupHelper
 {
     public enum PopupContext { Global, PerGame }
 
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     /// <summary>
     /// Shows the shader selection popup.
     /// Returns the list of selected pack IDs, or null if cancelled.
@@ -27,23 +29,23 @@ public static class ShaderPopupHelper
         PopupContext context)
     {
         var packs = shaderPackService.AvailablePacks;
-        var primaryButtonText = context == PopupContext.Global ? "Deploy" : "Confirm";
+        var primaryButtonText = context == PopupContext.Global ? Loc.GetString("Dialog.Deploy") : Loc.GetString("Dialog.Confirm");
 
         // Handle empty packs state
         if (packs.Count == 0)
         {
             var emptyDlg = new ContentDialog
             {
-                Title             = "Select Shader Packs",
+                Title             = Loc.GetString("Dialog.SelectShaderPacks"),
                 Content           = new TextBlock
                 {
-                    Text       = "No shader packs available.",
+                    Text       = Loc.GetString("Dialog.NoShaderPacksAvailable"),
                     FontSize   = 13,
                     Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                 },
                 PrimaryButtonText      = primaryButtonText,
                 IsPrimaryButtonEnabled = false,
-                CloseButtonText        = "Cancel",
+                CloseButtonText        = Loc.GetString("Dialog.Cancel"),
                 XamlRoot               = xamlRoot,
                 Background             = Brush(ResourceKeys.SurfaceOverlayBrush),
                 RequestedTheme         = ElementTheme.Dark,
@@ -88,14 +90,14 @@ public static class ShaderPopupHelper
         bool allExpanded = false;
         var expandAllBtn = new Button
         {
-            Content             = "Expand All",
+            Content             = Loc.GetString("Dialog.ExpandAll"),
             FontSize            = 12,
             Padding             = new Thickness(8, 4, 8, 4),
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         var deselectAllBtn = new Button
         {
-            Content             = "Deselect All",
+            Content             = Loc.GetString("Dialog.DeselectAll"),
             FontSize            = 12,
             Padding             = new Thickness(8, 4, 8, 4),
             HorizontalAlignment = HorizontalAlignment.Left,
@@ -110,7 +112,7 @@ public static class ShaderPopupHelper
                 if (expandButtons.TryGetValue(pid, out var eb))
                     eb.Content = allExpanded ? "▼" : "▶";
             }
-            expandAllBtn.Content = allExpanded ? "Collapse All" : "Expand All";
+            expandAllBtn.Content = allExpanded ? Loc.GetString("Dialog.CollapseAll") : Loc.GetString("Dialog.ExpandAll");
         };
         deselectAllBtn.Click += (s, ev) =>
         {
@@ -129,7 +131,7 @@ public static class ShaderPopupHelper
                         eb.Content = "▶";
                 }
                 allExpanded = false;
-                expandAllBtn.Content = "Expand All";
+                expandAllBtn.Content = Loc.GetString("Dialog.ExpandAll");
             }
             finally { profileLoading = false; }
         };
@@ -145,7 +147,7 @@ public static class ShaderPopupHelper
         // ── Search box (right of Deselect All) ───────────────────────────────
         var searchBox = new TextBox
         {
-            PlaceholderText = "Search packs or shaders...",
+            PlaceholderText = Loc.GetString("Dialog.SearchPacksOrShaders"),
             FontSize        = 12,
             MinWidth        = 220,
             Background      = Brush(ResourceKeys.SurfaceInputBrush),
@@ -177,9 +179,9 @@ public static class ShaderPopupHelper
         {
             var headerText = group.Key switch
             {
-                ShaderPackService.PackCategory.Essential   => "Essential",
-                ShaderPackService.PackCategory.Recommended => "Recommended",
-                _                                          => "Extra",
+                ShaderPackService.PackCategory.Essential   => Loc.GetString("Shader.Category.Essential"),
+                ShaderPackService.PackCategory.Recommended => Loc.GetString("Shader.Category.Recommended"),
+                _                                          => Loc.GetString("Shader.Category.Extra"),
             };
 
             var headerTextBlock = new TextBlock
@@ -501,7 +503,7 @@ public static class ShaderPopupHelper
         // Header
         profilePanel.Children.Add(new TextBlock
         {
-            Text       = "Profiles",
+            Text       = Loc.GetString("Shader.Profiles"),
             FontSize   = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -521,7 +523,7 @@ public static class ShaderPopupHelper
         // Inline rename TextBox for new profile (hidden until "New" is clicked)
         var newProfileBox = new TextBox
         {
-            PlaceholderText = "Profile name",
+            PlaceholderText = Loc.GetString("Shader.ProfileName"),
             FontSize        = 12,
             Margin          = new Thickness(0, 2, 0, 2),
             Visibility      = Visibility.Collapsed,
@@ -780,7 +782,7 @@ public static class ShaderPopupHelper
             // Save button
             var saveBtn = new Button
             {
-                Content  = "Save",
+                Content  = Loc.GetString("Shader.Save"),
                 FontSize = 12,
                 Padding  = new Thickness(8, 4, 8, 4),
                 Margin   = new Thickness(0, 6, 0, 2),
@@ -819,10 +821,10 @@ public static class ShaderPopupHelper
                 rebuildProfileList!();
             };
             profilePanel.Children.Add(saveBtn);
-            ToolTipService.SetToolTip(saveBtn, "Save the current shader selection into the highlighted profile. If no profile is selected, a new one is created automatically.");
+            ToolTipService.SetToolTip(saveBtn, Loc.GetString("Shader.Tooltip.Save"));
             var newBtn = new Button
             {
-                Content  = "New",
+                Content  = Loc.GetString("Dialog.New")
                 FontSize = 12,
                 Padding  = new Thickness(8, 4, 8, 4),
                 Margin   = new Thickness(0, 2, 0, 2),
@@ -840,7 +842,7 @@ public static class ShaderPopupHelper
                 newProfileBox.SelectAll();
             };
             profilePanel.Children.Add(newBtn);
-            ToolTipService.SetToolTip(newBtn, "Create a new profile from the current shader selection. You'll be prompted to enter a name.");
+            ToolTipService.SetToolTip(newBtn, Loc.GetString("Shader.Tooltip.New"));
             profilePanel.Children.Add(newProfileBox);
 
             // Confirm new profile on Enter or focus lost
@@ -887,7 +889,7 @@ public static class ShaderPopupHelper
             // Export button
             var exportBtn = new Button
             {
-                Content  = "Export",
+                Content  = Loc.GetString("Shader.Export"),
                 FontSize = 12,
                 Padding  = new Thickness(8, 4, 8, 4),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -922,7 +924,7 @@ public static class ShaderPopupHelper
 
                     CrashReporter.Log($"[ShaderPopupHelper.ShowAsync] Exported shaders zip to clipboard: {zipPath}");
 
-                    exportStatusLabel.Text       = "Copied to clipboard";
+                    exportStatusLabel.Text       = Loc.GetString("Dialog.CopiedToClipboard");
                     exportStatusLabel.Visibility = Visibility.Visible;
 
                     // Clear after 3 seconds
@@ -944,19 +946,19 @@ public static class ShaderPopupHelper
                 }
             };
             profilePanel.Children.Add(exportBtn);
-            ToolTipService.SetToolTip(exportBtn, "Zip the currently selected shader files and copy the archive to your clipboard. Paste directly into Discord to share.");
+            ToolTipService.SetToolTip(exportBtn, Loc.GetString("Shader.Tooltip.Export"));
             profilePanel.Children.Add(exportStatusLabel);
 
             // Import button
             var importBtn = new Button
             {
-                Content  = "Import",
+                Content  = Loc.GetString("Shader.Import"),
                 FontSize = 12,
                 Padding  = new Thickness(8, 4, 8, 4),
                 Margin   = new Thickness(0, 2, 0, 0),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
-            ToolTipService.SetToolTip(importBtn, "Import a shader profile from a .zip archive exported by RHI.");
+            ToolTipService.SetToolTip(importBtn, Loc.GetString("Shader.Tooltip.Import"));
 
             var importStatusLabel = new TextBlock
             {
@@ -990,7 +992,7 @@ public static class ShaderPopupHelper
                     if (string.IsNullOrEmpty(zipPath)) return;
 
                     importBtn.IsEnabled = false;
-                    importStatusLabel.Text       = "Importing...";
+                    importStatusLabel.Text       = Loc.GetString("Dialog.Importing");
                     importStatusLabel.Foreground = Brush(ResourceKeys.AccentGreenBrush);
                     importStatusLabel.Visibility = Visibility.Visible;
 
@@ -998,7 +1000,7 @@ public static class ShaderPopupHelper
 
                     if (result == null)
                     {
-                        importStatusLabel.Text       = "Invalid archive — not an RHI shader profile.";
+                        importStatusLabel.Text       = Loc.GetString("Shader.InvalidArchive");
                         importStatusLabel.Foreground = Brush(ResourceKeys.AccentRedBrush);
                         importStatusLabel.Visibility = Visibility.Visible;
                     }
@@ -1020,8 +1022,8 @@ public static class ShaderPopupHelper
                         ApplyProfileToPanel(importedProfile);
 
                         var msg = extractedPackIds.Count > 0
-                            ? $"Imported — {extractedPackIds.Count} pack(s) extracted from archive."
-                            : "Imported.";
+                            ? Loc.GetString("Shader.Import.ExtractedPacks", extractedPackIds.Count)
+                            : Loc.GetString("Shader.Import.Success");
                         importStatusLabel.Text       = msg;
                         importStatusLabel.Foreground = Brush(ResourceKeys.AccentGreenBrush);
                         importStatusLabel.Visibility = Visibility.Visible;
@@ -1075,10 +1077,10 @@ public static class ShaderPopupHelper
 
         var dlg = new ContentDialog
         {
-            Title             = "Select Shader Packs",
+            Title             = Loc.GetString("Dialog.SelectShaderPacks"),
             Content           = contentGrid,
             PrimaryButtonText = primaryButtonText,
-            CloseButtonText   = "Cancel",
+            CloseButtonText   = Loc.GetString("Dialog.Cancel"),
             XamlRoot          = xamlRoot,
             Background        = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme    = ElementTheme.Dark,

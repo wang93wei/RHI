@@ -1,5 +1,6 @@
 // DragDropHandler.Exe.cs — Exe drop processing: game root inference, name inference, and game addition.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using RenoDXCommander.Models;
@@ -55,9 +56,9 @@ public partial class DragDropHandler
         {
             var dupDialog = new ContentDialog
             {
-                Title           = "Game Already Exists",
-                Content         = $"\"{existingCard.GameName}\" is already in your library at:\n{existingCard.InstallPath}",
-                CloseButtonText = "OK",
+                Title           = Loc.GetString("Dialog.GameAlreadyExists"),
+                Content         = Loc.GetString("Dialog.GameAlreadyExists.Content", existingCard.GameName, existingCard.InstallPath),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot        = _window.Content.XamlRoot,
                 Background      = UIFactory.Brush(ResourceKeys.SurfaceToolbarBrush),
                 RequestedTheme  = ElementTheme.Dark,
@@ -70,21 +71,21 @@ public partial class DragDropHandler
         var nameBox = new TextBox { Text = gameName, Width = 380 };
         var engineLabel = engine switch
         {
-            EngineType.Unreal       => "Unreal Engine",
-            EngineType.UnrealLegacy => "Unreal Engine (Legacy)",
-            EngineType.Unity        => "Unity",
-            _                       => "Unknown"
+            EngineType.Unreal       => Loc.GetString("Dialog.Engine.Unreal"),
+            EngineType.UnrealLegacy => Loc.GetString("Dialog.Engine.UnrealLegacy"),
+            EngineType.Unity        => Loc.GetString("Dialog.Engine.Unity"),
+            _                       => Loc.GetString("Dialog.Engine.Unknown")
         };
 
         var confirmPanel = new StackPanel { Spacing = 8 };
         confirmPanel.Children.Add(new TextBlock
         {
-            Text = "Game name:", Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            Text = Loc.GetString("Dialog.GameName"), Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         });
         confirmPanel.Children.Add(nameBox);
         confirmPanel.Children.Add(new TextBlock
         {
-            Text = $"Engine: {engineLabel}\nInstall path: {installPath}",
+            Text = Loc.GetString("Dialog.AddGame.EngineAndPath", engineLabel, installPath),
             TextWrapping = TextWrapping.Wrap,
             Foreground   = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
             FontSize     = 12, Margin = new Thickness(0, 6, 0, 0),
@@ -92,10 +93,10 @@ public partial class DragDropHandler
 
         var confirmDialog = new ContentDialog
         {
-            Title             = "➕ Add Dropped Game",
+            Title             = Loc.GetString("Dialog.AddDroppedGame"),
             Content           = confirmPanel,
-            PrimaryButtonText = "Add Game",
-            CloseButtonText   = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.AddGame"),
+            CloseButtonText   = Loc.GetString("Dialog.Cancel"),
             XamlRoot          = _window.Content.XamlRoot,
             Background        = UIFactory.Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme    = ElementTheme.Dark,

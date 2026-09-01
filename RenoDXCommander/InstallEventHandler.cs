@@ -19,6 +19,7 @@ public class InstallEventHandler
     private readonly IREFrameworkService _reFrameworkService;
     private readonly IShaderPackService _shaderPackService;
     private readonly IDlssStreamlineService _dlssStreamlineService;
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     public InstallEventHandler(MainWindow window, Func<string?, Task<string?>> pickFolderAsync)
     {
@@ -197,10 +198,10 @@ public class InstallEventHandler
             {
                 var warningDialog = new ContentDialog
                 {
-                    Title = "⚠ OptiScaler Setup",
-                    Content = "Before installing OptiScaler, please configure your GPU type and DLSS input (AMD/Intel only) settings in the OptiScaler Settings section on the Settings page.\n\nThis ensures OptiScaler is configured correctly for your hardware.",
-                    PrimaryButtonText = "Continue",
-                    CloseButtonText = "Cancel",
+                    Title = Loc.GetString("Dialog.OptiScalerSetup"),
+                    Content = Loc.GetString("Dialog.BeforeInstallingOptiscalerPleaseConfigur"),
+                    PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = xamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -563,16 +564,14 @@ public class InstallEventHandler
 
         var dontShowCheck = new CheckBox
         {
-            Content = "Don't show this again",
+            Content = Loc.GetString("Dialog.DonTShowThisAgain"),
             FontSize = 12,
             Margin = new Thickness(0, 12, 0, 0),
         };
 
         var messageText = new TextBlock
         {
-            Text = "Heads up — you're installing both RenoDX and Luma on this game.\n\n" +
-                   "There's no guarantee they'll work well together. If you're using RenoDX for HDR and just want Luma for DLAA, make sure to disable HDR in the Luma mod settings to avoid conflicts.\n\n" +
-                   "If something doesn't look right, uninstalling one of them is the first thing to try. We can't offer support for issues that come from running both together.",
+            Text = Loc.GetString("Dialog.LumaRenodxCombinedWarning.Content"),
             TextWrapping = TextWrapping.Wrap,
             FontSize = 13,
             LineHeight = 22,
@@ -585,10 +584,10 @@ public class InstallEventHandler
 
         var dialog = new ContentDialog
         {
-            Title = "Installing both RenoDX and Luma",
+            Title = Loc.GetString("Dialog.InstallingBothRenodxAndLuma"),
             Content = content,
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,

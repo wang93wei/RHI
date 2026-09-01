@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using RenoDXCommander.Models;
 using RenoDXCommander.Services;
 using RenoDXCommander.ViewModels;
 using Windows.ApplicationModel.DataTransfer;
@@ -21,23 +22,22 @@ public static class GameReportEncoder
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RHI", "reports");
 
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     public static async Task ShowAndCopyAsync(XamlRoot xamlRoot, GameCardViewModel card, MainViewModel vm)
     {
         // Gatekeep: ask user to correct overrides first
         var gateDlg = new ContentDialog
         {
-            Title = "Before you submit",
+            Title = Loc.GetString("Dialog.BeforeYouSubmit"),
             Content = new TextBlock
             {
-                Text = "Please use the overrides on this panel to correct any wrong values " +
-                       "(bitness, graphics API, game name, etc.) before generating a report. " +
-                       "This helps us update the manifest faster.\n\n" +
-                       "Have you corrected everything you can?",
+                Text = Loc.GetString("Dialog.ReportGate.Content"),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12,
             },
-            PrimaryButtonText = "Yes, continue",
-            CloseButtonText = "Go back",
+            PrimaryButtonText = Loc.GetString("Dialog.YesContinue"),
+            CloseButtonText = Loc.GetString("Dialog.GoBack"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -48,7 +48,7 @@ public static class GameReportEncoder
         // Show dialog with optional note
         var noteBox = new TextBox
         {
-            PlaceholderText = "Describe the issue (optional)",
+            PlaceholderText = Loc.GetString("Dialog.ReportNote.Placeholder"),
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
             MinHeight = 80,
@@ -57,7 +57,7 @@ public static class GameReportEncoder
 
         var dlg = new ContentDialog
         {
-            Title = "Copy Game Report",
+            Title = Loc.GetString("Dialog.CopyGameReport"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -65,8 +65,7 @@ public static class GameReportEncoder
                 {
                     new TextBlock
                     {
-                        Text = "This saves a report file and copies it to your clipboard. " +
-                               "Paste it directly into Discord or attach it to a GitHub issue.",
+                        Text = Loc.GetString("Dialog.ReportCopy.Content"),
                         TextWrapping = TextWrapping.Wrap,
                         FontSize = 12,
                         Opacity = 0.7,
@@ -74,8 +73,8 @@ public static class GameReportEncoder
                     noteBox,
                 },
             },
-            PrimaryButtonText = "Copy to Clipboard",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.CopyToClipboard"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -328,21 +327,21 @@ public static class GameReportEncoder
             ["renderingPath"] = card.RequiresVulkanInstall ? "Vulkan" : "DirectX",
         };
 
-        // Components
+        // Components — statuses intentionally kept in English for the support team
         var components = new List<Dictionary<string, string?>>
         {
-            new() { ["name"] = "ReShade", ["status"] = card.RsStatusText, ["version"] = card.RsInstalledVersion ?? "", ["filename"] = card.RsInstalledFile ?? "" },
-            new() { ["name"] = "RenoDX", ["status"] = card.RdxStatusText, ["version"] = "", ["filename"] = card.InstalledAddonFileName },
-            new() { ["name"] = "ReLimiter", ["status"] = card.UlStatusText, ["version"] = "", ["filename"] = "" },
-            new() { ["name"] = "Display Commander", ["status"] = card.DcStatusText, ["version"] = "", ["filename"] = "" },
-            new() { ["name"] = "OptiScaler", ["status"] = card.OsStatusText, ["version"] = card.OsInstalledVersion ?? "", ["filename"] = card.OsInstalledFile ?? "" },
+            new() { ["name"] = "ReShade", ["status"] = ReportVersionedStatus(card.RsIsInstalling, card.RsStatus, card.RsInstalledVersion), ["version"] = card.RsInstalledVersion ?? "", ["filename"] = card.RsInstalledFile ?? "" },
+            new() { ["name"] = "RenoDX", ["status"] = ReportRdxStatus(card), ["version"] = "", ["filename"] = card.InstalledAddonFileName },
+            new() { ["name"] = "ReLimiter", ["status"] = ReportVersionStatus(card.UlIsInstalling, card.UlStatus, card.UlInstalledVersion), ["version"] = "", ["filename"] = "" },
+            new() { ["name"] = "Display Commander", ["status"] = ReportVersionStatus(card.DcIsInstalling, card.DcStatus, card.DcInstalledVersion), ["version"] = "", ["filename"] = "" },
+            new() { ["name"] = "OptiScaler", ["status"] = ReportVersionStatus(card.OsIsInstalling, card.OsStatus, card.OsInstalledVersion), ["version"] = card.OsInstalledVersion ?? "", ["filename"] = card.OsInstalledFile ?? "" },
         };
 
         if (card.IsREEngineGame)
-            components.Add(new() { ["name"] = "RE Framework", ["status"] = card.RefStatusText, ["version"] = "", ["filename"] = "" });
+            components.Add(new() { ["name"] = "RE Framework", ["status"] = ReportVersionStatus(card.RefIsInstalling, card.RefStatus, card.RefInstalledVersion), ["version"] = "", ["filename"] = "" });
 
         if (card.IsLumaMode)
-            components.Add(new() { ["name"] = "Luma", ["status"] = card.LumaStatusText, ["version"] = "", ["filename"] = "" });
+            components.Add(new() { ["name"] = "Luma", ["status"] = ReportLumaStatus(card), ["version"] = "", ["filename"] = "" });
 
         // DLSS / Streamline
         Dictionary<string, object?>? dlssInfo = null;
@@ -440,4 +439,33 @@ public static class GameReportEncoder
             ["timestamp"] = DateTime.UtcNow.ToString("O"),
         };
     }
+
+    // ── English component status for support reports ────────────────────────────
+    // Reports are pasted into Discord for the support team, so statuses must stay
+    // English even when the UI is localized (i18n R3.4 — support/log output is not
+    // translated). These mirror the GameCardViewModel.*StatusText logic.
+    private static string ReportVersionStatus(bool installing, GameStatus status, string? version) =>
+        installing ? "Installing…"
+        : status == GameStatus.UpdateAvailable ? "Update"
+        : status == GameStatus.Installed ? (version ?? "Installed")
+        : "Ready";
+
+    private static string ReportVersionedStatus(bool installing, GameStatus status, string? version) =>
+        installing ? "Installing…"
+        : status == GameStatus.UpdateAvailable ? (version ?? "Update")
+        : status == GameStatus.Installed ? (version ?? "Installed")
+        : "Ready";
+
+    private static string ReportRdxStatus(GameCardViewModel card) =>
+        card.IsInstalling ? "Installing…"
+        : card.Status == GameStatus.UpdateAvailable ? (card.RdxInstalledVersion ?? "Update")
+        : card.Status == GameStatus.Installed ? (card.RdxInstalledVersion ?? "Installed")
+        : (card.Mod?.SnapshotUrl != null ? "Ready" : "—");
+
+    private static string ReportLumaStatus(GameCardViewModel card) =>
+        card.IsLumaInstalling ? "Installing…"
+        : card.LumaStatus == GameStatus.UpdateAvailable ? "Update"
+        : card.LumaStatus == GameStatus.Installed
+            ? (card.LumaRecord?.InstalledBuildNumber > 0 ? $"Build {card.LumaRecord.InstalledBuildNumber}" : "Installed")
+        : "Ready";
 }

@@ -44,6 +44,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Exposes the detail panel builder for extracted handler classes.</summary>
     internal DetailPanelBuilder DetailPanelBuilderInstance => _detailPanelBuilder;
 
+    /// <summary>Localization service for i18n string lookups (shared across all MainWindow partials).</summary>
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     private string? _pendingReselect;
     private bool _forceClose;
     private DispatcherTimer? _shutdownSignalTimer;
@@ -86,7 +89,7 @@ public sealed partial class MainWindow : Window
         AuxInstallService.EnsureReShadeStaging(); // create staging dir (DLLs downloaded by ReShadeUpdateService)
         App.Services.GetRequiredService<CustomReShadeHashService>().EnsureInitialized(); // seed hash file on first run
         App.Services.GetRequiredService<IOptiScalerService>().SeedUserInis(); // seed OptiScaler INIs if missing
-        Title = "RHI";
+        Title = Loc.GetString("App.Title");
         // Fire-and-forget: check/download shader packs in the background
         // When CacheAllShaders is off, skip the bulk download — packs will be fetched on demand.
         Task shaderTask;
@@ -534,18 +537,18 @@ public sealed partial class MainWindow : Window
                 };
                 var pickerDialog = new ContentDialog
                 {
-                    Title = "Install Luma Mod",
+                    Title = Loc.GetString("Dialog.InstallLumaMod"),
                     Content = new StackPanel
                     {
                         Spacing = 8,
                         Children =
                         {
-                            new TextBlock { Text = $"Luma mod detected: {Path.GetFileName(filePath)}\n\nSelect game to install to:", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, FontSize = 12 },
+                            new TextBlock { Text = Loc.GetString("Dialog.InstallLumaMod.Detected", Path.GetFileName(filePath)), TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, FontSize = 12 },
                             combo,
                         }
                     },
-                    PrimaryButtonText = "Install",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Install"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                 };

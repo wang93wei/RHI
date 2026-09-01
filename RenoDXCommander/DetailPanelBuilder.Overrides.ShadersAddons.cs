@@ -65,7 +65,7 @@ public partial class DetailPanelBuilder
             IsEnabled = !card.UseNormalReShade,
         };
         ToolTipService.SetToolTip(addonModeCombo,
-            "Global = use global addon set. Select = pick per-game addons. Off = no addons for this game.");
+            Loc.GetString("Overrides.AddonMode.Tooltip"));
 
         // Allow re-opening the Select picker when already on Select
         addonModeCombo.DropDownClosed += (s, ev) =>
@@ -105,7 +105,7 @@ public partial class DetailPanelBuilder
                 {
                     var infoDlg = new ContentDialog
                     {
-                        Title = "Select Addons",
+                        Title = Loc.GetString("Dialog.SelectAddons"),
                         Content = new TextBlock
                         {
                             Text = Loc.GetString("Shader.AddonNotWired"),
@@ -189,7 +189,7 @@ public partial class DetailPanelBuilder
             Margin = new Thickness(0, 8, 0, 0),
         };
         ToolTipService.SetToolTip(presetBtn,
-            "Pick .ini preset files to copy to this game's folder. Place presets in the reshade-presets folder.");
+            Loc.GetString("Overrides.SelectPreset.Tooltip"));
         presetBtn.Click += async (s, ev) =>
         {
             var selected = await PresetPopupHelper.ShowAsync(_window.Content.XamlRoot);
@@ -206,7 +206,7 @@ public partial class DetailPanelBuilder
                     {
                         var shaderDialog = new ContentDialog
                         {
-                            Title = "🔧 Install Shaders?",
+                            Title = Loc.GetString("Dialog.InstallShaders"),
                             Content = Loc.GetString("Shader.InstallConfirmDetail"),
                             PrimaryButtonText = Loc.GetString("Xaml.Yes"),
                             CloseButtonText = Loc.GetString("Xaml.No"),
@@ -276,8 +276,8 @@ public partial class DetailPanelBuilder
                     : null));
 
         var headerText = string.IsNullOrEmpty(effectiveExe)
-            ? "Launch executable"
-            : $"Launch executable  —  {effectiveExe}";
+            ? Loc.GetString("Overrides.LaunchExe")
+            : Loc.GetString("Overrides.LaunchExe.Named", effectiveExe);
         launchExeHeaderPanel.Children.Add(new TextBlock
         {
             Text = headerText,
@@ -304,7 +304,7 @@ public partial class DetailPanelBuilder
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         ToolTipService.SetToolTip(launchExeBox,
-            "Override the executable used when launching this game. Leave blank for auto-detection (largest exe in install folder).");
+            Loc.GetString("Overrides.LaunchExe.Tooltip"));
         launchExeBox.LostFocus += (s, ev) =>
         {
             var newPath = launchExeBox.Text.Trim();
@@ -324,9 +324,9 @@ public partial class DetailPanelBuilder
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        var argsTooltip = "Command-line arguments passed to the game on launch. Saves on focus lost.";
+        var argsTooltip = Loc.GetString("Overrides.LaunchArgs.Tooltip");
         if (card.Source.Equals("Epic", StringComparison.OrdinalIgnoreCase))
-            argsTooltip += "\n\nNote: Setting arguments disables Epic protocol launch. EOS-protected games may fail to launch with arguments.";
+            argsTooltip += "\n\n" + Loc.GetString("Overrides.LaunchArgs.EpicNote");
         ToolTipService.SetToolTip(launchArgsBox, argsTooltip);
         launchArgsBox.LostFocus += (s, ev) =>
         {
@@ -372,10 +372,11 @@ public partial class DetailPanelBuilder
                 var ofn = new NativeInterop.OpenFileName();
                 ofn.structSize = System.Runtime.InteropServices.Marshal.SizeOf(ofn);
                 ofn.hwndOwner = hwnd;
-                ofn.filter = "Executables (*.exe)\0*.exe\0All Files (*.*)\0*.*\0";
+                ofn.filter = Loc.GetString("Overrides.LaunchExe.FilterExecutables") + "\0*.exe\0"
+                           + Loc.GetString("Overrides.LaunchExe.FilterAllFiles") + "\0*.*\0";
                 ofn.file = new string(new char[260]);
                 ofn.maxFile = ofn.file.Length;
-                ofn.title = "Select Game Executable";
+                ofn.title = Loc.GetString("Overrides.LaunchExe.SelectTitle");
                 var browseDir = card.InstallPath is { Length: > 0 } bp && System.IO.Directory.Exists(bp) ? bp
                               : card.DetectedGame?.InstallPath is { Length: > 0 } dp && System.IO.Directory.Exists(dp) ? dp
                               : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
@@ -391,7 +392,7 @@ public partial class DetailPanelBuilder
             }
         };
         Grid.SetColumn(browseLaunchBtn, 0);
-        ToolTipService.SetToolTip(browseLaunchBtn, "Browse for a game executable to use as the launch target.");
+        ToolTipService.SetToolTip(browseLaunchBtn, Loc.GetString("Overrides.LaunchExe.BrowseTooltip"));
         launchBtnRow.Children.Add(browseLaunchBtn);
 
         var resetLaunchBtn = new Button
@@ -413,7 +414,7 @@ public partial class DetailPanelBuilder
             _window.ViewModel.SaveSettingsPublic();
         };
         Grid.SetColumn(resetLaunchBtn, 1);
-        ToolTipService.SetToolTip(resetLaunchBtn, "Clear the launch executable override and revert to auto-detection.");
+        ToolTipService.SetToolTip(resetLaunchBtn, Loc.GetString("Overrides.LaunchExe.ResetTooltip"));
         launchBtnRow.Children.Add(resetLaunchBtn);
         Grid.SetRow(launchBtnRow, 2);
         shadersAddonsRightColumn.Children.Add(launchBtnRow);

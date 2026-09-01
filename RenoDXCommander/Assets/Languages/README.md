@@ -4,7 +4,7 @@ JSON-based i18n resource packs. `en-US.json` is the authoritative full set. Othe
 
 ## Files
 
-- `en-US.json` — English (US), fallback, ~848 keys
+- `en-US.json` — English (US), fallback, ~1160 keys
 - `zh-CN.json` — Simplified Chinese (简体中文)
 - `zh-TW.json` — Traditional Chinese (繁體中文)
 - `ja-JP.json` — Japanese (日本語)
@@ -35,3 +35,13 @@ Parameterized strings use `{0}`, `{1}` or `{name}` placeholders via `string.Form
 ## Coverage
 
 `Coverage(lang)` = translated keys / total en-US keys. CI prints coverage; missing keys do not block build but should be translated for key user journeys.
+
+## Intentionally untranslated (i18n R3.4)
+
+The following stay in English by design and have no keys:
+
+- `CrashReporter.Log` messages, exception messages, and game support reports (`GameReportEncoder`) — diagnostics shared with the support team.
+- File names, registry paths, DLL names, URLs, version numbers, Shader/Addon IDs and other technical identifiers.
+- FAQ long-form body/tip paragraphs in `MainWindow.FaqBuilder.cs` — only the structural section titles and link labels are localized; the prose remains English.
+- Transient install progress messages assigned to `*ActionMessage` (set by install pipelines/services).
+- Filter/search logic tokens in `FilterViewModel` (`Detected`, `Installed`, `Unreal`, …) — these are matching keys, not display text; the visible chip labels come from `Filter.*` / `Detail.*` keys.

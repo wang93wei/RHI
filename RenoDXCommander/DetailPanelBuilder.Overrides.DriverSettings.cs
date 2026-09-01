@@ -38,7 +38,7 @@ public partial class DetailPanelBuilder
             // ── Column 0: VSync ──
             var vsyncCol = new StackPanel { Spacing = 4 };
             var vsyncLabel = new TextBlock { Text = Loc.GetString("Xaml.Vsync"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
-            ToolTipService.SetToolTip(vsyncLabel, "Vertical Sync settings — controls how the driver synchronizes frame rendering with your display's refresh rate.");
+            ToolTipService.SetToolTip(vsyncLabel, Loc.GetString("Overrides.Vsync.Tooltip"));
             vsyncCol.Children.Add(vsyncLabel);
 
             // VSync Mode
@@ -80,8 +80,8 @@ public partial class DetailPanelBuilder
                     CornerRadius = new CornerRadius(6),
                 };
                 ToolTipService.SetToolTip(combo, globalVSync.HasValue
-                    ? "Global = inherit from global setting. App Controlled: let the game decide. Force Off: disables VSync. Force On: locks to refresh rate. Fast Sync: renders freely, displays latest complete frame."
-                    : "VSync Mode — App Controlled: let the game decide. Force Off: disables VSync entirely. Force On: locks to refresh rate. Fast Sync: renders freely, displays latest complete frame.");
+                    ? Loc.GetString("Overrides.VsyncMode.Tooltip.Global")
+                    : Loc.GetString("Overrides.VsyncMode.Tooltip"));
                 var init = true;
                 combo.SelectionChanged += (s, ev) =>
                 {
@@ -121,7 +121,7 @@ public partial class DetailPanelBuilder
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     CornerRadius = new CornerRadius(6),
                 };
-                ToolTipService.SetToolTip(combo, "VSync Tear Control — Standard: normal VSync behavior. Adaptive: VSync on when FPS ≥ refresh rate, off when below (reduces stuttering at low FPS).");
+                ToolTipService.SetToolTip(combo, Loc.GetString("Overrides.TearControl.Tooltip"));
                 var init = true;
                 combo.SelectionChanged += (s, ev) =>
                 {
@@ -156,8 +156,8 @@ public partial class DetailPanelBuilder
                     Opacity = latencyLocked ? 0.4 : 1.0,
                 };
                 ToolTipService.SetToolTip(combo2, latencyLocked
-                    ? "Low Latency is locked to Ultra while Smooth Motion is enabled. Turn off Smooth Motion to change this setting."
-                    : "Low Latency Mode — Off: game controls frame queue. On: limits pre-rendered frames to 1 (lower latency). Ultra: just-in-time frame submission (lowest latency, may reduce FPS slightly).");
+                    ? Loc.GetString("Overrides.LowLatency.Tooltip.Locked")
+                    : Loc.GetString("Overrides.LowLatency.Tooltip"));
                 var init2 = true;
                 combo2.SelectionChanged += (s, ev) =>
                 {
@@ -177,7 +177,7 @@ public partial class DetailPanelBuilder
             // ── Column 4: Smooth Motion ──
             var smoothCol = new StackPanel { Spacing = 4 };
             var smoothLabel = new TextBlock { Text = Loc.GetString("Dialog.SmoothMotion"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
-            ToolTipService.SetToolTip(smoothLabel, "NVIDIA Smooth Motion — driver-level frame generation. Adds interpolated frames for smoother visuals. RTX 40 Series+ required.");
+            ToolTipService.SetToolTip(smoothLabel, Loc.GetString("Overrides.SmoothMotion.Tooltip"));
             smoothCol.Children.Add(smoothLabel);
 
             // Enable
@@ -198,7 +198,7 @@ public partial class DetailPanelBuilder
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     CornerRadius = new CornerRadius(6),
                 };
-                ToolTipService.SetToolTip(combo, "Smooth Motion Enable — Off: disabled. On: enables driver-level frame generation (RTX 40 Series+ only).");
+                ToolTipService.SetToolTip(combo, Loc.GetString("Overrides.SmoothMotionEnable.Tooltip"));
                 var init = true;
                 combo.SelectionChanged += (s, ev) =>
                 {
@@ -249,7 +249,7 @@ public partial class DetailPanelBuilder
                     IsEnabled = smoothMotionEnabled,
                     Opacity = smoothMotionEnabled ? 1.0 : 0.4,
                 };
-                ToolTipService.SetToolTip(combo, "Smooth Motion APIs — which graphics APIs Smooth Motion is allowed to hook. None = disabled for all APIs.");
+                ToolTipService.SetToolTip(combo, Loc.GetString("Overrides.SmoothMotionApis.Tooltip"));
                 var init = true;
                 combo.SelectionChanged += (s, ev) =>
                 {
@@ -280,7 +280,7 @@ public partial class DetailPanelBuilder
                     IsEnabled = smoothMotionEnabled,
                     Opacity = smoothMotionEnabled ? 1.0 : 0.4,
                 };
-                ToolTipService.SetToolTip(combo, "Flip Pacing — Off: prioritize lower latency. On: prioritize smoother frame pacing. Sets both fullscreen and windowed modes together.");
+                ToolTipService.SetToolTip(combo, Loc.GetString("Overrides.FlipPacing.Tooltip"));
                 var init = true;
                 combo.SelectionChanged += (s, ev) =>
                 {
@@ -303,7 +303,7 @@ public partial class DetailPanelBuilder
             // ── Column 6: Other (Power, G-Sync, Restore) ──
             var powerCol = new StackPanel { Spacing = 4 };
             var powerLabel = new TextBlock { Text = Loc.GetString("Xaml.Other"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
-            ToolTipService.SetToolTip(powerLabel, "Power management, G-Sync control, and profile reset.");
+            ToolTipService.SetToolTip(powerLabel, Loc.GetString("Overrides.Power.Tooltip"));
             powerCol.Children.Add(powerLabel);
 
             // Power Management Mode
@@ -322,7 +322,7 @@ public partial class DetailPanelBuilder
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     CornerRadius = new CornerRadius(6),
                 };
-                ToolTipService.SetToolTip(combo, "Power Management — Adaptive: GPU clocks down at idle. Maximum: locks GPU to highest clocks. Optimal: balanced (NVIDIA recommended).");
+                ToolTipService.SetToolTip(combo, Loc.GetString("Overrides.PowerMode.Tooltip"));
                 var init = true;
                 combo.SelectionChanged += (s, ev) =>
                 {
@@ -341,13 +341,13 @@ public partial class DetailPanelBuilder
                 bool gsyncEnabled = nvidiaPresetService.GetPerGameGSyncEnabled(card.GameName, installPathSafe);
                 var gsyncCombo = new ComboBox
                 {
-                    ItemsSource = new[] { "Enabled", "Disabled" },
+                    ItemsSource = new[] { Loc.GetString("Xaml.Enabled"), Loc.GetString("Xaml.Disabled") },
                     SelectedIndex = gsyncEnabled ? 0 : 1,
                     FontSize = 11,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     CornerRadius = new CornerRadius(6),
                 };
-                ToolTipService.SetToolTip(gsyncCombo, "Per-game G-Sync control. Disabled forces G-Sync off for this game regardless of global setting.");
+                ToolTipService.SetToolTip(gsyncCombo, Loc.GetString("Overrides.GSync.Tooltip"));
                 var gsyncInit = true;
                 gsyncCombo.SelectionChanged += (s, ev) =>
                 {
@@ -375,16 +375,16 @@ public partial class DetailPanelBuilder
                 IsEnabled = nvidiaPresetService.IsSupported,
             };
             ToolTipService.SetToolTip(restoreProfileBtn,
-                "Restore this game's NVIDIA driver profile to factory defaults. Removes all custom settings (presets, render scale, MFG, driver overrides). This action is irreversible.");
+                Loc.GetString("Overrides.RestoreProfile.Tooltip"));
             restoreProfileBtn.Click += async (s, ev) =>
             {
                 var xamlRoot = (s as FrameworkElement)?.XamlRoot ?? _window.Content.XamlRoot;
                 var warningDialog = new ContentDialog
                 {
-                    Title = "Restore driver settings?",
+                    Title = Loc.GetString("Dialog.RestoreDriverSettings"),
                     Content = new TextBlock
                     {
-                        Text = $"This will restore driver settings for {capturedName} back to the factory default and restore DLSS/Streamline DLLs to their original versions. This action is irreversible.",
+                        Text = Loc.GetString("Dialog.RestoreDriverSettings.Content", capturedName),
                         TextWrapping = TextWrapping.Wrap,
                         FontSize = 13,
                     },
@@ -423,7 +423,7 @@ public partial class DetailPanelBuilder
             // ── Column 8: ReBAR ──
             var rebarCol = new StackPanel { Spacing = 4 };
             var rebarLabel = new TextBlock { Text = Loc.GetString("Xaml.Rebar"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
-            ToolTipService.SetToolTip(rebarLabel, "Resizable BAR — allows the CPU to access full GPU VRAM at once. Can improve performance by 5-10% in some titles. RTX 30+ and BIOS support required.");
+            ToolTipService.SetToolTip(rebarLabel, Loc.GetString("Overrides.Rebar.Tooltip"));
             rebarCol.Children.Add(rebarLabel);
 
             bool rebarEnabled = nvidiaPresetService.GetReBarEnabled(card.GameName, installPathSafe);
@@ -461,8 +461,8 @@ public partial class DetailPanelBuilder
                     CornerRadius = new CornerRadius(6),
                 };
                 ToolTipService.SetToolTip(rebarEnableCombo, globalReBarState.HasValue
-                    ? "Global = inherit from global setting. On/Off = per-game override."
-                    : "Off = ReBAR disabled. On = Force-enable ReBAR for this game.");
+                    ? Loc.GetString("Overrides.RebarEnable.Tooltip.Global")
+                    : Loc.GetString("Overrides.RebarEnable.Tooltip"));
                 var rebarComboInit = true;
                 rebarEnableCombo.SelectionChanged += (s, ev) =>
                 {
@@ -506,7 +506,7 @@ public partial class DetailPanelBuilder
                     IsEnabled = rebarEnabled,
                     Opacity = rebarEnabled ? 1.0 : 0.4,
                 };
-                ToolTipService.SetToolTip(rebarModeCombo, "Standard = conservative. Optimized = aggressive driver scheduling (used by NVIDIA-whitelisted titles).");
+                ToolTipService.SetToolTip(rebarModeCombo, Loc.GetString("Overrides.RebarMode.Tooltip"));
                 var modeComboInit = true;
                 rebarModeCombo.SelectionChanged += (s, ev) =>
                 {
@@ -549,7 +549,7 @@ public partial class DetailPanelBuilder
                     IsEnabled = rebarEnabled,
                     Opacity = rebarEnabled ? 1.0 : 0.4,
                 };
-                ToolTipService.SetToolTip(rebarSizeCombo, "1GB is optimal for most games. Decrease to 512MB if experiencing ReBAR-related stutters.");
+                ToolTipService.SetToolTip(rebarSizeCombo, Loc.GetString("Overrides.RebarSize.Tooltip"));
                 var sizeComboInit = true;
                 rebarSizeCombo.SelectionChanged += (s, ev) =>
                 {
@@ -575,8 +575,8 @@ public partial class DetailPanelBuilder
         _window.NvidiaProfilePanel.Children.Add(new TextBlock
         {
             Text = isElevated
-                ? "✓ Running as admin — all driver profile settings are writable."
-                : "⚠ Admin rights required to write driver profile settings. Enable Admin Mode in Settings or restart as admin.",
+                ? Loc.GetString("Overrides.AdminNotice.Elevated")
+                : Loc.GetString("Overrides.AdminNotice.NotElevated"),
             FontSize = 10,
             Foreground = UIFactory.Brush(isElevated ? ResourceKeys.TextTertiaryBrush : ResourceKeys.AccentAmberDimBrush),
             TextWrapping = TextWrapping.Wrap,

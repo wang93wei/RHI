@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -14,6 +15,8 @@ namespace RenoDXCommander;
 public static class AddonPopupHelper
 {
     public enum PopupContext { Global, PerGame }
+
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     /// <summary>
     /// Shows the per-game addon selection popup.
@@ -41,14 +44,14 @@ public static class AddonPopupHelper
         {
             var emptyDlg = new ContentDialog
             {
-                Title = "Select Addons",
+                Title = Loc.GetString("Dialog.SelectAddons"),
                 Content = new TextBlock
                 {
-                    Text = "No addons available.",
+                    Text = Loc.GetString("Dialog.NoAddonsAvailable"),
                     FontSize = 13,
                     Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                 },
-                CloseButtonText = "Close",
+                CloseButtonText = Loc.GetString("Dialog.Close"),
                 XamlRoot = xamlRoot,
                 Background = Brush(ResourceKeys.SurfaceOverlayBrush),
                 MinWidth = 750,
@@ -69,7 +72,7 @@ public static class AddonPopupHelper
             "RHI", "Custom", "Addons");
         var folderLink = new HyperlinkButton
         {
-            Content = "Place custom .addon64/.addon32 files here",
+            Content = Loc.GetString("Dialog.PlaceCustomAddon64Addon32Files"),
             FontSize = 11,
             Foreground = Brush(ResourceKeys.AccentBlueBrush),
             Padding = new Thickness(0),
@@ -150,7 +153,7 @@ public static class AddonPopupHelper
             {
                 textPanel.Children.Add(new HyperlinkButton
                 {
-                    Content = "How to use",
+                    Content = Loc.GetString("Dialog.HowToUse"),
                     NavigateUri = new Uri(entry.RepositoryUrl),
                     FontSize = 11,
                     Foreground = Brush(ResourceKeys.AccentBlueBrush),
@@ -173,14 +176,14 @@ public static class AddonPopupHelper
             var toggle = new ToggleSwitch
             {
                 IsOn = isSelected,
-                OnContent = "On",
-                OffContent = "Off",
+                OnContent = Loc.GetString("Xaml.On"),
+                OffContent = Loc.GetString("Xaml.Off"),
                 VerticalAlignment = VerticalAlignment.Center,
                 IsEnabled = !peerIsSelected,
                 Opacity = peerIsSelected ? 0.35 : 1.0,
             };
             if (peerIsSelected)
-                ToolTipService.SetToolTip(toggle, $"Disable {mutualExclusivePeer} first to enable this addon.");
+                ToolTipService.SetToolTip(toggle, Loc.GetString("Dialog.Addon.DisablePeerFirst", mutualExclusivePeer));
 
             // Capture for the lambda
             var capturedEntry = entry;
@@ -228,7 +231,7 @@ public static class AddonPopupHelper
                         peer.Toggle.IsEnabled = !toggle.IsOn;
                         peer.Toggle.Opacity = toggle.IsOn ? 0.35 : 1.0;
                         if (toggle.IsOn)
-                            ToolTipService.SetToolTip(peer.Toggle, $"Disable {entry.PackageName} first to enable this addon.");
+                            ToolTipService.SetToolTip(peer.Toggle, Loc.GetString("Dialog.Addon.DisablePeerFirst", entry.PackageName));
                         else
                             ToolTipService.SetToolTip(peer.Toggle, null);
                     }
@@ -262,7 +265,7 @@ public static class AddonPopupHelper
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "Custom Addons",
+                Text = Loc.GetString("Dialog.CustomAddons"),
                 FontSize = 12,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -311,8 +314,8 @@ public static class AddonPopupHelper
                 var toggle = new ToggleSwitch
                 {
                     IsOn = isSelected,
-                    OnContent = "On",
-                    OffContent = "Off",
+                    OnContent = Loc.GetString("Xaml.On"),
+                    OffContent = Loc.GetString("Xaml.Off"),
                     VerticalAlignment = VerticalAlignment.Center,
                 };
                 toggle.Toggled += (s, ev) => { if (suppressToggle) return; };
@@ -347,10 +350,10 @@ public static class AddonPopupHelper
 
         var dlg = new ContentDialog
         {
-            Title = "Select Addons",
+            Title = Loc.GetString("Dialog.SelectAddons"),
             Content = scrollViewer,
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Deploy"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = xamlRoot,
             Background = Brush(ResourceKeys.SurfaceOverlayBrush),
             MinWidth = 750,

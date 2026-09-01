@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -13,6 +14,7 @@ namespace RenoDXCommander;
 /// </summary>
 public static class AddonManagerDialog
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
     /// <summary>
     /// Shows the Addon Manager Window as a ContentDialog.
     /// </summary>
@@ -29,14 +31,14 @@ public static class AddonManagerDialog
         {
             var emptyDlg = new ContentDialog
             {
-                Title = "ReShade Addon Manager",
+                Title = Loc.GetString("Dialog.ReshadeAddonManager"),
                 Content = new TextBlock
                 {
-                    Text = "No addons available. Try refreshing.",
+                    Text = Loc.GetString("Dialog.NoAddonsAvailableTryRefreshing"),
                     FontSize = 13,
                     Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                 },
-                CloseButtonText = "Close",
+                CloseButtonText = Loc.GetString("Dialog.Close"),
                 XamlRoot = xamlRoot,
                 Background = Brush(ResourceKeys.SurfaceOverlayBrush),
                 MinWidth = 750,
@@ -54,7 +56,7 @@ public static class AddonManagerDialog
             "RHI", "Custom", "Addons");
         var folderLink = new HyperlinkButton
         {
-            Content = "Place custom .addon64/.addon32 files here",
+            Content = Loc.GetString("Dialog.PlaceCustomAddon64Addon32Files"),
             FontSize = 11,
             Foreground = Brush(ResourceKeys.AccentBlueBrush),
             Padding = new Thickness(0),
@@ -87,7 +89,7 @@ public static class AddonManagerDialog
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "Custom Addons",
+                Text = Loc.GetString("Dialog.CustomAddons"),
                 FontSize = 12,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -111,9 +113,9 @@ public static class AddonManagerDialog
 
         var dlg = new ContentDialog
         {
-            Title = "ReShade Addon Manager",
+            Title = Loc.GetString("Dialog.ReshadeAddonManager"),
             Content = scrollViewer,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = xamlRoot,
             Background = Brush(ResourceKeys.SurfaceOverlayBrush),
             MinWidth = 750,
@@ -209,7 +211,7 @@ public static class AddonManagerDialog
         {
             textPanel.Children.Add(new HyperlinkButton
             {
-                Content = "How to use",
+                Content = Loc.GetString("Dialog.HowToUse"),
                 NavigateUri = new Uri(entry.RepositoryUrl),
                 FontSize = 11,
                 Foreground = Brush(ResourceKeys.AccentBlueBrush),
@@ -227,8 +229,8 @@ public static class AddonManagerDialog
             var toggle = new ToggleSwitch
             {
                 IsOn = isEnabled,
-                OnContent = "On",
-                OffContent = "Off",
+                OnContent = Loc.GetString("Xaml.On"),
+                OffContent = Loc.GetString("Xaml.Off"),
                 VerticalAlignment = VerticalAlignment.Center,
             };
 
@@ -277,7 +279,7 @@ public static class AddonManagerDialog
         {
             rightElement = new HyperlinkButton
             {
-                Content = "Repository",
+                Content = Loc.GetString("Dialog.Repository"),
                 NavigateUri = new Uri(entry.RepositoryUrl!),
                 FontSize = 11,
                 Foreground = Brush(ResourceKeys.AccentBlueBrush),

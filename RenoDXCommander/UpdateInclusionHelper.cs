@@ -1,6 +1,7 @@
 // UpdateInclusionHelper.cs — Shared Update Inclusion dialog logic used by both
 // DetailPanelBuilder and OverridesFlyoutBuilder.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using RenoDXCommander.Services;
@@ -14,6 +15,7 @@ namespace RenoDXCommander;
 /// </summary>
 public static class UpdateInclusionHelper
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
     /// <summary>
     /// Refreshes the summary TextBlock with the current On/Off state for each component.
     /// Callers can use this after externally toggling exclusions (e.g. a "Reset" button).
@@ -49,7 +51,7 @@ public static class UpdateInclusionHelper
             });
             summaryTb.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run
             {
-                Text = isOn ? "On" : "Off",
+                Text = isOn ? Loc.GetString("Xaml.On") : Loc.GetString("Xaml.Off"),
                 Foreground = UIFactory.Brush(isOn ? ResourceKeys.AccentGreenBrush : ResourceKeys.AccentRedBrush),
             });
             if (i < items.Count - 1)
@@ -87,7 +89,7 @@ public static class UpdateInclusionHelper
 
         var button = new Button
         {
-            Content = "Update Inclusion",
+            Content = Loc.GetString("Xaml.UpdateInclusion"),
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
@@ -108,20 +110,20 @@ public static class UpdateInclusionHelper
                 CrashReporter.Log("[UpdateInclusionHelper] Cannot show dialog — XamlRoot is null");
                 return;
             }
-            var rsCheck = new CheckBox { Content = "ReShade", IsChecked = !viewModel.IsUpdateAllExcludedReShade(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-            var rdxCheck = new CheckBox { Content = "RenoDX", IsChecked = !viewModel.IsUpdateAllExcludedRenoDx(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-            var ulCheck = new CheckBox { Content = "ReLimiter", IsChecked = !viewModel.IsUpdateAllExcludedUl(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-            var dcCheck = new CheckBox { Content = "Display Commander", IsChecked = !viewModel.IsUpdateAllExcludedDc(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-            var osCheck = new CheckBox { Content = "OptiScaler", IsChecked = !viewModel.IsUpdateAllExcludedOs(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+            var rsCheck = new CheckBox { Content = Loc.GetString("Detail.ReShade"), IsChecked = !viewModel.IsUpdateAllExcludedReShade(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+            var rdxCheck = new CheckBox { Content = Loc.GetString("Detail.RenoDX"), IsChecked = !viewModel.IsUpdateAllExcludedRenoDx(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+            var ulCheck = new CheckBox { Content = Loc.GetString("Detail.ReLimiter"), IsChecked = !viewModel.IsUpdateAllExcludedUl(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+            var dcCheck = new CheckBox { Content = Loc.GetString("Detail.DisplayCommander"), IsChecked = !viewModel.IsUpdateAllExcludedDc(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+            var osCheck = new CheckBox { Content = Loc.GetString("Detail.OptiScaler"), IsChecked = !viewModel.IsUpdateAllExcludedOs(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
             CheckBox? dxvkCheck = isDxvkEnabled
-                ? new CheckBox { Content = "DXVK", IsChecked = !viewModel.IsUpdateAllExcludedDxvk(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) }
+                ? new CheckBox { Content = Loc.GetString("Detail.DXVK"), IsChecked = !viewModel.IsUpdateAllExcludedDxvk(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) }
                 : null;
             CheckBox? refCheck = isREEngineGame
-                ? new CheckBox { Content = "RE Framework", IsChecked = !viewModel.IsUpdateAllExcludedRef(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) }
+                ? new CheckBox { Content = Loc.GetString("Detail.REFramework"), IsChecked = !viewModel.IsUpdateAllExcludedRef(gameName, store), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) }
                 : null;
 
             var checkPanel = new StackPanel { Spacing = 0 };
-            checkPanel.Children.Add(new TextBlock { Text = "Include this game in Update All for:", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 0, 0, 8) });
+            checkPanel.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.IncludeThisGameInUpdate"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 0, 0, 8) });
             checkPanel.Children.Add(rsCheck);
             checkPanel.Children.Add(rdxCheck);
             checkPanel.Children.Add(ulCheck);
@@ -132,10 +134,10 @@ public static class UpdateInclusionHelper
 
             var dialog = new ContentDialog
             {
-                Title = "Global Update Inclusion",
+                Title = Loc.GetString("Dialog.GlobalUpdateInclusion2"),
                 Content = checkPanel,
-                PrimaryButtonText = "Save",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Dialog.Save"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = effectiveRoot,
                 RequestedTheme = ElementTheme.Dark,
             };

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -11,6 +12,7 @@ namespace RenoDXCommander;
 /// </summary>
 public static class PresetPopupHelper
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
     public static readonly string PresetsDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RHI", "inis", "reshade-presets");
@@ -50,7 +52,7 @@ public static class PresetPopupHelper
 
             var emptyDlg = new ContentDialog
             {
-                Title = "Select ReShade Presets",
+                Title = Loc.GetString("Dialog.SelectReshadePresets"),
                 Content = new StackPanel
                 {
                     Spacing = 8,
@@ -58,13 +60,13 @@ public static class PresetPopupHelper
                     {
                         new TextBlock
                         {
-                            Text = "No preset files found.",
+                            Text = Loc.GetString("Dialog.NoPresetFilesFound"),
                             FontSize = 13,
                             Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                         },
                         new TextBlock
                         {
-                            Text = "Place .ini files in:",
+                            Text = Loc.GetString("Dialog.PlaceIniFilesIn"),
                             FontSize = 11,
                             Opacity = 0.6,
                             Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -72,8 +74,8 @@ public static class PresetPopupHelper
                         emptyPathLink,
                     },
                 },
-                PrimaryButtonText = "Open Folder",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Dialog.OpenFolder"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = xamlRoot,
                 Background = Brush(ResourceKeys.SurfaceOverlayBrush),
                 RequestedTheme = ElementTheme.Dark,
@@ -100,7 +102,7 @@ public static class PresetPopupHelper
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 6),
         };
-        pathLink.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = "Presets from: " });
+        pathLink.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = Loc.GetString("Dialog.PresetsFrom") });
         var linkRun = new Microsoft.UI.Xaml.Documents.Hyperlink();
         linkRun.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = PresetsDir });
         linkRun.Click += (s, e) =>
@@ -136,11 +138,11 @@ public static class PresetPopupHelper
 
         var dlg = new ContentDialog
         {
-            Title = "Select ReShade Presets",
+            Title = Loc.GetString("Dialog.SelectReshadePresets"),
             Content = scrollViewer,
-            PrimaryButtonText = "Deploy",
+            PrimaryButtonText = Loc.GetString("Dialog.Deploy"),
             IsPrimaryButtonEnabled = false,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = xamlRoot,
             Background = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme = ElementTheme.Dark,

@@ -2,6 +2,7 @@
 // Shown before MainWindow on first launch to ask the user how they want ReShade managed.
 // UI is built imperatively (same pattern as DetailPanelBuilder) — no separate XAML template.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -17,6 +18,8 @@ namespace RenoDXCommander;
 /// </summary>
 public sealed partial class SetupWindow : Window
 {
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     /// <summary>
     /// Called after the user clicks either button.
     /// <c>true</c> = "Manage ReShade for me", <c>false</c> = "I'll manage it myself".
@@ -27,7 +30,7 @@ public sealed partial class SetupWindow : Window
     {
         InitializeComponent();
 
-        Title = "RHI Setup";
+        Title = Loc.GetString("Dialog.RhiSetup");
 
         // Size and position — scale by display DPI so window is correct at any Windows scaling setting
         var hwndForDpi = WindowNative.GetWindowHandle(this);
@@ -97,22 +100,14 @@ public sealed partial class SetupWindow : Window
         // ── Title ──
         root.Children.Add(new TextBlock
         {
-            Text = "Welcome to RHI",
+            Text = Loc.GetString("Dialog.WelcomeToRhi"),
             FontSize = 22,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
 
         // ── Description ──
-        const string description =
-            "RHI can manage ReShade across all your games automatically. Here's what that includes:\n\n" +
-            "  - Installs and updates ReShade for each game with one click\n" +
-            "  - Keeps the correct DLL name per game based on what the game needs\n" +
-            "  - Manages shader packs globally - install once, deployed to every game automatically\n" +
-            "  - Backs up any shaders already in your game folders before taking over\n" +
-            "  - Keeps ReShade in sync when you install RenoDX, OptiScaler, or other components\n\n" +
-            "If you already have a custom ReShade setup - specific shader collections, hand-tuned configs, " +
-            "or a version you prefer - choose \"I'll manage it myself\" and RHI will leave ReShade completely alone.";
+        var description = Loc.GetString("Setup.Description");
 
         root.Children.Add(new TextBlock
         {
@@ -140,7 +135,7 @@ public sealed partial class SetupWindow : Window
         // "Manage ReShade for me" — accent blue style
         var manageBtn = new Button
         {
-            Content = "Manage ReShade for me",
+            Content = Loc.GetString("Dialog.ManageReshadeForMe"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             FontSize = 14,
             Padding = new Thickness(12, 10, 12, 10),
@@ -153,7 +148,7 @@ public sealed partial class SetupWindow : Window
 
         var selfBtn = new Button
         {
-            Content = "I'll manage it myself",
+            Content = Loc.GetString("Dialog.ILlManageItMyself"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             FontSize = 14,
             Padding = new Thickness(12, 10, 12, 10),

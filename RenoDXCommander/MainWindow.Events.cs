@@ -28,18 +28,10 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Full Refresh",
-            Content = "This will clear all caches and re-scan everything from scratch:\n\n" +
-                      "• Re-detects all games from every storefront\n" +
-                      "• Re-scans DLSS/Streamline DLL paths\n" +
-                      "• Re-detects graphics APIs and engine types\n" +
-                      "• Rebuilds shader and addon deployment state\n\n" +
-                      "Try a normal Refresh first — it handles most issues without the full rescan. " +
-                      "Use Full Refresh as a last resort if games are missing, paths have changed, DLSS has been added to a game, or the DLSS section is missing from a game card.\n\n" +
-                      "The next couple of restarts may take a few seconds longer while caches are rebuilt.\n\n" +
-                      "Do not close RHI while the refresh is in progress — closing early will result in a missing library and the scan will need to be repeated.",
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            Title = Loc.GetString("Xaml.FullRefresh"),
+            Content = Loc.GetString("Dialog.FullRefresh.Content"),
+            PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot,
         };
@@ -58,14 +50,14 @@ public sealed partial class MainWindow
         var progressPanel = new StackPanel { Spacing = 8 };
         var progressRow = new StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 12 };
         var progressRing = new ProgressRing { IsActive = true, Width = 20, Height = 20 };
-        var progressText = new TextBlock { Text = "Fetching manifest...", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
+        var progressText = new TextBlock { Text = Loc.GetString("Dialog.FetchingManifest"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
         progressRow.Children.Add(progressRing);
         progressRow.Children.Add(progressText);
         progressPanel.Children.Add(progressRow);
 
         var progressDialog = new ContentDialog
         {
-            Title = "Checking for updates...",
+            Title = Loc.GetString("Dialog.CheckingForUpdates"),
             Content = progressPanel,
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -78,11 +70,11 @@ public sealed partial class MainWindow
             ViewModel.ForceNextUpdateCheck();
 
             // Trigger a Refresh (which fetches manifests + wiki + runs update checks)
-            DispatcherQueue?.TryEnqueue(() => progressText.Text = "Checking components...");
+            DispatcherQueue?.TryEnqueue(() => progressText.Text = Loc.GetString("Dialog.CheckingComponents"));
             await ViewModel.RefreshAsync();
 
             // Check app update
-            DispatcherQueue?.TryEnqueue(() => progressText.Text = "Checking app version...");
+            DispatcherQueue?.TryEnqueue(() => progressText.Text = Loc.GetString("Dialog.CheckingAppVersion"));
             await _dialogService.CheckForAppUpdateAsync();
 
             progressDialog.Hide();
@@ -169,7 +161,7 @@ public sealed partial class MainWindow
         {
             content.Children.Add(new TextBlock
             {
-                Text = "Engine.ini Settings",
+                Text = Loc.GetString("Dialog.EngineIniSettings"),
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 Margin = new Thickness(0, 0, 0, 4),
@@ -184,7 +176,7 @@ public sealed partial class MainWindow
             // ── HDR on First Boot ──────────────────────────────────────────────
             var hdrLabel = new TextBlock
             {
-                Text = "HDR on First Boot",
+                Text = Loc.GetString("Dialog.HdrOnFirstBoot"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -196,11 +188,7 @@ public sealed partial class MainWindow
             hdrCombo.Items.Add("Default");
             hdrCombo.Items.Add("Off");
             hdrCombo.Items.Add("On");
-            ToolTipService.SetToolTip(hdrCombo,
-                "Controls EnableHDR and DisplayMode in the [Luma] section of reshade.ini.\n" +
-                "Default: leaves both keys as-is (Luma controls them).\n" +
-                "Off: sets EnableHDR=0 and DisplayMode=0.\n" +
-                "On: sets EnableHDR=1 and DisplayMode=1.");
+            ToolTipService.SetToolTip(hdrCombo, Loc.GetString("Dialog.Luma.HdrTooltip"));
 
             var currentHdr = AuxInstallService.GetLumaReshadeIniValue(card.InstallPath, "EnableHDR");
             // Default = key absent or never set by RHI; Off = "0"; On = "1"
@@ -231,7 +219,7 @@ public sealed partial class MainWindow
             // ── TAA Settings ───────────────────────────────────────────────────
             var taaLabel = new TextBlock
             {
-                Text = "TAA Settings",
+                Text = Loc.GetString("Dialog.TaaSettings"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -242,9 +230,7 @@ public sealed partial class MainWindow
             var taaCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
             taaCombo.Items.Add("Off");
             taaCombo.Items.Add("On");
-            ToolTipService.SetToolTip(taaCombo,
-                "Writes r.DefaultFeature.AntiAliasing=2 and r.PostProcessAAQuality=4 to Engine.ini.\n" +
-                "Forces TAA with high quality for Luma HDR compatibility.");
+            ToolTipService.SetToolTip(taaCombo, Loc.GetString("Dialog.Luma.TaaTooltip"));
 
             bool taaActive = ViewModel.IsLumaTaaEnabled(card.GameName);
             taaCombo.SelectedIndex = taaActive ? 1 : 0;
@@ -285,9 +271,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Luma Settings",
+            Title = Loc.GetString("Xaml.LumaSettings"),
             Content = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = this.Content.XamlRoot,
         };
@@ -816,7 +802,7 @@ public sealed partial class MainWindow
         var currentQuery = SearchBox.Text?.Trim() ?? "";
         if (string.IsNullOrEmpty(currentQuery)) return;
 
-        var nameBox = new TextBox { PlaceholderText = "Filter name", Text = currentQuery, Width = 350 };
+        var nameBox = new TextBox { PlaceholderText = Loc.GetString("Dialog.FilterName"), Text = currentQuery, Width = 350 };
         var errorText = new TextBlock
         {
             Text = "",
@@ -828,7 +814,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Save Custom Filter",
+            Title = Loc.GetString("Dialog.SaveCustomFilter"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -836,7 +822,7 @@ public sealed partial class MainWindow
                 {
                     new TextBlock
                     {
-                        Text = $"Save the current search \"{currentQuery}\" as a custom filter:",
+                        Text = Loc.GetString("Dialog.SaveCustomFilter.Prompt", currentQuery),
                         TextWrapping = TextWrapping.Wrap,
                         Foreground = Brush(ResourceKeys.TextSecondaryBrush),
                     },
@@ -844,8 +830,8 @@ public sealed partial class MainWindow
                     errorText,
                 }
             },
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Save"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = Content.XamlRoot,
             Background = Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme = ElementTheme.Dark,
@@ -857,14 +843,14 @@ public sealed partial class MainWindow
             var name = nameBox.Text?.Trim() ?? "";
             if (string.IsNullOrEmpty(name))
             {
-                errorText.Text = "Please enter a filter name.";
+                errorText.Text = Loc.GetString("Dialog.PleaseEnterAFilterName");
                 errorText.Visibility = Visibility.Visible;
                 args.Cancel = true;
                 return;
             }
             if (ViewModel.Filter.CustomFilterNameExists(name))
             {
-                errorText.Text = $"A filter named \"{name}\" already exists.";
+                errorText.Text = Loc.GetString("Dialog.SaveCustomFilter.Exists", name);
                 errorText.Visibility = Visibility.Visible;
                 args.Cancel = true;
                 return;
@@ -919,7 +905,7 @@ public sealed partial class MainWindow
 
             // Right-click context menu with "Delete" option (Req 5.1–5.5)
             var flyout = new MenuFlyout();
-            var deleteItem = new MenuFlyoutItem { Text = "Delete" };
+            var deleteItem = new MenuFlyoutItem { Text = Loc.GetString("Dialog.Delete") };
             deleteItem.Click += (s, args) =>
             {
                 ViewModel.Filter.RemoveCustomFilter(chipName);
@@ -959,10 +945,10 @@ public sealed partial class MainWindow
                 var ofn = new NativeInterop.OpenFileName();
                 ofn.structSize = System.Runtime.InteropServices.Marshal.SizeOf(ofn);
                 ofn.hwndOwner = hwnd;
-                ofn.filter = "Executables (*.exe)\0*.exe\0All Files (*.*)\0*.*\0";
+                ofn.filter = Loc.GetString("Overrides.LaunchExe.FilterExecutables") + "\0*.exe\0" + Loc.GetString("Overrides.LaunchExe.FilterAllFiles") + "\0*.*\0";
                 ofn.file = new string(new char[260]);
                 ofn.maxFile = ofn.file.Length;
-                ofn.title = "Select Game Executable";
+                ofn.title = Loc.GetString("Overrides.LaunchExe.SelectTitle");
                 ofn.flags = 0x00080000 | 0x00001000; // OFN_EXPLORER | OFN_FILEMUSTEXIST
 
                 return NativeInterop.GetOpenFileName(ref ofn) ? ofn.file.TrimEnd('\0') : null;
@@ -989,19 +975,19 @@ public sealed partial class MainWindow
         nameBox.SelectAll();
         var nameDialog = new ContentDialog
         {
-            Title           = "Name This Game",
+            Title           = Loc.GetString("Dialog.NameThisGame"),
             Content         = new StackPanel
             {
                 Spacing = 10,
                 Children =
                 {
-                    new TextBlock { Text = $"Selected: {filePath}", TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush), FontSize = 11 },
-                    new TextBlock { Text = "Enter the game name:", TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush) },
+                    new TextBlock { Text = Loc.GetString("Dialog.AddGame.Selected", filePath), TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush), FontSize = 11 },
+                    new TextBlock { Text = Loc.GetString("Dialog.EnterTheGameName"), TextWrapping = TextWrapping.Wrap, Foreground = Brush(ResourceKeys.TextSecondaryBrush) },
                     nameBox
                 }
             },
-            PrimaryButtonText   = "Add Game",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.GetString("Dialog.AddGame"),
+            CloseButtonText     = Loc.GetString("Dialog.Cancel"),
             XamlRoot            = Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceToolbarBrush),
             RequestedTheme      = ElementTheme.Dark,
@@ -1089,17 +1075,15 @@ public sealed partial class MainWindow
             {
                 var warningDialog = new ContentDialog
                 {
-                    Title = "⚠ ReShade Addons",
+                    Title = Loc.GetString("Dialog.ReshadeAddons2"),
                     Content = new TextBlock
                     {
-                        Text = "ReShade addons are advanced features intended for experienced users who understand what they are.\n\n" +
-                               "Addons can modify game rendering behaviour and may cause instability. " +
-                               "Only proceed if you are comfortable managing ReShade addons.",
+                        Text = Loc.GetString("Dialog.ReshadeAddons.Warning"),
                         TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                         MaxWidth = 450,
                     },
-                    PrimaryButtonText = "Continue",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using RenoDXCommander.Services;
@@ -11,6 +12,8 @@ namespace RenoDXCommander;
 /// </summary>
 public static class DlssDefaultsDialog
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     public static async Task ShowAsync(MainViewModel viewModel, IDlssStreamlineService dlssService, DlssPresetService presetService, XamlRoot xamlRoot)
     {
         var settings = viewModel.Settings;
@@ -27,17 +30,17 @@ public static class DlssDefaultsDialog
 
         // ── SR Column ──
         var srCol = new StackPanel { Spacing = 4 };
-        srCol.Children.Add(new TextBlock { Text = "DLSS", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
+        srCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Dlss"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
-        srCol.Children.Add(new TextBlock { Text = "Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        srCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var srVersionCombo = BuildCombo(dlssService.DlssVersions, settings.DefaultDlssVersion);
         srCol.Children.Add(srVersionCombo);
 
-        srCol.Children.Add(new TextBlock { Text = "Preset", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        srCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var srPresetCombo = BuildPresetComboBox(DlssPresetService.SrPresets, settings.DefaultSrPreset);
         srCol.Children.Add(srPresetCombo);
 
-        srCol.Children.Add(new TextBlock { Text = "Render Scale", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        srCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.RenderScale"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var srScaleCombo = BuildRenderScaleComboBox(settings.DefaultSrRenderScale);
         srCol.Children.Add(srScaleCombo);
 
@@ -49,17 +52,17 @@ public static class DlssDefaultsDialog
 
         // ── RR Column ──
         var rrCol = new StackPanel { Spacing = 4 };
-        rrCol.Children.Add(new TextBlock { Text = "Ray Reconstruction", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
+        rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.RayReconstruction"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
-        rrCol.Children.Add(new TextBlock { Text = "Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var rrVersionCombo = BuildCombo(dlssService.DlssdVersions, settings.DefaultDlssdVersion);
         rrCol.Children.Add(rrVersionCombo);
 
-        rrCol.Children.Add(new TextBlock { Text = "Preset", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var rrPresetCombo = BuildPresetComboBox(DlssPresetService.RrPresets, settings.DefaultRrPreset);
         rrCol.Children.Add(rrPresetCombo);
 
-        rrCol.Children.Add(new TextBlock { Text = "Render Scale", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.RenderScale"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var rrScaleCombo = BuildRenderScaleComboBox(settings.DefaultRrRenderScale);
         rrCol.Children.Add(rrScaleCombo);
 
@@ -71,13 +74,13 @@ public static class DlssDefaultsDialog
 
         // ── FG Column ──
         var fgCol = new StackPanel { Spacing = 4 };
-        fgCol.Children.Add(new TextBlock { Text = "Frame Generation", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
+        fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.FrameGeneration"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
-        fgCol.Children.Add(new TextBlock { Text = "Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var fgVersionCombo = BuildCombo(dlssService.DlssgVersions, settings.DefaultDlssgVersion);
         fgCol.Children.Add(fgVersionCombo);
 
-        fgCol.Children.Add(new TextBlock { Text = "Preset", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var fgPresetCombo = BuildPresetComboBox(DlssPresetService.FgPresets, settings.DefaultFgPreset);
         fgCol.Children.Add(fgPresetCombo);
 
@@ -97,13 +100,13 @@ public static class DlssDefaultsDialog
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             var nrCol = new StackPanel { Spacing = 4 };
-            nrCol.Children.Add(new TextBlock { Text = "Neural Rendering", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
+            nrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.NeuralRendering"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
-            nrCol.Children.Add(new TextBlock { Text = "Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+            nrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
             nrVersionCombo = BuildCombo(dlssService.DlssnrVersions, settings.DefaultDlssnrVersion);
             nrCol.Children.Add(nrVersionCombo);
 
-            nrCol.Children.Add(new TextBlock { Text = "Preset", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+            nrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
             nrPresetCombo = BuildPresetComboBox(DlssPresetService.NrPresets, settings.DefaultNrPreset);
             nrCol.Children.Add(nrPresetCombo);
 
@@ -117,9 +120,9 @@ public static class DlssDefaultsDialog
 
         // ── SL Column ──
         var slCol = new StackPanel { Spacing = 4 };
-        slCol.Children.Add(new TextBlock { Text = "Streamline", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
+        slCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Streamline"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
-        slCol.Children.Add(new TextBlock { Text = "Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
+        slCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
         var slVersionCombo = BuildCombo(dlssService.StreamlineVersions, settings.DefaultStreamlineVersion);
         slCol.Children.Add(slVersionCombo);
 
@@ -128,10 +131,10 @@ public static class DlssDefaultsDialog
 
         var dialog = new ContentDialog
         {
-            Title = "DLSS & Streamline Defaults",
+            Title = Loc.GetString("Dialog.DlssStreamlineDefaults"),
             Content = grid,
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Save"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };

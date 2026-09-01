@@ -22,6 +22,8 @@ public partial class DragDropHandler
     private readonly ILumaService _lumaService;
     private readonly IGameNameService _gameNameService;
 
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     public DragDropHandler(MainWindow window, ICrashReporter crashReporter)
     {
         _window = window;
@@ -78,14 +80,14 @@ public partial class DragDropHandler
         if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
         {
             e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-            e.DragUIOverride.Caption = "Drop to add game, install addon, install preset, or extract archive";
+            e.DragUIOverride.Caption = Loc.GetString("DragDrop.DragOver.AddGameAddonPresetArchive");
             e.DragUIOverride.IsCaptionVisible = true;
             e.DragUIOverride.IsGlyphVisible = true;
         }
         else if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.Text))
         {
             e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-            e.DragUIOverride.Caption = "Drop URL to download addon";
+            e.DragUIOverride.Caption = Loc.GetString("DragDrop.DragOver.DownloadAddon");
             e.DragUIOverride.IsCaptionVisible = true;
             e.DragUIOverride.IsGlyphVisible = true;
         }
@@ -230,18 +232,18 @@ public partial class DragDropHandler
                                 };
                                 var pickerDialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                                 {
-                                    Title = "Install Luma Mod",
+                                    Title = Loc.GetString("Dialog.InstallLumaMod"),
                                     Content = new Microsoft.UI.Xaml.Controls.StackPanel
                                     {
                                         Spacing = 8,
                                         Children =
                                         {
-                                            new Microsoft.UI.Xaml.Controls.TextBlock { Text = $"Luma mod detected: {Path.GetFileName(file.Path)}\n\nSelect game to install to:", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, FontSize = 12 },
+                                            new Microsoft.UI.Xaml.Controls.TextBlock { Text = Loc.GetString("DragDrop.LumaDetected", Path.GetFileName(file.Path)), TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, FontSize = 12 },
                                             combo,
                                         }
                                     },
-                                    PrimaryButtonText = "Install",
-                                    CloseButtonText = "Cancel",
+                                    PrimaryButtonText = Loc.GetString("Dialog.Install"),
+                                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                                     XamlRoot = _window.Content.XamlRoot,
                                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                                 };

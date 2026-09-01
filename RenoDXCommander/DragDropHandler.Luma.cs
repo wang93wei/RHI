@@ -130,7 +130,7 @@ public partial class DragDropHandler
                         };
                         var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                         {
-                            Title = "Select Folder",
+                            Title = Loc.GetString("Dialog.SelectFolder"),
                             Content = new Microsoft.UI.Xaml.Controls.StackPanel
                             {
                                 Spacing = 8,
@@ -138,15 +138,15 @@ public partial class DragDropHandler
                                 {
                                     new Microsoft.UI.Xaml.Controls.TextBlock
                                     {
-                                        Text = "This archive contains multiple game folders.\nSelect the folder to install:",
+                                        Text = Loc.GetString("Dialog.ThisArchiveContainsMultipleGame"),
                                         TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                                         FontSize = 12,
                                     },
                                     combo,
                                 }
                             },
-                            PrimaryButtonText = "Install",
-                            CloseButtonText = "Cancel",
+                            PrimaryButtonText = Loc.GetString("Dialog.Install"),
+                            CloseButtonText = Loc.GetString("Dialog.Cancel"),
                             XamlRoot = _window.Content.XamlRoot,
                             RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                         };

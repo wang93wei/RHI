@@ -26,10 +26,10 @@ public partial class GameCardViewModel
     public Visibility DofFixRowVisibility =>
         IsDofFixEligible ? Visibility.Visible : Visibility.Collapsed;
 
-    public string DofFixActionLabel => DofFixIsInstalling ? "Installing..."
-        : DofFixStatus == GameStatus.UpdateAvailable ? "⬆  Update DOF Fix"
-        : DofFixStatus == GameStatus.Installed ? "↺  Reinstall DOF Fix"
-        : "⬇  Install DOF Fix";
+    public string DofFixActionLabel => DofFixIsInstalling ? Tr("Status.Installing")
+        : DofFixStatus == GameStatus.UpdateAvailable ? Tr("Action.Update", Tr("Detail.DofFix"))
+        : DofFixStatus == GameStatus.Installed ? Tr("Action.Reinstall", Tr("Detail.DofFix"))
+        : Tr("Action.Install", Tr("Detail.DofFix"));
 
     public string DofFixBtnBackground  => DofFixStatus == GameStatus.UpdateAvailable ? "#201838" : "#182840";
     public string DofFixBtnForeground  => DofFixStatus == GameStatus.UpdateAvailable ? "#B898E8" : "#7AACDD";
@@ -39,10 +39,10 @@ public partial class GameCardViewModel
     public Visibility DofFixDeleteVisibility   => DofFixStatus == GameStatus.Installed || DofFixStatus == GameStatus.UpdateAvailable
         ? Visibility.Visible : Visibility.Collapsed;
 
-    public string DofFixStatusText => DofFixIsInstalling ? "Installing…"
-        : DofFixStatus == GameStatus.UpdateAvailable ? "Update"
-        : DofFixStatus == GameStatus.Installed ? (DofFixInstalledVersion ?? "Installed")
-        : "Ready";
+    public string DofFixStatusText => DofFixIsInstalling ? Tr("Status.InstallingShort")
+        : DofFixStatus == GameStatus.UpdateAvailable ? Tr("Status.UpdateShort")
+        : DofFixStatus == GameStatus.Installed ? (DofFixInstalledVersion ?? Tr("Status.Installed"))
+        : Tr("Status.Ready");
     public string DofFixStatusColor => DofFixIsInstalling ? "#D4A856"
         : DofFixStatus == GameStatus.UpdateAvailable ? "#B898E8"
         : DofFixStatus == GameStatus.Installed ? "#5ECB7D"

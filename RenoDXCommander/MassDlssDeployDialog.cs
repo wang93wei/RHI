@@ -18,6 +18,7 @@ public class MassDlssDeployDialog
     private readonly IDlssStreamlineService _dlssService;
     private readonly XamlRoot _xamlRoot;
     private readonly Action? _onComplete;
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     private const string NoneOption = "None";
     private const string DefaultOption = "Default (Restore)";
@@ -43,9 +44,9 @@ public class MassDlssDeployDialog
         {
             var emptyDialog = new ContentDialog
             {
-                Title = "No DLSS/Streamline Games",
-                Content = "No games with DLSS or Streamline DLLs were detected.\nRun a Full Refresh to scan for them.",
-                CloseButtonText = "OK",
+                Title = Loc.GetString("Dialog.NoDlssStreamlineGames"),
+                Content = Loc.GetString("Dialog.NoGamesWithDlssOr"),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _xamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -70,14 +71,14 @@ public class MassDlssDeployDialog
                     : Windows.UI.Color.FromArgb(255, 220, 220, 220)),
             };
             if (isV1)
-                ToolTipService.SetToolTip(cb, "Skipped — v1.x DLSS/Streamline not compatible with newer versions");
+                ToolTipService.SetToolTip(cb, Loc.GetString("Dialog.DlssDeploy.SkippedV1Tooltip"));
             checkBoxes.Add(cb);
             gameListPanel.Children.Add(cb);
         }
 
         var selectAllBtn = new Button
         {
-            Content = "Select All", FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
+            Content = Loc.GetString("Dialog.SelectAll"), FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             CornerRadius = new CornerRadius(6),
@@ -86,7 +87,7 @@ public class MassDlssDeployDialog
 
         var deselectAllBtn = new Button
         {
-            Content = "Deselect All", FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
+            Content = Loc.GetString("Dialog.DeselectAll"), FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             CornerRadius = new CornerRadius(6),
@@ -119,10 +120,10 @@ public class MassDlssDeployDialog
         var fgPresetCombo = BuildPresetCombo(DlssPresetService.FgPresets, settings.DefaultFgPreset);
 
         var rightPanel = new StackPanel { Spacing = 8, Width = 280 };
-        rightPanel.Children.Add(BuildDropdownSection("DLSS Super Resolution", dlssCombo));
-        rightPanel.Children.Add(BuildDropdownSection("DLSS Ray Reconstruction", dlssdCombo));
-        rightPanel.Children.Add(BuildDropdownSection("DLSS Frame Generation", dlssgCombo));
-        rightPanel.Children.Add(BuildDropdownSection("Streamline", slCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelDlssSr"), dlssCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelDlssRr"), dlssdCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelDlssFg"), dlssgCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelStreamline"), slCombo));
 
         // Presets section
         rightPanel.Children.Add(new Border
@@ -131,14 +132,14 @@ public class MassDlssDeployDialog
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
             Margin = new Thickness(0, 4, 0, 4),
         });
-        rightPanel.Children.Add(BuildDropdownSection("SR Preset", srPresetCombo));
-        rightPanel.Children.Add(BuildDropdownSection("RR Preset", rrPresetCombo));
-        rightPanel.Children.Add(BuildDropdownSection("FG Preset", fgPresetCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelSrPreset"), srPresetCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelRrPreset"), rrPresetCombo));
+        rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelFgPreset"), fgPresetCombo));
 
         // Auto-create profiles checkbox
         var autoCreateCheck = new CheckBox
         {
-            Content = "Auto-create NVIDIA profiles",
+            Content = Loc.GetString("Dialog.AutoCreateNvidiaProfiles"),
             IsChecked = true,
             FontSize = 11,
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
@@ -182,11 +183,11 @@ public class MassDlssDeployDialog
         // ── Dialog ──
         var dialog = new ContentDialog
         {
-            Title = "Batch DLSS & Streamline Deploy",
+            Title = Loc.GetString("Dialog.BatchDlssStreamlineDeploy"),
             Content = mainGrid,
-            PrimaryButtonText = "Deploy",
-            SecondaryButtonText = "Restore",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Deploy"),
+            SecondaryButtonText = Loc.GetString("Dialog.Restore"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -239,7 +240,7 @@ public class MassDlssDeployDialog
         // Show progress
         var progressText = new TextBlock
         {
-            Text = "Deploying to selected games...",
+            Text = Loc.GetString("Dialog.DeployingToSelectedGames"),
             FontSize = 12,
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
             TextWrapping = TextWrapping.Wrap,
@@ -268,7 +269,7 @@ public class MassDlssDeployDialog
 
         var progressDialog = new ContentDialog
         {
-            Title = "Deploying...",
+            Title = Loc.GetString("Dialog.Deploying"),
             Content = progressContainer,
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -293,7 +294,7 @@ public class MassDlssDeployDialog
             if (detection == null) { skippedNoComponent++; continue; }
 
             processed++;
-            progressText.Text = $"[{processed}/{totalSelected}] {card.GameName}";
+            progressText.Text = Loc.GetString("Dialog.DlssDeploy.Progress", processed, totalSelected, card.GameName);
             await Task.Delay(1); // Yield to UI thread so text updates visually
 
             // DLSS SR — skip v1.x
@@ -423,26 +424,26 @@ public class MassDlssDeployDialog
 
         // ── Show results ──
         var report = new System.Text.StringBuilder();
-        if (dlssCount > 0) report.AppendLine($"DLSS SR deployed to {dlssCount} game(s)");
-        if (dlssdCount > 0) report.AppendLine($"DLSS RR deployed to {dlssdCount} game(s)");
-        if (dlssgCount > 0) report.AppendLine($"DLSS FG deployed to {dlssgCount} game(s)");
-        if (slCount > 0) report.AppendLine($"Streamline deployed to {slCount} game(s)");
-        if (srPresetCount > 0) report.AppendLine($"SR Preset applied to {srPresetCount} game(s)");
-        if (rrPresetCount > 0) report.AppendLine($"RR Preset applied to {rrPresetCount} game(s)");
-        if (fgPresetCount > 0) report.AppendLine($"FG Preset applied to {fgPresetCount} game(s)");
+        if (dlssCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportDlssSr", dlssCount));
+        if (dlssdCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportDlssRr", dlssdCount));
+        if (dlssgCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportDlssFg", dlssgCount));
+        if (slCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportStreamline", slCount));
+        if (srPresetCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportSrPreset", srPresetCount));
+        if (rrPresetCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportRrPreset", rrPresetCount));
+        if (fgPresetCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportFgPreset", fgPresetCount));
         if (autoCreateProfiles && presetService.ProfilesCreatedCount > 0)
-            report.AppendLine($"NVIDIA profiles created: {presetService.ProfilesCreatedCount}");
-        if (skippedAlreadyAtVersion > 0) report.AppendLine($"\nSkipped: {skippedAlreadyAtVersion} (already at selected version)");
-        if (skippedNoComponent > 0) report.AppendLine($"Skipped: {skippedNoComponent} (component not present)");
-        if (presetMissedCount > 0) report.AppendLine($"Presets missed: {presetMissedCount} game(s) (no NVIDIA profile found)");
+            report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ProfilesCreated", presetService.ProfilesCreatedCount));
+        if (skippedAlreadyAtVersion > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.SkippedAlreadyAtVersion", skippedAlreadyAtVersion));
+        if (skippedNoComponent > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.SkippedNoComponent", skippedNoComponent));
+        if (presetMissedCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.PresetsMissed", presetMissedCount));
 
-        if (report.Length == 0) report.Append("No changes made.");
+        if (report.Length == 0) report.Append(Loc.GetString("Dialog.DlssDeploy.NoChanges"));
 
         var resultDialog = new ContentDialog
         {
-            Title = "Batch Deploy Complete",
+            Title = Loc.GetString("Dialog.BatchDeployComplete"),
             Content = new TextBlock { Text = report.ToString().TrimEnd(), TextWrapping = TextWrapping.Wrap, FontSize = 12 },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -459,7 +460,7 @@ public class MassDlssDeployDialog
         // Show progress
         var progressText = new TextBlock
         {
-            Text = "Restoring selected games...",
+            Text = Loc.GetString("Dialog.RestoringSelectedGames"),
             FontSize = 12,
             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
             TextWrapping = TextWrapping.Wrap,
@@ -480,7 +481,7 @@ public class MassDlssDeployDialog
 
         var progressDialog = new ContentDialog
         {
-            Title = "Restoring...",
+            Title = Loc.GetString("Dialog.Restoring"),
             Content = progressContainer,
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -498,7 +499,7 @@ public class MassDlssDeployDialog
             var detection = card.DlssDetection;
             if (detection == null) continue;
 
-            progressText.Text = $"Restoring {card.GameName}...";
+            progressText.Text = Loc.GetString("Dialog.DlssDeploy.RestoringGame", card.GameName);
             await Task.Delay(1);
 
             // Restore DLL backups
@@ -521,20 +522,20 @@ public class MassDlssDeployDialog
         progressDialog.Hide();
 
         var reportText = new System.Text.StringBuilder();
-        if (restoredCount > 0) reportText.AppendLine($"Restored {restoredCount} game(s) to default DLLs.");
-        if (presetsResetCount > 0) reportText.AppendLine($"Reset presets to Default on {presetsResetCount} game(s).");
-        if (restoredCount == 0 && presetsResetCount == 0) reportText.Append("No games had backups to restore or presets to reset.");
+        if (restoredCount > 0) reportText.AppendLine(Loc.GetString("Dialog.DlssDeploy.RestoredToDefault", restoredCount));
+        if (presetsResetCount > 0) reportText.AppendLine(Loc.GetString("Dialog.DlssDeploy.PresetsReset", presetsResetCount));
+        if (restoredCount == 0 && presetsResetCount == 0) reportText.Append(Loc.GetString("Dialog.DlssDeploy.NoRestoreNeeded"));
 
         var resultDialog = new ContentDialog
         {
-            Title = "Restore Complete",
+            Title = Loc.GetString("Dialog.RestoreComplete"),
             Content = new TextBlock
             {
                 Text = reportText.ToString().TrimEnd(),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };

@@ -21,7 +21,7 @@ public sealed partial class MainWindow
         // Build the progress dialog
         var statusText = new TextBlock
         {
-            Text = "Preparing...",
+            Text = Loc.GetString("Dialog.Preparing"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
@@ -39,7 +39,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Updating All Components",
+            Title = Loc.GetString("Dialog.UpdatingAllComponents"),
             Content = panel,
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -52,39 +52,39 @@ public sealed partial class MainWindow
         {
             if (!ViewModel.Settings.GlobalSkipRsUpdates)
             {
-                statusText.Text = "Updating ReShade...";
+                statusText.Text = Loc.GetString("Dialog.UpdatingReshade");
                 await ViewModel.UpdateAllReShadeAsync();
             }
             if (!ViewModel.Settings.GlobalSkipRdxUpdates)
             {
-                statusText.Text = "Updating RenoDX...";
+                statusText.Text = Loc.GetString("Dialog.UpdatingRenodx");
                 await ViewModel.UpdateAllRenoDxAsync();
             }
             if (!ViewModel.Settings.GlobalSkipUlUpdates)
             {
-                statusText.Text = "Updating ReLimiter...";
+                statusText.Text = Loc.GetString("Dialog.UpdatingRelimiter");
                 await ViewModel.UpdateAllUlAsync();
             }
             if (!ViewModel.Settings.GlobalSkipDcUpdates)
             {
-                statusText.Text = "Updating Display Commander...";
+                statusText.Text = Loc.GetString("Dialog.UpdatingDisplayCommander");
                 await ViewModel.UpdateAllDcAsync();
             }
             if (!ViewModel.Settings.GlobalSkipOsUpdates)
             {
-                statusText.Text = "Updating OptiScaler...";
+                statusText.Text = Loc.GetString("Dialog.UpdatingOptiscaler");
                 await ViewModel.UpdateAllOsAsync();
             }
             if (!ViewModel.Settings.GlobalSkipRefUpdates)
             {
-                statusText.Text = "Updating RE Framework...";
+                statusText.Text = Loc.GetString("Dialog.UpdatingReFramework");
                 await ViewModel.UpdateAllRefAsync();
             }
-            statusText.Text = "Updating DXVK...";
+            statusText.Text = Loc.GetString("Dialog.UpdatingDxvk");
             await ViewModel.UpdateAllDxvkAsync();
-            statusText.Text = "Updating Luma...";
+            statusText.Text = Loc.GetString("Dialog.UpdatingLuma");
             await ViewModel.UpdateAllLumaAsync();
-            statusText.Text = "Updating DOF Fix...";
+            statusText.Text = Loc.GetString("Dialog.UpdatingDofFix");
             await ViewModel.UpdateAllDofFixAsync();
         }
         catch (Exception ex)
@@ -192,14 +192,7 @@ public sealed partial class MainWindow
         if (sender is not FrameworkElement { Tag: GameCardViewModel card }) return;
 
         // Build DXVK info content with game-specific notes from manifest
-        var content = "DXVK translates DirectX 8/9/10/11 API calls into Vulkan.\n\n"
-            + "Benefits:\n"
-            + "• Enables ReShade compute shaders on older DX games\n"
-            + "• May improve performance and reduce shader stutter\n"
-            + "• Enables HDR output via dxvk.conf\n"
-            + "• Borderless fullscreen recommended over exclusive fullscreen\n\n"
-            + "⚠ Anti-cheat games may ban players using DXVK.\n"
-            + "⚠ Game overlays (Steam, NVIDIA, RTSS) may conflict.";
+        var content = Loc.GetString("Dialog.DxvkInfo.Content");
 
         // Append game-specific notes from manifest
         var manifest = ViewModel.Manifest;
@@ -207,12 +200,12 @@ public sealed partial class MainWindow
             && manifest.DxvkGameNotes.TryGetValue(card.GameName, out var noteEntry)
             && !string.IsNullOrWhiteSpace(noteEntry.Notes))
         {
-            content += $"\n\n── Game Notes ──\n{noteEntry.Notes}";
+            content += Loc.GetString("Dialog.DxvkInfo.GameNotes", noteEntry.Notes);
         }
 
         var dialog = new ContentDialog
         {
-            Title = "ℹ DXVK Info",
+            Title = Loc.GetString("Dialog.DxvkInfo"),
             Content = new TextBlock
             {
                 Text = content,
@@ -220,7 +213,7 @@ public sealed partial class MainWindow
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -364,18 +357,18 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "UE DOF Fix — Release Notes",
+            Title = Loc.GetString("Dialog.UeDofFixReleaseNotes"),
             Content = new ScrollViewer
             {
                 Content = new TextBlock
                 {
-                    Text = notes ?? "No release notes available.",
+                    Text = notes ?? Loc.GetString("Dialog.DofFix.NoReleaseNotes"),
                     TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                     IsTextSelectionEnabled = true,
                 },
                 MaxHeight = 400,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -386,13 +379,13 @@ public sealed partial class MainWindow
     {
         var dialog = new ContentDialog
         {
-            Title = "DOF Fix Settings",
+            Title = Loc.GetString("Xaml.DofFixSettings"),
             Content = new TextBlock
             {
-                Text = "No configurable settings available for this component.",
+                Text = Loc.GetString("Dialog.NoConfigurableSettingsAvailableFor"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -487,14 +480,14 @@ public sealed partial class MainWindow
         {
             var dontShowCheck = new CheckBox
             {
-                Content = "Don't show this again",
+                Content = Loc.GetString("Dialog.DonTShowThisAgain"),
                 FontSize = 12,
                 Margin = new Thickness(0, 8, 0, 0),
             };
             var panel = new StackPanel { Spacing = 8 };
             panel.Children.Add(new TextBlock
             {
-                Text = "This toggles the engine version to Unreal Engine 5.0–5.6, making this game eligible for the DOF Fix addon.\n\nUse this when RHI cannot detect the UE version automatically (e.g. Game Pass games).",
+                Text = Loc.GetString("Dialog.ThisTogglesTheEngineVersion"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 12,
             });
@@ -502,10 +495,10 @@ public sealed partial class MainWindow
 
             var dialog = new ContentDialog
             {
-                Title = "Engine Version Override",
+                Title = Loc.GetString("Dialog.EngineVersionOverride"),
                 Content = panel,
-                PrimaryButtonText = "Continue",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -1032,14 +1025,14 @@ public sealed partial class MainWindow
                 var panel = new StackPanel { Spacing = 8 };
                 panel.Children.Add(new TextBlock
                 {
-                    Text = $"Remove {card.GameName} from RHI?",
+                    Text = Loc.GetString("Dialog.RemoveGame.Confirm", card.GameName),
                     FontSize = 13,
                     FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                     Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 });
                 panel.Children.Add(new TextBlock
                 {
-                    Text = $"The following components are installed: {componentList}.",
+                    Text = Loc.GetString("Dialog.RemoveGame.ComponentsInstalled", componentList),
                     TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                     FontSize = 12,
                     Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -1047,7 +1040,7 @@ public sealed partial class MainWindow
 
                 var uninstallCheck = new CheckBox
                 {
-                    Content = "Also uninstall all RHI-managed components from game folder",
+                    Content = Loc.GetString("Dialog.AlsoUninstallAllRhiManaged"),
                     FontSize = 12,
                     IsChecked = false,
                 };
@@ -1055,10 +1048,10 @@ public sealed partial class MainWindow
 
                 var dialog = new ContentDialog
                 {
-                    Title = "Remove Game",
+                    Title = Loc.GetString("Dialog.RemoveGame"),
                     Content = panel,
-                    PrimaryButtonText = "Remove",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Remove"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -1071,15 +1064,15 @@ public sealed partial class MainWindow
                 // No components installed — simple confirm
                 var dialog = new ContentDialog
                 {
-                    Title = "Remove Game",
+                    Title = Loc.GetString("Dialog.RemoveGame"),
                     Content = new TextBlock
                     {
-                        Text = $"Remove {card.GameName} from RHI?",
+                        Text = Loc.GetString("Dialog.RemoveGame.Confirm", card.GameName),
                         FontSize = 12,
                         TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                     },
-                    PrimaryButtonText = "Remove",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Remove"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -1141,14 +1134,14 @@ public sealed partial class MainWindow
         var progressPanel = new StackPanel { Spacing = 8 };
         var progressRow = new StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 12 };
         var progressRing = new ProgressRing { IsActive = true, Width = 20, Height = 20 };
-        var progressText = new TextBlock { Text = "Clearing caches...", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
+        var progressText = new TextBlock { Text = Loc.GetString("Dialog.ClearingCaches"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) };
         progressRow.Children.Add(progressRing);
         progressRow.Children.Add(progressText);
         progressPanel.Children.Add(progressRow);
 
         var progressDialog = new ContentDialog
         {
-            Title = "Full Refresh",
+            Title = Loc.GetString("Xaml.FullRefresh"),
             Content = progressPanel,
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,

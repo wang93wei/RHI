@@ -28,7 +28,7 @@ public sealed partial class MainWindow
         // Deploy ReShade.ini
         var deployIniBtn = new Button
         {
-            Content = "Deploy ReShade.ini",
+            Content = Loc.GetString("Dialog.DeployReshadeIni"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -69,7 +69,7 @@ public sealed partial class MainWindow
         // Deploy ReShadePreset.ini
         var deployPresetBtn = new Button
         {
-            Content = "Deploy ReShadePreset.ini",
+            Content = Loc.GetString("Dialog.DeployReshadePresetIni"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -88,13 +88,13 @@ public sealed partial class MainWindow
             catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
         };
         if (!File.Exists(AuxInstallService.RsPresetIniPath))
-            ToolTipService.SetToolTip(deployPresetBtn, "No ReShadePreset.ini found in RHI config folder");
+            ToolTipService.SetToolTip(deployPresetBtn, Loc.GetString("Dialog.ReshadePresetIni.NotFound"));
         content.Children.Add(deployPresetBtn);
 
         // Open ReShade.ini
         var openIniBtn = new Button
         {
-            Content = "Open ReShade.ini",
+            Content = Loc.GetString("Dialog.OpenReshadeIni"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
         // Open ReShade.log
         var openLogBtn = new Button
         {
-            Content = "Open ReShade.log",
+            Content = Loc.GetString("Dialog.OpenReshadeLog"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
         // Copy ReShade.log to clipboard (as file, so Discord shows "ReShade.log")
         var copyLogBtn = new Button
         {
-            Content = "Copy ReShade.log to clipboard",
+            Content = Loc.GetString("Dialog.CopyReshadeLogToClipboard"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -173,7 +173,7 @@ public sealed partial class MainWindow
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 2, 0, 2) });
         content.Children.Add(new TextBlock
         {
-            Text = "Overlay Key",
+            Text = Loc.GetString("Dialog.OverlayKey2"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             Margin = new Thickness(0, 4, 0, 0),
@@ -200,13 +200,13 @@ public sealed partial class MainWindow
         {
             Text = HotkeyManager.FormatHotkeyDisplay(hotkeyString),
             IsReadOnly = true,
-            PlaceholderText = "Click then press a key...",
+            PlaceholderText = Loc.GetString("Dialog.ClickThenPressAKey"),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(hotkeyBox, "Click here then press your desired key. Written to all reshade*.ini files for this game.");
+        ToolTipService.SetToolTip(hotkeyBox, Loc.GetString("Dialog.ReshadeHotkeys.BoxTooltip"));
 
-        hotkeyBox.GotFocus += (s, ev) => hotkeyBox.Text = "Press a key...";
+        hotkeyBox.GotFocus += (s, ev) => hotkeyBox.Text = Loc.GetString("Xaml.PressAKey");
         hotkeyBox.KeyDown += (s, ev) =>
         {
             var vk = (int)ev.Key;
@@ -220,13 +220,13 @@ public sealed partial class MainWindow
         };
         hotkeyBox.LostFocus += (s, ev) =>
         {
-            if (hotkeyBox.Text == "Press a key...")
+            if (hotkeyBox.Text == Loc.GetString("Xaml.PressAKey"))
                 hotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(hotkeyString);
         };
 
         var applyKeyBtn = new Button
         {
-            Content = "Apply",
+            Content = Loc.GetString("Dialog.Apply"),
             FontSize = 12,
             Padding = new Thickness(16, 7, 16, 7),
             HorizontalAlignment = HorizontalAlignment.Right,
@@ -243,7 +243,7 @@ public sealed partial class MainWindow
                     .ToList();
                 foreach (var file in iniFiles)
                     AuxInstallService.ApplyOverlayHotkey(file, hotkeyString);
-                applyKeyBtn.Content = "Applied!";
+                applyKeyBtn.Content = Loc.GetString("Dialog.Applied");
                 _crashReporter.Log($"[RsCogButton_Click] Applied overlay key '{hotkeyString}' to {iniFiles.Count} ini file(s) for '{card.GameName}'");
             }
             catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
@@ -264,7 +264,7 @@ public sealed partial class MainWindow
         // ── Screenshot Key ────────────────────────────────────────────────────
         content.Children.Add(new TextBlock
         {
-            Text = "Screenshot Key",
+            Text = Loc.GetString("Dialog.ScreenshotKey2"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             Margin = new Thickness(0, 6, 0, 0),
@@ -289,13 +289,13 @@ public sealed partial class MainWindow
         {
             Text = HotkeyManager.FormatHotkeyDisplay(screenshotHotkeyString),
             IsReadOnly = true,
-            PlaceholderText = "Click then press a key...",
+            PlaceholderText = Loc.GetString("Dialog.ClickThenPressAKey"),
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(screenshotHotkeyBox, "Click here then press your desired key. Written to all reshade*.ini files for this game.");
+        ToolTipService.SetToolTip(screenshotHotkeyBox, Loc.GetString("Dialog.ReshadeHotkeys.BoxTooltip"));
 
-        screenshotHotkeyBox.GotFocus += (s, ev) => screenshotHotkeyBox.Text = "Press a key...";
+        screenshotHotkeyBox.GotFocus += (s, ev) => screenshotHotkeyBox.Text = Loc.GetString("Xaml.PressAKey");
         screenshotHotkeyBox.KeyDown += (s, ev) =>
         {
             var vk2 = (int)ev.Key;
@@ -309,13 +309,13 @@ public sealed partial class MainWindow
         };
         screenshotHotkeyBox.LostFocus += (s, ev) =>
         {
-            if (screenshotHotkeyBox.Text == "Press a key...")
+            if (screenshotHotkeyBox.Text == Loc.GetString("Xaml.PressAKey"))
                 screenshotHotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(screenshotHotkeyString);
         };
 
         var applyScreenshotKeyBtn = new Button
         {
-            Content = "Apply",
+            Content = Loc.GetString("Dialog.Apply"),
             FontSize = 12,
             Padding = new Thickness(16, 7, 16, 7),
             HorizontalAlignment = HorizontalAlignment.Right,
@@ -331,7 +331,7 @@ public sealed partial class MainWindow
                     .ToList();
                 foreach (var file in iniFiles2)
                     AuxInstallService.ApplyScreenshotHotkey(file, screenshotHotkeyString);
-                applyScreenshotKeyBtn.Content = "Applied!";
+                applyScreenshotKeyBtn.Content = Loc.GetString("Dialog.Applied");
                 _crashReporter.Log($"[RsCogButton_Click] Applied screenshot key '{screenshotHotkeyString}' to {iniFiles2.Count} ini file(s) for '{card.GameName}'");
             }
             catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
@@ -357,7 +357,7 @@ public sealed partial class MainWindow
 
         var keepUpdatedLabel = new TextBlock
         {
-            Text = "Keep ReShade.ini Updated",
+            Text = Loc.GetString("Dialog.KeepReshadeIniUpdated"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
@@ -370,7 +370,7 @@ public sealed partial class MainWindow
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(keepUpdatedCombo, "When No, RHI will not automatically update this game's reshade.ini on ReShade install, update, or Apply to All Games.");
+        ToolTipService.SetToolTip(keepUpdatedCombo, Loc.GetString("Dialog.KeepReshadeIniUpdated.Tooltip"));
         keepUpdatedCombo.Items.Add("Yes");
         keepUpdatedCombo.Items.Add("No");
 
@@ -388,9 +388,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "ReShade Settings",
+            Title = Loc.GetString("Xaml.ReshadeSettings"),
             Content = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -412,7 +412,7 @@ public sealed partial class MainWindow
         {
             content.Children.Add(new TextBlock
             {
-                Text = "UE-Extended Settings",
+                Text = Loc.GetString("Dialog.UeExtendedSettings"),
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             });
@@ -427,7 +427,7 @@ public sealed partial class MainWindow
         if (card.UeExtendedToggleVisibility == Visibility.Visible)
         {
             topGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var ueLabel = new TextBlock { Text = "UE-Extended", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), VerticalAlignment = VerticalAlignment.Center };
+            var ueLabel = new TextBlock { Text = Loc.GetString("Dialog.UeExtended"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), VerticalAlignment = VerticalAlignment.Center };
             Grid.SetRow(ueLabel, topGridRow);
             Grid.SetColumn(ueLabel, 0);
             topGrid.Children.Add(ueLabel);
@@ -435,7 +435,7 @@ public sealed partial class MainWindow
             var ueCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
             ueCombo.Items.Add("Off");
             ueCombo.Items.Add("On");
-            ToolTipService.SetToolTip(ueCombo, "Switch between using UE-Extended or the game specific mod/generic Unreal RenoDX mod.");
+            ToolTipService.SetToolTip(ueCombo, Loc.GetString("Dialog.UeExtended.Tooltip"));
             ueCombo.SelectedIndex = card.UseUeExtended ? 1 : 0;
             ueCombo.SelectionChanged += (s, ev) =>
             {
@@ -465,7 +465,7 @@ public sealed partial class MainWindow
             // Label in column 0
             var nitsLabel = new TextBlock
             {
-                Text = "Set Maximum Nits",
+                Text = Loc.GetString("Dialog.SetMaximumNits"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -479,7 +479,7 @@ public sealed partial class MainWindow
                 Text = currentNits,
                 Width = 100,
                 FontSize = 11,
-                PlaceholderText = "nits",
+                PlaceholderText = Loc.GetString("Xaml.Nits"),
                 VerticalAlignment = VerticalAlignment.Center,
             };
 
@@ -530,14 +530,14 @@ public sealed partial class MainWindow
 
             var autoBtn = new Button
             {
-                Content = "Auto",
+                Content = Loc.GetString("Xaml.Auto"),
                 Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
                 Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
                 BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 5, 10, 5), FontSize = 11,
             };
-            ToolTipService.SetToolTip(autoBtn, "Reads your monitor's peak brightness automatically.");
+            ToolTipService.SetToolTip(autoBtn, Loc.GetString("Xaml.ReadsYourMonitorSPeak"));
             autoBtn.Click += async (s, ev) =>
             {
                 try
@@ -599,7 +599,7 @@ public sealed partial class MainWindow
                     content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
                     content.Children.Add(new TextBlock
                     {
-                        Text = "Compatibility Settings",
+                        Text = Loc.GetString("Dialog.CompatibilitySettings"),
                         FontSize = 13,
                         Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                         Margin = new Thickness(0, 4, 0, 0),
@@ -627,7 +627,7 @@ public sealed partial class MainWindow
 
                         var label = new TextBlock
                         {
-                            Text = isSetPath ? "Upgrade Path" : isDumpLut ? "Dump LUT Shaders" : kv.Key,
+                            Text = isSetPath ? Loc.GetString("Dialog.Renodx.UpgradePath") : isDumpLut ? Loc.GetString("Dialog.Renodx.DumpLutShaders") : kv.Key,
                             FontSize = 11,
                             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                             VerticalAlignment = VerticalAlignment.Center,
@@ -727,7 +727,7 @@ public sealed partial class MainWindow
             {
                 content.Children.Add(new TextBlock
                 {
-                    Text = "Run the game once with RenoDX installed to generate settings.",
+                    Text = Loc.GetString("Dialog.RunTheGameOnceWith"),
                     FontSize = 11,
                     Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                     FontStyle = Windows.UI.Text.FontStyle.Italic,
@@ -739,7 +739,7 @@ public sealed partial class MainWindow
         {
             content.Children.Add(new TextBlock
             {
-                Text = "No reshade.ini found in game folder.",
+                Text = Loc.GetString("Dialog.Renodx.NoReshadeIni"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 FontStyle = Windows.UI.Text.FontStyle.Italic,
@@ -752,7 +752,7 @@ public sealed partial class MainWindow
             content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
             content.Children.Add(new TextBlock
             {
-                Text = "Engine.ini Settings",
+                Text = Loc.GetString("Dialog.EngineIniSettings"),
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 Margin = new Thickness(0, 4, 0, 0),
@@ -770,7 +770,7 @@ public sealed partial class MainWindow
             {
                 var hdrLabel = new TextBlock
                 {
-                    Text = "HDR Settings",
+                    Text = Loc.GetString("Dialog.HdrSettings"),
                     FontSize = 11,
                     Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                     VerticalAlignment = VerticalAlignment.Center,
@@ -782,7 +782,7 @@ public sealed partial class MainWindow
                 var hdrCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
                 hdrCombo.Items.Add("Off");
                 hdrCombo.Items.Add("On");
-                ToolTipService.SetToolTip(hdrCombo, "Deploys Engine.ini with HDR flags for games that don't have an ingame HDR option. Disable for SDR.");
+                ToolTipService.SetToolTip(hdrCombo, Loc.GetString("Dialog.EngineIni.HdrTooltip"));
                 bool hdrActive = card.InstalledRecord?.EngineIniHdr ?? true;
                 hdrCombo.SelectedIndex = hdrActive ? 1 : 0;
                 hdrCombo.SelectionChanged += (s, ev) =>
@@ -812,7 +812,7 @@ public sealed partial class MainWindow
             int lutCol = card.UseUeExtended ? 2 : 0;
             var lutLabel = new TextBlock
             {
-                Text = "LUT Update Every Frame",
+                Text = Loc.GetString("Dialog.LutUpdateEveryFrame"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -824,7 +824,7 @@ public sealed partial class MainWindow
             var lutCombo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
             lutCombo.Items.Add("Off");
             lutCombo.Items.Add("On");
-            ToolTipService.SetToolTip(lutCombo, "Writes r.LUT.UpdateEveryFrame=1 to Engine.ini. Ensures the game recalculates LUTs each frame for accurate HDR color.");
+            ToolTipService.SetToolTip(lutCombo, Loc.GetString("Dialog.EngineIni.LutTooltip"));
             bool lutActive = card.InstalledRecord?.EngineIniLut ?? true;
             lutCombo.SelectedIndex = lutActive ? 1 : 0;
             lutCombo.SelectionChanged += (s, ev) =>
@@ -858,7 +858,7 @@ public sealed partial class MainWindow
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
         content.Children.Add(new TextBlock
         {
-            Text = "RenoDX Presets",
+            Text = Loc.GetString("Dialog.RenodxPresets"),
             FontSize = 13,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 8, 0, 0),
@@ -867,7 +867,7 @@ public sealed partial class MainWindow
 
         var exportBtn = new Button
         {
-            Content = "Export Presets",
+            Content = Loc.GetString("Dialog.ExportPresets"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -929,12 +929,12 @@ public sealed partial class MainWindow
             }
             catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
         };
-        ToolTipService.SetToolTip(exportBtn, "Save all RenoDX presets to a file and copy to clipboard for sharing.");
+        ToolTipService.SetToolTip(exportBtn, Loc.GetString("Dialog.ExportPresets.Tooltip"));
         presetRow.Children.Add(exportBtn);
 
         var importBtn = new Button
         {
-            Content = "Import Presets",
+            Content = Loc.GetString("Dialog.ImportPresets"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -988,9 +988,9 @@ public sealed partial class MainWindow
             catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
         };
         if (!File.Exists(presetPath))
-            ToolTipService.SetToolTip(importBtn, "No RHI-RenoDX-Preset.txt file found. Export first.");
+            ToolTipService.SetToolTip(importBtn, Loc.GetString("Dialog.ImportPresets.TooltipMissing"));
         else
-            ToolTipService.SetToolTip(importBtn, "Restore presets from the exported backup file into reshade.ini.");
+            ToolTipService.SetToolTip(importBtn, Loc.GetString("Dialog.ImportPresets.Tooltip"));
         presetRow.Children.Add(importBtn);
         content.Children.Add(presetRow);
         } // end hasRenoDxMod
@@ -999,14 +999,14 @@ public sealed partial class MainWindow
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
         content.Children.Add(new TextBlock
         {
-            Text = "RTX HDR",
+            Text = Loc.GetString("Dialog.RtxHdr"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
         content.Children.Add(new TextBlock
         {
-            Text = "Requires NVIDIA App with Overlay and Game Filters enabled.",
+            Text = Loc.GetString("Dialog.RequiresNvidiaAppWithOverlay"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush),
             TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
@@ -1104,7 +1104,7 @@ public sealed partial class MainWindow
         var rtxHdrRow = new StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 12 };
         rtxHdrRow.Children.Add(new TextBlock
         {
-            Text = "Enable RTX HDR",
+            Text = Loc.GetString("Dialog.EnableRtxHdr"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
@@ -1114,9 +1114,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "RenoDX Settings",
+            Title = Loc.GetString("Xaml.RenodxSettings"),
             Content = new ScrollViewer { Content = content, MaxHeight = 620, Padding = new Thickness(0, 0, 16, 0) },
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1149,14 +1149,14 @@ public sealed partial class MainWindow
 
         // ── Peak Brightness ───────────────────────────────────────────────────
         var nitsRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var nitsLabel = new TextBlock { Text = $"Peak Brightness: {peakBrightnessDisplay} nits", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), MinWidth = 175 };
-        var nitsWarning = new TextBlock { Text = "⚠ High values may look unnatural", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush), VerticalAlignment = VerticalAlignment.Center, Opacity = peakBrightnessDisplay > 600 ? 1.0 : 0.0 };
+        var nitsLabel = new TextBlock { Text = Loc.GetString("Dialog.RtxHdr.PeakBrightness", peakBrightnessDisplay), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), MinWidth = 175 };
+        var nitsWarning = new TextBlock { Text = Loc.GetString("Dialog.HighValuesMayLookUnnatural"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush), VerticalAlignment = VerticalAlignment.Center, Opacity = peakBrightnessDisplay > 600 ? 1.0 : 0.0 };
         nitsRow.Children.Add(nitsLabel);
         nitsRow.Children.Add(nitsWarning);
         var nitsSlider = new Slider { Minimum = 400, Maximum = 2000, StepFrequency = 10, Value = peakBrightnessDisplay, HorizontalAlignment = HorizontalAlignment.Stretch };
         nitsSlider.ValueChanged += (s, ev) =>
         {
-            nitsLabel.Text = $"Peak Brightness: {(int)nitsSlider.Value} nits";
+            nitsLabel.Text = Loc.GetString("Dialog.RtxHdr.PeakBrightness", (int)nitsSlider.Value);
             nitsWarning.Opacity = (int)nitsSlider.Value > 600 ? 1.0 : 0.0;
         };
         content.Children.Add(nitsRow);
@@ -1166,10 +1166,10 @@ public sealed partial class MainWindow
         // ── Contrast ──────────────────────────────────────────────────────────
         string ContrastLabel(int val) => val switch
         {
-            0 => "Contrast: 0 — Gamma 2.0 (Default)",
-            25 => "Contrast: +25 — Gamma 2.2",
-            50 => "Contrast: +50 — Gamma 2.4",
-            _ => $"Contrast: {(val >= 0 ? "+" : "")}{val}",
+            0 => Loc.GetString("Dialog.RtxHdr.Contrast0"),
+            25 => Loc.GetString("Dialog.RtxHdr.Contrast25"),
+            50 => Loc.GetString("Dialog.RtxHdr.Contrast50"),
+            _ => Loc.GetString("Dialog.RtxHdr.ContrastValue", $"{(val >= 0 ? "+" : "")}{val}"),
         };
         var contrastLabel = new TextBlock { Text = ContrastLabel(contrastDisplay), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
         var contrastSlider = new Slider { Minimum = -100, Maximum = 100, StepFrequency = 1, Value = contrastDisplay, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -1179,11 +1179,11 @@ public sealed partial class MainWindow
 
         // ── Gamma preset buttons ──────────────────────────────────────────────
         var gammaPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 2, 0, 4) };
-        foreach (var (label, value) in new[] { ("Gamma 2.0", 0), ("Gamma 2.2", 25), ("Gamma 2.4", 50) })
+        foreach (var (labelKey, value) in new[] { ("Dialog.RtxHdr.Gamma20", 0), ("Dialog.RtxHdr.Gamma22", 25), ("Dialog.RtxHdr.Gamma24", 50) })
         {
             var btn = new Button
             {
-                Content = label,
+                Content = Loc.GetString(labelKey),
                 FontSize = 11,
                 Padding = new Thickness(10, 4, 10, 4),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -1252,13 +1252,13 @@ public sealed partial class MainWindow
         string MiddleGreyLabel(int val, int contrastVal)
         {
             var perceivedPw = CalcPerceivedPaperwhite(val, contrastVal);
-            return $"Middle Grey: {val} ({perceivedPw} nits)";
+            return Loc.GetString("Dialog.RtxHdr.MiddleGrey", val, perceivedPw);
         }
         
         int mgInitialPw = CalcPerceivedPaperwhite(mgInitial, (int)contrastSlider.Value);
         var mgRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var mgLabel = new TextBlock { Text = MiddleGreyLabel(mgInitial, (int)contrastSlider.Value), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), MinWidth = 175 };
-        var mgWarning = new TextBlock { Text = "⚠ High values may look washed out", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush), VerticalAlignment = VerticalAlignment.Center, Opacity = mgInitialPw > 203 ? 1.0 : 0.0 };
+        var mgWarning = new TextBlock { Text = Loc.GetString("Dialog.HighValuesMayLookWashed"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush), VerticalAlignment = VerticalAlignment.Center, Opacity = mgInitialPw > 203 ? 1.0 : 0.0 };
         mgRow.Children.Add(mgLabel);
         mgRow.Children.Add(mgWarning);
         var mgSlider = new Slider { Minimum = 10, Maximum = 100, StepFrequency = 1, Value = mgInitial, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -1280,11 +1280,11 @@ public sealed partial class MainWindow
         var mgButtonsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 2, 0, 4) };
         var autoMgBtn = new Button
         {
-            Content = "Auto",
+            Content = Loc.GetString("Xaml.Auto"),
             FontSize = 11,
             Padding = new Thickness(10, 4, 10, 4),
         };
-        ToolTipService.SetToolTip(autoMgBtn, "Calculate Middle Grey from Peak Brightness and Gamma using the ITU formula");
+        ToolTipService.SetToolTip(autoMgBtn, Loc.GetString("Dialog.RtxHdr.AutoMgTooltip"));
         autoMgBtn.Click += (s, ev) =>
         {
             var autoVal = CalcAutoMiddleGrey((int)nitsSlider.Value, (int)contrastSlider.Value);
@@ -1308,7 +1308,7 @@ public sealed partial class MainWindow
                 MinWidth = 36,
             };
             var capturedPw = presetPw;
-            ToolTipService.SetToolTip(presetBtn, $"Set Middle Grey to achieve ~{presetPw} nits paperwhite");
+            ToolTipService.SetToolTip(presetBtn, Loc.GetString("Dialog.RtxHdr.PresetPwTooltip", presetPw));
             presetBtn.Click += (s, ev) =>
             {
                 // Reverse formula: midGrey = paperwhite × (0.5 ^ gamma)
@@ -1328,8 +1328,8 @@ public sealed partial class MainWindow
         // ── Saturation ────────────────────────────────────────────────────────
         string SaturationLabel(int val) => val switch
         {
-            -25 => "Saturation: -25 — Neutral Saturation",
-            _ => $"Saturation: {(val >= 0 ? "+" : "")}{val}",
+            -25 => Loc.GetString("Dialog.RtxHdr.SaturationNeutral"),
+            _ => Loc.GetString("Dialog.RtxHdr.SaturationValue", $"{(val >= 0 ? "+" : "")}{val}"),
         };
         var satLabel = new TextBlock { Text = SaturationLabel(saturationDisplay), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
         var satSlider = new Slider { Minimum = -100, Maximum = 100, StepFrequency = 1, Value = saturationDisplay, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -1356,13 +1356,13 @@ public sealed partial class MainWindow
             if (currentDebanding == (int)debandingOptions[i].value) selectedDbIndex = i;
         }
         debandingCombo.SelectedIndex = selectedDbIndex;
-        var dbLabel = new TextBlock { Text = "Debanding", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
+        var dbLabel = new TextBlock { Text = Loc.GetString("Dialog.Debanding"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
         content.Children.Add(dbLabel);
         content.Children.Add(debandingCombo);
         if (!isAdmin)
             content.Children.Add(new TextBlock
             {
-                Text = "Requires admin mode to change",
+                Text = Loc.GetString("Dialog.RequiresAdminModeToChange"),
                 FontSize = 10,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 Margin = new Thickness(0, -4, 0, 0),
@@ -1379,21 +1379,21 @@ public sealed partial class MainWindow
         var defaultsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 4, 0, 0) };
         var saveDefaultBtn = new Button
         {
-            Content = "Save as Default",
+            Content = Loc.GetString("Dialog.SaveAsDefault"),
             FontSize = 11,
             Padding = new Thickness(12, 6, 12, 6),
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(saveDefaultBtn, "Save current slider values as your default RTX HDR preset");
+        ToolTipService.SetToolTip(saveDefaultBtn, Loc.GetString("Dialog.SaveAsDefault.Tooltip"));
         var setDefaultBtn = new Button
         {
-            Content = "Set Default",
+            Content = Loc.GetString("Dialog.SetDefault"),
             FontSize = 11,
             Padding = new Thickness(12, 6, 12, 6),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsEnabled = hasDefaults,
         };
-        ToolTipService.SetToolTip(setDefaultBtn, hasDefaults ? "Apply your saved default preset to the sliders" : "No default saved yet — use 'Save as Default' first");
+        ToolTipService.SetToolTip(setDefaultBtn, hasDefaults ? Loc.GetString("Dialog.SetDefault.Tooltip") : Loc.GetString("Dialog.SetDefault.TooltipNone"));
 
         saveDefaultBtn.Click += (s, ev) =>
         {
@@ -1411,8 +1411,8 @@ public sealed partial class MainWindow
                 File.WriteAllText(defaultsPath, JsonSerializer.Serialize(defaults,
                     new JsonSerializerOptions { WriteIndented = true }));
                 setDefaultBtn.IsEnabled = true;
-                ToolTipService.SetToolTip(setDefaultBtn, "Apply your saved default preset to the sliders");
-                saveDefaultBtn.Content = "Saved!";
+                ToolTipService.SetToolTip(setDefaultBtn, Loc.GetString("Dialog.SetDefault.Tooltip"));
+                saveDefaultBtn.Content = Loc.GetString("Dialog.Saved");
             }
             catch (Exception ex) { CrashReporter.Log($"[RtxHdrConfigButton_Click] Failed to save defaults — {ex.Message}"); }
         };
@@ -1452,10 +1452,10 @@ public sealed partial class MainWindow
         // ── Dialog ────────────────────────────────────────────────────────────
         var dialog = new ContentDialog
         {
-            Title = "RTX HDR Settings",
+            Title = Loc.GetString("Dialog.RtxHdrSettings"),
             Content = new ScrollViewer { Content = content, MaxHeight = 600, Padding = new Thickness(0, 0, 16, 0) },
-            PrimaryButtonText = "Apply",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Apply"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1487,7 +1487,7 @@ public sealed partial class MainWindow
         var content = new StackPanel { Spacing = 8 };
         var deployBtn = new Button
         {
-            Content = "Deploy relimiter.ini",
+            Content = Loc.GetString("Dialog.DeployRelimiterIni"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -1523,7 +1523,7 @@ public sealed partial class MainWindow
         // Open relimiter log
         var openLogBtn = new Button
         {
-            Content = "Open ReLimiter log",
+            Content = Loc.GetString("Dialog.OpenRelimiterLog"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -1542,7 +1542,7 @@ public sealed partial class MainWindow
         // Copy relimiter log to clipboard (as file with correct name)
         var copyLogBtn = new Button
         {
-            Content = "Copy ReLimiter log to clipboard",
+            Content = Loc.GetString("Dialog.CopyRelimiterLogToClipboard"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -1582,7 +1582,7 @@ public sealed partial class MainWindow
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
         content.Children.Add(new TextBlock
         {
-            Text = "Frame Limiter",
+            Text = Loc.GetString("Dialog.FrameLimiter"),
             FontSize = 13,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 4, 0, 0),
@@ -1594,7 +1594,7 @@ public sealed partial class MainWindow
         targetFpsPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var targetFpsLabel = new TextBlock
         {
-            Text = "Target FPS",
+            Text = Loc.GetString("Xaml.TargetFps"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
@@ -1602,7 +1602,7 @@ public sealed partial class MainWindow
         Grid.SetColumn(targetFpsLabel, 0);
         targetFpsPanel.Children.Add(targetFpsLabel);
         var targetFpsCombo = new ComboBox { FontSize = 12, MinWidth = 140, HorizontalAlignment = HorizontalAlignment.Right };
-        ToolTipService.SetToolTip(targetFpsCombo, "FPS cap for this game. Select a VRR preset or Custom for a manual value.");
+        ToolTipService.SetToolTip(targetFpsCombo, Loc.GetString("Dialog.TargetFps.Tooltip"));
         Grid.SetColumn(targetFpsCombo, 1);
         targetFpsPanel.Children.Add(targetFpsCombo);
 
@@ -1650,7 +1650,7 @@ public sealed partial class MainWindow
         // Inline custom FPS input (shown when "Custom..." is selected)
         var customFpsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Visibility = Visibility.Collapsed };
         var customFpsBox = new TextBox { PlaceholderText = "20-1000", FontSize = 12, MinWidth = 100 };
-        var customFpsBtn = new Button { Content = "Set", FontSize = 12 };
+        var customFpsBtn = new Button { Content = Loc.GetString("Dialog.Set"), FontSize = 12 };
         customFpsPanel.Children.Add(customFpsBox);
         customFpsPanel.Children.Add(customFpsBtn);
 
@@ -1806,7 +1806,7 @@ public sealed partial class MainWindow
             targetFpsPanel.IsHitTestVisible = false;
             content.Children.Add(new TextBlock
             {
-                Text = "Deploy relimiter.ini to enable these settings",
+                Text = Loc.GetString("Dialog.DeployRelimiterIni.ToEnable"),
                 FontSize = 10,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 Margin = new Thickness(0, -2, 0, 0),
@@ -1817,7 +1817,7 @@ public sealed partial class MainWindow
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
         content.Children.Add(new TextBlock
         {
-            Text = "Compatibility Settings",
+            Text = Loc.GetString("Dialog.CompatibilitySettings"),
             FontSize = 13,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 4, 0, 0),
@@ -1829,7 +1829,7 @@ public sealed partial class MainWindow
         dlssHooksPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var dlssHooksLabel = new TextBlock
         {
-            Text = "DLSS Hooks",
+            Text = Loc.GetString("Dialog.DlssHooks"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
@@ -1839,7 +1839,7 @@ public sealed partial class MainWindow
         var dlssHooksCombo = new ComboBox { FontSize = 12, MinWidth = 80, HorizontalAlignment = HorizontalAlignment.Right };
         dlssHooksCombo.Items.Add("Off");
         dlssHooksCombo.Items.Add("On");
-        ToolTipService.SetToolTip(dlssHooksCombo, "Shows DLSS version/preset info on the ReLimiter OSD. Disable if causing crashes.");
+        ToolTipService.SetToolTip(dlssHooksCombo, Loc.GetString("Dialog.DlssHooks.Tooltip"));
         Grid.SetColumn(dlssHooksCombo, 1);
         dlssHooksPanel.Children.Add(dlssHooksCombo);
 
@@ -1889,9 +1889,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "ReLimiter Settings",
+            Title = Loc.GetString("Xaml.RelimiterSettings"),
             Content = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1904,7 +1904,7 @@ public sealed partial class MainWindow
         var content = new StackPanel { Spacing = 12 };
         var deployBtn = new Button
         {
-            Content = "Deploy DisplayCommander.ini",
+            Content = Loc.GetString("Dialog.DeployDisplayCommanderIni"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -1927,9 +1927,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Display Commander Settings",
+            Title = Loc.GetString("Xaml.DisplayCommanderSettings"),
             Content = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1994,7 +1994,7 @@ public sealed partial class MainWindow
         };
         var fpsLabels = new[] { "Off" }.Concat(vrrPresetsOs.Select(p => p.Label)).ToArray();
         var fpsLimitCombo = new ComboBox { ItemsSource = fpsLabels, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        ToolTipService.SetToolTip(fpsLimitCombo, "Framerate limit using Reflex whenever possible. 'Off' disables the limit.");
+        ToolTipService.SetToolTip(fpsLimitCombo, Loc.GetString("Dialog.OptiScaler.FpsLimitTooltip"));
 
         // Read current value from OptiScaler.ini
         string currentFpsStr = "Off";
@@ -2019,12 +2019,12 @@ public sealed partial class MainWindow
         }
         fpsLimitCombo.SelectedItem = currentFpsStr;
 
-        AddRow(unifiedGrid, 0, "OptiScaler Version",
+        AddRow(unifiedGrid, 0, Loc.GetString("Dialog.OptiScaler.Version"),
             new ComboBox { ItemsSource = new[] { "Stable", "Nightly" }, SelectedItem = ViewModel.GetOsVariant(card.GameName, card.Source ?? ""), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch },
-            "Framerate Limit", fpsLimitCombo);
+            Loc.GetString("Dialog.OptiScaler.FramerateLimit"), fpsLimitCombo);
         // Grab the variant combo we just added
         var variantCombo = (ComboBox)unifiedGrid.Children.Cast<UIElement>().Where(c => c is ComboBox).First();
-        ToolTipService.SetToolTip(variantCombo, "Stable uses the official OptiScaler release. Nightly uses the latest daily build.");
+        ToolTipService.SetToolTip(variantCombo, Loc.GetString("Dialog.OptiScaler.VariantTooltip"));
 
         fpsLimitCombo.SelectionChanged += (s, ev) =>
         {
@@ -2077,8 +2077,8 @@ public sealed partial class MainWindow
 
         var apiCombo = new ComboBox { ItemsSource = new[] { "DX11", "DX12", "Vulkan" }, SelectedItem = "DX11", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         var apiUpscalerCombo = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        ToolTipService.SetToolTip(apiCombo, "Select which graphics API's upscaler to configure.");
-        ToolTipService.SetToolTip(apiUpscalerCombo, "Upscaler for the selected API. 'Auto' lets OptiScaler choose based on your GPU.");
+        ToolTipService.SetToolTip(apiCombo, Loc.GetString("Dialog.OptiScaler.ApiTooltip"));
+        ToolTipService.SetToolTip(apiUpscalerCombo, Loc.GetString("Dialog.OptiScaler.UpscalerTooltip"));
 
         // Populate upscaler combo for initial API (DX11) and select current INI value
         void RefreshUpscalerCombo(string api)
@@ -2093,7 +2093,7 @@ public sealed partial class MainWindow
         RefreshUpscalerCombo("DX11");
 
         bool apiComboInitializing = true;
-        AddRow(unifiedGrid, 1, "Upscaler API", apiCombo, "Upscaler", apiUpscalerCombo);
+        AddRow(unifiedGrid, 1, Loc.GetString("Dialog.OptiScaler.UpscalerApi"), apiCombo, Loc.GetString("Dialog.OptiScaler.Upscaler"), apiUpscalerCombo);
         apiComboInitializing = false;
 
         apiCombo.SelectionChanged += (s, ev) =>
@@ -2163,7 +2163,7 @@ public sealed partial class MainWindow
 
             // Section heading: Frame Generation Settings
             unifiedGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var fgHeading = new TextBlock { Text = "Frame Generation Settings", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) };
+            var fgHeading = new TextBlock { Text = Loc.GetString("Dialog.FrameGenerationSettings"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) };
             Grid.SetRow(fgHeading, 3); Grid.SetColumn(fgHeading, 0); Grid.SetColumnSpan(fgHeading, 4);
             unifiedGrid.Children.Add(fgHeading);
 
@@ -2182,9 +2182,9 @@ public sealed partial class MainWindow
 
             bool combinedOn = ViewModel.GetOsDeployStreamline(card.GameName, card.Source ?? "");
             combinedCombo = new ComboBox { ItemsSource = new[] { "No", "Yes" }, SelectedItem = combinedOn ? "Yes" : "No" };
-            ToolTipService.SetToolTip(combinedCombo, "Deploys Streamline and DLSS Enabler to the game's OptiScaler folder. Required for DLSS Frame Generation with OptiScaler.");
+            ToolTipService.SetToolTip(combinedCombo, Loc.GetString("Dialog.OptiScaler.CombinedTooltip"));
             var slVersionCombo = new ComboBox { ItemsSource = slVersions.Count > 0 ? (IEnumerable<string>)slVersions : new[] { slVersionDefault }, SelectedItem = slVersionDefault, IsEnabled = combinedOn };
-            AddRow(unifiedGrid, 4, "Streamline/DLSS Enabler", combinedCombo, "Streamline Version", slVersionCombo);
+            AddRow(unifiedGrid, 4, Loc.GetString("Dialog.OptiScaler.StreamlineDlssEnabler"), combinedCombo, Loc.GetString("Dialog.OptiScaler.StreamlineVersion"), slVersionCombo);
 
             // Row 4: FG Input (left) | HUD Fix (right)
             fgInputCombo = new ComboBox { ItemsSource = new[] { "Auto (Default)", "OptiFG (Upscaler)", "DLSSG via Streamline", "DLSSG via Nvngx", "FSR 3.1 FG", "FSR 3.0 FG", "XeFG" }, SelectedItem = IniToFgInput(ViewModel.GetOsFgInput(card.GameName, card.Source ?? "")) };
@@ -2210,9 +2210,9 @@ public sealed partial class MainWindow
                                : hudFixCurrent.Equals("false", StringComparison.OrdinalIgnoreCase) ? "Off"
                                : "Default";
             hudFixCombo = new ComboBox { ItemsSource = new[] { "Default", "On", "Off" }, SelectedItem = hudFixSelected };
-            ToolTipService.SetToolTip(hudFixCombo!, "HUD Fix: enables hudless resource tracking for Frame Generation. On = HUDFix=true in [OptiFG].");
+            ToolTipService.SetToolTip(hudFixCombo!, Loc.GetString("Dialog.OptiScaler.HudFixTooltip"));
 
-            AddRow(unifiedGrid, 5, "FG Input", fgInputCombo!, "HUD Fix", hudFixCombo!);
+            AddRow(unifiedGrid, 5, Loc.GetString("Dialog.OptiScaler.FgInput"), fgInputCombo!, Loc.GetString("Dialog.OptiScaler.HudFix"), hudFixCombo!);
 
             // Row 5: FG Output (left) | FG Nvngx Override (right)
             fgOutputCombo = new ComboBox { ItemsSource = new[] { "Auto (Default)", "FSR FG", "DLSSG", "XeFG" }, SelectedItem = IniToFgOutput(ViewModel.GetOsFgOutput(card.GameName, card.Source ?? "")) };
@@ -2221,8 +2221,8 @@ public sealed partial class MainWindow
             var currentNvngxDisplay = IniToFgNvngx(ViewModel.GetOsFgNvngxReplacement(card.GameName, card.Source ?? ""));
             object? nvngxSelected = nvngxItems.FirstOrDefault(i => i is ComboBoxItem cb ? (cb.Content as string) == currentNvngxDisplay : (i as string) == currentNvngxDisplay) ?? nvngxItems[0];
             fgNvngxCombo = new ComboBox { ItemsSource = nvngxItems, SelectedItem = nvngxSelected };
-            ToolTipService.SetToolTip(fgNvngxCombo!, "Only relevant when FG Output = DLSSG. Enabler requires Deploy Streamline + Deploy DLSS Enabler.");
-            AddRow(unifiedGrid, 6, "FG Output", fgOutputCombo!, "FG Nvngx Override", fgNvngxCombo!);
+            ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxTooltip"));
+            AddRow(unifiedGrid, 6, Loc.GetString("Dialog.OptiScaler.FgOutput"), fgOutputCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"), fgNvngxCombo!);
 
             bool fgOutputIsDlssg = fgOutputCombo!.SelectedItem as string == "DLSSG";
             fgNvngxCombo!.Opacity = fgOutputIsDlssg ? 1.0 : 0.35;
@@ -2307,7 +2307,7 @@ public sealed partial class MainWindow
 
             // ── Additional Settings ────────────────────────────────────────
             content.Children.Add(MakeSeparator());
-            content.Children.Add(new TextBlock { Text = "Additional Settings", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+            content.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.AdditionalSettings"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
 
             var addGrid = MakeSettingsGrid();
 
@@ -2334,22 +2334,22 @@ public sealed partial class MainWindow
             var srCurrent = ReadIniValue("DLSS", "RenderPresetForAll");
             var srSelected = srPresetMap.FirstOrDefault(p => p.Item2 == srCurrent).Item1 ?? "Default";
             srPresetCombo = new ComboBox { ItemsSource = srPresetMap.Select(p => p.Item1).ToArray(), SelectedItem = srSelected };
-            ToolTipService.SetToolTip(srPresetCombo!, "DLSS Super Resolution render preset. J-M are the recommended modern presets.");
+            ToolTipService.SetToolTip(srPresetCombo!, Loc.GetString("Dialog.OptiScaler.SrPresetTooltip"));
 
             // DLSS RR preset: 3=D, 4=E
             rrPresetMap = new[] { ("Default", "auto"), ("D", "3"), ("E", "4") };
             var rrCurrent = ReadIniValue("DLSSD", "RenderPresetForAll");
             var rrSelected = rrPresetMap.FirstOrDefault(p => p.Item2 == rrCurrent).Item1 ?? "Default";
             rrPresetCombo = new ComboBox { ItemsSource = rrPresetMap.Select(p => p.Item1).ToArray(), SelectedItem = rrSelected };
-            ToolTipService.SetToolTip(rrPresetCombo!, "DLSS Ray Reconstruction render preset.");
+            ToolTipService.SetToolTip(rrPresetCombo!, Loc.GetString("Dialog.OptiScaler.RrPresetTooltip"));
 
-            AddRow(addGrid, 0, "DLSS SR Preset", srPresetCombo!, "DLSS RR Preset", rrPresetCombo!);
+            AddRow(addGrid, 0, Loc.GetString("Dialog.OptiScaler.DlssSrPreset"), srPresetCombo!, Loc.GetString("Dialog.OptiScaler.DlssRrPreset"), rrPresetCombo!);
 
             // Disable Flip Metering + Render Scale
             var flipCurrent = ReadIniValue("NvApi", "DisableFlipMetering");
             var flipSelected = flipCurrent == "true" ? "On" : "Default";
             flipCombo = new ComboBox { ItemsSource = new[] { "Default", "On" }, SelectedItem = flipSelected };
-            ToolTipService.SetToolTip(flipCombo!, "On: DisableFlipMetering=true — fixes thick frametime graph with NukemFG + fakenvapi.");
+            ToolTipService.SetToolTip(flipCombo!, Loc.GetString("Dialog.OptiScaler.FlipTooltip"));
 
             // Render Scale — UpscaleRatioOverride
             renderScaleMap = new[] {
@@ -2375,9 +2375,9 @@ public sealed partial class MainWindow
                 if (match.Item1 != null) rsSelected = match.Item1;
             }
             rsCombo = new ComboBox { ItemsSource = renderScaleMap.Select(p => p.Item1).ToArray(), SelectedItem = rsSelected };
-            ToolTipService.SetToolTip(rsCombo!, "Override the internal render resolution. Off = use in-game quality preset as-is.");
+            ToolTipService.SetToolTip(rsCombo!, Loc.GetString("Dialog.OptiScaler.RenderScaleTooltip"));
 
-            AddRow(addGrid, 1, "Render Scale", rsCombo!, "Disable Flip Metering", flipCombo!);
+            AddRow(addGrid, 1, Loc.GetString("Dialog.OptiScaler.RenderScale"), rsCombo!, Loc.GetString("Dialog.OptiScaler.DisableFlipMetering"), flipCombo!);
 
             content.Children.Add(addGrid);
 
@@ -2424,21 +2424,21 @@ public sealed partial class MainWindow
             if (isUnreal)
             {
                 content.Children.Add(MakeSeparator());
-                content.Children.Add(new TextBlock { Text = "Engine.ini Settings", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                content.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.EngineIniSettings"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
 
                 var ueGrid = MakeSettingsGrid();
 
                 var dmvCombo = new ComboBox { ItemsSource = new[] { "Default", "Off" }, SelectedItem = ViewModel.GetOsDilatedMotionVectorsOff(card.GameName, card.Source ?? "") ? "Off" : "Default" };
-                ToolTipService.SetToolTip(dmvCombo, "Off: r.NGX.DLSS.DilateMotionVectors=0 + r.Streamline.DilateMotionVectors=0");
+                ToolTipService.SetToolTip(dmvCombo, Loc.GetString("Dialog.OptiScaler.DmvTooltip"));
                 var fsrCombo = new ComboBox { ItemsSource = new[] { "None", "FSR2", "FSR3", "FSR3.1" }, SelectedItem = ViewModel.GetOsFsrCrashFix(card.GameName, card.Source ?? "") };
-                ToolTipService.SetToolTip(fsrCombo, "FSR2: r.FidelityFX.FSR2.UseNativeDX12=1\nFSR3: r.FidelityFX.FSR3.UseNativeDX12=1\nFSR3.1: above + r.FidelityFX.FSR3.UseRHI=0");
-                AddRow(ueGrid, 0, "Dilated Motion Vectors", dmvCombo, "FSR Crash Fix", fsrCombo);
+                ToolTipService.SetToolTip(fsrCombo, Loc.GetString("Dialog.OptiScaler.FsrTooltip"));
+                AddRow(ueGrid, 0, Loc.GetString("Dialog.OptiScaler.DilatedMotionVectors"), dmvCombo, Loc.GetString("Dialog.OptiScaler.FsrCrashFix"), fsrCombo);
 
                 var fgSwapCombo = new ComboBox { ItemsSource = new[] { "Default", "On" }, SelectedItem = ViewModel.GetOsFsrFgSwapchain(card.GameName, card.Source ?? "") ? "On" : "Default" };
-                ToolTipService.SetToolTip(fgSwapCombo, "On: r.FidelityFX.FI.OverrideSwapChainDX12=1");
+                ToolTipService.SetToolTip(fgSwapCombo, Loc.GetString("Dialog.OptiScaler.FgSwapTooltip"));
                 var upscalerCombo = new ComboBox { ItemsSource = new[] { "Default", "On" }, SelectedItem = ViewModel.GetOsUpscalerPlugin(card.GameName, card.Source ?? "") ? "On" : "Default" };
-                ToolTipService.SetToolTip(upscalerCombo, "On: r.AntiAliasingMethod=4 + r.TemporalAA.Upscaler=1");
-                AddRow(ueGrid, 1, "FSR-FG Swapchain", fgSwapCombo, "Upscaler Plugin", upscalerCombo);
+                ToolTipService.SetToolTip(upscalerCombo, Loc.GetString("Dialog.OptiScaler.UpscalerPluginTooltip"));
+                AddRow(ueGrid, 1, Loc.GetString("Dialog.OptiScaler.FsrFgSwapchain"), fgSwapCombo, Loc.GetString("Dialog.OptiScaler.UpscalerPlugin"), upscalerCombo);
 
                 content.Children.Add(ueGrid);
 
@@ -2476,7 +2476,7 @@ public sealed partial class MainWindow
 
         if (isNightly)
         {
-            var presetsLabel = new TextBlock { Text = "Presets", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
+            var presetsLabel = new TextBlock { Text = Loc.GetString("Dialog.Presets"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
             bottomBorder.Children.Add(presetsLabel);
 
             // Load global presets from disk
@@ -2500,7 +2500,7 @@ public sealed partial class MainWindow
 
                 var nameBox = new TextBox
                 {
-                    PlaceholderText = $"Slot {i + 1}",
+                    PlaceholderText = Loc.GetString("Dialog.OptiScaler.Slot", i + 1),
                     Text = preset?.Name ?? "",
                     FontSize = 11,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -2510,13 +2510,13 @@ public sealed partial class MainWindow
 
                 var saveBtn = new Button
                 {
-                    Content = "Save",
+                    Content = Loc.GetString("Dialog.Save"),
                     FontSize = 11,
                     Width = 42,
                     Padding = new Thickness(4),
                     CornerRadius = new CornerRadius(4),
                 };
-                ToolTipService.SetToolTip(saveBtn, "Save current cog settings into this slot");
+                ToolTipService.SetToolTip(saveBtn, Loc.GetString("Dialog.OptiScaler.SaveSlotTooltip"));
 
                 // Stretch the textbox to fill remaining space
                 var nameRowGrid = new Grid { ColumnSpacing = 4 };
@@ -2530,7 +2530,7 @@ public sealed partial class MainWindow
                 // ── Apply button ───────────────────────────────────────────
                 var applyBtn = new Button
                 {
-                    Content = hasData ? (preset!.Name ?? $"Slot {i + 1}") : $"Slot {i + 1}",
+                    Content = hasData ? (preset!.Name ?? Loc.GetString("Dialog.OptiScaler.Slot", i + 1)) : Loc.GetString("Dialog.OptiScaler.Slot", i + 1),
                     FontSize = 11,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     Padding = new Thickness(6, 5, 6, 5),
@@ -2538,14 +2538,14 @@ public sealed partial class MainWindow
                     IsEnabled = hasData,
                     Opacity = hasData ? 1.0 : 0.40,
                 };
-                ToolTipService.SetToolTip(applyBtn, hasData ? "Apply this preset to the current game" : "No preset saved yet — click Save to capture current settings");
+                ToolTipService.SetToolTip(applyBtn, hasData ? Loc.GetString("Dialog.OptiScaler.ApplyPresetTooltip") : Loc.GetString("Dialog.OptiScaler.ApplyPresetTooltipNone"));
 
                 // ── Wire: TextBox name editing ─────────────────────────────
                 nameBox.TextChanged += (s, ev) =>
                 {
                     if (presets[i] == null) presets[i] = new Models.OsPreset();
                     presets[i]!.Name = string.IsNullOrWhiteSpace(nameBox.Text) ? null : nameBox.Text;
-                    applyBtn.Content = presets[i]!.Name ?? $"Slot {i + 1}";
+                    applyBtn.Content = presets[i]!.Name ?? Loc.GetString("Dialog.OptiScaler.Slot", i + 1);
                     OsPresetService.Save(presets);
                 };
 
@@ -2587,8 +2587,8 @@ public sealed partial class MainWindow
                     OsPresetService.Save(presets);
                     applyBtn.IsEnabled = true;
                     applyBtn.Opacity = 1.0;
-                    applyBtn.Content = p.Name ?? $"Slot {i + 1}";
-                    ToolTipService.SetToolTip(applyBtn, "Apply this preset to the current game");
+                    applyBtn.Content = p.Name ?? Loc.GetString("Dialog.OptiScaler.Slot", i + 1);
+                    ToolTipService.SetToolTip(applyBtn, Loc.GetString("Dialog.OptiScaler.ApplyPresetTooltip"));
                 };
 
                 // ── Wire: Apply button ─────────────────────────────────────
@@ -2706,7 +2706,7 @@ public sealed partial class MainWindow
 
         var deployBtn = new Button
         {
-            Content = "Deploy OptiScaler.ini",
+            Content = Loc.GetString("Dialog.DeployOptiscalerIni"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -2719,7 +2719,7 @@ public sealed partial class MainWindow
 
         bottomBorder.Children.Add(new TextBlock
         {
-            Text = "If the game crashes with both ReShade and OptiScaler installed, try renaming ReShade to d3d12.dll (or another DLL name) using DLL Naming Overrides in the Overrides panel.",
+            Text = Loc.GetString("Dialog.OptiScaler.CrashNote"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             TextWrapping = TextWrapping.Wrap,
@@ -2773,9 +2773,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "OptiScaler Settings",
+            Title = Loc.GetString("Xaml.OptiscalerSettings"),
             Content = rootGrid,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -2789,7 +2789,7 @@ public sealed partial class MainWindow
         var content = new StackPanel { Spacing = 12 };
         var deployBtn = new Button
         {
-            Content = "Deploy dxvk.conf",
+            Content = Loc.GetString("Dialog.DeployDxvkConf"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -2811,12 +2811,12 @@ public sealed partial class MainWindow
         // Row 0: Prefer DXGI Swapchain
         var presentLabel = new TextBlock
         {
-            Text = "Prefer DXGI Swapchain",
+            Text = Loc.GetString("Dialog.PreferDxgiSwapchain"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(presentLabel, "Sets Vulkan/OpenGL Present Method to 'Preferred layered on DXGI Swapchain' in the NVIDIA driver profile. Recommended for DXVK — improves compatibility and HDR support.");
+        ToolTipService.SetToolTip(presentLabel, Loc.GetString("Dialog.Dxvk.PreferDxgiTooltip"));
         Grid.SetRow(presentLabel, 0); Grid.SetColumn(presentLabel, 0);
         presentGrid.Children.Add(presentLabel);
 
@@ -2836,12 +2836,12 @@ public sealed partial class MainWindow
         // Row 1: DXVK as Native Flags
         var flagsLabel = new TextBlock
         {
-            Text = "DXVK as Native",
+            Text = Loc.GetString("Dialog.DxvkAsNative"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(flagsLabel, "Standard: Treat DXVK as Native (0x000802A5). Alternative: Allow DXVK Promotion + DirectFlip (0x00080004). Only active when Prefer DXGI Swapchain is Yes.");
+        ToolTipService.SetToolTip(flagsLabel, Loc.GetString("Dialog.Dxvk.AsNativeTooltip"));
         Grid.SetRow(flagsLabel, 1); Grid.SetColumn(flagsLabel, 0);
         presentGrid.Children.Add(flagsLabel);
 
@@ -2852,7 +2852,7 @@ public sealed partial class MainWindow
         };
         var flagsCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
         foreach (var (lbl, _) in flagOptions) flagsCombo.Items.Add(lbl);
-        ToolTipService.SetToolTip(flagsCombo, "Standard (0x000802A5): Treat DXVK as Native\nAlternative (0x00080004): Allow DXVK Promotion + DirectFlip");
+        ToolTipService.SetToolTip(flagsCombo, Loc.GetString("Dialog.Dxvk.FlagsTooltip"));
 
         var currentFlags = _dlssPresetService.GetVulkanPresentMethodFlags(card.GameName, card.InstallPath ?? "");
         bool presentIsYes = currentPresentMethod == 0x00000001;
@@ -2899,9 +2899,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "DXVK Settings",
+            Title = Loc.GetString("Xaml.DxvkSettings"),
             Content = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };

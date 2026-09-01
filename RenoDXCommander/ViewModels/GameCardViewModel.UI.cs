@@ -8,6 +8,145 @@ namespace RenoDXCommander.ViewModels;
 // UI state: IsSelected, CardHighlighted, ComponentExpanded, sidebar props, visibility, display
 public partial class GameCardViewModel
 {
+    // ── Localization plumbing ─────────────────────────────────────────────────────
+    // Cached localization service — cards are per-game instances, so avoid a DI
+    // lookup per property read. Null when DI is unavailable (unit tests); callers
+    // fall back to the key itself in that case.
+    private static ILocalizationService? _locService;
+    private static bool _locResolved;
+    private static readonly object _locLock = new();
+
+    private static ILocalizationService? LocService
+    {
+        get
+        {
+            if (_locResolved) return _locService;
+            lock (_locLock)
+            {
+                if (_locResolved) return _locService;
+                try
+                {
+                    _locService = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+                }
+                catch
+                {
+                    _locService = null; // DI not available (unit tests) — labels fall back to keys
+                }
+                _locResolved = true;
+                return _locService;
+            }
+        }
+    }
+
+    /// <summary>Localized string lookup; returns the key when the service is unavailable.</summary>
+    private static string Tr(string key) => LocService?.GetString(key) ?? key;
+
+    /// <summary>Localized format lookup; returns the key when the service is unavailable.</summary>
+    private static string Tr(string key, params object[] args) => LocService?.GetString(key, args) ?? key;
+
+    // ── Live language refresh ─────────────────────────────────────────────────────
+    // One card instance exists per game; subscribing each instance directly to the
+    // singleton LanguageChanged event would leak (the service outlives every card).
+    // A single static subscription forwards the event to live cards via weak refs.
+    private static readonly object _langLock = new();
+    private static readonly List<WeakReference<GameCardViewModel>> _langTargets = new();
+    private static bool _langHooked;
+
+    public GameCardViewModel()
+    {
+        RegisterForLanguageChanges();
+    }
+
+    private void RegisterForLanguageChanges()
+    {
+        try
+        {
+            lock (_langLock)
+            {
+                _langTargets.Add(new WeakReference<GameCardViewModel>(this));
+                // Occasionally prune collected cards so the list stays bounded
+                // between language changes (cards are recreated on every scan).
+                if (_langTargets.Count > 512)
+                {
+                    for (var i = _langTargets.Count - 1; i >= 0; i--)
+                        if (!_langTargets[i].TryGetTarget(out _)) _langTargets.RemoveAt(i);
+                }
+                if (_langHooked) return;
+                if (LocService is { } loc)
+                {
+                    loc.LanguageChanged += OnLanguageChangedBroadcast;
+                    _langHooked = true;
+                }
+            }
+        }
+        catch
+        {
+            // DI unavailable (unit tests) — live refresh is not needed there.
+        }
+    }
+
+    private static void OnLanguageChangedBroadcast(object? sender, string language)
+    {
+        GameCardViewModel[] alive;
+        lock (_langLock)
+        {
+            var list = new List<GameCardViewModel>(_langTargets.Count);
+            for (var i = _langTargets.Count - 1; i >= 0; i--)
+            {
+                if (_langTargets[i].TryGetTarget(out var vm)) list.Add(vm);
+                else _langTargets.RemoveAt(i); // prune collected cards
+            }
+            alive = list.ToArray();
+        }
+        foreach (var vm in alive)
+            vm.NotifyLanguageChanged();
+    }
+
+    /// <summary>Raises PropertyChanged for every localized computed label so the UI re-reads them.</summary>
+    private void NotifyLanguageChanged()
+    {
+        // Card grid / sidebar
+        OnPropertyChanged(nameof(CardPrimaryActionLabel));
+        OnPropertyChanged(nameof(HideButtonLabel));
+        OnPropertyChanged(nameof(WikiStatusLabel));
+        // RenoDX row
+        OnPropertyChanged(nameof(InstallActionLabel));
+        OnPropertyChanged(nameof(GenericModLabel));
+        OnPropertyChanged(nameof(UeExtendedLabel));
+        OnPropertyChanged(nameof(CombinedActionLabel));
+        OnPropertyChanged(nameof(RdxStatusText));
+        OnPropertyChanged(nameof(RdxShortAction));
+        OnPropertyChanged(nameof(ExternalDisplayLabel));
+        // ReShade row
+        OnPropertyChanged(nameof(RsActionLabel));
+        OnPropertyChanged(nameof(RsStatusText));
+        OnPropertyChanged(nameof(RsShortAction));
+        // Luma row
+        OnPropertyChanged(nameof(LumaActionLabel));
+        OnPropertyChanged(nameof(LumaStatusText));
+        OnPropertyChanged(nameof(LumaShortAction));
+        OnPropertyChanged(nameof(LumaBadgeLabel));
+        // Frame limiters / OptiScaler / DXVK / RE Framework / DOF Fix
+        OnPropertyChanged(nameof(UlActionLabel));
+        OnPropertyChanged(nameof(UlStatusText));
+        OnPropertyChanged(nameof(UlShortAction));
+        OnPropertyChanged(nameof(DcActionLabel));
+        OnPropertyChanged(nameof(DcStatusText));
+        OnPropertyChanged(nameof(DcShortAction));
+        OnPropertyChanged(nameof(OsActionLabel));
+        OnPropertyChanged(nameof(OsStatusText));
+        OnPropertyChanged(nameof(OsShortAction));
+        OnPropertyChanged(nameof(DxvkActionLabel));
+        OnPropertyChanged(nameof(DxvkStatusText));
+        OnPropertyChanged(nameof(DxvkShortAction));
+        OnPropertyChanged(nameof(DxvkToggleTooltip));
+        OnPropertyChanged(nameof(RefActionLabel));
+        OnPropertyChanged(nameof(RefStatusText));
+        OnPropertyChanged(nameof(RefShortAction));
+        OnPropertyChanged(nameof(DofFixActionLabel));
+        OnPropertyChanged(nameof(DofFixStatusText));
+    }
+
     // ── Sidebar item styling (computed from IsSelected + managed state) ────────────
     public string SidebarItemBackground => IsRunning ? "#1A3A20" : IsSelected ? "#1A2840" : "Transparent";
     public string SidebarItemBorderBrush => IsRunning ? "#2A5A30" : IsSelected ? "#2A4060" : "Transparent";
@@ -45,17 +184,17 @@ public partial class GameCardViewModel
             var effectiveStatus = Status;
             var effectiveInstalling = IsInstalling;
 
-            if (effectiveInstalling) return "Installing...";
+            if (effectiveInstalling) return Tr("Status.Installing");
             if (IsManaged)
             {
                 // Any component has an update available → show update icon
                 if (effectiveStatus == GameStatus.UpdateAvailable
                     || RsStatus == GameStatus.UpdateAvailable
                     || LumaStatus == GameStatus.UpdateAvailable)
-                    return "⬆  Manage";
-                return "↺  Manage";
+                    return Tr("Action.ManageUpdate");
+                return Tr("Action.Manage");
             }
-            return "⬇  Install";
+            return Tr("Action.InstallPlain");
         }
     }
 
@@ -100,12 +239,13 @@ public partial class GameCardViewModel
 
     // ── Derived display ───────────────────────────────────────────────────────────
 
-    public string WikiStatusLabel => WikiStatus == "✅" ? "✅ Working"
-                                   : WikiStatus == "🚧" ? "🚧 In Progress"
-                                   : WikiStatus == "?"  ? "⚠️ May Work"
-                                   : WikiStatus == "💬" ? "💬 Discord"
-                                   : WikiStatus == "🌐" ? "🌐 Nexus"
-                                   : WikiStatus == "—" && IsGenericMod ? "⚠️ May Work"
+    // WikiStatus data values ("✅"/"🚧"/"?"…) are logic keys — only the labels are localized.
+    public string WikiStatusLabel => WikiStatus == "✅" ? Tr("Status.Wiki.Working")
+                                   : WikiStatus == "🚧" ? Tr("Status.Wiki.InProgress")
+                                   : WikiStatus == "?"  ? Tr("Status.Wiki.MayWork")
+                                   : WikiStatus == "💬" ? Tr("Status.Wiki.Discord")
+                                   : WikiStatus == "🌐" ? Tr("Status.Wiki.Nexus")
+                                   : WikiStatus == "—" && IsGenericMod ? Tr("Status.Wiki.MayWork")
                                    : "";
 
     /// <summary>
@@ -199,7 +339,7 @@ public partial class GameCardViewModel
     public bool HasUwFixUrl        => !string.IsNullOrEmpty(UwFixUrl);
     public bool HasUltraPlusUrl    => !string.IsNullOrEmpty(UltraPlusUrl);
     public bool HasNameUrl            => !string.IsNullOrEmpty(NameUrl);
-    public string HideButtonLabel     => IsHidden ? "👁 Show" : "🚫 Hide";
+    public string HideButtonLabel     => IsHidden ? Tr("Card.Show") : Tr("Card.Hide");
     public string StarForeground       => IsFavourite ? "#FFD700" : "#282840";
     public Visibility IsFavouriteVisibility      => IsFavourite ? Visibility.Visible : Visibility.Collapsed;
     public Visibility IsNotFavouriteVisibility   => IsFavourite ? Visibility.Collapsed : Visibility.Visible;
