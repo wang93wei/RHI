@@ -27,7 +27,7 @@ public partial class DetailPanelBuilder
         var shadersAddonsLeftColumn = new StackPanel { Spacing = 6 };
         shadersAddonsLeftColumn.Children.Add(new TextBlock
         {
-            Text = "Shaders and Addons",
+            Text = Loc.GetString("Shader.AddonsTitle"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 0, 0, 4),
@@ -42,7 +42,7 @@ public partial class DetailPanelBuilder
 
         var shaderLabel = new TextBlock
         {
-            Text = "Shaders",
+            Text = Loc.GetString("Shader.Shaders"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         };
@@ -108,11 +108,11 @@ public partial class DetailPanelBuilder
                         Title = "Select Addons",
                         Content = new TextBlock
                         {
-                            Text = "Addon service is not yet wired. Complete Task 9.1 to enable addon selection.",
+                            Text = Loc.GetString("Shader.AddonNotWired"),
                             FontSize = 13,
                             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                         },
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = _window.Content.XamlRoot,
                         Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
                         RequestedTheme = ElementTheme.Dark,
@@ -163,7 +163,7 @@ public partial class DetailPanelBuilder
 
         var addonLabel = new TextBlock
         {
-            Text = "Addons",
+            Text = Loc.GetString("Shader.Addons"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         };
@@ -177,7 +177,7 @@ public partial class DetailPanelBuilder
         // "Select ReShade Preset" button
         var presetBtn = new Button
         {
-            Content = "Select ReShade Preset",
+            Content = Loc.GetString("Shader.SelectPreset"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -207,9 +207,9 @@ public partial class DetailPanelBuilder
                         var shaderDialog = new ContentDialog
                         {
                             Title = "🔧 Install Shaders?",
-                            Content = "Also install the required shaders and textures?",
-                            PrimaryButtonText = "Yes",
-                            CloseButtonText = "No",
+                            Content = Loc.GetString("Shader.InstallConfirmDetail"),
+                            PrimaryButtonText = Loc.GetString("Xaml.Yes"),
+                            CloseButtonText = Loc.GetString("Xaml.No"),
                             XamlRoot = _window.Content.XamlRoot,
                             RequestedTheme = ElementTheme.Dark,
                         };
@@ -299,7 +299,7 @@ public partial class DetailPanelBuilder
         var launchExeBox = new TextBox
         {
             Text = currentLaunchExe,
-            PlaceholderText = "Auto-detect (or paste path)",
+            PlaceholderText = Loc.GetString("Shader.AutoDetect"),
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
@@ -320,7 +320,7 @@ public partial class DetailPanelBuilder
         var launchArgsBox = new TextBox
         {
             Text = currentLaunchArgs,
-            PlaceholderText = "Launch arguments",
+            PlaceholderText = Loc.GetString("Shader.LaunchArgs"),
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
@@ -354,7 +354,7 @@ public partial class DetailPanelBuilder
         launchBtnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var browseLaunchBtn = new Button
         {
-            Content = "Browse",
+            Content = Loc.GetString("Xaml.Browse"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -396,7 +396,7 @@ public partial class DetailPanelBuilder
 
         var resetLaunchBtn = new Button
         {
-            Content = "Reset",
+            Content = Loc.GetString("Xaml.Reset"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -425,7 +425,7 @@ public partial class DetailPanelBuilder
 
         var resetOverridesBtn = new Button
         {
-            Content = "Reset Overrides",
+            Content = Loc.GetString("Shader.ResetOverrides"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,

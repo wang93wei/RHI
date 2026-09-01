@@ -31,7 +31,7 @@ public partial class DetailPanelBuilder
         });
 
         // Version ComboBox
-        var versionLabel = new TextBlock { Text = "Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) };
+        var versionLabel = new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) };
         if (driverOverrideActive)
             ToolTipService.SetToolTip(versionLabel, "Driver override is active — the NVIDIA driver is injecting its own DLL. Disable 'Latest DLL' in NVIDIA App or Profile Inspector to manage versions manually.");
         col.Children.Add(versionLabel);
@@ -138,7 +138,7 @@ public partial class DetailPanelBuilder
         // Preset ComboBox (only for SR, RR, FG)
         if (presets != null && isPresent)
         {
-            col.Children.Add(new TextBlock { Text = "Preset", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+            col.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
 
             var presetItems = presets.Select(p => p.Name).ToList();
             int presetIdx = 0;
@@ -182,7 +182,7 @@ public partial class DetailPanelBuilder
         // Render Scale ComboBox (only for SR and RR)
         if (onRenderScaleSelected != null && isPresent)
         {
-            col.Children.Add(new TextBlock { Text = "Render Scale", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+            col.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.RenderScale"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
             var rsOptions = DlssPresetService.RenderScaleOptions;
             var rsItems = rsOptions.Select(o => o.Name).ToList();
 
@@ -228,7 +228,7 @@ public partial class DetailPanelBuilder
                     var comboIdx = parent.Children.IndexOf(rsCombo);
                     var inputBox = new TextBox
                     {
-                        PlaceholderText = "33-100",
+                        PlaceholderText = Loc.GetString("Dialog.33100"),
                         FontSize = 11,
                         HorizontalAlignment = HorizontalAlignment.Stretch,
                         MaxLength = 3,

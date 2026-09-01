@@ -17,7 +17,7 @@ public partial class DetailPanelBuilder
         // DLSS / Streamline / ReBAR + future additions
         // ══════════════════════════════════════════════════════════════════════
         _window.NvidiaProfilePanel.Children.Clear();
-        var nvidiaHeaderText = "Nvidia Profile Overrides";
+        var nvidiaHeaderText = Loc.GetString("Dialog.NvidiaProfileOverrides");
         var driverVer = _dlssPresetService.DriverVersionString;
         if (!string.IsNullOrEmpty(driverVer))
             nvidiaHeaderText += $" — Driver {driverVer}";
@@ -124,7 +124,7 @@ public partial class DetailPanelBuilder
             fgCol.Children.Add(new TextBlock { Text = " ", FontSize = 10, Margin = new Thickness(0, 2, 0, 0) });
             var mfgBtn = new Button
             {
-                Content = "Multi Frame Gen",
+                Content = Loc.GetString("Dialog.MultiFrameGen"),
                 FontSize = 11,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -213,7 +213,7 @@ public partial class DetailPanelBuilder
                 // When NR is not installed the placeholder is invisible but still takes space.
                 if (!hasDlssnr)
                 {
-                    var presetPlaceholderLabel = new TextBlock { Text = "Preset", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0), Opacity = 0 };
+                    var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0), Opacity = 0 };
                     var presetPlaceholderCombo = new ComboBox { ItemsSource = new[] { "Default" }, SelectedIndex = 0, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false, Opacity = 0 };
                     nrCol.Children.Add(presetPlaceholderLabel);
                     nrCol.Children.Add(presetPlaceholderCombo);
@@ -225,7 +225,7 @@ public partial class DetailPanelBuilder
 
                 var deployNrBtn = new Button
                 {
-                    Content = "Deploy DLL",
+                    Content = Loc.GetString("Dialog.DeployDll"),
                     FontSize = 11,
                     Height = 32,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -260,7 +260,7 @@ public partial class DetailPanelBuilder
                     if (tc == null || string.IsNullOrEmpty(tc.InstallPath)) return;
 
                     deployNrBtn.IsEnabled = false;
-                    deployNrBtn.Content = "Downloading...";
+                    deployNrBtn.Content = Loc.GetString("Dialog.Downloading");
 
                     try
                     {
@@ -285,7 +285,7 @@ public partial class DetailPanelBuilder
                                     "RHI", "Custom", "DLSS", "nvngx_dlssnr.dll");
                                 if (!File.Exists(customSrc))
                                 {
-                                    _window.DispatcherQueue?.TryEnqueue(() => { deployNrBtn.Content = "Not in Custom/DLSS"; deployNrBtn.IsEnabled = true; });
+                                    _window.DispatcherQueue?.TryEnqueue(() => { deployNrBtn.Content = Loc.GetString("Dialog.NotInCustomDlss"); deployNrBtn.IsEnabled = true; });
                                     return;
                                 }
                                 File.Copy(customSrc, destPath, overwrite: true);
@@ -316,7 +316,7 @@ public partial class DetailPanelBuilder
                             }
                             else if (cachedPath == null)
                             {
-                                _window.DispatcherQueue?.TryEnqueue(() => { deployNrBtn.Content = "Not available"; deployNrBtn.IsEnabled = true; });
+                                _window.DispatcherQueue?.TryEnqueue(() => { deployNrBtn.Content = Loc.GetString("Dialog.NotAvailable"); deployNrBtn.IsEnabled = true; });
                                 return;
                             }
                             else if (isDefault)
@@ -365,7 +365,7 @@ public partial class DetailPanelBuilder
                     catch (Exception ex)
                     {
                         CrashReporter.Log($"[NrDeployBtn] Failed — {ex.Message}");
-                        _window.DispatcherQueue?.TryEnqueue(() => { deployNrBtn.Content = "Deploy DLL"; deployNrBtn.IsEnabled = true; });
+                        _window.DispatcherQueue?.TryEnqueue(() => { deployNrBtn.Content = Loc.GetString("Dialog.DeployDll"); deployNrBtn.IsEnabled = true; });
                     }
                 };
 
@@ -460,7 +460,7 @@ public partial class DetailPanelBuilder
             bool restoreEnabled = card.HasAnyDlssBackup || hasNonDefaultPreset;
             var dlssRestoreBtn = new Button
             {
-                Content = "Restore DLSS/SL",
+                Content = Loc.GetString("Dialog.RestoreDlssSl"),
                 FontSize = 11,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -512,7 +512,7 @@ public partial class DetailPanelBuilder
 
             var applyBtn = new Button
             {
-                Content = "Quick Apply",
+                Content = Loc.GetString("Dialog.QuickApply"),
                 FontSize = 11,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Stretch,

@@ -88,6 +88,7 @@ public partial class App : Application
         services.AddSingleton<IPcgwService, PcgwService>();
         services.AddSingleton<IUltrawideFixService, UltrawideFixService>();
         services.AddSingleton<IUltraPlusService, UltraPlusService>();
+        services.AddSingleton<ILocalizationService, LocalizationService>();
 
         // ViewModels
         services.AddSingleton<SettingsViewModel>();
@@ -125,6 +126,25 @@ public partial class App : Application
         services.AddTransient<MainWindow>();
 
         Services = services.BuildServiceProvider();
+
+        // Expose localization service as XAML resource for Binding {Source={StaticResource Loc}}
+        try
+        {
+            var loc = Services.GetRequiredService<ILocalizationService>();
+            // Apply saved preference early so first window uses correct language
+            var earlySettings = SettingsViewModel.LoadSettingsFile();
+            if (earlySettings.TryGetValue("Language", out var earlyLang))
+                loc.ApplyPreference(earlyLang);
+            else
+                loc.ApplyPreference("System");
+            // Make available to XAML
+            if (Current != null)
+                Current.Resources["Loc"] = loc;
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[App] Localization init failed — {ex.Message}");
+        }
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)

@@ -38,6 +38,7 @@ public class SettingsHandler
     }
 
     private MainViewModel ViewModel => _window.ViewModel;
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     public void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
@@ -285,6 +286,9 @@ public class SettingsHandler
         }
         _window._shaderCacheComboInit = false;
 
+        // Initialize language combo
+        InitLanguageCombo(_window.LanguageCombo);
+
         // Initialize admin mode combo
         InitAdminModeCombo(_window.AdminModeCombo);
 
@@ -461,9 +465,9 @@ public class SettingsHandler
         // Show confirmation dialog
         var dialog = new ContentDialog
         {
-            Title = "Screenshots & Hotkeys",
+            Title = Loc.GetString("Dialog.ScreenshotsHotkeys"),
             Content = $"Screenshot path, ReShade hotkeys, and effect list style applied to {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -498,9 +502,9 @@ public class SettingsHandler
         {
             var emptyDialog = new ContentDialog
             {
-                Title = "Peak Nits",
-                Content = "Peak nits is not configured or is disabled.",
-                CloseButtonText = "OK",
+                Title = Loc.GetString("Dialog.PeakNits.Title"),
+                Content = Loc.GetString("Dialog.PeakNits.NotConfigured"),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -537,9 +541,9 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "Peak Nits",
+            Title = Loc.GetString("Dialog.PeakNits.Title"),
             Content = $"Applied peak nits ({peakNits}) to {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -554,6 +558,69 @@ public class SettingsHandler
         System.IO.Directory.CreateDirectory(logsDir);
         CrashReporter.Log("[SettingsHandler.OpenLogsFolder_Click] User opened logs folder");
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(logsDir) { UseShellExecute = true });
+    }
+
+    private bool _languageComboInit = true;
+
+    public void InitLanguageCombo(ComboBox combo)
+    {
+        _languageComboInit = true;
+        var pref = ViewModel.Settings.Language;
+        if (string.IsNullOrWhiteSpace(pref)) pref = "System";
+        // Find item with matching Tag
+        int idx = -1;
+        for (int i = 0; i < combo.Items.Count; i++)
+        {
+            if (combo.Items[i] is ComboBoxItem cbi && cbi.Tag is string tag &&
+                string.Equals(tag, pref, StringComparison.OrdinalIgnoreCase))
+            {
+                idx = i;
+                break;
+            }
+        }
+        combo.SelectedIndex = idx >= 0 ? idx : 0;
+        _languageComboInit = false;
+        RefreshLanguageCoverage();
+    }
+
+    public void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_languageComboInit) return;
+        if (sender is not ComboBox combo) return;
+        if (combo.SelectedItem is not ComboBoxItem cbi || cbi.Tag is not string tag) return;
+        CrashReporter.Log($"[SettingsHandler.LanguageCombo] Selected {tag}");
+        ViewModel.Settings.Language = tag;
+        ViewModel.SaveSettingsPublic();
+        RefreshLanguageCoverage();
+        // Force UI to re-evaluate bindings (LocalizationService notifies, but ensure window updates)
+        try
+        {
+            var loc = App.Services.GetRequiredService<ILocalizationService>();
+            // CurrentLanguage already set via SettingsViewModel.OnLanguageChanged, but ensure
+            loc.ApplyPreference(tag);
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[SettingsHandler.LanguageCombo] Apply failed — {ex.Message}");
+        }
+    }
+
+    private void RefreshLanguageCoverage()
+    {
+        try
+        {
+            var loc = App.Services.GetRequiredService<ILocalizationService>();
+            var cur = loc.CurrentLanguage;
+            var cov = loc.Coverage(cur);
+            // Show only in verbose or when coverage < 100% for debug
+            if (_window.LanguageCoverageText != null)
+            {
+                _window.LanguageCoverageText.Text = $"{cur} {cov:P0}";
+                // Keep collapsed unless verbose — uncomment to show
+                // _window.LanguageCoverageText.Visibility = Visibility.Visible;
+            }
+        }
+        catch { }
     }
 
     private const string AdminTaskName = "RHI Admin Mode";
@@ -589,11 +656,11 @@ public class SettingsHandler
             // Show restart notice
             await DialogService.ShowSafeAsync(new ContentDialog
             {
-                Title = "Admin Mode",
+                Title = Loc.GetString("Dialog.AdminMode.Title"),
                 Content = enable
                     ? "Admin Mode enabled. Restart RHI for it to take effect."
                     : "Admin Mode disabled. RHI will launch normally on next start.",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             });
@@ -731,9 +798,9 @@ public class SettingsHandler
             {
                 await DialogService.ShowSafeAsync(new ContentDialog
                 {
-                    Title = "Logs Copied",
-                    Content = "All session logs have been archived and copied to your clipboard. Paste directly into Discord to share.",
-                    CloseButtonText = "OK",
+                    Title = Loc.GetString("Dialog.LogsCopied"),
+                    Content = Loc.GetString("Dialog.AllSessionLogsHaveBeen"),
+                    CloseButtonText = Loc.GetString("Dialog.Ok"),
                     XamlRoot = fe.XamlRoot,
                 });
             }
@@ -749,10 +816,10 @@ public class SettingsHandler
         // Show warning dialog
         var warningDialog = new ContentDialog
         {
-            Title = "⚠ Purge Staging Files",
-            Content = "This will delete cached DLSS, Streamline, and component staging files to free disk space.\n\nShaders, installed RenoDX addons, and version metadata are preserved.\n\nThese files will be re-downloaded automatically when needed.\n\nContinue?",
-            PrimaryButtonText = "Purge",
-            CloseButtonText = "Cancel",
+            Title = Loc.GetString("Dialog.PurgeCache.Title"),
+            Content = Loc.GetString("Dialog.ThisWillDeleteCachedDlss"),
+            PrimaryButtonText = Loc.GetString("Dialog.Purge"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -871,9 +938,9 @@ public class SettingsHandler
 
             var resultDialog = new ContentDialog
             {
-                Title = "✅ Cache Purged",
+                Title = Loc.GetString("Dialog.CachePurged"),
                 Content = $"Deleted {filesDeleted} files, freed {sizeStr} of disk space.",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -884,9 +951,9 @@ public class SettingsHandler
             CrashReporter.Log($"[SettingsHandler.PurgeCachedFiles_Click] Failed: {ex.Message}");
             var errDialog = new ContentDialog
             {
-                Title = "❌ Purge Failed",
+                Title = Loc.GetString("Dialog.PurgeFailed"),
                 Content = $"An error occurred: {ex.Message}",
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -996,9 +1063,9 @@ public class SettingsHandler
         // Req 4.5: Show confirmation dialog with count of updated files
         var dialog = new ContentDialog
         {
-            Title = "ReShade UI Hotkey",
+            Title = Loc.GetString("Dialog.OverlayHotkey.Title"),
             Content = $"Updated {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1050,9 +1117,9 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "ReShade Hotkeys",
+            Title = Loc.GetString("Dialog.ReShadeHotkeys.Title"),
             Content = $"Updated {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1142,9 +1209,9 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "ReShade Screenshot Hotkey",
+            Title = Loc.GetString("Dialog.ReshadeScreenshotHotkey"),
             Content = $"Updated {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1264,9 +1331,9 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "ReLimiter Settings",
+            Title = Loc.GetString("Xaml.RelimiterSettings"),
             Content = $"Updated {updatedCount} relimiter.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1377,10 +1444,10 @@ public class SettingsHandler
 
             var dialog = new ContentDialog
             {
-                Title = "Custom Target FPS",
+                Title = Loc.GetString("Dialog.CustomTargetFps"),
                 Content = panel,
                 PrimaryButtonText = "Set",
-                CloseButtonText = "Cancel",
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -1445,12 +1512,12 @@ public class SettingsHandler
         var xamlRoot = (sender as FrameworkElement)?.XamlRoot ?? _window.Content.XamlRoot;
         if (xamlRoot == null) return;
 
-        var rsCheck = new CheckBox { Content = "ReShade", IsChecked = !settings.GlobalSkipRsUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-        var rdxCheck = new CheckBox { Content = "RenoDX", IsChecked = !settings.GlobalSkipRdxUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-        var ulCheck = new CheckBox { Content = "ReLimiter", IsChecked = !settings.GlobalSkipUlUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-        var dcCheck = new CheckBox { Content = "Display Commander", IsChecked = !settings.GlobalSkipDcUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-        var osCheck = new CheckBox { Content = "OptiScaler", IsChecked = !settings.GlobalSkipOsUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
-        var refCheck = new CheckBox { Content = "RE Framework", IsChecked = !settings.GlobalSkipRefUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+        var rsCheck = new CheckBox { Content = Loc.GetString("Detail.ReShade"), IsChecked = !settings.GlobalSkipRsUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+        var rdxCheck = new CheckBox { Content = Loc.GetString("Detail.RenoDX"), IsChecked = !settings.GlobalSkipRdxUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+        var ulCheck = new CheckBox { Content = Loc.GetString("Detail.ReLimiter"), IsChecked = !settings.GlobalSkipUlUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+        var dcCheck = new CheckBox { Content = Loc.GetString("Detail.DisplayCommander"), IsChecked = !settings.GlobalSkipDcUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+        var osCheck = new CheckBox { Content = Loc.GetString("Detail.OptiScaler"), IsChecked = !settings.GlobalSkipOsUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
+        var refCheck = new CheckBox { Content = Loc.GetString("Detail.REFramework"), IsChecked = !settings.GlobalSkipRefUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
 
         var checkPanel = new StackPanel { Spacing = 0 };
         checkPanel.Children.Add(new TextBlock { Text = "Include components in Update All globally:", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 0, 0, 8) });
@@ -1463,10 +1530,10 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "Global Update Inclusion",
+            Title = Loc.GetString("Dialog.GlobalUpdateInclusion2"),
             Content = checkPanel,
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Common.Save"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1595,9 +1662,9 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "OptiScaler Hotkey",
+            Title = Loc.GetString("Dialog.OptiscalerHotkey"),
             Content = $"Updated {updatedCount} OptiScaler.ini file{(updatedCount == 1 ? "" : "s")}.",
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1667,12 +1734,12 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "DXVK Variant Changed",
+            Title = Loc.GetString("Dialog.DxvkVariantChanged"),
             Content = $"DXVK variant changed to {variantLabel}."
                 + (gamesWithDxvk.Count > 0
                     ? $"\n\nSwitching {gamesWithDxvk.Count} game(s) to the {variantLabel} build."
                     : "\n\nNo games currently have DXVK installed."),
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1821,13 +1888,13 @@ public class SettingsHandler
 
         var dialog = new ContentDialog
         {
-            Title = "ReShade Build Channel Changed",
+            Title = Loc.GetString("Dialog.ReshadeBuildChannelChanged"),
             Content = $"ReShade build channel changed to {channelLabel}.\n\n"
                 + (totalCount > 0
                     ? $"Switching {totalCount} game(s) to the {channelLabel} build."
                       + (vulkanCount > 0 ? $"\n{vulkanCount} Vulkan game(s) updated via global layer." : "")
                     : "No games currently have ReShade installed."),
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -1876,14 +1943,14 @@ public class SettingsHandler
             _window.NexusStatusText.Foreground = UIFactory.Brush(
                 isPremium ? ResourceKeys.AccentGreenBrush : ResourceKeys.TextSecondaryBrush);
             _window.NexusDisconnectRow.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-            _window.NexusConnectBtn.Content = "Re-connect";
+            _window.NexusConnectBtn.Content = Loc.GetString("Dialog.ReConnect");
         }
         else
         {
             _window.NexusStatusText.Text = "Not connected";
             _window.NexusStatusText.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
             _window.NexusDisconnectRow.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-            _window.NexusConnectBtn.Content = "Connect";
+            _window.NexusConnectBtn.Content = Loc.GetString("Xaml.Connect");
         }
 
         // NXM handler status
@@ -1901,9 +1968,9 @@ public class SettingsHandler
         {
             await DialogService.ShowSafeAsync(new ContentDialog
             {
-                Title = "Nexus Mods",
-                Content = "Please paste your API key first. You can find it at nexusmods.com → Settings → API Keys.",
-                CloseButtonText = "OK",
+                Title = Loc.GetString("Xaml.NexusMods"),
+                Content = Loc.GetString("Dialog.PleasePasteYourApiKey"),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
             });
@@ -1963,10 +2030,10 @@ public class SettingsHandler
             {
                 var result = await DialogService.ShowSafeAsync(new ContentDialog
                 {
-                    Title = "NXM Protocol Handler",
-                    Content = "Another application (e.g. Vortex or MO2) is already registered as the nxm:// handler. Registering RHI will replace it. Continue?",
-                    PrimaryButtonText = "Register RHI",
-                    CloseButtonText = "Cancel",
+                    Title = Loc.GetString("Xaml.NxmProtocolHandler"),
+                    Content = Loc.GetString("Dialog.AnotherApplicationEGVortex"),
+                    PrimaryButtonText = Loc.GetString("Dialog.RegisterRhi"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                 });
@@ -1982,9 +2049,9 @@ public class SettingsHandler
             {
                 await DialogService.ShowSafeAsync(new ContentDialog
                 {
-                    Title = "NXM Registration Failed",
+                    Title = Loc.GetString("Dialog.NxmRegistrationFailed"),
                     Content = $"Could not register the nxm:// handler: {ex.Message}",
-                    CloseButtonText = "OK",
+                    CloseButtonText = Loc.GetString("Dialog.Ok"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                 });

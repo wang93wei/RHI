@@ -24,6 +24,7 @@ public partial class DetailPanelBuilder
 
     // Services injected directly — no longer accessed via ViewModel forwarding properties
     private readonly IGameNameService _gameNameService;
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
     private readonly IPeHeaderService _peHeaderService;
     private readonly DlssPresetService _dlssPresetService;
     private readonly IDlssStreamlineService _dlssStreamlineService;
@@ -216,7 +217,7 @@ public partial class DetailPanelBuilder
 
         // Utility buttons — set Tag for event handlers
         _window.DetailFavBtn.Tag = card;
-        _window.DetailFavIcon.Text = "Favourite";
+        _window.DetailFavIcon.Text = Loc.GetString("Xaml.Favourite");
         var favColor = card.IsFavourite
             ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
             : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
@@ -248,7 +249,7 @@ public partial class DetailPanelBuilder
         bool hdrActive = hdrOverride != null
             ? string.Equals(hdrOverride, "On", StringComparison.OrdinalIgnoreCase)
             : _window.ViewModel.Settings.HdrAutoToggle;
-        _window.DetailHdrToggleText.Text = "HDR";
+        _window.DetailHdrToggleText.Text = Loc.GetString("Xaml.Hdr");
         _window.DetailHdrToggleBtn.Background = hdrActive
             ? UIFactory.Brush(ResourceKeys.AccentPurpleBgBrush)
             : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
@@ -269,7 +270,7 @@ public partial class DetailPanelBuilder
             bool resActive = resOverride != null
                 ? string.Equals(resOverride, "On", StringComparison.OrdinalIgnoreCase)
                 : _window.ViewModel.Settings.ResolutionAutoToggle;
-            _window.DetailResToggleText.Text = "RES";
+            _window.DetailResToggleText.Text = Loc.GetString("Xaml.Res");
             _window.DetailResToggleBtn.Background = resActive
                 ? UIFactory.Brush(ResourceKeys.AccentPurpleBgBrush)
                 : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);

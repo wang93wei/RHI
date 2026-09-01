@@ -1,3 +1,21 @@
+## v2.6.0 — i18n Preview
+
+### New
+
+- 🌐 **Multi-language support (i18n)** — RHI now ships with 5 languages: English (en-US, fallback), Simplified Chinese (zh-CN), Traditional Chinese (zh-TW), Japanese (ja-JP) and Korean (ko-KR). `en-GB` is aliased to `en-US`.
+- **Follow System + Real-time switching** — Default is `Follow System` (maps `CurrentUICulture` to the nearest supported language, fallback `en-US`). Changing language in Settings → Language applies within 200 ms without restart and persists to `settings.json`.
+- **Full coverage** — All `MainWindow.xaml` navigation, filters, detail panels and settings cards, plus 20+ `ContentDialog`s (`DialogService`, `SettingsHandler`, `DetailPanelBuilder`) are now localized via `ILocalizationService` (`Assets/Languages/*.json`).
+- **JSON resource packs** — Flat `Section.Key` JSON under `Assets/Languages/` with `en-US` as authoritative baseline (≈848 keys). Missing keys fall back to `en-US` then to the key itself and are logged once via `CrashReporter`. Coverage script `tools/check-i18n-coverage.py` / `.ps1` prints per-language coverage.
+
+### Changes
+
+- `SettingsViewModel` now persists `Language` (`System` | `en-US` | `zh-CN` | `zh-TW` | `ja-JP` | `ko-KR`) via `LoadSettingsFromDict` / `SaveSettingsToDict`; old installs without the key default to `System`.
+- `App.xaml.cs` registers `ILocalizationService` as singleton and exposes it as XAML resource `Loc` for `{Binding [Key], Source={StaticResource Loc}}` live updates.
+- `RenoDXCommander.csproj` and `package.yml` now publish `Assets/Languages/*.json`; GitHub Actions split into `build.yml` (Build & Test) and `package.yml` (Package) — both `workflow_dispatch` only.
+- `LocalizationTests` added (≥15 cases: fallback, formatting, coverage, System mapping, persistence).
+
+---
+
 ## v2.5.3
 
 ### Bug Fixes

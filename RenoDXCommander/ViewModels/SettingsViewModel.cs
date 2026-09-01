@@ -81,6 +81,28 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _startWithWindows;
     [ObservableProperty] private List<string> _recentLaunches = new();
 
+    // ── Localization ──────────────────────────────────────────────────────────
+    /// <summary>Language preference: "System" or concrete code like "en-US", "zh-CN".</summary>
+    [ObservableProperty] private string _language = "System";
+
+    partial void OnLanguageChanged(string value)
+    {
+        if (IsLoadingSettings) return;
+        try
+        {
+            if (App.Services != null)
+            {
+                var loc = App.Services.GetService(typeof(ILocalizationService)) as ILocalizationService;
+                loc?.ApplyPreference(value);
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[SettingsViewModel.OnLanguageChanged] Failed — {ex.Message}");
+        }
+        SettingsChanged?.Invoke();
+    }
+
     // ── Nexus Mods integration (dev-unlocked only) ────────────────────────────
     [ObservableProperty] private string _nexusApiKey = "";
     [ObservableProperty] private bool _nexusIsPremium;
@@ -315,6 +337,12 @@ public partial class SettingsViewModel : ObservableObject
             try { RecentLaunches = System.Text.Json.JsonSerializer.Deserialize<List<string>>(rlVal) ?? new(); }
             catch { RecentLaunches = new(); }
         }
+        // Language preference (default "System" = follow OS)
+        if (s.TryGetValue("Language", out var langVal) && !string.IsNullOrWhiteSpace(langVal))
+            Language = langVal;
+        else
+            Language = "System";
+
         // Nexus Mods (dev-unlocked only — stored but never logged)
         if (s.TryGetValue("NexusApiKey",    out var nakVal)) NexusApiKey    = nakVal ?? "";
         if (s.TryGetValue("NexusIsPremium", out var nipVal)) NexusIsPremium = nipVal == "true";
@@ -410,6 +438,11 @@ public partial class SettingsViewModel : ObservableObject
         s["RecentGamesMenu"] = RecentGamesMenu ? "true" : "false";
         s["StartWithWindows"] = StartWithWindows ? "true" : "false";
         if (RecentLaunches.Count > 0) s["RecentLaunches"] = System.Text.Json.JsonSerializer.Serialize(RecentLaunches);
+        // Language preference
+        if (!string.IsNullOrWhiteSpace(Language) && !string.Equals(Language, "System", StringComparison.OrdinalIgnoreCase))
+            s["Language"] = Language;
+        else
+            s["Language"] = "System";
         // Nexus Mods — key stored as-is (local settings.json, not transmitted anywhere)
         if (!string.IsNullOrEmpty(NexusApiKey))    s["NexusApiKey"]    = NexusApiKey;
         if (NexusIsPremium)                        s["NexusIsPremium"] = "true";

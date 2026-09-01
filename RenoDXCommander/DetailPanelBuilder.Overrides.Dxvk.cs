@@ -151,7 +151,7 @@ public partial class DetailPanelBuilder
             var dxvkColumn = new StackPanel { Spacing = 6 };
             dxvkColumn.Children.Add(new TextBlock
             {
-                Text = "DXVK",
+                Text = Loc.GetString("Xaml.Dxvk"),
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 Margin = new Thickness(0, 0, 0, 4),
@@ -193,7 +193,7 @@ public partial class DetailPanelBuilder
                 var liliumPresetCol = new StackPanel { Spacing = 6 };
                 liliumPresetCol.Children.Add(new TextBlock
                 {
-                    Text = "Lilium HDR Preset",
+                    Text = Loc.GetString("Dialog.LiliumHdrPreset"),
                     FontSize = 12,
                     Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                     Margin = new Thickness(0, 0, 0, 4),
@@ -266,7 +266,7 @@ public partial class DetailPanelBuilder
 
         var changeFolderBtn = new Button
         {
-            Content = "Change install folder",
+            Content = Loc.GetString("Dialog.ChangeInstallFolder"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -288,7 +288,7 @@ public partial class DetailPanelBuilder
 
         var removeGameBtn = new Button
         {
-            Content = "Reset / Remove game",
+            Content = Loc.GetString("Dialog.ResetRemoveGame"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -310,7 +310,7 @@ public partial class DetailPanelBuilder
 
         var mgmtResetOverridesBtn = new Button
         {
-            Content = "Reset Overrides",
+            Content = Loc.GetString("Shader.ResetOverrides"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -335,7 +335,7 @@ public partial class DetailPanelBuilder
 
         var reportBtn = new Button
         {
-            Content = "Copy Report",
+            Content = Loc.GetString("Dialog.CopyReport"),
             FontSize = 11,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,

@@ -23,7 +23,7 @@ public partial class DetailPanelBuilder
 
         var channelLabel = new TextBlock
         {
-            Text = "ReShade Channel",
+            Text = Loc.GetString("Dialog.ReshadeChannel"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         };
@@ -117,7 +117,7 @@ public partial class DetailPanelBuilder
                 var pickerContent = new StackPanel { Spacing = 12 };
                 pickerContent.Children.Add(new TextBlock
                 {
-                    Text = "⚠ Older ReShade versions may not support newer addons.\nThe game will be excluded from automatic ReShade updates.",
+                    Text = Loc.GetString("Dialog.OlderReshadeVersionsMayNot"),
                     TextWrapping = TextWrapping.Wrap,
                     Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                     FontSize = 12,
@@ -128,8 +128,8 @@ public partial class DetailPanelBuilder
                 {
                     Title = "Select Legacy ReShade Version",
                     Content = new ScrollViewer { Content = pickerContent, MaxHeight = 400 },
-                    PrimaryButtonText = "Confirm",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Confirm"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -235,7 +235,7 @@ public partial class DetailPanelBuilder
                     {
                         Title = "Custom ReShade Not Found",
                         Content = warnContent,
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = _window.Content.XamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     };
@@ -287,8 +287,8 @@ public partial class DetailPanelBuilder
                 var pickerDialog = new ContentDialog
                 {
                     Title = "Select Custom ReShade",
-                    PrimaryButtonText = "Deploy",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Deploy"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     DefaultButton = ContentDialogButton.Primary,
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
@@ -324,10 +324,10 @@ public partial class DetailPanelBuilder
                     var vDialog = new ContentDialog
                     {
                         Title = "Vulkan ReShade Channel Override",
-                        Content = "Vulkan games share a global ReShade layer.\n\n" +
+                        Content = Loc.GetString("Dialog.VulkanGamesShareAGlobal") +
                             "Changing the channel for this game will change it for ALL Vulkan games.",
-                        PrimaryButtonText = "Apply to All Vulkan Games",
-                        CloseButtonText = "Cancel",
+                        PrimaryButtonText = Loc.GetString("Dialog.ApplyToAllVulkanGames"),
+                        CloseButtonText = Loc.GetString("Dialog.Cancel"),
                         XamlRoot = _window.Content.XamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     };
@@ -443,10 +443,10 @@ public partial class DetailPanelBuilder
                     var dialog = new ContentDialog
                     {
                         Title = "Vulkan ReShade Channel Override",
-                        Content = "Vulkan games share a global ReShade layer.\n\n" +
+                        Content = Loc.GetString("Dialog.VulkanGamesShareAGlobal") +
                             "Changing the channel for this game will change it for ALL Vulkan games.",
-                        PrimaryButtonText = "Apply to All Vulkan Games",
-                        CloseButtonText = "Cancel",
+                        PrimaryButtonText = Loc.GetString("Dialog.ApplyToAllVulkanGames"),
+                        CloseButtonText = Loc.GetString("Dialog.Cancel"),
                         XamlRoot = _window.Content.XamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     };
@@ -560,7 +560,7 @@ public partial class DetailPanelBuilder
         var globalUpdateColumn = new StackPanel { Spacing = 0 };
         globalUpdateColumn.Children.Add(new TextBlock
         {
-            Text = "Global update inclusion",
+            Text = Loc.GetString("Dialog.GlobalUpdateInclusion"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 0, 0, 8),

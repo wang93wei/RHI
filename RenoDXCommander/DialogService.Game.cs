@@ -13,6 +13,8 @@ public partial class DialogService
 {
     // ── Foreign DLL Confirmation Dialogs ────────────────────────────────────────
 
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     public async Task<bool> ShowForeignDxgiConfirmDialogAsync(GameCardViewModel card, string dxgiPath)
     {
         var fileSize = new System.IO.FileInfo(dxgiPath).Length;
@@ -20,20 +22,16 @@ public partial class DialogService
 
         var dlg = new ContentDialog
         {
-            Title               = "⚠ Unknown dxgi.dll Detected",
+            Title               = Loc.GetString("Dialog.UnknownDxgi.Title"),
             Content             = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
                 Foreground   = Brush(ResourceKeys.AccentAmberBrush),
                 FontSize     = 13,
-                Text         = $"A dxgi.dll file was found in:\n{card.InstallPath}\n\n" +
-                               $"File size: {sizeKB:N0} KB\n\n" +
-                               "RHI cannot identify this file as ReShade or Display Commander. " +
-                               "It may belong to another mod (e.g. DXVK, Special K, ENB).\n\n" +
-                               "Overwriting it may break the existing mod. Do you want to proceed?",
+                Text         = Loc.GetString("Dialog.UnknownDxgi.Content", card.InstallPath, $"{sizeKB:N0}"),
             },
-            PrimaryButtonText   = "Overwrite",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.GetString("Dialog.Overwrite"),
+            CloseButtonText     = Loc.GetString("Dialog.Cancel"),
             XamlRoot            = _window.Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme      = ElementTheme.Dark,
@@ -50,20 +48,16 @@ public partial class DialogService
 
         var dlg = new ContentDialog
         {
-            Title               = "⚠ Unknown winmm.dll Detected",
+            Title               = Loc.GetString("Dialog.UnknownWinmm.Title"),
             Content             = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
                 Foreground   = Brush(ResourceKeys.AccentAmberBrush),
                 FontSize     = 13,
-                Text         = $"A winmm.dll file was found in:\n{card.InstallPath}\n\n" +
-                               $"File size: {sizeKB:N0} KB\n\n" +
-                               "RHI cannot identify this file as Display Commander. " +
-                               "It may belong to another mod or DLL injector.\n\n" +
-                               "Overwriting it may break the existing mod. Do you want to proceed?",
+                Text         = Loc.GetString("Dialog.UnknownWinmm.Content", card.InstallPath, $"{sizeKB:N0}"),
             },
-            PrimaryButtonText   = "Overwrite",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.GetString("Dialog.Overwrite"),
+            CloseButtonText     = Loc.GetString("Dialog.Cancel"),
             XamlRoot            = _window.Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme      = ElementTheme.Dark,

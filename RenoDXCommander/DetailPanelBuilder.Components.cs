@@ -158,7 +158,7 @@ public partial class DetailPanelBuilder
                 }
                 else
                 {
-                    _window.DetailRsStatus.Text = "Ready";
+                    _window.DetailRsStatus.Text = Loc.GetString("Status.Ready");
                     _window.DetailRsStatus.Foreground = UIFactory.GetBrush("#A0AABB");
                     _window.DetailRsStatus.TextDecorations = Windows.UI.Text.TextDecorations.None;
                 }

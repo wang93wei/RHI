@@ -37,13 +37,13 @@ public partial class DetailPanelBuilder
 
             // ── Column 0: VSync ──
             var vsyncCol = new StackPanel { Spacing = 4 };
-            var vsyncLabel = new TextBlock { Text = "VSync", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
+            var vsyncLabel = new TextBlock { Text = Loc.GetString("Xaml.Vsync"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
             ToolTipService.SetToolTip(vsyncLabel, "Vertical Sync settings — controls how the driver synchronizes frame rendering with your display's refresh rate.");
             vsyncCol.Children.Add(vsyncLabel);
 
             // VSync Mode
             {
-                vsyncCol.Children.Add(new TextBlock { Text = "Mode", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Mode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.VSyncModeOptions;
                 uint current = nvidiaPresetService.GetVSyncMode(card.GameName, installPathSafe);
                 var globalVSync = nvidiaPresetService.GetGlobalVSyncMode();
@@ -107,7 +107,7 @@ public partial class DetailPanelBuilder
 
             // VSync Tear Control
             {
-                vsyncCol.Children.Add(new TextBlock { Text = "Tear Control", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.TearControl"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.VSyncTearControlOptions;
                 uint current = nvidiaPresetService.GetVSyncTearControl(card.GameName, installPathSafe);
                 var items = options.Select(o => o.Name).ToArray();
@@ -136,7 +136,7 @@ public partial class DetailPanelBuilder
 
             // Low Latency Mode (in VSync column)
             {
-                vsyncCol.Children.Add(new TextBlock { Text = "Low Latency", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.LowLatency"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.LowLatencyModeOptions;
                 uint current = nvidiaPresetService.GetLowLatencyMode(card.GameName, installPathSafe);
                 var items = options.Select(o => o.Name).ToArray();
@@ -176,14 +176,14 @@ public partial class DetailPanelBuilder
 
             // ── Column 4: Smooth Motion ──
             var smoothCol = new StackPanel { Spacing = 4 };
-            var smoothLabel = new TextBlock { Text = "Smooth Motion", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
+            var smoothLabel = new TextBlock { Text = Loc.GetString("Dialog.SmoothMotion"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
             ToolTipService.SetToolTip(smoothLabel, "NVIDIA Smooth Motion — driver-level frame generation. Adds interpolated frames for smoother visuals. RTX 40 Series+ required.");
             smoothCol.Children.Add(smoothLabel);
 
             // Enable
             bool smoothMotionEnabled;
             {
-                smoothCol.Children.Add(new TextBlock { Text = "Enable", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Enable"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionEnableOptions;
                 uint current = nvidiaPresetService.GetSmoothMotionEnable(card.GameName, installPathSafe);
                 smoothMotionEnabled = current != 0;
@@ -233,7 +233,7 @@ public partial class DetailPanelBuilder
 
             // APIs
             {
-                smoothCol.Children.Add(new TextBlock { Text = "Allowed APIs", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.AllowedApis"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionApisOptions;
                 uint current = nvidiaPresetService.GetSmoothMotionApis(card.GameName, installPathSafe);
                 var items = options.Select(o => o.Name).ToArray();
@@ -264,7 +264,7 @@ public partial class DetailPanelBuilder
 
             // Flip Pacing (combined — sets both Fullscreen and Windowed together)
             {
-                smoothCol.Children.Add(new TextBlock { Text = "Flip Pacing", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.FlipPacing"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionFlipPacingFsOptions;
                 uint current = nvidiaPresetService.GetSmoothMotionFlipPacingFs(card.GameName, installPathSafe);
                 var items = options.Select(o => o.Name).ToArray();
@@ -302,13 +302,13 @@ public partial class DetailPanelBuilder
 
             // ── Column 6: Other (Power, G-Sync, Restore) ──
             var powerCol = new StackPanel { Spacing = 4 };
-            var powerLabel = new TextBlock { Text = "Other", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
+            var powerLabel = new TextBlock { Text = Loc.GetString("Xaml.Other"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
             ToolTipService.SetToolTip(powerLabel, "Power management, G-Sync control, and profile reset.");
             powerCol.Children.Add(powerLabel);
 
             // Power Management Mode
             {
-                powerCol.Children.Add(new TextBlock { Text = "Power Mode", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                powerCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.PowerMode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.PowerManagementOptions;
                 uint current = nvidiaPresetService.GetPowerManagementMode(card.GameName, installPathSafe);
                 var items = options.Select(o => o.Name).ToArray();
@@ -337,7 +337,7 @@ public partial class DetailPanelBuilder
 
             // G-Sync per-game toggle
             {
-                powerCol.Children.Add(new TextBlock { Text = "G-Sync", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                powerCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.GSync"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 bool gsyncEnabled = nvidiaPresetService.GetPerGameGSyncEnabled(card.GameName, installPathSafe);
                 var gsyncCombo = new ComboBox
                 {
@@ -363,7 +363,7 @@ public partial class DetailPanelBuilder
             powerCol.Children.Add(new TextBlock { Text = " ", FontSize = 10, Margin = new Thickness(0, 2, 0, 0) });
             var restoreProfileBtn = new Button
             {
-                Content = "Restore Defaults",
+                Content = Loc.GetString("Dialog.RestoreDefaults"),
                 FontSize = 11,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -388,8 +388,8 @@ public partial class DetailPanelBuilder
                         TextWrapping = TextWrapping.Wrap,
                         FontSize = 13,
                     },
-                    PrimaryButtonText = "Restore",
-                    CloseButtonText = "Cancel",
+                    PrimaryButtonText = Loc.GetString("Dialog.Restore"),
+                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                     XamlRoot = xamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -422,7 +422,7 @@ public partial class DetailPanelBuilder
 
             // ── Column 8: ReBAR ──
             var rebarCol = new StackPanel { Spacing = 4 };
-            var rebarLabel = new TextBlock { Text = "ReBAR", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
+            var rebarLabel = new TextBlock { Text = Loc.GetString("Xaml.Rebar"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
             ToolTipService.SetToolTip(rebarLabel, "Resizable BAR — allows the CPU to access full GPU VRAM at once. Can improve performance by 5-10% in some titles. RTX 30+ and BIOS support required.");
             rebarCol.Children.Add(rebarLabel);
 
@@ -432,7 +432,7 @@ public partial class DetailPanelBuilder
 
             // Enable — with Global (On/Off) option when global is set
             {
-                rebarCol.Children.Add(new TextBlock { Text = "Enable", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Enable"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var enableItems = new List<string>();
                 if (globalReBarState.HasValue)
                     enableItems.Add($"Global ({(globalReBarState.Value ? "On" : "Off")})");
@@ -488,7 +488,7 @@ public partial class DetailPanelBuilder
 
             // Mode
             {
-                rebarCol.Children.Add(new TextBlock { Text = "Mode", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Mode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 uint rebarMode = nvidiaPresetService.GetReBarMode(card.GameName, installPathSafe);
                 var modeItems = DlssPresetService.ReBarModes.Select(m => m.Name).ToList();
 
@@ -522,7 +522,7 @@ public partial class DetailPanelBuilder
 
             // Size Limit — always shows actual size values (no Global option)
             {
-                rebarCol.Children.Add(new TextBlock { Text = "Size Limit", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.SizeLimit"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
 
                 var sizeItems = new List<string>();
                 var sizeValues = new List<ulong>();

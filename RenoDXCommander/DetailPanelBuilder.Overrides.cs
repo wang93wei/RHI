@@ -45,7 +45,7 @@ public partial class DetailPanelBuilder
         // ── Title ────────────────────────────────────────────────────────────────
         _window.OverridesPanel.Children.Add(new TextBlock
         {
-            Text = "Game Overrides",
+            Text = Loc.GetString("Dialog.GameOverrides"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
@@ -64,7 +64,7 @@ public partial class DetailPanelBuilder
         var wikiBox = new TextBox
         {
             Header = "Wiki mod name",
-            PlaceholderText = "Exact wiki name",
+            PlaceholderText = Loc.GetString("Dialog.ExactWikiName"),
             Text = _window.ViewModel.GetUserNameMapping(gameName) ?? "",
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -78,7 +78,7 @@ public partial class DetailPanelBuilder
 
         var resetBtn = new Button
         {
-            Content = "Reset",
+            Content = Loc.GetString("Xaml.Reset"),
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Bottom,
             Padding = new Thickness(10, 6, 10, 6),
@@ -117,8 +117,8 @@ public partial class DetailPanelBuilder
             Header = "DLL naming overrides",
             IsOn = isDllOverride,
             IsEnabled = true,
-            OnContent = "Custom filenames enabled",
-            OffContent = "Override DLL filenames",
+            OnContent = Loc.GetString("Dialog.CustomFilenamesEnabled"),
+            OffContent = Loc.GetString("Dialog.OverrideDllFilenames"),
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             FontSize = 12,
         };
@@ -128,7 +128,7 @@ public partial class DetailPanelBuilder
 
         var rsNameBox = new ComboBox
         {
-            PlaceholderText = "Select ReShade DLL name",
+            PlaceholderText = Loc.GetString("Dialog.SelectReshadeDllName"),
             Header = (object?)null,
             FontSize = 12,
             IsEnabled = isDllOverride,
@@ -159,7 +159,7 @@ public partial class DetailPanelBuilder
 
         var dcNameBox = new ComboBox
         {
-            PlaceholderText = "Select DC DLL name",
+            PlaceholderText = Loc.GetString("Dialog.SelectDcDllName"),
             FontSize = 12,
             IsEnabled = isDcDllOverrideOn,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -198,7 +198,7 @@ public partial class DetailPanelBuilder
 
         var osNameBox = new ComboBox
         {
-            PlaceholderText = "Select OptiScaler DLL name",
+            PlaceholderText = Loc.GetString("Dialog.SelectOptiscalerDllName"),
             FontSize = 12,
             IsEnabled = isDllOverride,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -574,7 +574,7 @@ public partial class DetailPanelBuilder
         resetWikiRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         // Restyle reset button to blue accent
-        resetBtn.Content = "Reset";
+        resetBtn.Content = Loc.GetString("Xaml.Reset");
         resetBtn.FontSize = 12;
         resetBtn.Height = 32;
         resetBtn.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -642,9 +642,9 @@ public partial class DetailPanelBuilder
         dllBoxesGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         // Label row
-        var rsLabel = new TextBlock { Text = "ReShade", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
-        var dcLabel = new TextBlock { Text = "Display Commander", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
-        var osLabel = new TextBlock { Text = "OptiScaler", FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
+        var rsLabel = new TextBlock { Text = Loc.GetString("Xaml.Reshade"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
+        var dcLabel = new TextBlock { Text = Loc.GetString("Xaml.DisplayCommander"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
+        var osLabel = new TextBlock { Text = Loc.GetString("Xaml.Optiscaler"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
         Grid.SetColumn(rsLabel, 0); Grid.SetRow(rsLabel, 0);
         Grid.SetColumn(dcLabel, 1); Grid.SetRow(dcLabel, 0);
         Grid.SetColumn(osLabel, 2); Grid.SetRow(osLabel, 0);
@@ -836,7 +836,7 @@ public partial class DetailPanelBuilder
         // ── Bitness Override ComboBox (left column of Bitness & API Row) ─────────
         var bitnessLabel = new TextBlock
         {
-            Text = "Bitness",
+            Text = Loc.GetString("Dialog.Bitness"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 0, 0, 8),
@@ -942,7 +942,7 @@ public partial class DetailPanelBuilder
         // ── API Override ComboBox (single selection, placed in left panel below bitness) ──────
         var apiLabel = new TextBlock
         {
-            Text = "Graphics API",
+            Text = Loc.GetString("Dialog.GraphicsApi"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         };

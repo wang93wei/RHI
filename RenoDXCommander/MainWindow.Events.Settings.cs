@@ -52,6 +52,9 @@ public sealed partial class MainWindow
     private void PurgeCachedFiles_Click(object sender, RoutedEventArgs e)
         => _settingsHandler.PurgeCachedFiles_Click(sender, e);
 
+    private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => _settingsHandler.LanguageCombo_SelectionChanged(sender, e);
+
     private void AdminModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         => _settingsHandler.AdminModeCombo_SelectionChanged(sender, e);
 

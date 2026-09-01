@@ -1,7 +1,6 @@
 name: Build & Test
 
 on:
-  # Manual trigger from the Actions tab — works on any branch.
   workflow_dispatch:
 
 jobs:
@@ -21,72 +20,3 @@ jobs:
 
       - name: Run tests
         run: dotnet test RenoDXCommander.Tests/RenoDXCommander.Tests.csproj -c Release -p:Platform=x64 --no-build
-
-  package:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      # Mirrors publish.bat: single-file main app + drop helper + content files.
-      - name: Publish app (Release win-x64)
-        run: dotnet publish RenoDXCommander/RenoDXCommander.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:Platform=x64 --self-contained false -o publish/RHI
-
-      - name: Build drop helper
-        run: dotnet build RHI.DropHelper/RHI.DropHelper.csproj -c Release -p:Platform=x64
-
-      - name: Assemble publish folder
-        shell: pwsh
-        run: |
-          $OUT = 'publish/RHI'
-          $SRC = 'RenoDXCommander'
-          $helperBin = 'RHI.DropHelper/bin/x64/Release/net8.0-windows'
-          Copy-Item "$helperBin/RHI.DropHelper.exe"                  $OUT -Force
-          Copy-Item "$helperBin/RHI.DropHelper.dll"                  $OUT -Force
-          Copy-Item "$helperBin/RHI.DropHelper.runtimeconfig.json"   $OUT -Force
-          foreach ($f in @(
-              'icon.ico', '7z.exe', '7z.dll', 'ReShade.ini', 'ReShade.Vulkan.ini',
-              'ReShade64.json', 'RHI_PatchNotes.md', 'relimiter.ini', 'reshade.rdr2.ini',
-              'OptiScaler.nvidia.ini', 'OptiScaler.amd-dlss.ini', 'OptiScaler.amd-nodlss.ini',
-              'OptiScaler_nightly.nvidia.ini', 'OptiScaler_nightly.amd-dlss.ini',
-              'OptiScaler_nightly.amd-nodlss.ini')) {
-            Copy-Item "$SRC/$f" $OUT -Force
-          }
-          New-Item "$OUT/Assets/icons" -ItemType Directory -Force | Out-Null
-          Copy-Item "$SRC/Assets/icons/*.ico" "$OUT/Assets/icons/" -Force
-          Copy-Item "$SRC/Assets/icons/*.png" "$OUT/Assets/icons/" -Force
-
-      - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
-
-      - name: Build installer
-        shell: pwsh
-        run: |
-          # Stamp the installer with the real app version from the csproj.
-          $match = Select-String -Path RenoDXCommander/RenoDXCommander.csproj -Pattern '<AssemblyVersion>([\d\.]+)</AssemblyVersion>'
-          $version = if ($match -and $match.Matches.Count -gt 0) { $match.Matches[0].Groups[1].Value } else { '0.0.0' }
-          Write-Host "Installer version: $version"
-          iscc "/DMyAppVersion=$version" "/DPublishDir=publish/RHI" "/DInstallerOutputDir=installer" "/DSetupIconPath=RenoDXCommander/icon.ico" "RHI Setup.iss"
-
-      - name: Zip portable build
-        shell: pwsh
-        run: Compress-Archive -Path publish/RHI/* -DestinationPath RHI-portable.zip
-
-      - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: RHI-Setup
-          path: installer/RHI-Setup.exe
-          if-no-files-found: error
-
-      - name: Upload portable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: RHI-portable
-          path: RHI-portable.zip
-          if-no-files-found: error
