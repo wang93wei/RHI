@@ -15,6 +15,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Check i18n catalogs
+        run: python tools/check-i18n-coverage.py --strict
+
       # Mirrors publish.bat: single-file main app + drop helper + content files.
       - name: Publish app (Release win-x64)
         run: dotnet publish RenoDXCommander/RenoDXCommander.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:Platform=x64 --self-contained false -o publish/RHI

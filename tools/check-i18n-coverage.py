@@ -2,10 +2,34 @@
 """
 Check i18n coverage: compare en-US.json against other languages.
 Usage: python3 tools/check-i18n-coverage.py [--strict]
-Exit code 0 always, but prints coverage and missing keys.
+Exits 1 for case-insensitive duplicate keys, which break the runtime catalog loader.
 --strict will exit 1 if any language < 50% coverage.
 """
 import json, pathlib, sys
+
+
+def load_catalog(path):
+    pairs = json.loads(
+        path.read_text(encoding="utf-8"),
+        object_pairs_hook=lambda items: items,
+    )
+    seen = {}
+    duplicates = []
+    for key, _ in pairs:
+        normalized = key.casefold()
+        if normalized in seen:
+            duplicates.append((seen[normalized], key))
+        else:
+            seen[normalized] = key
+    return dict(pairs), duplicates
+
+
+def report_duplicates(label, duplicates):
+    if not duplicates:
+        return
+    print(f"[check-i18n] {label}: CASE-INSENSITIVE DUPLICATE KEYS")
+    for first, second in duplicates:
+        print(f"  {first} <=> {second}")
 
 base = pathlib.Path("RenoDXCommander/Assets/Languages")
 en_path = base / "en-US.json"
@@ -13,13 +37,15 @@ if not en_path.exists():
     print(f"[check-i18n] Missing {en_path}")
     sys.exit(1)
 
-en_data = json.loads(en_path.read_text(encoding="utf-8"))
+en_data, en_duplicates = load_catalog(en_path)
+report_duplicates("en-US", en_duplicates)
 total = len(en_data)
 print(f"[check-i18n] en-US baseline: {total} keys")
 
 langs = ["zh-CN", "zh-TW", "ja-JP", "ko-KR"]
 strict = "--strict" in sys.argv
 has_low = False
+has_duplicates = bool(en_duplicates)
 
 for lang in langs:
     p = base / f"{lang}.json"
@@ -28,11 +54,13 @@ for lang in langs:
         has_low = True
         continue
     try:
-        data = json.loads(p.read_text(encoding="utf-8"))
+        data, duplicates = load_catalog(p)
     except Exception as e:
         print(f"[check-i18n] {lang}: JSON error {e}")
         has_low = True
         continue
+    report_duplicates(lang, duplicates)
+    has_duplicates = has_duplicates or bool(duplicates)
     present = sum(1 for k in en_data if k in data and str(data[k]).strip() != "")
     coverage = present / total if total else 0
     missing = [k for k in en_data if k not in data or str(data[k]).strip() == ""]
@@ -45,7 +73,7 @@ for lang in langs:
         has_low = True
         print(f"  WARN: {lang} coverage < 50%")
 
-if strict and has_low:
+if has_duplicates or (strict and has_low):
     sys.exit(1)
 
 # Also check hard-coded strings in MainWindow.xaml

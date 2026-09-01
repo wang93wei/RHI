@@ -15,6 +15,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Check i18n catalogs
+        run: python tools/check-i18n-coverage.py --strict
+
       - name: Build (Release x64)
         run: dotnet build RenoDXCommander.sln -c Release -p:Platform=x64
 

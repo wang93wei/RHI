@@ -453,7 +453,6 @@
   "Dialog.OptiScalerSetup": "⚠ OptiScaler Setup",
   "Dialog.Optional2": "── Optional ──",
   "Dialog.OptiscalerHotkey": "OptiScaler Hotkey",
-  "Dialog.OptiscalerSetup": "⚠ OptiScaler Setup",
   "Dialog.OverlayHotkey.Applied": "Updated {0} reshade.ini file(s).",
   "Dialog.OverlayHotkey.Title": "ReShade UI Hotkey",
   "Dialog.OverlayKey2": "Overlay Key",

@@ -453,7 +453,6 @@
   "Dialog.OptiScalerSetup": "⚠ OptiScaler 설정",
   "Dialog.Optional2": "──  선택 사항  ──",
   "Dialog.OptiscalerHotkey": "OptiScaler 단축키",
-  "Dialog.OptiscalerSetup": "⚠ OptiScaler 설정",
   "Dialog.OverlayHotkey.Applied": "{0}개의 reshade.ini 파일을 업데이트했습니다.",
   "Dialog.OverlayHotkey.Title": "ReShade UI 단축키",
   "Dialog.OverlayKey2": "오버레이 키",

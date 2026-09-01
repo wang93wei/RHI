@@ -453,7 +453,6 @@
   "Dialog.OptiScalerSetup": "⚠ OptiScaler 设置",
   "Dialog.Optional2": "──  可选  ──",
   "Dialog.OptiscalerHotkey": "OptiScaler 快捷键",
-  "Dialog.OptiscalerSetup": "⚠ OptiScaler 设置",
   "Dialog.OverlayHotkey.Applied": "已更新 {0} 个 reshade.ini 文件。",
   "Dialog.OverlayHotkey.Title": "ReShade 界面快捷键",
   "Dialog.OverlayKey2": "覆盖键",
