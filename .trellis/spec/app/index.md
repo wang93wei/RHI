@@ -18,6 +18,7 @@ RHI (RenoDX HDR Injector) 是管理 PC 游戏 HDR 模组的桌面工具：自动
 | [Error Handling](./error-handling.md) | 异常捕获、CrashReporter、静默失败边界 |
 | [Logging Guidelines](./logging-guidelines.md) | CrashReporter.Log / session 日志 / Verbose 开关 |
 | [Quality Guidelines](./quality-guidelines.md) | 编码规范、禁止模式、测试要求 |
+| [i18n Guidelines](./i18n.md) | JSON 驱动多语言、实时切换、回退与打包 |
 
 ## How to Fill These Guidelines
 
