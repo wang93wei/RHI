@@ -824,7 +824,7 @@ public static class ShaderPopupHelper
             ToolTipService.SetToolTip(saveBtn, Loc.GetString("Shader.Tooltip.Save"));
             var newBtn = new Button
             {
-                Content  = Loc.GetString("Dialog.New")
+                Content  = Loc.GetString("Dialog.New"),
                 FontSize = 12,
                 Padding  = new Thickness(8, 4, 8, 4),
                 Margin   = new Thickness(0, 2, 0, 2),
