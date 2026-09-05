@@ -89,6 +89,27 @@ public partial class MainViewModel
 
     public async Task RefreshAsync()
     {
+        // Re-check games in the DLSS skip cache before rebuilding cards.
+        // Games confirmed as "no DLSS" after 3+ scans are skipped in BuildCards — this
+        // gives them a fresh look so newly installed DLSS (e.g. game update) is detected
+        // without requiring a Full Refresh. Only fires on explicit Refresh, not at startup.
+        await Task.Run(() =>
+        {
+            try
+            {
+                // Build a minimal DetectedGame list from the saved library for skip cache recheck
+                var savedLib = _gameLibraryService.Load();
+                if (savedLib?.Games != null)
+                {
+                    var games = savedLib.Games
+                        .Select(g => new Models.DetectedGame { Name = g.Name, InstallPath = g.InstallPath, Source = g.Source })
+                        .ToList();
+                    _dlssStreamlineService.RecheckSkipList(games);
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[MainViewModel.RefreshAsync] RecheckSkipList failed — {ex.Message}"); }
+        });
+
         await InitializeAsync(forceRescan: true);
 
         // Check for custom ReShade DLL changes and redeploy

@@ -90,6 +90,25 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Per-display DVC values. Key = display index (string), Value = 0-100.</summary>
     public Dictionary<string, int> DigitalVibranceSettings { get; set; } = new();
 
+    // ── Detail panel section collapse state ───────────────────────────────────
+    /// <summary>
+    /// Section keys that are currently collapsed in the detail panel.
+    /// Keys: "Components", "GameOverrides", "NeuralRendering", "NvidiaProfile", "Management"
+    /// Absent = expanded (default).
+    /// </summary>
+    public HashSet<string> CollapsedDetailSections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    // ── Detail panel section order ────────────────────────────────────────────
+    /// <summary>
+    /// Ordered list of section keys for the detail panel.
+    /// Default order: Components, GameOverrides, NeuralRendering, NvidiaProfile, Management.
+    /// Absent or incomplete = use default order.
+    /// </summary>
+    public static readonly IReadOnlyList<string> DefaultSectionOrder = new[]
+        { "Components", "GameOverrides", "NeuralRendering", "NvidiaProfile", "Management", "Extras" };
+
+    public List<string> DetailSectionOrder { get; set; } = new(DefaultSectionOrder);
+
     // ── DLSS/Streamline Defaults ──────────────────────────────────────────────
     [ObservableProperty] private string _defaultDlssVersion = "";
     [ObservableProperty] private string _defaultDlssdVersion = "";
@@ -339,6 +358,36 @@ public partial class SettingsViewModel : ObservableObject
             try { DigitalVibranceSettings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(dvcVal) ?? new(); }
             catch { DigitalVibranceSettings = new(); }
         }
+
+        // Detail panel section collapse state
+        if (s.TryGetValue("CollapsedDetailSections", out var cdsVal))
+        {
+            try
+            {
+                var list = System.Text.Json.JsonSerializer.Deserialize<List<string>>(cdsVal);
+                CollapsedDetailSections = new HashSet<string>(list ?? new(), StringComparer.OrdinalIgnoreCase);
+            }
+            catch { CollapsedDetailSections = new(StringComparer.OrdinalIgnoreCase); }
+        }
+
+        // Detail panel section order
+        if (s.TryGetValue("DetailSectionOrder", out var dsoVal))
+        {
+            try
+            {
+                var loaded = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dsoVal);
+                // Merge: keep loaded order for known keys, append any missing ones at end
+                if (loaded != null)
+                {
+                    var known = new HashSet<string>(DefaultSectionOrder, StringComparer.OrdinalIgnoreCase);
+                    var merged = loaded.Where(k => known.Contains(k)).ToList();
+                    foreach (var def in DefaultSectionOrder)
+                        if (!merged.Contains(def, StringComparer.OrdinalIgnoreCase)) merged.Add(def);
+                    DetailSectionOrder = merged;
+                }
+            }
+            catch { DetailSectionOrder = new(DefaultSectionOrder); }
+        }
     }
 
     /// <summary>
@@ -394,9 +443,9 @@ public partial class SettingsViewModel : ObservableObject
             s["PeakNitsPresets"] = System.Text.Json.JsonSerializer.Serialize(PeakNitsPresets);
         else
             s.Remove("PeakNitsPresets"); // All 3 checked = default — remove stale non-default value
-        if (AutoUpdateComponents) s["AutoUpdateComponents"] = "true";
-        if (AutoUpdateDlss) s["AutoUpdateDlss"] = "true";
-        if (AutoUpdateStreamline) s["AutoUpdateStreamline"] = "true";
+        if (AutoUpdateComponents) s["AutoUpdateComponents"] = "true"; else s.Remove("AutoUpdateComponents");
+        if (AutoUpdateDlss) s["AutoUpdateDlss"] = "true"; else s.Remove("AutoUpdateDlss");
+        if (AutoUpdateStreamline) s["AutoUpdateStreamline"] = "true"; else s.Remove("AutoUpdateStreamline");
         if (!string.IsNullOrEmpty(LastKnownNewestDlss)) s["LastKnownNewestDlss"] = LastKnownNewestDlss;
         if (!string.IsNullOrEmpty(LastKnownNewestStreamline)) s["LastKnownNewestStreamline"] = LastKnownNewestStreamline;
         s["HdrAutoToggle"] = HdrAutoToggle ? "true" : "false";
@@ -433,6 +482,18 @@ public partial class SettingsViewModel : ObservableObject
         // Digital Vibrance per-display settings
         if (DigitalVibranceSettings.Count > 0)
             s["DigitalVibrance"] = System.Text.Json.JsonSerializer.Serialize(DigitalVibranceSettings);
+
+        // Detail panel section collapse state — only save when any section is collapsed
+        if (CollapsedDetailSections.Count > 0)
+            s["CollapsedDetailSections"] = System.Text.Json.JsonSerializer.Serialize(CollapsedDetailSections.ToList());
+        else
+            s.Remove("CollapsedDetailSections");
+
+        // Detail panel section order — only save when different from default
+        if (!DetailSectionOrder.SequenceEqual(DefaultSectionOrder, StringComparer.OrdinalIgnoreCase))
+            s["DetailSectionOrder"] = System.Text.Json.JsonSerializer.Serialize(DetailSectionOrder);
+        else
+            s.Remove("DetailSectionOrder");
     }
 
     public void LoadThemeAndDensity()

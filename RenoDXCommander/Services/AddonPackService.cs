@@ -169,6 +169,13 @@ public class AddonPackService : IAddonPackService
             var v = rdx5Service.SfStagedVersion;
             return string.IsNullOrEmpty(v) ? null : $"v{v}";
         }
+        // Generic fallback: version stored in versions.json after first download (covers releaseApiUrl addons)
+        var pack = _packs.FirstOrDefault(e => e.SectionId.Equals(sectionId, StringComparison.OrdinalIgnoreCase));
+        if (pack != null)
+        {
+            var v = LoadAddonVersion(pack.PackageName);
+            return string.IsNullOrEmpty(v) ? null : $"v{v}";
+        }
         return null;
     }
 
@@ -370,6 +377,7 @@ public class AddonPackService : IAddonPackService
                     RepositoryUrl = entry.RepositoryUrl ?? existing.RepositoryUrl,
                     EffectInstallPath = entry.EffectInstallPath ?? existing.EffectInstallPath,
                     DeployFileName = entry.DeployFileName ?? existing.DeployFileName,
+                    ReleaseApiUrl = entry.ReleaseApiUrl ?? existing.ReleaseApiUrl,
                 };
             }
             else
@@ -377,7 +385,7 @@ public class AddonPackService : IAddonPackService
                 // New addon from manifest — requires at minimum a PackageName and at least one URL
                 if (string.IsNullOrEmpty(entry.PackageName))
                     continue;
-                if (string.IsNullOrEmpty(entry.DownloadUrl) && string.IsNullOrEmpty(entry.DownloadUrl32) && string.IsNullOrEmpty(entry.DownloadUrl64))
+                if (string.IsNullOrEmpty(entry.DownloadUrl) && string.IsNullOrEmpty(entry.DownloadUrl32) && string.IsNullOrEmpty(entry.DownloadUrl64) && string.IsNullOrEmpty(entry.ReleaseApiUrl))
                     continue;
 
                 merged.Insert(0, new AddonEntry(
@@ -389,7 +397,8 @@ public class AddonPackService : IAddonPackService
                     DownloadUrl64: entry.DownloadUrl64,
                     RepositoryUrl: entry.RepositoryUrl,
                     EffectInstallPath: entry.EffectInstallPath,
-                    DeployFileName: entry.DeployFileName
+                    DeployFileName: entry.DeployFileName,
+                    ReleaseApiUrl: entry.ReleaseApiUrl
                 ));
             }
         }
@@ -460,7 +469,22 @@ public class AddonPackService : IAddonPackService
             // Collect URLs to download
             var downloads = new List<(string url, string extension)>();
 
-            if (!string.IsNullOrEmpty(entry.DownloadUrl32) && !string.IsNullOrEmpty(entry.DownloadUrl64))
+            // If releaseApiUrl is set, resolve the actual asset URL + version tag dynamically
+            if (!string.IsNullOrEmpty(entry.ReleaseApiUrl))
+            {
+                var (resolvedUrl, resolvedTag) = await ResolveDownloadUrlFromApiAsync(entry.ReleaseApiUrl).ConfigureAwait(false);
+                if (resolvedUrl == null)
+                {
+                    CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Could not resolve asset URL from API for '{entry.PackageName}'");
+                    progress?.Report(($"❌ Failed to resolve download URL for {entry.PackageName}", 0));
+                    return;
+                }
+                // Use the tag as the version token unless the caller already supplied one
+                versionOverride ??= resolvedTag;
+                var ext = ClassifyUrlExtension(resolvedUrl);
+                downloads.Add((resolvedUrl, ext));
+            }
+            else if (!string.IsNullOrEmpty(entry.DownloadUrl32) && !string.IsNullOrEmpty(entry.DownloadUrl64))
             {
                 // Both 32/64 variants provided
                 downloads.Add((entry.DownloadUrl32, ".addon32"));
@@ -489,6 +513,7 @@ public class AddonPackService : IAddonPackService
 
             // Use the caller-provided version if available (avoids ETag drift for /latest/ URLs)
             string? versionToken = versionOverride;
+            bool anySucceeded = false;
 
             for (int i = 0; i < downloads.Count; i++)
             {
@@ -499,19 +524,33 @@ public class AddonPackService : IAddonPackService
                 progress?.Report(($"Downloading {entry.PackageName}...", pctBase));
                 CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Downloading '{entry.PackageName}' from {url}");
 
-                if (IsZipUrl(url))
+                try
                 {
-                    // Download zip to temp, extract .addon32/.addon64 files
-                    versionToken ??= await ResolveVersionToken(url);
-                    await DownloadAndExtractZipAsync(url, safeName, progress, pctBase, pctRange);
+                    if (IsZipUrl(url))
+                    {
+                        // Download zip to temp, extract .addon32/.addon64 files
+                        versionToken ??= await ResolveVersionToken(url);
+                        await DownloadAndExtractZipAsync(url, safeName, progress, pctBase, pctRange);
+                    }
+                    else
+                    {
+                        // Direct .addon32/.addon64 save
+                        versionToken ??= await ResolveVersionToken(url);
+                        var destPath = Path.Combine(StagingDir, safeName + ext);
+                        await DownloadFileAsync(url, destPath, entry.PackageName, progress, pctBase, pctRange);
+                    }
+                    anySucceeded = true;
                 }
-                else
+                catch (Exception urlEx)
                 {
-                    // Direct .addon32/.addon64 save
-                    versionToken ??= await ResolveVersionToken(url);
-                    var destPath = Path.Combine(StagingDir, safeName + ext);
-                    await DownloadFileAsync(url, destPath, entry.PackageName, progress, pctBase, pctRange);
+                    CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Failed for '{entry.PackageName}' url={url} — {urlEx.Message}. Continuing with remaining URLs.");
                 }
+            }
+
+            if (!anySucceeded)
+            {
+                progress?.Report(($"❌ Download failed for {entry.PackageName}", 0));
+                return;
             }
 
             // Track version
@@ -557,17 +596,32 @@ public class AddonPackService : IAddonPackService
             try
             {
                 // Pick a representative URL for version resolution
-                var versionUrl = entry.DownloadUrl64
-                    ?? entry.DownloadUrl32
-                    ?? entry.DownloadUrl;
-
-                if (string.IsNullOrEmpty(versionUrl))
+                // For API-based addons, resolve the version tag from the GitHub API
+                string remoteVersion;
+                if (!string.IsNullOrEmpty(entry.ReleaseApiUrl))
                 {
-                    CrashReporter.Log($"[AddonPackService.CheckAndUpdateAllAsync] No download URL for '{entry.PackageName}', skipping.");
-                    continue;
+                    var (_, tag) = await ResolveDownloadUrlFromApiAsync(entry.ReleaseApiUrl).ConfigureAwait(false);
+                    if (tag == null)
+                    {
+                        CrashReporter.Log($"[AddonPackService.CheckAndUpdateAllAsync] Could not resolve version from API for '{entry.PackageName}', skipping.");
+                        continue;
+                    }
+                    remoteVersion = tag;
                 }
+                else
+                {
+                    var versionUrl = entry.DownloadUrl64
+                        ?? entry.DownloadUrl32
+                        ?? entry.DownloadUrl;
 
-                var remoteVersion = await ResolveVersionToken(versionUrl);
+                    if (string.IsNullOrEmpty(versionUrl))
+                    {
+                        CrashReporter.Log($"[AddonPackService.CheckAndUpdateAllAsync] No download URL for '{entry.PackageName}', skipping.");
+                        continue;
+                    }
+
+                    remoteVersion = await ResolveVersionToken(versionUrl);
+                }
                 var storedVersion = versions.TryGetValue(entry.PackageName, out var info)
                     ? info.Version
                     : null;
@@ -575,11 +629,13 @@ public class AddonPackService : IAddonPackService
                 if (string.Equals(remoteVersion, storedVersion, StringComparison.Ordinal))
                 {
                     // Check if OriginalName is missing — if so, re-download to capture it
+                    // API-based addons always download a zip, so check them unconditionally
+                    bool isZipBased = !string.IsNullOrEmpty(entry.ReleaseApiUrl)
+                        || (entry.DownloadUrl64 ?? entry.DownloadUrl32 ?? entry.DownloadUrl ?? "").Contains(".zip", StringComparison.OrdinalIgnoreCase);
                     var needsNameBackfill = info != null
                         && string.IsNullOrEmpty(info.OriginalName64)
                         && string.IsNullOrEmpty(info.OriginalName32)
-                        && (versionUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
-                            || versionUrl.Contains(".zip", StringComparison.OrdinalIgnoreCase));
+                        && isZipBased;
 
                     if (needsNameBackfill)
                     {
@@ -782,11 +838,39 @@ public class AddonPackService : IAddonPackService
                 if (deployedFileNames.Contains(fileName))
                     continue;
 
+                // Don't remove renodx-dlss5 addon if the Neural Rendering section owns it
+                // (detected by presence of nvngx_dlssnr.dll or its sentinel in the same folder)
+                if (fileName.Equals("renodx-dlss5.addon64", StringComparison.OrdinalIgnoreCase)
+                    || fileName.Equals("renodx-dlss5.addon32", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll"))
+                        || File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll.original")))
+                        continue; // NR section manages this — leave it alone
+                }
+
+                // Don't remove renodx-dlss (ShortFuse) addon if the NR section owns it
+                // (detected by presence of nvngx_dlssnr.dll or its sentinel — ShortFuse co-deploys NR dll)
+                if (fileName.Equals("renodx-dlss.addon64", StringComparison.OrdinalIgnoreCase)
+                    || fileName.Equals("renodx-dlss.addon32", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll"))
+                        || File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll.original")))
+                        continue; // ShortFuse NR section manages this — leave it alone
+                }
+
                 try
                 {
                     File.Delete(file);
                     trackedFiles.Remove(fileName);
                     CrashReporter.Log($"[AddonPackService.DeployAddonsForGame] Removed stale addon '{fileName}' from '{installPath}'.");
+
+                // If DLSS5 Tool addon was removed, also clean up the NR dll via sentinel pattern.
+                    if (fileName.Equals("renodx-dlss5.addon64", StringComparison.OrdinalIgnoreCase)
+                        || fileName.Equals("renodx-dlss5.addon32", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var rdx5Svc = App.Services.GetRequiredService<Renodx5AddonService>();
+                        rdx5Svc.RemoveNrDll(installPath);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -975,6 +1059,78 @@ public class AddonPackService : IAddonPackService
     }
 
     /// <summary>
+    /// Resolves the latest release asset download URL and version tag from a GitHub releases API URL.
+    /// Prefers .addon64 > .addon32 > .zip assets in that order.
+    /// Returns (downloadUrl, versionTag) or (null, null) on failure.
+    /// </summary>
+    internal async Task<(string? downloadUrl, string? versionTag)> ResolveDownloadUrlFromApiAsync(string releaseApiUrl)
+    {
+        try
+        {
+            // /releases/latest only returns full releases, missing pre-releases.
+            // Rewrite to /releases?per_page=1 which returns the newest release regardless of type.
+            var effectiveUrl = releaseApiUrl;
+            if (effectiveUrl.EndsWith("/releases/latest", StringComparison.OrdinalIgnoreCase))
+                effectiveUrl = effectiveUrl[..^"/latest".Length] + "?per_page=1";
+
+            var req = new HttpRequestMessage(HttpMethod.Get, effectiveUrl);
+            req.Headers.Add("User-Agent", "RHI");
+            req.Headers.Add("Accept", "application/vnd.github+json");
+            var token = DevUnlockService.GitHubApiToken;
+            if (!string.IsNullOrEmpty(token))
+                req.Headers.Add("Authorization", $"Bearer {token}");
+            var resp = await _http.SendAsync(req).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+            {
+                CrashReporter.Log($"[AddonPackService.ResolveDownloadUrlFromApiAsync] HTTP {(int)resp.StatusCode} for {effectiveUrl}");
+                return (null, null);
+            }
+
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            // Handle both /releases/latest (object) and /releases list (array)
+            System.Text.Json.JsonElement releaseEl = root.ValueKind == System.Text.Json.JsonValueKind.Array
+                ? root.EnumerateArray().FirstOrDefault()
+                : root;
+
+            // Extract version tag
+            string? tag = null;
+            if (releaseEl.TryGetProperty("tag_name", out var tagEl))
+                tag = tagEl.GetString();
+
+            // Find best asset: prefer .addon64, then .addon32, then .zip
+            if (!releaseEl.TryGetProperty("assets", out var assetsEl)) return (null, tag);
+
+            string? addon64 = null, addon32 = null, zip = null;
+            foreach (var asset in assetsEl.EnumerateArray())
+            {
+                var name = asset.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                var url  = asset.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
+                if (url == null) continue;
+
+                if (name.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase)) addon64 ??= url;
+                else if (name.EndsWith(".addon32", StringComparison.OrdinalIgnoreCase)) addon32 ??= url;
+                else if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) zip ??= url;
+            }
+
+            var chosen = addon64 ?? addon32 ?? zip;
+            if (chosen != null)
+                CrashReporter.Log($"[AddonPackService.ResolveDownloadUrlFromApiAsync] Resolved '{chosen}' (tag={tag}) from {releaseApiUrl}");
+            else
+                CrashReporter.Log($"[AddonPackService.ResolveDownloadUrlFromApiAsync] No suitable asset found at {releaseApiUrl}");
+
+            return (chosen, tag);
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[AddonPackService.ResolveDownloadUrlFromApiAsync] Failed — {ex.Message}");
+            return (null, null);
+        }
+    }
+
+    /// <summary>
     /// Classifies a URL's extension. Returns ".addon32", ".addon64", or ".addon64" as default
     /// for single-URL entries.
     /// </summary>
@@ -1128,6 +1284,31 @@ public class AddonPackService : IAddonPackService
     internal static string GetStagingDir() => StagingDir;
     internal static string GetCachePath() => CachePath;
     internal static string GetVersionsJsonPath() => VersionsJsonPath;
+
+    /// <summary>
+    /// Adds a deployed addon filename to the tracker for the given install path.
+    /// Called by components (e.g. Neural Rendering section) that deploy addons directly
+    /// without going through DeployAddonsForGame.
+    /// </summary>
+    public static void TrackAddonDeployment(string installPath, string addonFileName)
+    {
+        try
+        {
+            var deployments = LoadDeployments();
+            if (!deployments.TryGetValue(installPath, out var tracked))
+            {
+                tracked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                deployments[installPath] = tracked;
+            }
+            tracked.Add(addonFileName);
+            SaveDeployments(deployments);
+            CrashReporter.Log($"[AddonPackService.TrackAddonDeployment] Tracked '{addonFileName}' at '{installPath}'");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[AddonPackService.TrackAddonDeployment] Failed — {ex.Message}");
+        }
+    }
 
     // ── Deployment tracker ────────────────────────────────────────────────────────
 

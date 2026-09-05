@@ -135,6 +135,9 @@ public partial class MainViewModel
     /// <summary>Callback set by MainWindow to trigger app update check from the periodic timer.</summary>
     public Action? PeriodicAppUpdateCheck { get; set; }
 
+    /// <summary>Triggers a silent auto-install pass — safe to call from any thread.</summary>
+    public void TriggerAutoUpdate() => _autoUpdateService.TriggerAsync();
+
     internal void NotifyUpdateButtonChanged()
     {
         HasUpdatesAvailable = AnyUpdateAvailable;

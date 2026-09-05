@@ -2,6 +2,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.Services;
 
@@ -133,11 +134,17 @@ public partial class MainViewModel
                 && !_manifestDllOverrideOptOuts.Contains(card.GameName)) continue;
 
             // ── RS reconciliation ──────────────────────────────────────────────
+            // Skip when ShortFuse is installed — it intentionally renames ReShade to
+            // Reshade64.asi; reconciling back to dxgi.dll would break the FrameGen setup.
+            bool _sfInstalled = !string.IsNullOrEmpty(card.InstallPath)
+                && App.Services.GetRequiredService<Renodx5AddonService>().IsSfInstalledIn(card.InstallPath);
+
             // Resolve the correct default ReShade filename for this game's API.
             // DX9 games should use d3d9.dll, OpenGL should use opengl32.dll, etc.
             // Only rename if the current filename doesn't match the API-correct default.
             var rsDefaultName = ResolveAutoReShadeFilename(card.DetectedApis) ?? AuxInstallService.RsNormalName;
-            if (card.RsRecord != null
+            if (!_sfInstalled
+                && card.RsRecord != null
                 && !string.IsNullOrEmpty(card.RsRecord.InstalledAs)
                 && !card.RsRecord.InstalledAs.Equals(rsDefaultName, StringComparison.OrdinalIgnoreCase))
             {
@@ -372,6 +379,19 @@ public partial class MainViewModel
         if (_gameApiCache.TryGetValue(installPath, out var cached))
             return cached.Primary;
 
+        // Check for D3D12Core.dll (Agility SDK) before PE scanning — this is a definitive
+        // DX12 signal even when the PE imports only show d3d11.dll (e.g. RE Engine games
+        // that load D3D12 dynamically via LoadLibrary).
+        try
+        {
+            foreach (var dir in Directory.GetDirectories(installPath))
+            {
+                if (File.Exists(Path.Combine(dir, "D3D12Core.dll")))
+                    return GraphicsApiType.DirectX12;
+            }
+        }
+        catch (Exception ex) { _crashReporter.Log($"[DetectGraphicsApi] D3D12Core pre-scan failed for '{installPath}' — {ex.Message}"); }
+
         // Unity: boot.config is the most reliable source (PE imports are misleading)
         var unityResult = GraphicsApiDetector.DetectUnityFromBootConfig(installPath);
         if (unityResult != GraphicsApiType.Unknown)
@@ -538,6 +558,17 @@ public partial class MainViewModel
         // ── Game-level cache: skip filesystem scanning if cached ──────────
         if (_gameApiCache.TryGetValue(installPath, out var cached))
             return cached.All;
+
+        // Check for D3D12Core.dll (Agility SDK) — definitive DX12 signal
+        try
+        {
+            foreach (var dir in Directory.GetDirectories(installPath))
+            {
+                if (File.Exists(Path.Combine(dir, "D3D12Core.dll")))
+                    return new HashSet<GraphicsApiType> { GraphicsApiType.DirectX12 };
+            }
+        }
+        catch { }
 
         // Scan all exes in the install directory
         ScanAllExesInDir(installPath, result);

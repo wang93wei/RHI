@@ -29,6 +29,7 @@ public static class AddonPopupHelper
             .Where(a => !string.IsNullOrEmpty(a.DownloadUrl)
                      || !string.IsNullOrEmpty(a.DownloadUrl32)
                      || !string.IsNullOrEmpty(a.DownloadUrl64)
+                     || !string.IsNullOrEmpty(a.ReleaseApiUrl)
                      || a.SectionId.Equals("renodx-dlss5", StringComparison.OrdinalIgnoreCase)
                      || a.SectionId.Equals("renodx-dlss-sf", StringComparison.OrdinalIgnoreCase)) // managed by Renodx5AddonService
             .ToList();
@@ -236,6 +237,26 @@ public static class AddonPopupHelper
             }
 
             toggles.Add((entry.PackageName, toggle));
+
+            // If already selected but not yet downloaded (e.g. added to selection on a previous session
+            // before staging completed), trigger the download now so it's ready when the dialog closes.
+            if (isSelected && !isCustomAddon && !addonPackService.IsDownloaded(capturedEntry.PackageName))
+            {
+                toggle.IsEnabled = false;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await addonPackService.DownloadAddonAsync(capturedEntry);
+                        toggle.DispatcherQueue?.TryEnqueue(() => capturedTickMark.Visibility = Visibility.Visible);
+                    }
+                    catch { }
+                    finally
+                    {
+                        toggle.DispatcherQueue?.TryEnqueue(() => toggle.IsEnabled = !peerIsSelected);
+                    }
+                });
+            }
 
             // Compose the row
             var rowGrid = new Grid { ColumnSpacing = 12 };

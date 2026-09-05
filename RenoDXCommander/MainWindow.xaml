@@ -583,7 +583,7 @@
 
 
                         <!-- ── Component status table ── -->
-                        <Border x:Name="DetailComponentSection" Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
+                        <Border x:Name="DetailComponentSection" x:FieldModifier="internal" Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
                                 BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1" Padding="16,14">
                             <StackPanel Spacing="10">
                                 <Grid ColumnSpacing="8">
@@ -595,8 +595,17 @@
                                         <ColumnDefinition Width="36"/>
                                         <ColumnDefinition Width="36"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Components" FontSize="13" FontWeight="SemiBold"
-                                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <!-- Collapse header for Components — arrow + title, wired in DetailPanelBuilder -->
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center"
+                                                x:Name="DetailComponentsHeader" x:FieldModifier="internal">
+                                        <TextBlock x:Name="DetailComponentsArrow" x:FieldModifier="internal"
+                                                   Text="▼" FontSize="10" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock x:Name="DetailComponentsTitle" x:FieldModifier="internal"
+                                                   Text="Components" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
                                     <TextBlock x:Name="DetailLumaInfoText" x:FieldModifier="internal" Grid.Column="3"
                                                FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
                                                Foreground="{StaticResource InlineDescriptionBrush}" Visibility="Collapsed"/>
@@ -609,6 +618,8 @@
                                     </ToggleButton>
                                 </Grid>
 
+                                <!-- Collapsible body — all component rows below header -->
+                                <StackPanel x:Name="DetailComponentsBody" x:FieldModifier="internal" Spacing="10">
                                 <!-- RE Framework row -->
                                 <Grid x:Name="DetailRefRow" x:FieldModifier="internal" ColumnSpacing="8" Visibility="Collapsed">
                                     <Grid.ColumnDefinitions>
@@ -717,8 +728,8 @@
                                         <ColumnDefinition Width="36"/>
                                         <ColumnDefinition Width="36"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="DetailRdxLabel" x:FieldModifier="internal" Grid.Column="0" Text="RenoDX" FontSize="12"
-                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="DetailRdxLabel" x:FieldModifier="internal" Grid.Column="0" Text="RenoDX HDR" FontSize="12"
+                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="DetailRdxStatus" x:FieldModifier="internal" Grid.Column="1" FontSize="12"
                                                VerticalAlignment="Center" HorizontalTextAlignment="Center"
                                                PointerPressed="DetailRdxStatus_PointerPressed"
@@ -1127,6 +1138,7 @@
                                     <TextBlock x:Name="DetailLumaMessage" x:FieldModifier="internal" FontSize="10" Foreground="{StaticResource AccentGreenBrush}"
                                                Visibility="Collapsed" TextWrapping="Wrap"/>
                                 </StackPanel>
+                                </StackPanel><!-- /DetailComponentsBody -->
                             </StackPanel>
                         </Border>
 
@@ -1135,7 +1147,21 @@
                                 Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
                                 BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
                                 Padding="14,12" Visibility="Collapsed">
-                            <StackPanel x:Name="OverridesPanel" x:FieldModifier="internal" Spacing="6"/>
+                            <StackPanel Spacing="8">
+                                <!-- Collapse header — wired in BuildOverridesPanel -->
+                                <StackPanel x:Name="OverridesHeaderRow" x:FieldModifier="internal"
+                                            Orientation="Horizontal" Spacing="0"/>
+                                <!-- Body — all overrides content added here by builder -->
+                                <StackPanel x:Name="OverridesPanel" x:FieldModifier="internal" Spacing="6"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Neural Rendering section ── -->
+                        <Border x:Name="NeuralRenderingContainer" x:FieldModifier="internal"
+                                Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
+                                BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
+                                Padding="14,12" Visibility="Collapsed">
+                            <StackPanel x:Name="NeuralRenderingPanel" x:FieldModifier="internal" Spacing="6"/>
                         </Border>
 
                         <!-- ── Nvidia Profile Overrides section ── -->
@@ -1152,6 +1178,13 @@
                                 BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
                                 Padding="14,12" Visibility="Collapsed">
                             <StackPanel x:Name="ManagementPanel" x:FieldModifier="internal" Spacing="6"/>
+                        </Border>
+                        <!-- ── Extras section ── -->
+                        <Border x:Name="ExtrasContainer" x:FieldModifier="internal"
+                                Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
+                                BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
+                                Padding="14,12" Visibility="Collapsed">
+                            <StackPanel x:Name="ExtrasPanel" x:FieldModifier="internal" Spacing="6"/>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -2004,7 +2037,7 @@
                                             CornerRadius="8" Padding="12,7" FontSize="12"
                                             HorizontalAlignment="Stretch"/>
 
-                                    <TextBlock Text="Export saves all per-game NVIDIA driver settings to a backup file. Import restores them — useful before updating drivers."
+                                    <TextBlock Text="Backup saves all per-game NVIDIA driver settings to a file. Restore loads them back — useful before updating drivers."
                                                TextWrapping="Wrap" FontSize="11"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                Margin="0,8,0,0"/>
@@ -2013,7 +2046,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0" Content="Export Profiles"
+                                        <Button Grid.Column="0" Content="Backup Profiles"
                                                 Click="ExportNvidiaProfiles_Click"
                                                 ToolTipService.ToolTip="Save all per-game NVIDIA profile settings to a backup file."
                                                 Background="{StaticResource AccentBlueBgBrush}"
@@ -2021,7 +2054,7 @@
                                                 BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
                                                 CornerRadius="8" Padding="12,7" FontSize="12"
                                                 HorizontalAlignment="Stretch"/>
-                                        <Button Grid.Column="1" Content="Import Profiles"
+                                        <Button Grid.Column="1" Content="Restore Profiles"
                                                 Click="ImportNvidiaProfiles_Click"
                                                 ToolTipService.ToolTip="Restore per-game NVIDIA profile settings from a previous export."
                                                 Background="{StaticResource AccentBlueBgBrush}"

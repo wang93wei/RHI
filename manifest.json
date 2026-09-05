@@ -233,7 +233,9 @@
     "Watch_Dogs\u00AE 2": "bin",
     "WATCH_DOGS2": "bin",
     "METAL GEAR SOLID 4: Guns of the Patriots - Master Collection Version": "MGS4",
-    "METAL GEAR SOLID: Peace Walker - Master Collection Version": "mgspw"
+    "METAL GEAR SOLID: Peace Walker - Master Collection Version": "mgspw",
+    "The Witcher 3: Wild Hunt - Complete Edition": "bin\\x64_dx12",
+    "Outlast": "Binaries\\Win64"
   },
   "splitGames": {
     "Diablo": [
@@ -501,11 +503,15 @@
     "Wolfenstein II: The New Colossus": "id Tech",
     "Wolfenstein: The New Order": "id Tech",
     "Wolfenstein: The Old Blood": "id Tech",
-    "Wolfenstein: Youngblood": "id Tech"
+    "Wolfenstein: Youngblood": "id Tech",
+    "The Witcher 3: Wild Hunt - Complete Edition": "REDengine"
   },
   "engineHintOverrides": {
     "Avowed": "Unreal Engine 5.3.2",
+    "ACE COMBAT™7: SKIES UNKNOWN": "Unreal Engine 4.27.2",
+    "Hogwarts Legacy": "Unreal Engine 4.27",
     "METAL GEAR SOLID 4: Guns of the Patriots - Master Collection Version": "MGS4 Engine",
+    "Outlast": "Unreal (Legacy)",
     "Beast of Reincarnation": "Unreal Engine 5.4.4",
     "Call of the Elder Gods": "Unreal Engine 5.6.1",
     "Denshattack!": "Unreal Engine 5.6.1",
@@ -530,10 +536,14 @@
     "System Shock": "%USERPROFILE%\\Saved Games\\Nightdive Studios\\SystemShock\\Saved\\Config\\WindowsNoEditor",
     "Terminator: Resistance": "%LOCALAPPDATA%\\Terminator\\Saved\\Config\\WindowsNoEditor",
     "Terminator\u2122: Resistance": "%LOCALAPPDATA%\\Terminator\\Saved\\Config\\WindowsNoEditor",
+    "RoboCop: Rogue City - Unfinished Business": "RoboCopUnfinishedBusiness",
     "The Sinking City 2": "TSC2"
   },
   "graphicsApiOverrides": {
     "Anno 117 - Pax Romana": "DX12",
+    "ACE COMBAT™7: SKIES UNKNOWN": "DX11",
+    "Clair Obscur: Expedition 33": "DX12",
+    "PRAGMATA": "DX12",
     "Crimson Desert": "DX12",
     "Resident Evil 4": "DX12",
     "Resident Evil Requiem": "DX12",
@@ -571,7 +581,8 @@
     "Trackmania": "DX11, DX12",
     "DOOM \u002B DOOM II": "VLK",
     "DOOM 64": "VLK",
-    "Crimson Desert Enhanced": "DX12"
+    "Crimson Desert Enhanced": "DX12",
+    "The Witcher 3: Wild Hunt - Complete Edition": "DX12"
   },
   "thirtyTwoBitGames": [
     "Assassin\u0027s Creed",
@@ -588,6 +599,8 @@
     "AI: THE SOMNIUM FILES",
     "Anno 117 - Pax Romana",
     "Ball x Pit",
+    "Baldur\u0027s Gate 3",
+    "Outlast",
     "Zero Parades",
     "BeamNG.drive",
     "Control",
@@ -605,7 +618,6 @@
     "Watch_Dogs\u00AE 2"
   ],
   "dlssSkipGames": [
-    "Deadly Premonition 2",
     "Dragon Age Inquisition",
     "Gothic II: Gold Classic",
     "Outward",
@@ -755,6 +767,9 @@
     },
     "REANIMAL": {
       "renodx": "REANIMAL has native HDR that is literally \u0022HDR Den made\u0022.\rThere is no need to add RenoDX to this game."
+    },
+    "Ori and the Blind Forest: Definitive Edition": {
+      "renodx": "Generic Unity mod may have visual issues in this game. The named mod is deprecated but can be installed manually as an alternative."
     }
   },
   "forceExternalOnly": {
@@ -784,6 +799,8 @@
     }
   },
   "snapshotOverrides": {
+    "ACE COMBAT™7: SKIES UNKNOWN": "https://marat569.github.io/renodx/renodx-ue-extended.addon64",
+    "Hogwarts Legacy": "https://marat569.github.io/renodx/renodx-ue-extended.addon64",
     "Assassin\u0027s Creed": "https://clshortfuse.github.io/renodx/renodx-asscreed1.addon32",
     "Cities: Skylines": "https://notvoosh.github.io/renodx-unity/renodx-unityengine.addon64",
     "CODE VEIN II": "https://marat569.github.io/renodx/renodx-codevein2.addon64",
@@ -1055,10 +1072,10 @@
     "Quarantine Zone: The Last Check": {
       "notes": "\u2139\uFE0F Native HDR can be enabled using Ultra\u002B.",
       "notesUrl": "https://theultraplace.com/games/quarantinezone/",
-      "notesUrlLabel": "Ultra\u002B"
+      "notesUrlLabel": "Ultra+"
     },
     "RoboCop: Rogue City": {
-      "notes": "\u2139\uFE0F Native HDR can be enabled using Ultra\u002B.",
+      "notes": "\u2139\uFE0F Native HDR can be enabled using Ultra+.",
       "notesUrl": "https://theultraplace.com/games/robocop/",
       "notesUrlLabel": "Ultra\u002B"
     },
@@ -1337,15 +1354,21 @@
     },
     "dlss5-dx11-bridge": {
       "packageName": "DLSS5 DX11 Bridge",
-      "description": "Enables DLSS 5 Neural Rendering in D3D11 games. Additional setup steps are required — click How To Use for details.",
-      "downloadUrl64": "https://github.com/NIGos/dlss5-dx11-bridge/releases/latest/download/dlss5-dx11-bridge.addon64",
-      "repositoryUrl": "https://github.com/NIGos/dlss5-dx11-bridge"
+      "description": "Enables DLSS 5 Neural Rendering in DX11 and Vulkan games that already have native DLSS. Mirrors the game\u2019s DLSS onto a private DX12 session for the NR addon to hook.",
+      "releaseApiUrl": "https://api.github.com/repos/NIGos/dlss5-bridge/releases/latest",
+      "repositoryUrl": "https://github.com/NIGos/dlss5-bridge"
     },
     "dlss5-feed": {
       "packageName": "DLSS5 Feeder",
-      "description": "Enables DLSS 5 Neural Rendering in D3D11 games with no native DLSS support. Additional setup steps are required — click How To Use for details.",
-      "downloadUrl64": "https://github.com/jlrouzies-fr/DLSS5-Feeder/releases/latest/download/dlss5-feed.addon64",
+      "description": "Enables DLSS 5 Neural Rendering in games with no native DLSS (DX11, DX12, Vulkan, OpenGL, 32-bit). Feeds a synthetic DLSS contract from ReShade depth and motion vectors. Requires motion vector shaders \u2014 see How To Use.",
+      "releaseApiUrl": "https://api.github.com/repos/jlrouzies-fr/DLSS5-Feeder/releases/latest",
       "repositoryUrl": "https://github.com/jlrouzies-fr/DLSS5-Feeder"
+    },
+    "mfgunlock": {
+      "packageName": "MFG Ada Unlock",
+      "description": "Unlocks DLSS Multi Frame Generation (3x/4x and above) on RTX 40-series cards, which NVIDIA ships gated to RTX 50-series only. Corrects frame interpolation so generated frames carry new motion. In-memory only \u2014 no files on disk are modified. Requires a game with DLSS frame generation via Streamline and a modern nvngx_dlssg.dll (310.x).",
+      "releaseApiUrl": "https://api.github.com/repos/mavismmg/MFGAdaUnlock-RenoDx/releases/latest",
+      "repositoryUrl": "https://github.com/mavismmg/MFGAdaUnlock-RenoDx"
     },
     "renodx-upgrade": {
       "packageName": "RenoDX Upgrade",

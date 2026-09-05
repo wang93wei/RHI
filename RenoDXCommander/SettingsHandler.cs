@@ -249,9 +249,9 @@ public class SettingsHandler
 
             // Global ReBAR
             var isAdminForReBar = VulkanLayerService.IsRunningAsAdmin();
-            _window.GlobalReBarEnableCombo.ItemsSource = new[] { "Off", "On" };
-            var globalReBar = presetSvc.GetGlobalReBarEnabled();
-            _window.GlobalReBarEnableCombo.SelectedIndex = globalReBar == true ? 1 : 0;
+            _window.GlobalReBarEnableCombo.ItemsSource = new[] { "Auto (Default)", "Off", "On" };
+            var globalReBarMode = presetSvc.GetGlobalReBarEnableMode(); // 0=Off, 1=Auto, 2=On
+            _window.GlobalReBarEnableCombo.SelectedIndex = globalReBarMode == 0 ? 1 : globalReBarMode == 2 ? 2 : 0;
             _window.GlobalReBarEnableCombo.IsEnabled = isAdminForReBar;
             _window.GlobalReBarEnableCombo.Opacity = isAdminForReBar ? 1.0 : 0.4;
 
@@ -259,8 +259,9 @@ public class SettingsHandler
             var globalReBarSize = presetSvc.GetGlobalReBarSizeLimit();
             var rebarSizeIdx = Array.FindIndex(DlssPresetService.ReBarSizeLimits, o => o.Value == globalReBarSize);
             _window.GlobalReBarSizeCombo.SelectedIndex = rebarSizeIdx >= 0 ? rebarSizeIdx : 1; // Default: 1GB
-            _window.GlobalReBarSizeCombo.IsEnabled = isAdminForReBar && globalReBar == true;
-            _window.GlobalReBarSizeCombo.Opacity = (isAdminForReBar && globalReBar == true) ? 1.0 : 0.4;
+            bool reBarOn = globalReBarMode == 2; // Only On enables size setting; Auto and Off grey it
+            _window.GlobalReBarSizeCombo.IsEnabled = isAdminForReBar && reBarOn;
+            _window.GlobalReBarSizeCombo.Opacity = (isAdminForReBar && reBarOn) ? 1.0 : 0.4;
 
             // Show admin warning if not elevated
             _window.ReBarAdminWarning.Visibility = isAdminForReBar
@@ -348,10 +349,11 @@ public class SettingsHandler
         _window.PreferredRefreshRateCombo.SelectedIndex = refreshIdx >= 0 ? refreshIdx : 0;
 
         var isAdminForReBar = VulkanLayerService.IsRunningAsAdmin();
-        var globalReBar = presetSvc.GetGlobalReBarEnabled();
-        _window.GlobalReBarEnableCombo.SelectedIndex = globalReBar == true ? 1 : 0;
-        _window.GlobalReBarSizeCombo.IsEnabled = isAdminForReBar && globalReBar == true;
-        _window.GlobalReBarSizeCombo.Opacity = (isAdminForReBar && globalReBar == true) ? 1.0 : 0.4;
+        var globalReBarMode = presetSvc.GetGlobalReBarEnableMode();
+        _window.GlobalReBarEnableCombo.SelectedIndex = globalReBarMode == 0 ? 1 : globalReBarMode == 2 ? 2 : 0;
+        bool reBarOn = globalReBarMode == 2;
+        _window.GlobalReBarSizeCombo.IsEnabled = isAdminForReBar && reBarOn;
+        _window.GlobalReBarSizeCombo.Opacity = (isAdminForReBar && reBarOn) ? 1.0 : 0.4;
         var globalReBarSize = presetSvc.GetGlobalReBarSizeLimit();
         var rebarSizeIdx = Array.FindIndex(DlssPresetService.ReBarSizeLimits, o => o.Value == globalReBarSize);
         _window.GlobalReBarSizeCombo.SelectedIndex = rebarSizeIdx >= 0 ? rebarSizeIdx : 1;

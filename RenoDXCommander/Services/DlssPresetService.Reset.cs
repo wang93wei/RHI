@@ -193,6 +193,7 @@ public partial class DlssPresetService
                 GSYNC_APP_MODE_ID,              // 0x1194F158
                 GSYNC_GLOBAL_MODE_ID,           // 0x1094F1F7
                 PREFERRED_REFRESH_RATE_ID,      // 0x0064B541
+                REBAR_ENABLE_ID,                // 0x000BFA21
                 REBAR_FEATURE_ID,               // 0x000F00BA
                 REBAR_EXPR_MODES_ID,            // 0x00C09D09
                 REBAR_SIZE_LIMIT_ID,            // 0x000F00FF

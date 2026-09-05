@@ -478,12 +478,13 @@ public sealed partial class MainWindow
         if (_shaderCacheComboInit) return;
         if (sender is not ComboBox combo || combo.SelectedIndex < 0) return;
         var presetService = App.Services.GetRequiredService<DlssPresetService>();
-        bool enabled = combo.SelectedIndex == 1; // 0=Off, 1=On
-        presetService.SetGlobalReBarEnabled(enabled);
-        // Update size combo enabled state and reset to default when off
-        GlobalReBarSizeCombo.IsEnabled = enabled;
-        GlobalReBarSizeCombo.Opacity = enabled ? 1.0 : 0.4;
-        if (!enabled)
+        // 0=Auto(Default), 1=Off, 2=On → driver values: Auto=1, Off=0, On=2
+        uint mode = combo.SelectedIndex switch { 1 => 0u, 2 => 2u, _ => 1u };
+        presetService.SetGlobalReBarEnableMode(mode);
+        bool reBarOn = mode == 2; // Only On enables size; Auto and Off grey it
+        GlobalReBarSizeCombo.IsEnabled = reBarOn;
+        GlobalReBarSizeCombo.Opacity = reBarOn ? 1.0 : 0.4;
+        if (!reBarOn)
             GlobalReBarSizeCombo.SelectedIndex = 1; // Reset to 1GB (Default)
         // Force detail panel rebuild if a game is selected
         if (ViewModel.SelectedGame != null)
@@ -632,7 +633,7 @@ public sealed partial class MainWindow
             await DialogService.ShowSafeAsync(new ContentDialog
             {
                 Title = "Import",
-                Content = $"No backup file found at:\n{path}\n\nExport profiles first.",
+                Content = $"No backup file found at:\n{path}\n\nBackup profiles first.",
                 CloseButtonText = "OK",
                 XamlRoot = Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
@@ -652,7 +653,7 @@ public sealed partial class MainWindow
 
         var confirmResult = await DialogService.ShowSafeAsync(new ContentDialog
         {
-            Title = "Import Profiles",
+            Title = "Restore Profiles",
             Content = new TextBlock
             {
                 Text = warningText,

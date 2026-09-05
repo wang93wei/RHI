@@ -196,7 +196,7 @@ public sealed partial class MainWindow : Window
         ViewModel.ConfirmForeignDxgiOverwrite = _dialogService.ShowForeignDxgiConfirmDialogAsync;
         ViewModel.ShowVulkanAdminRequiredDialog = _dialogService.ShowVulkanAdminRequiredDialogAsync;
         ViewModel.RequestOverridesPanelRebuild = card =>
-            DispatcherQueue.TryEnqueue(() => BuildOverridesPanel(card));
+            DispatcherQueue.TryEnqueue(() => { BuildOverridesPanel(card); _detailPanelBuilder.ApplySectionOrder(); });
         ViewModel.RequestCardRebuild = card =>
             DispatcherQueue.TryEnqueue(() =>
             {
@@ -603,8 +603,10 @@ public sealed partial class MainWindow : Window
                                     DetailPanel.Visibility = Visibility.Visible;
                                     BuildOverridesPanel(target);
                                     OverridesContainer.Visibility = Visibility.Visible;
+                                    NeuralRenderingContainer.Visibility = Visibility.Visible;
                                     NvidiaProfileContainer.Visibility = Visibility.Visible;
                                     ManagementContainer.Visibility = Visibility.Visible;
+                                    _detailPanelBuilder.ApplySectionOrder();
                                 }
                                 else if (ViewModel.CurrentViewLayout == ViewLayout.Compact)
                                 {
@@ -629,20 +631,28 @@ public sealed partial class MainWindow : Window
                     DetailPanel.Visibility = Visibility.Collapsed;
                     OverridesPanel.Children.Clear();
                     OverridesContainer.Visibility = Visibility.Collapsed;
+                    NeuralRenderingPanel.Children.Clear();
+                    NeuralRenderingContainer.Visibility = Visibility.Collapsed;
                     NvidiaProfilePanel.Children.Clear();
                     NvidiaProfileContainer.Visibility = Visibility.Collapsed;
                     ManagementPanel.Children.Clear();
                     ManagementContainer.Visibility = Visibility.Collapsed;
+                    ExtrasPanel.Children.Clear();
+                    ExtrasContainer.Visibility = Visibility.Collapsed;
                     break;
                 case ViewLayout.Compact:
                     // Hide detail panel content when no game is selected
                     DetailPanel.Visibility = Visibility.Collapsed;
                     OverridesPanel.Children.Clear();
                     OverridesContainer.Visibility = Visibility.Collapsed;
+                    NeuralRenderingPanel.Children.Clear();
+                    NeuralRenderingContainer.Visibility = Visibility.Collapsed;
                     NvidiaProfilePanel.Children.Clear();
                     NvidiaProfileContainer.Visibility = Visibility.Collapsed;
                     ManagementPanel.Children.Clear();
                     ManagementContainer.Visibility = Visibility.Collapsed;
+                    ExtrasPanel.Children.Clear();
+                    ExtrasContainer.Visibility = Visibility.Collapsed;
                     break;
             }
         }

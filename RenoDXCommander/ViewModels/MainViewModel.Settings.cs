@@ -229,6 +229,33 @@ public partial class MainViewModel
 
     // ── Deploy Streamline ─────────────────────────────────────────────────────
 
+    // ── Neural Rendering Method ───────────────────────────────────────────────
+
+    /// <summary>Returns the persisted NR method for a game. Null = not set (auto-detect from game state).</summary>
+    public string? GetNrMethodOverride(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.NrMethodOverrides.TryGetValue(key, out var v)) return v;
+        if (_gameNameService.NrMethodOverrides.TryGetValue(gameName, out var v2)) return v2;
+        return null;
+    }
+
+    /// <summary>Sets the persisted NR method for a game. Null clears the override.</summary>
+    public void SetNrMethodOverride(string gameName, string? value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(value))
+        {
+            _gameNameService.NrMethodOverrides.Remove(key);
+            _gameNameService.NrMethodOverrides.Remove(gameName);
+        }
+        else
+            _gameNameService.NrMethodOverrides[key] = value;
+        SaveNameMappings();
+    }
+
+    // ── Deploy Streamline (original) ──────────────────────────────────────────
+
     /// <summary>Returns whether Deploy Streamline is enabled for a game.</summary>
     public bool GetOsDeployStreamline(string gameName, string store = "")
     {
@@ -458,7 +485,215 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
-    // ── DLL Naming Override ───────────────────────────────────────────────────────
+    // ── Ultimate ASI Loader ───────────────────────────────────────────────────
+
+    public string? GetUalInstalledAs(string gameName, string store)
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.UalInstalledAs.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.UalInstalledAs.TryGetValue(gameName, out var vLegacy) && !string.IsNullOrEmpty(vLegacy)) return vLegacy;
+        return null;
+    }
+
+    public void SetUalInstalledAs(string gameName, string? dllName, string store)
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(dllName))
+        {
+            _gameNameService.UalInstalledAs.Remove(key);
+            _gameNameService.UalInstalledAs.Remove(gameName);
+        }
+        else
+            _gameNameService.UalInstalledAs[key] = dllName;
+        SaveNameMappings();
+    }
+
+    // ── ShortFuse Auto-Config ─────────────────────────────────────────────────
+
+    /// <summary>Returns true when ShortFuse auto-config is enabled for this game (default when absent).</summary>
+    public bool GetSfAutoConfigEnabled(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return !_gameNameService.SfAutoConfigDisabled.Contains(key)
+            && !_gameNameService.SfAutoConfigDisabled.Contains(gameName);
+    }
+
+    public void SetSfAutoConfigEnabled(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (!value) // disabled → add to set
+            _gameNameService.SfAutoConfigDisabled.Add(key);
+        else // enabled → remove from set (absent = enabled)
+        {
+            _gameNameService.SfAutoConfigDisabled.Remove(key);
+            _gameNameService.SfAutoConfigDisabled.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    /// <summary>
+    /// Post-ShortFuse-install auto-config: renames ReShade → Reshade64.asi,
+    /// installs UAL (winmm → version → dinput8 priority), writes [INSTALL] keys to reshade.ini.
+    /// Respects GetSfAutoConfigEnabled and GetKeepRsIniUpdated per-game settings.
+    /// </summary>
+    public async Task ApplySfAutoConfigAsync(GameCardViewModel card)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath)) return;
+        var installPath = card.InstallPath;
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+
+        // ── Step 1: Rename ReShade DLL to Reshade64.asi ───────────────────────
+        const string asiName = "Reshade64.asi";
+        var rsRecord = card.RsRecord;
+        if (rsRecord != null && !string.IsNullOrEmpty(rsRecord.InstalledAs)
+            && !rsRecord.InstalledAs.Equals(asiName, StringComparison.OrdinalIgnoreCase))
+        {
+            var currentPath = System.IO.Path.Combine(installPath, rsRecord.InstalledAs);
+            var asiPath     = System.IO.Path.Combine(installPath, asiName);
+            try
+            {
+                if (System.IO.File.Exists(currentPath))
+                {
+                    if (System.IO.File.Exists(asiPath)) System.IO.File.Delete(asiPath);
+                    System.IO.File.Move(currentPath, asiPath);
+                    rsRecord.InstalledAs      = asiName;
+                    card.RsRecord.InstalledAs = asiName;
+                    _auxInstaller.SaveAuxRecord(rsRecord);
+                    _crashReporter.Log($"[SfAutoConfig] Renamed ReShade to '{asiName}' for '{gameName}'");
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig] ReShade rename failed — {ex.Message}"); }
+        }
+
+        // ── Step 2: Auto-install ASI Loader (winmm → version → dinput8) ───────
+        var ualSvc = App.Services.GetRequiredService<UltimateAsiLoaderService>();
+        bool ualAlreadyInstalled = !string.IsNullOrEmpty(GetUalInstalledAs(gameName, store));
+
+        if (!ualAlreadyInstalled)
+        {
+            string[] preferenceOrder = { "winmm.dll", "version.dll", "dinput8.dll" };
+            string? chosenName = null;
+            foreach (var candidate in preferenceOrder)
+            {
+                var candidatePath = System.IO.Path.Combine(installPath, candidate);
+                bool takenByOther = System.IO.File.Exists(candidatePath)
+                    && !string.Equals(rsRecord?.InstalledAs, candidate, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(card.OsInstalledFile, candidate, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(card.DcInstalledFile, candidate, StringComparison.OrdinalIgnoreCase);
+                if (!takenByOther) { chosenName = candidate; break; }
+            }
+
+            if (chosenName != null)
+            {
+                try
+                {
+                    var (success, hookedOriginal) = await ualSvc.InstallAsync(card, chosenName).ConfigureAwait(false);
+                    if (success)
+                    {
+                        SetUalInstalledAs(gameName, chosenName, store);
+                        _crashReporter.Log($"[SfAutoConfig] Installed UAL as '{chosenName}' for '{gameName}'" +
+                            (hookedOriginal != null ? $" (chained '{hookedOriginal}')" : ""));
+                    }
+                }
+                catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig] UAL install failed — {ex.Message}"); }
+            }
+            else
+                _crashReporter.Log($"[SfAutoConfig] No suitable UAL name available for '{gameName}'");
+        }
+        else
+            _crashReporter.Log($"[SfAutoConfig] UAL already installed for '{gameName}' — skipping");
+
+        // ── Step 3: Write [INSTALL] HookStreamline=1 + HookDirectX=1 ─────────
+        if (GetKeepRsIniUpdated(gameName, store))
+        {
+            var iniPath = System.IO.Path.Combine(installPath, "reshade.ini");
+            if (System.IO.File.Exists(iniPath))
+            {
+                try
+                {
+                    var ini = AuxInstallService.ParseIni(System.IO.File.ReadAllLines(iniPath));
+                    if (!ini.ContainsKey("INSTALL"))
+                        ini["INSTALL"] = new AuxInstallService.OrderedDict();
+                    ini["INSTALL"]["HookStreamline"] = "1";
+                    ini["INSTALL"]["HookDirectX"]    = "1";
+                    AuxInstallService.WriteIni(iniPath, ini);
+                    _crashReporter.Log($"[SfAutoConfig] Wrote [INSTALL] keys to reshade.ini for '{gameName}'");
+                }
+                catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig] reshade.ini write failed — {ex.Message}"); }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reverts the ShortFuse auto-config applied during install:
+    /// renames Reshade64.asi back to the API-correct default DLL name, and
+    /// uninstalls ASI Loader if RHI auto-installed it.
+    /// Called from the Neural Rendering Remove button for the ShortFuse method.
+    /// </summary>
+    public void RevertSfAutoConfig(GameCardViewModel card)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath)) return;
+        var installPath = card.InstallPath;
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+
+        // ── Revert ReShade rename ─────────────────────────────────────────────
+        const string asiName = "Reshade64.asi";
+        var rsRecord = card.RsRecord;
+        if (rsRecord != null
+            && rsRecord.InstalledAs.Equals(asiName, StringComparison.OrdinalIgnoreCase))
+        {
+            var defaultName = ResolveAutoReShadeFilename(card.DetectedApis)
+                           ?? AuxInstallService.RsNormalName;
+            var asiPath     = System.IO.Path.Combine(installPath, asiName);
+            var defaultPath = System.IO.Path.Combine(installPath, defaultName);
+            try
+            {
+                if (System.IO.File.Exists(asiPath))
+                {
+                    if (System.IO.File.Exists(defaultPath)) System.IO.File.Delete(defaultPath);
+                    System.IO.File.Move(asiPath, defaultPath);
+                    rsRecord.InstalledAs      = defaultName;
+                    card.RsRecord.InstalledAs = defaultName;
+                    _auxInstaller.SaveAuxRecord(rsRecord);
+                    _crashReporter.Log($"[SfAutoConfig.Revert] Renamed '{asiName}' → '{defaultName}' for '{gameName}'");
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig.Revert] ReShade rename failed — {ex.Message}"); }
+        }
+
+        // ── Remove UAL if RHI installed it ────────────────────────────────────
+        var ualInstalled = GetUalInstalledAs(gameName, store);
+        if (!string.IsNullOrEmpty(ualInstalled))
+        {
+            var ualSvc = App.Services.GetRequiredService<UltimateAsiLoaderService>();
+            ualSvc.Uninstall(card);
+            SetUalInstalledAs(gameName, null, store);
+            _crashReporter.Log($"[SfAutoConfig.Revert] Removed UAL ('{ualInstalled}') for '{gameName}'");
+        }
+
+        // ── Remove [INSTALL] keys from reshade.ini ────────────────────────────
+        var iniPath = System.IO.Path.Combine(installPath, "reshade.ini");
+        if (System.IO.File.Exists(iniPath))
+        {
+            try
+            {
+                var ini = AuxInstallService.ParseIni(System.IO.File.ReadAllLines(iniPath));
+                if (ini.TryGetValue("INSTALL", out var installSection))
+                {
+                    installSection.Remove("HookStreamline");
+                    installSection.Remove("HookDirectX");
+                    // Remove the section entirely if now empty
+                    if (installSection.Count == 0)
+                        ini.Remove("INSTALL");
+                    AuxInstallService.WriteIni(iniPath, ini);
+                    _crashReporter.Log($"[SfAutoConfig.Revert] Removed [INSTALL] keys from reshade.ini for '{gameName}'");
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig.Revert] reshade.ini cleanup failed — {ex.Message}"); }
+        }
+    }
 
     /// <summary>Per-game DLL naming overrides — delegated to DllOverrideService.</summary>
     private Dictionary<string, DllOverrideConfig> _dllOverrides => _dllOverrideService.GetAllOverrides();
@@ -630,9 +865,9 @@ public partial class MainViewModel
         {
             _gameNameService.PerGameAddonMode.Remove(key);
             _gameNameService.PerGameAddonMode.Remove(gameName); // clear legacy name-only entry too
-            // Discard per-game addon selection when reverting to global (Req 6.6)
-            _gameNameService.PerGameAddonSelection.Remove(key);
-            _gameNameService.PerGameAddonSelection.Remove(gameName); // clear legacy name-only entry too
+            // Do NOT wipe PerGameAddonSelection here — preserve it so switching back to Select
+            // restores the previous selection. Selection is only cleared explicitly by the user
+            // through the addon picker.
         }
         else
             _gameNameService.PerGameAddonMode[key] = mode;
@@ -751,6 +986,13 @@ public partial class MainViewModel
                             var rdx5Svc = App.Services.GetRequiredService<Renodx5AddonService>();
                             var detection = _dlssStreamlineService.Detect(card.InstallPath);
                             await rdx5Svc.InstallSfAsync(card.InstallPath, detection).ConfigureAwait(false);
+
+                            // Apply SF auto-config (rename ReShade, install UAL, write [INSTALL] keys)
+                            if (GetSfAutoConfigEnabled(card.GameName, card.Source ?? ""))
+                            {
+                                try { await ApplySfAutoConfigAsync(card).ConfigureAwait(false); }
+                                catch (Exception acEx) { _crashReporter.Log($"[MainViewModel.DeployAddonsForCard] SfAutoConfig failed — {acEx.Message}"); }
+                            }
 
                             // Refresh card DLSS state
                             var freshDetection = _dlssStreamlineService.Detect(card.InstallPath);

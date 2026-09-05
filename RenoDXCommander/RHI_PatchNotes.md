@@ -1,8 +1,141 @@
+
+## v2.6.1
+
+### Changes
+
+- Neural Rendering auto-select now defaults to ShortFuse (was DLSS5 Tool) for DX12 games with native DLSS.
+- ReShade Settings cog: Overlay Key and Screenshot Key fields are now side by side.
+
+### Bug Fixes
+
+- Fixed UI hang when rapidly clicking through the game list — all synchronous NVAPI driver profile reads (DLSS presets, driver overrides, VSync/ReBAR/Smooth Motion) are now fetched off the UI thread.
+- Fixed UI hang when rapidly changing DLSS/Streamline version dropdowns.
+- Fixed toggling the DLL naming overrides switch hanging the UI.
+- Fixed games using the D3D12 Agility SDK (e.g. Onimusha: Way of the Sword) being detected as DX11.
+- Fixed Neural Rendering method incorrectly defaulting to DLSS5 Tool for games that have a backed-up NR DLL but nothing actively installed.
+- Fixed DLSS5 Feeder deploying a 0-byte nvngx_dlss.dll when the cached file was unavailable.
+
+### Manifest Updates
+
+- Onimusha: Way of the Sword and PRAGMATA forced to DX12 detection.
+- RoboCop: Rogue City — Unfinished Business Engine.ini config path corrected.
+
+---
+
+## v2.6.0
+
+### New
+
+- Detail view sections (Components, Game Overrides, Neural Rendering, Nvidia Profile Overrides, Management) are now collapsible. Click the section heading to toggle it open or closed. Collapsed state persists across restarts.
+- Detail view sections can be reordered by dragging the ≡ handle on the left of each section header. Order persists across restarts.
+- New Extras section in detail view. Contains Ultimate ASI Loader — install the UAL proxy DLL into any game folder to enable .asi plugin loading. Choose from the full list of supported DLL names (bitness-filtered, with Recommended badges and conflict warnings). Keeps itself up to date automatically. Hooked chaining handled automatically when the chosen DLL name is already in use by a game file.
+- ShortFuse DLSS Tool now auto-configures ReShade for FrameGen on install: renames ReShade to Reshade64.asi, installs ASI Loader automatically (winmm → version → dinput8 priority), and writes HookStreamline=1 and HookDirectX=1 to reshade.ini. Controlled via the ⚙ cog next to the Neural Rendering install button — enabled by default, can be turned off per-game.
+
+### Changes
+
+- RenoDX renamed to RenoDX HDR in the detail view component list.
+- Version number now shown next to MFG Ada Unlock, DLSS5 Feeder, and DX11 Bridge in the addon panel (same as DLSS5 Tool).
+- ASI Loader status now appears in the ShortFuse Neural Rendering status line alongside ReShade and DLSS versions.
+
+### Bug Fixes
+
+- Fixed ShortFuse DLSS Tool addon (renodx-dlss.addon64) being removed as stale on every launch and Refresh for games where it was installed via the Neural Rendering section.
+- Fixed Nvidia Profile Overrides section showing stale DLSS versions after removing a Neural Rendering method — now refreshes immediately without needing a manual Refresh.
+
+### Manifest Updates
+
+- Baldur's Gate 3 forced to 64-bit detection.
+- Hogwarts Legacy linked to Marat's UE-Extended addon.
+
+---
+
+## v2.5.9
+
+### Bug Fixes
+
+- Fixed DLSS5 Feeder refresh wiping lumenite shader files — `SyncGameFolder` was deleting all managed shaders then only redeploying DLSS5_Feed.fx, losing lumenite_Kernel.fx. Fixed by persisting pack-level exclusions via SetExcludedFiles so refresh correctly deploys only the two needed files.
+- Fixed MFG Ada Unlock, DLSS5 Feeder, and DX11 Bridge missing from the per-game addon picker.
+
+---
+
+## v2.5.8
+
+### Changes
+
+- Clicking the installed version number on a UE-Extended game now opens Marat's commit history for the UE-Extended addon.
+
+### Bug Fixes
+
+- Fixed OptiPatcher not deploying for NVIDIA users — it was incorrectly gated to AMD/Intel only.
+- Fixed MFG Ada Unlock, DLSS5 Feeder, and DX11 Bridge disappearing from the global addon manager after being switched to API-based auto-updating.
+- Fixed MFG Ada Unlock, DLSS5 Feeder, and DX11 Bridge not auto-updating — these addons use dynamic release filenames so RHI now resolves the download URL from the GitHub releases API rather than a hardcoded URL.
+- Fixed addon update check running before the manifest was applied, causing manifest-driven addons to be silently skipped on every startup.
+- Fixed normal Refresh not re-checking games previously confirmed as "no DLSS" — newly installed DLSS (e.g. a game update that adds frame generation) now shows up on a standard Refresh instead of requiring a Full Refresh., causing manifest-driven addons to be silently skipped on every startup.
+
+---
+
+## v2.5.7
+
+### Bug Fixes
+
+- Fixed DLSS5 Feeder failing to download for some users — the zip filename changes with each release so the hardcoded URL broke on updates. RHI now resolves the download URL dynamically from the GitHub releases API so Feeder auto-updates correctly going forward.
+- Fixed DOF Fix install failing — the releases API was returning only the first 30 results by default, pushing DOF Fix releases off the page as the repo grew. Now uses per_page=100.
+
+---
+
+## v2.5.6
+
+### Bug Fixes
+
+- Fixed `renodx-dlss5.addon64` deployed by the Neural Rendering section being removed on the next Refresh — the addon cleanup pass was treating it as stale since it wasn't deployed through the standard addon system.
+
+---
+
+## v2.5.5
+
+
+### New
+
+- **Neural Rendering section** — a dedicated self-contained section in the game detail panel (between Game Overrides and NVIDIA Profile Overrides) for installing DLSS 5 Neural Rendering. No addon picker required. Method combo with four options:
+  - **DLSS5 Tool** — for native DLSS games. Deploys `renodx-dlss5.addon64`, upgrades DLSS SR/RR/FG to latest, and deploys `nvngx_dlssnr.dll`.
+  - **DLSS5 Tool + DX11 Bridge** — for DX11/Vulkan native-DLSS games. Same as above plus `dlss5-bridge.addon64` (always downloads latest).
+  - **DLSS Tool (ShortFuse)** — alternative for any 64-bit native-DLSS game. Deploys the full DLSS SR/RR/FG/NR stack and Streamline via the sentinel pattern.
+  - **DLSS5 Feeder** — default for games with no native DLSS (DX11, DX12, Vulkan, OpenGL, 32-bit). Deploys the Feeder addon, DLSS5 Tool as neural consumer, `nvngx_dlss.dll`, `nvngx_dlssnr.dll`, and the required shaders (`DLSS5_Feed.fx` + LumeniteFX motion vectors) automatically. Writes a `ReShadePreset.ini` with both techniques pre-enabled in the correct render order.
+  - ReShade is installed automatically if not already present.
+  - NR DLL version picker, per-file status indicators with versions, Install/Reinstall/Remove buttons, automatic method detection for existing installs, and descriptions with links for each method.
+
+### Manifest Updates
+
+- Added a note to Ori and the Blind Forest: Definitive Edition warning that the generic Unity mod may have visual issues and the named mod is deprecated.
+- Added install path override for The Witcher 3: Wild Hunt - Complete Edition (`bin\x64_dx12`), engine hint (REDengine), and graphics API override (DX12).
+- Fixed Outlast detecting as 32-bit and resolving to the wrong path — now forced 64-bit with `Binaries\Win64` path override and engine hint set to Unreal (Legacy).
+- Fixed DLSS5 DX11 Bridge download URL — old repo was deleted; updated to `NIGos/dlss5-bridge` with correct filename `dlss5-bridge.addon64`.
+
+---
+
+## v2.5.4
+
+### Changes
+
+- Clicking "Check For Updates" now also triggers a silent auto-install pass immediately after the check completes, so any updates found are installed without needing a separate "Update All" click (when Automatic Updates is enabled).
+- Renamed "Export Profiles" / "Import Profiles" buttons in Settings to "Backup Profiles" / "Restore Profiles" for clarity.
+- ReBAR Enable now has three options: Auto (Default), Off, and On — reflecting the new driver setting (0x000BFA21). Previously only Off and On were available. Both the global Settings page and per-game overrides panel are updated.
+
+### Bug Fixes
+
+- Fixed `nvngx_dlssnr.dll` not being removed from the game folder when uninstalling DLSS5 Tool. RHI now uses a sentinel file to track whether it placed the DLL, so it only removes what it deployed.
+- Fixed Automatic Updates setting reverting to Yes on restart when set to No.
+- Fixed addon downloads aborting entirely when one URL (e.g. the 32-bit variant) returns a 404 — remaining URLs now continue independently.
+- Fixed per-game addon selection being lost when switching the addon mode to Global and back.
+- Fixed pre-selected addons not re-downloading on launch if their staging files were missing.
+
+---
+
 ## v2.5.3
 
 ### Bug Fixes
 
-- Fixed `RenoDX DLSS5.addon64` continuing to deploy to game folders even after v2.5.2. The old name was still stored in per-game addon selections in settings — RHI now migrates these to `DLSS5 Tool` on load.
+- Fixed `RenoDX DLSS5.addon64` still being deployed to game folders after v2.5.2. Per-game addon selections stored in `settings.json` still referenced the old name (`RenoDX DLSS5`) — these are now migrated to `DLSS5 Tool` on load. This is separate from the global addon list and stale file fixes in v2.5.2.
 
 ---
 

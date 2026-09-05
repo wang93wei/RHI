@@ -754,6 +754,15 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     }
 
     /// <inheritdoc />
+    public string? GetCachedNrDllPath()
+    {
+        var newest = _manifest?.Dlssnr?.FirstOrDefault();
+        if (newest == null) return null;
+        var cachedDll = Path.Combine(DlssnrCacheDir, newest.Version, DlssnrDllName);
+        return File.Exists(cachedDll) ? cachedDll : null;
+    }
+
+    /// <inheritdoc />
     public async Task<string?> EnsureNewestStreamlineCachedAsync()
     {
         var newest = _manifest?.Streamline?.FirstOrDefault();

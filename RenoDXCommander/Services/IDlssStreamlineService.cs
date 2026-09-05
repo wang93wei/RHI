@@ -171,6 +171,12 @@ public interface IDlssStreamlineService
     Task<string?> EnsureNewestDlssnrCachedAsync();
 
     /// <summary>
+    /// Returns the path to the newest cached DLSS NR DLL if already on disk, without downloading.
+    /// Returns null if not yet cached.
+    /// </summary>
+    string? GetCachedNrDllPath();
+
+    /// <summary>
     /// Returns the cached directory path for the newest Streamline version, downloading if needed.
     /// </summary>
     Task<string?> EnsureNewestStreamlineCachedAsync();
