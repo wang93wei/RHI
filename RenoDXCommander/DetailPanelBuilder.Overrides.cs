@@ -659,7 +659,7 @@ public partial class DetailPanelBuilder
             CornerRadius = new CornerRadius(8),
         };
         ToolTipService.SetToolTip(resetDllBtn,
-            "Revert all DLL names back to defaults and clear saved overrides.");
+            Loc.GetString("Overrides.ResetDllNames.Tooltip"));
         resetDllBtn.Click += async (s, e) =>
         {
             resetDllBtn.IsEnabled = false;

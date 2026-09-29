@@ -37,11 +37,13 @@ public class AddonPackService : IAddonPackService
     private List<AddonEntry> _packs = new();
     private readonly SemaphoreSlim _downloadLock = new(1, 1);
 
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     // RenoDX DevKit addon — injected alongside Addons.ini entries
     private static readonly AddonEntry RenoDxDevKitEntry = new(
         SectionId: "renodx-devkit",
         PackageName: "RenoDX DevKit",
-        PackageDescription: "RenoDX development tools addon for ReShade",
+        PackageDescription: Loc.GetString("Addon.Description.RenoDxDevKit"),
         DownloadUrl: null,
         DownloadUrl32: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-devkit.addon32",
         DownloadUrl64: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-devkit.addon64",
@@ -52,7 +54,7 @@ public class AddonPackService : IAddonPackService
     private static readonly AddonEntry Renodx5Entry = new(
         SectionId: "renodx-dlss5",
         PackageName: "DLSS5 Tool",
-        PackageDescription: "Enables DLSS Neural Rendering in any DLSS-compatible game. Supports RTX 20, 30, 40 and 50 Series GPUs. RHI automatically deploys nvngx_dlssnr.dll to the game folder alongside this addon.",
+        PackageDescription: Loc.GetString("Addon.Description.Dlss5Tool"),
         DownloadUrl: null,
         DownloadUrl32: null,
         DownloadUrl64: null,
@@ -65,7 +67,7 @@ public class AddonPackService : IAddonPackService
     private static readonly AddonEntry Renodx5SfEntry = new(
         SectionId: "renodx-dlss-sf",
         PackageName: "DLSS Tool (ShortFuse)",
-        PackageDescription: "ShortFuse's DLSS5 addon. Supports DX12, DX11 and DX9. For non-DLSS games enable Load DLSS Libraries and set Hook Method to On Present. Supports RTX 20-50 Series. Still WIP — fall back to DLSS5 Tool if you have issues.",
+        PackageDescription: Loc.GetString("Addon.Description.DlssToolShortFuse"),
         DownloadUrl: null,
         DownloadUrl32: null,
         DownloadUrl64: null,
@@ -78,7 +80,7 @@ public class AddonPackService : IAddonPackService
     private static readonly AddonEntry DlssFixEntry = new(
         SectionId: "renodx-dlssfix",
         PackageName: "DLSS Fix",
-        PackageDescription: "Makes ReShade draw on native game frames instead of frame gen frames. Also hides DLSS upscaling from ReShade.",
+        PackageDescription: Loc.GetString("Addon.Description.DlssFix"),
         DownloadUrl: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-dlssfix.addon64",
         DownloadUrl32: null,
         DownloadUrl64: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-dlssfix.addon64",
@@ -978,7 +980,7 @@ public class AddonPackService : IAddonPackService
             results.Add(new AddonEntry(
                 SectionId: $"custom-{baseName}",
                 PackageName: baseName,
-                PackageDescription: "Custom addon (local file)",
+                PackageDescription: Loc.GetString("Addon.Description.CustomAddon"),
                 DownloadUrl: null,
                 DownloadUrl32: null,
                 DownloadUrl64: null,

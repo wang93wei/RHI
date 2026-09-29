@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.ViewModels;
 
@@ -14,31 +15,25 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class AddonInfoResolver
 {
-    // ── Generic fallback text constants (Tier 3) ──────────────────────────────────
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
-    public const string FallbackREFramework =
-        "RE Framework is a modding framework for RE Engine games. It enables ReShade injection and other mods by hooking into the game's rendering pipeline.";
+    // ── Generic fallback text (Tier 3) ───────────────────────────────────────────
 
-    public const string FallbackReShade =
-        "ReShade is a post-processing injector that adds visual effects to games. It is required by RenoDX to apply HDR tone mapping and color grading.";
+    public static string FallbackREFramework => Loc.GetString("Info.ReFramework");
 
-    public const string FallbackRenoDX =
-        "RenoDX is an HDR mod framework that upgrades SDR games to HDR using ReShade. It provides per-game tone mapping and color space conversion.";
+    public static string FallbackReShade => Loc.GetString("Info.ReShade");
 
-    public const string FallbackNativeHdr =
-        "This game is set to use UE-Extended. It is automatically configured to use native HDR and an Engine.ini will be automatically deployed upon installation. If there is an ingame HDR option then enable that too.";
+    public static string FallbackRenoDX => Loc.GetString("Info.RenoDX");
 
-    public const string FallbackReLimiter =
-        "ReLimiter is a frame limiter that works alongside ReShade to reduce input lag and improve frame pacing in games.";
+    public static string FallbackNativeHdr => Loc.GetString("Info.UeExtended");
 
-    public const string FallbackDisplayCommander =
-        "Display Commander is a frame limiter that works alongside ReShade to reduce input lag and improve frame pacing.";
+    public static string FallbackReLimiter => Loc.GetString("Info.ReLimiter");
 
-    public const string FallbackOptiScaler =
-        "OptiScaler is an upscaling compatibility layer that enables FSR, XeSS, or DLSS across different GPU vendors, allowing you to use any upscaler regardless of your hardware.";
+    public static string FallbackDisplayCommander => Loc.GetString("Info.DisplayCommander");
 
-    public const string FallbackLuma =
-        "Luma is an alternative HDR mod framework that provides native HDR output for supported games, bypassing the need for ReShade-based injection.";
+    public static string FallbackOptiScaler => Loc.GetString("Info.OptiScaler");
+
+    public static string FallbackLuma => Loc.GetString("Info.Luma");
 
     /// <summary>
     /// Returns the generic fallback text for the given addon type.
@@ -108,7 +103,7 @@ public class AddonInfoResolver
             // card.Notes = "⚠ In-game HDR must be turned ON..." + optional "\n\n{dbComment}"
             // Strip the warning line to get just the DB comment portion.
             var notesWithoutWarning = card.Notes
-                .Replace("⚠ In-game HDR must be turned ON for UE-Extended to work correctly in this title.", "")
+                .Replace(Loc.GetString("Wiki.Notes.InGameHdrWarning"), "")
                 .Trim();
             if (!string.IsNullOrWhiteSpace(notesWithoutWarning))
                 fallbackText = fallbackText + "\n\n" + notesWithoutWarning;
@@ -146,10 +141,10 @@ public class AddonInfoResolver
         var source = GetSourceType(card, addon, manifest, osWikiData, hdrDatabase);
         return source switch
         {
-            InfoSourceType.Manifest => "Per-game notes available",
-            InfoSourceType.Wiki     => "Wiki info available",
-            InfoSourceType.Fallback => "General addon info",
-            _ => "General addon info"
+            InfoSourceType.Manifest => Loc.GetString("Info.Tooltip.Manifest"),
+            InfoSourceType.Wiki     => Loc.GetString("Info.Tooltip.Wiki"),
+            InfoSourceType.Fallback => Loc.GetString("Info.Tooltip.Fallback"),
+            _ => Loc.GetString("Info.Tooltip.Fallback")
         };
     }
 
@@ -301,7 +296,7 @@ public class AddonInfoResolver
         {
             Content = content,
             Url = card.NameUrl,
-            UrlLabel = !string.IsNullOrEmpty(card.NameUrl) ? "View wiki page" : null,
+            UrlLabel = !string.IsNullOrEmpty(card.NameUrl) ? Loc.GetString("Dialog.ViewWikiPage") : null,
             Source = InfoSourceType.Wiki,
             WikiStatusLabel = card.WikiStatusLabel,
             WikiStatusBadgeBg = card.WikiStatusBadgeBackground,
@@ -344,7 +339,7 @@ public class AddonInfoResolver
         {
             Content = content,
             Url = url,
-            UrlLabel = url != null ? "View wiki page" : null,
+            UrlLabel = url != null ? Loc.GetString("Dialog.ViewWikiPage") : null,
             Source = InfoSourceType.Wiki,
             OptiScalerCompat = stdEntry,
             OptiScalerFsr4Compat = fsr4Entry
@@ -382,8 +377,9 @@ public class AddonInfoResolver
         {
             var upscalers = stdEntry.Upscalers.Count > 0
                 ? string.Join(", ", stdEntry.Upscalers)
-                : "None listed";
-            parts.Add($"OptiScaler Compatibility: {stdEntry.Status}\nUpscalers: {upscalers}");
+                : Loc.GetString("Dialog.NoneListed");
+            parts.Add(Loc.GetString("Dialog.CompatStatus", Loc.GetString("Dialog.OptiScalerCompatibility"), stdEntry.Status)
+                + "\n" + Loc.GetString("Dialog.Upscalers", upscalers));
             if (!string.IsNullOrWhiteSpace(stdEntry.Notes))
                 parts.Add(stdEntry.Notes);
         }
@@ -392,8 +388,9 @@ public class AddonInfoResolver
         {
             var upscalers = fsr4Entry.Upscalers.Count > 0
                 ? string.Join(", ", fsr4Entry.Upscalers)
-                : "None listed";
-            parts.Add($"FSR4 Compatibility: {fsr4Entry.Status}\nUpscalers: {upscalers}");
+                : Loc.GetString("Dialog.NoneListed");
+            parts.Add(Loc.GetString("Dialog.CompatStatus", Loc.GetString("Dialog.Fsr4Compatibility"), fsr4Entry.Status)
+                + "\n" + Loc.GetString("Dialog.Upscalers", upscalers));
             if (!string.IsNullOrWhiteSpace(fsr4Entry.Notes))
                 parts.Add(fsr4Entry.Notes);
         }

@@ -734,8 +734,8 @@ public partial class DetailPanelBuilder
                     targetPanel.Children.Add(new TextBlock
                     {
                         Text = isElevatedCapture
-                            ? "✓ Running as admin — all driver profile settings are writable."
-                            : "⚠ Admin rights required to write driver profile settings. Enable Admin Mode in Settings or restart as admin.",
+                            ? Loc.GetString("Overrides.AdminNotice.Elevated")
+                            : Loc.GetString("Overrides.AdminNotice.NotElevated"),
                         FontSize = 10,
                         Foreground = UIFactory.Brush(isElevatedCapture ? ResourceKeys.TextTertiaryBrush : ResourceKeys.AccentAmberDimBrush),
                         TextWrapping = TextWrapping.Wrap,
