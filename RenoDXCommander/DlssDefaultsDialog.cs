@@ -272,7 +272,7 @@ public static class DlssDefaultsDialog
         // Inline TextBox shown when "Custom" is selected
         var customBox = new TextBox
         {
-            PlaceholderText = "33–100",
+            PlaceholderText = Loc.GetString("Dialog.33100"),
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             MaxLength = 3,

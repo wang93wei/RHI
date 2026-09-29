@@ -610,7 +610,7 @@ public partial class DetailPanelBuilder
 
         var dllOverrideLabel = new TextBlock
         {
-            Text = "DLL naming overrides",
+            Text = Loc.GetString("Overrides.DllNaming.Header"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         };
@@ -646,7 +646,7 @@ public partial class DetailPanelBuilder
         // Reset DLL Names button — reverts all three DLLs to defaults and clears the config
         resetDllBtn = new Button
         {
-            Content = "Reset DLL Names",
+            Content = Loc.GetString("Overrides.DllNaming.ResetButton"),
             FontSize = 12,
             Height = 28,
             HorizontalAlignment = HorizontalAlignment.Right,

@@ -37,6 +37,12 @@ public partial class DetailPanelBuilder
     private const string NrMethodShortFuse         = "ShortFuse";
     private const string NrMethodFeeder            = "Feeder";
 
+    /// <summary>
+    /// Localized label of the "Latest" entry shown in every version combo. Also used as the
+    /// sentinel prefix when reading a combo selection back, so detection follows the UI language.
+    /// </summary>
+    private string NrLatestLabel => Loc.GetString("NeuralRendering.Latest");
+
     public void BuildNeuralRenderingSection(GameCardViewModel card)
     {
         _window.NeuralRenderingPanel.Children.Clear();
@@ -160,10 +166,10 @@ public partial class DetailPanelBuilder
         // ── Build method combo items (show all, disable inapplicable) ─────────
         var methodItems = new[]
         {
-            new { Name = "ShortFuse DLSS Tool",          Key = NrMethodShortFuse,       Enabled = !is32Bit && card.GraphicsApi != GraphicsApiType.OpenGL },
-            new { Name = "DLSS5 Tool",                 Key = NrMethodDlss5Tool,       Enabled = hasDlss && !is32Bit },
-            new { Name = "DLSS5 Tool + DX11 Bridge",   Key = NrMethodDlss5ToolBridge, Enabled = hasDlss && (isDx11 || isVulkan) && !is32Bit },
-            new { Name = "DLSS5 Feeder",               Key = NrMethodFeeder,          Enabled = true },
+            new { Name = Loc.GetString("NeuralRendering.Method.ShortFuse"),       Key = NrMethodShortFuse,       Enabled = !is32Bit && card.GraphicsApi != GraphicsApiType.OpenGL },
+            new { Name = Loc.GetString("NeuralRendering.Method.Dlss5Tool"),       Key = NrMethodDlss5Tool,       Enabled = hasDlss && !is32Bit },
+            new { Name = Loc.GetString("NeuralRendering.Method.Dlss5ToolBridge"), Key = NrMethodDlss5ToolBridge, Enabled = hasDlss && (isDx11 || isVulkan) && !is32Bit },
+            new { Name = Loc.GetString("NeuralRendering.Method.Feeder"),          Key = NrMethodFeeder,          Enabled = true },
         };
 
         // ── Header ────────────────────────────────────────────────────────────
@@ -181,7 +187,7 @@ public partial class DetailPanelBuilder
         };
         var nrTitle = new TextBlock
         {
-            Text       = "Neural Rendering",
+            Text       = Loc.GetString("Dialog.NeuralRendering"),
             FontSize   = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
@@ -213,16 +219,16 @@ public partial class DetailPanelBuilder
             var nrSummaryEntries = new List<(string, string?)>();
             string methodLabel = effectiveMethod switch
             {
-                NrMethodShortFuse       => "DLSS Tool (SF)",
-                NrMethodDlss5Tool       => "DLSS5 Tool",
-                NrMethodDlss5ToolBridge => "DLSS5 Tool + Bridge",
-                NrMethodFeeder          => "Feeder",
+                NrMethodShortFuse       => Loc.GetString("NeuralRendering.Summary.ShortFuse"),
+                NrMethodDlss5Tool       => Loc.GetString("NeuralRendering.Method.Dlss5Tool"),
+                NrMethodDlss5ToolBridge => Loc.GetString("NeuralRendering.Summary.Bridge"),
+                NrMethodFeeder          => Loc.GetString("NeuralRendering.Summary.Feeder"),
                 _                       => effectiveMethod,
             };
             if (nrAnyInstalled)
-                nrSummaryEntries.Add(("NR Method", methodLabel));
+                nrSummaryEntries.Add((Loc.GetString("NeuralRendering.Summary.MethodLabel"), methodLabel));
             if (nrDllPresent)
-                nrSummaryEntries.Add(("NR DLL", nrDllVersion));
+                nrSummaryEntries.Add((Loc.GetString("NeuralRendering.Summary.NrDllLabel"), nrDllVersion));
             nrSummary = DetailPanelBuilder.MakeSectionSummaryInlines(nrSummaryEntries);
             if (nrSummary != null)
             {
@@ -255,7 +261,7 @@ public partial class DetailPanelBuilder
 
         // Method combo (col 0)
         var methodStack = new StackPanel { Spacing = 2 };
-        methodStack.Children.Add(new TextBlock { Text = "Method", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) });
+        methodStack.Children.Add(new TextBlock { Text = Loc.GetString("NeuralRendering.Method.Label"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) });
 
         var methodCombo = new ComboBox
         {
@@ -272,18 +278,14 @@ public partial class DetailPanelBuilder
                 methodCombo.SelectedItem = cbi;
         }
         if (methodCombo.SelectedIndex < 0) methodCombo.SelectedIndex = 0;
-        ToolTipService.SetToolTip(methodCombo,
-            "DLSS5 Tool: for DX12 native-DLSS games.\n" +
-            "DLSS5 Tool + DX11 Bridge: for DX11/Vulkan native-DLSS games.\n" +
-            "ShortFuse DLSS Tool: alternative full-stack install for native-DLSS games.\n" +
-            "DLSS5 Feeder: for games with no native DLSS (DX11, DX12, Vulkan, 32-bit).");
+        ToolTipService.SetToolTip(methodCombo, Loc.GetString("NeuralRendering.Method.Tooltip"));
         methodStack.Children.Add(methodCombo);
         Grid.SetColumn(methodStack, 0);
         row1.Children.Add(methodStack);
 
         // Pack version combo (col 1) — Feeder version or Bridge version, always "Latest" (managed by AddonPackService)
         var packVersionLabel = new TextBlock { FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) };
-        packVersionLabel.Text = effectiveMethod == NrMethodFeeder ? "Feeder Version" : "Bridge Version";
+        packVersionLabel.Text = effectiveMethod == NrMethodFeeder ? Loc.GetString("NeuralRendering.PackVersion.FeederLabel") : Loc.GetString("NeuralRendering.PackVersion.BridgeLabel");
         var packVersionStack = new StackPanel { Spacing = 2, Visibility = isFeederOrBridge ? Visibility.Visible : Visibility.Collapsed };
         packVersionStack.Children.Add(packVersionLabel);
         var packVersionCombo = new ComboBox
@@ -314,7 +316,7 @@ public partial class DetailPanelBuilder
             packVersionCombo.Items.Clear();
             var packAddonType = methodKey == NrMethodFeeder ? Renodx5AddonService.FeederSubDir : Renodx5AddonService.BridgeSubDir;
             var latestPackVer = rdx5Svc.GetLatestAvailableVersion(packAddonType);
-            packVersionCombo.Items.Add(string.IsNullOrEmpty(latestPackVer) ? "Latest" : $"Latest ({latestPackVer})");
+            packVersionCombo.Items.Add(string.IsNullOrEmpty(latestPackVer) ? NrLatestLabel : Loc.GetString("NeuralRendering.LatestVersionFormat", latestPackVer));
             var versions = rdx5Svc.GetAvailableVersions(packAddonType);
             foreach (var v in versions)
                 packVersionCombo.Items.Add(v);
@@ -344,7 +346,7 @@ public partial class DetailPanelBuilder
             {
                 if (packComboInitializing || addonSwapInProgress) return;
                 var sel = packVersionCombo.SelectedItem as string;
-                bool useLatest = string.IsNullOrEmpty(sel) || sel.StartsWith("Latest");
+                bool useLatest = string.IsNullOrEmpty(sel) || sel.StartsWith(NrLatestLabel);
 
                 // Persist the selection
                 _window.ViewModel.SetNrPackVersion(gameName, useLatest ? null : sel, store);
@@ -371,7 +373,7 @@ public partial class DetailPanelBuilder
                 _window.DispatcherQueue?.TryEnqueue(() =>
                 {
                     installBtn.IsEnabled = false;
-                    installBtn.Content   = "Swapping addon...";
+                    installBtn.Content   = Loc.GetString("NeuralRendering.Status.SwappingAddon");
                 });
 
                 try
@@ -452,17 +454,17 @@ public partial class DetailPanelBuilder
 
         ToolTipService.SetToolTip(packVersionStack,
             effectiveMethod == NrMethodFeeder
-                ? "Version of dlss5-feed.addon64 to install."
-                : "Version of dlss5-bridge.addon64 to install.");
+                ? Loc.GetString("NeuralRendering.PackVersion.Tooltip.Feeder")
+                : Loc.GetString("NeuralRendering.PackVersion.Tooltip.Bridge"));
         packVersionStack.Children.Add(packVersionCombo);        Grid.SetColumn(packVersionStack, 1);
         row1.Children.Add(packVersionStack);
 
         // DLSS5 Tool / SF version combo (col 2)
         var addonVersionLabel = new TextBlock { FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) };
-        addonVersionLabel.Text = effectiveMethod == NrMethodShortFuse ? "SF Version"
-                                : effectiveMethod == NrMethodFeeder    ? "DLSS5 Tool Version"
-                                : effectiveMethod == NrMethodDlss5ToolBridge ? "DLSS5 Tool Version"
-                                : "DLSS5 Tool Version";
+        addonVersionLabel.Text = effectiveMethod == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel")
+                                : effectiveMethod == NrMethodFeeder    ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label")
+                                : effectiveMethod == NrMethodDlss5ToolBridge ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label")
+                                : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
         var addonVersionStack = new StackPanel { Spacing = 2 };
         addonVersionStack.Children.Add(addonVersionLabel);
 
@@ -481,7 +483,7 @@ public partial class DetailPanelBuilder
             bool addonComboInit = true;
             addonVersionCombo.Items.Clear();
             var latestAddonVer = rdx5Svc.GetLatestAvailableVersion(addonType);
-            addonVersionCombo.Items.Add(string.IsNullOrEmpty(latestAddonVer) ? "Latest" : $"Latest ({latestAddonVer})");
+            addonVersionCombo.Items.Add(string.IsNullOrEmpty(latestAddonVer) ? NrLatestLabel : Loc.GetString("NeuralRendering.LatestVersionFormat", latestAddonVer));
             foreach (var v in rdx5Svc.GetAvailableVersions(addonType))
                 addonVersionCombo.Items.Add(v);
 
@@ -507,7 +509,7 @@ public partial class DetailPanelBuilder
             {
                 if (addonComboInit || addonSwapInProgress) return;
                 var sel = addonVersionCombo.SelectedItem as string;
-                bool useLatest = string.IsNullOrEmpty(sel) || sel.StartsWith("Latest");
+                bool useLatest = string.IsNullOrEmpty(sel) || sel.StartsWith(NrLatestLabel);
 
                 // Persist the selection first (same as before)
                 _window.ViewModel.SetNrAddonVersion(gameName, useLatest ? null : sel, store);
@@ -529,7 +531,7 @@ public partial class DetailPanelBuilder
                 _window.DispatcherQueue?.TryEnqueue(() =>
                 {
                     installBtn.IsEnabled = false;
-                    installBtn.Content   = "Swapping addon...";
+                    installBtn.Content   = Loc.GetString("NeuralRendering.Status.SwappingAddon");
                 });
 
                 try
@@ -616,15 +618,15 @@ public partial class DetailPanelBuilder
 
         ToolTipService.SetToolTip(addonVersionCombo,
             effectiveMethod == NrMethodFeeder
-                ? "Version of renodx-dlss5.addon64 deployed as the neural consumer. The Feeder addon itself always uses the latest version."
-                : "Addon version to install. 'Latest' always installs the newest available and auto-updates.");
+                ? Loc.GetString("NeuralRendering.AddonVersion.Tooltip.Feeder")
+                : Loc.GetString("NeuralRendering.AddonVersion.Tooltip"));
         addonVersionStack.Children.Add(addonVersionCombo);
         Grid.SetColumn(addonVersionStack, 2);
         row1.Children.Add(addonVersionStack);
 
         // NR version combo (col 3)
         var nrVersionStack = new StackPanel { Spacing = 2 };
-        nrVersionStack.Children.Add(new TextBlock { Text = "NR DLL Version", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) });
+        nrVersionStack.Children.Add(new TextBlock { Text = Loc.GetString("NeuralRendering.NrDllVersion.Label"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) });
 
         var nrVersionCombo = new ComboBox
         {
@@ -632,7 +634,7 @@ public partial class DetailPanelBuilder
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
         };
-        ToolTipService.SetToolTip(nrVersionCombo, "NR DLL version to deploy. 'Latest' always uses the newest available. Change while installed to swap the NR DLL in-place.");
+        ToolTipService.SetToolTip(nrVersionCombo, Loc.GetString("NeuralRendering.NrDllVersion.Tooltip"));
         nrVersionStack.Children.Add(nrVersionCombo);
         Grid.SetColumn(nrVersionStack, 3);
         row1.Children.Add(nrVersionStack);
@@ -645,7 +647,7 @@ public partial class DetailPanelBuilder
             nrVersionCombo.Items.Clear();
             var versions = dlssSvc.DlssnrVersions.ToList();
             var latestVer = versions.FirstOrDefault();
-            nrVersionCombo.Items.Add(string.IsNullOrEmpty(latestVer) ? "Latest" : $"Latest ({latestVer})");
+            nrVersionCombo.Items.Add(string.IsNullOrEmpty(latestVer) ? NrLatestLabel : Loc.GetString("NeuralRendering.LatestVersionFormat", latestVer));
             foreach (var v in versions)
                 nrVersionCombo.Items.Add(v);
 
@@ -673,7 +675,7 @@ public partial class DetailPanelBuilder
         {
             if (nrComboInit || addonSwapInProgress) return;
             var sel = nrVersionCombo.SelectedItem as string;
-            bool useLatest = string.IsNullOrEmpty(sel) || sel.StartsWith("Latest");
+            bool useLatest = string.IsNullOrEmpty(sel) || sel.StartsWith(NrLatestLabel);
 
             // Persist selection
             _window.ViewModel.SetNrDllVersion(gameName, useLatest ? null : sel, store);
@@ -687,7 +689,7 @@ public partial class DetailPanelBuilder
             _window.DispatcherQueue?.TryEnqueue(() =>
             {
                 installBtn.IsEnabled = false;
-                installBtn.Content   = "Swapping NR DLL...";
+                installBtn.Content   = Loc.GetString("NeuralRendering.Status.SwappingNrDll");
             });
 
             try
@@ -843,60 +845,60 @@ public partial class DetailPanelBuilder
                            ?? methodItems.ElementAtOrDefault(methodCombo.SelectedIndex)?.Key
                            ?? effectiveMethod;
 
-            Tag(rsi ? "✓ ReShade" : "✗ ReShade", rsi);
+            Tag(rsi ? Loc.GetString("NeuralRendering.Tag.ReShade") : Loc.GetString("NeuralRendering.Tag.ReShade.Missing"), rsi);
 
             switch (selectedKey)
             {
                 case NrMethodDlss5Tool:
-                    Tag(d5i ? "✓ DLSS5 Tool" : "✗ DLSS5 Tool", d5i);
+                    Tag(d5i ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool") : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"), d5i);
                     if (card.HasDlss)
                     {
-                        Tag(srOk ? $"✓ DLSS SR {srv}" : "✗ DLSS SR", srOk);
-                        Tag(rrOk ? $"✓ DLSS RR {rrv}" : "✗ DLSS RR", rrOk);
-                        Tag(fgOk ? $"✓ DLSS FG {fgv}" : "✗ DLSS FG", fgOk);
+                        Tag(srOk ? Loc.GetString("NeuralRendering.Tag.DlssSr", srv) : Loc.GetString("NeuralRendering.Tag.DlssSr.Missing"), srOk);
+                        Tag(rrOk ? Loc.GetString("NeuralRendering.Tag.DlssRr", rrv) : Loc.GetString("NeuralRendering.Tag.DlssRr.Missing"), rrOk);
+                        Tag(fgOk ? Loc.GetString("NeuralRendering.Tag.DlssFg", fgv) : Loc.GetString("NeuralRendering.Tag.DlssFg.Missing"), fgOk);
                     }
-                    Tag(nrOk ? $"✓ NR DLL {nrv2}" : "✗ NR DLL", nrOk);
+                    Tag(nrOk ? Loc.GetString("NeuralRendering.Tag.NrDll", nrv2) : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"), nrOk);
                     break;
                 case NrMethodDlss5ToolBridge:
-                    Tag(d5i ? "✓ DLSS5 Tool" : "✗ DLSS5 Tool", d5i);
-                    Tag(bri ? "✓ DX11 Bridge" : "✗ DX11 Bridge", bri);
+                    Tag(d5i ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool") : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"), d5i);
+                    Tag(bri ? Loc.GetString("NeuralRendering.Tag.Bridge") : Loc.GetString("NeuralRendering.Tag.Bridge.Missing"), bri);
                     if (card.HasDlss)
                     {
-                        Tag(srOk ? $"✓ DLSS SR {srv}" : "✗ DLSS SR", srOk);
-                        Tag(rrOk ? $"✓ DLSS RR {rrv}" : "✗ DLSS RR", rrOk);
-                        Tag(fgOk ? $"✓ DLSS FG {fgv}" : "✗ DLSS FG", fgOk);
+                        Tag(srOk ? Loc.GetString("NeuralRendering.Tag.DlssSr", srv) : Loc.GetString("NeuralRendering.Tag.DlssSr.Missing"), srOk);
+                        Tag(rrOk ? Loc.GetString("NeuralRendering.Tag.DlssRr", rrv) : Loc.GetString("NeuralRendering.Tag.DlssRr.Missing"), rrOk);
+                        Tag(fgOk ? Loc.GetString("NeuralRendering.Tag.DlssFg", fgv) : Loc.GetString("NeuralRendering.Tag.DlssFg.Missing"), fgOk);
                     }
-                    Tag(nrOk ? $"✓ NR DLL {nrv2}" : "✗ NR DLL", nrOk);
+                    Tag(nrOk ? Loc.GetString("NeuralRendering.Tag.NrDll", nrv2) : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"), nrOk);
                     break;
                 case NrMethodShortFuse:
-                    Tag(sfi    ? "✓ ShortFuse DLSS Tool"  : "✗ ShortFuse DLSS Tool", sfi);
-                    Tag(srOk   ? $"✓ DLSS SR {srv}"   : "✗ DLSS SR",  srOk);
-                    Tag(rrOk   ? $"✓ DLSS RR {rrv}"   : "✗ DLSS RR", rrOk);
-                    Tag(fgOk   ? $"✓ DLSS FG {fgv}"   : "✗ DLSS FG", fgOk);
-                    Tag(nrOk   ? $"✓ NR DLL {nrv2}"   : "✗ NR DLL",  nrOk);
-                    Tag(ualOk  ? $"✓ ASI Loader ({ualName})" : "✗ ASI Loader", ualOk);
+                    Tag(sfi    ? Loc.GetString("NeuralRendering.Tag.ShortFuse")  : Loc.GetString("NeuralRendering.Tag.ShortFuse.Missing"), sfi);
+                    Tag(srOk   ? Loc.GetString("NeuralRendering.Tag.DlssSr", srv)   : Loc.GetString("NeuralRendering.Tag.DlssSr.Missing"),  srOk);
+                    Tag(rrOk   ? Loc.GetString("NeuralRendering.Tag.DlssRr", rrv)   : Loc.GetString("NeuralRendering.Tag.DlssRr.Missing"), rrOk);
+                    Tag(fgOk   ? Loc.GetString("NeuralRendering.Tag.DlssFg", fgv)   : Loc.GetString("NeuralRendering.Tag.DlssFg.Missing"), fgOk);
+                    Tag(nrOk   ? Loc.GetString("NeuralRendering.Tag.NrDll", nrv2)   : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"),  nrOk);
+                    Tag(ualOk  ? Loc.GetString("NeuralRendering.Tag.AsiLoader", ualName) : Loc.GetString("NeuralRendering.Tag.AsiLoader.Missing"), ualOk);
                     break;
                 case NrMethodFeeder:
-                    Tag(fei   ? "✓ Feeder Addon"            : "✗ Feeder Addon",  fei);
+                    Tag(fei   ? Loc.GetString("NeuralRendering.Tag.FeederAddon")            : Loc.GetString("NeuralRendering.Tag.FeederAddon.Missing"),  fei);
                     // For 32-bit games DLSS5 Tool lives in host64\ — label accordingly
                     if (card.Is32Bit)
                     {
-                        Tag(d5i   ? "✓ DLSS5 Tool (host64)"   : "✗ DLSS5 Tool (host64)", d5i);
-                        Tag(hostExeOk ? "✓ host64.exe"         : "✗ host64.exe",           hostExeOk);
+                        Tag(d5i   ? Loc.GetString("NeuralRendering.Tag.Dlss5ToolHost64")   : Loc.GetString("NeuralRendering.Tag.Dlss5ToolHost64.Missing"), d5i);
+                        Tag(hostExeOk ? Loc.GetString("NeuralRendering.Tag.Host64Exe")         : Loc.GetString("NeuralRendering.Tag.Host64Exe.Missing"),           hostExeOk);
                     }
                     else
                     {
-                        Tag(d5i   ? "✓ DLSS5 Tool"             : "✗ DLSS5 Tool",    d5i);
+                        Tag(d5i   ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool")             : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"),    d5i);
                     }
-                    Tag(dlssi ? $"✓ DLSS SR {dlssv}"        : "✗ DLSS SR",       dlssi);
-                    Tag(nri   ? $"✓ NR DLL {nrv}"           : "✗ NR DLL",        nri);
-                    Tag(feedFxPresent    ? "✓ Feed.fx"    : "✗ Feed.fx",    feedFxPresent);
-                    Tag(lumeniteFxPresent ? "✓ LumeniteFX" : "✗ LumeniteFX", lumeniteFxPresent);
+                    Tag(dlssi ? Loc.GetString("NeuralRendering.Tag.DlssSr", dlssv)        : Loc.GetString("NeuralRendering.Tag.DlssSr.Missing"),       dlssi);
+                    Tag(nri   ? Loc.GetString("NeuralRendering.Tag.NrDll", nrv)           : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"),        nri);
+                    Tag(feedFxPresent    ? Loc.GetString("NeuralRendering.Tag.FeedFx")    : Loc.GetString("NeuralRendering.Tag.FeedFx.Missing"),    feedFxPresent);
+                    Tag(lumeniteFxPresent ? Loc.GetString("NeuralRendering.Tag.LumeniteFx") : Loc.GetString("NeuralRendering.Tag.LumeniteFx.Missing"), lumeniteFxPresent);
                     if (isDx9Feeder)
-                        Tag(dgVoodooOk ? "✓ dgVoodoo2" : "✗ dgVoodoo2", dgVoodooOk);
+                        Tag(dgVoodooOk ? Loc.GetString("NeuralRendering.Tag.DgVoodoo2") : Loc.GetString("NeuralRendering.Tag.DgVoodoo2.Missing"), dgVoodooOk);
                     break;
                 default:
-                    Tag("Not installed", false);
+                    Tag(Loc.GetString("Status.NotInstalled"), false);
                     break;
             }
         }
@@ -935,26 +937,26 @@ public partial class DetailPanelBuilder
             {
                 case NrMethodDlss5Tool:
                     descText.Text = hasDlss
-                        ? "For DX12 games with native DLSS. Deploys the DLSS5 Tool ReShade addon and nvngx_dlssnr.dll. Lighter alternative to ShortFuse DLSS Tool when you don't need the full Streamline stack."
-                        : "For DX12 games with native DLSS. This game has no detected DLSS — consider ShortFuse DLSS Tool instead.";
-                    descLink.Content = "DLSS5 Tool info →";
+                        ? Loc.GetString("NeuralRendering.Description.Dlss5Tool")
+                        : Loc.GetString("NeuralRendering.Description.Dlss5Tool.NoDlss");
+                    descLink.Content = Loc.GetString("NeuralRendering.Link.Dlss5ToolInfo");
                     descLink.NavigateUri = new Uri("https://discord.com/channels/1408098019194310818/1543802634991968366");
                     break;
                 case NrMethodDlss5ToolBridge:
-                    descText.Text = "For DX11 and Vulkan games with native DLSS. The bridge mirrors the game's DLSS onto a private DX12 session so the NR addon can hook it.";
-                    descLink.Content = "DX11 Bridge info →";
+                    descText.Text = Loc.GetString("NeuralRendering.Description.Dlss5ToolBridge");
+                    descLink.Content = Loc.GetString("NeuralRendering.Link.BridgeInfo");
                     descLink.NavigateUri = new Uri("https://github.com/NIGos/dlss5-bridge");
                     break;
                 case NrMethodShortFuse:
-                    descText.Text = "Recommended for most games with native DLSS. Deploys the full DLSS SR/RR/FG/NR stack and Streamline alongside the ReShade addon. Supports DX12, DX11, DX9, and Vulkan.";
-                    descLink.Content = "ShortFuse DLSS Tool info →";
+                    descText.Text = Loc.GetString("NeuralRendering.Description.ShortFuse");
+                    descLink.Content = Loc.GetString("NeuralRendering.Link.ShortFuseInfo");
                     descLink.NavigateUri = new Uri("https://discord.com/channels/1408098019194310818/1543975158937821315");
                     break;
                 case NrMethodFeeder:
                     descText.Text = is32Bit
-                        ? "For 32-bit games. Feeds a synthetic DLSS contract from ReShade depth and motion vectors. Deploys the Feeder addon, DLSS5 Tool (neural consumer), NR DLL, DLSS SR DLL, and the required shaders (DLSS5_Feed.fx + LumeniteFX)."
-                        : "For games with no native DLSS (DX11, DX12, Vulkan, OpenGL). Feeds a synthetic DLSS contract from ReShade depth and motion vectors. Deploys the Feeder addon, DLSS5 Tool (neural consumer), NR DLL, DLSS SR DLL, and required shaders.";
-                    descLink.Content = "Feeder setup guide →";
+                        ? Loc.GetString("NeuralRendering.Description.Feeder32")
+                        : Loc.GetString("NeuralRendering.Description.Feeder");
+                    descLink.Content = Loc.GetString("NeuralRendering.Link.FeederGuide");
                     descLink.NavigateUri = new Uri("https://github.com/jlrouzies-fr/DLSS5-Feeder");
                     break;
             }
@@ -979,7 +981,7 @@ public partial class DetailPanelBuilder
 
         var removeBtn = new Button
         {
-            Content = "Remove",
+            Content = Loc.GetString("Dialog.Remove"),
             FontSize = 12,
             Height = 34,
             CornerRadius = new CornerRadius(8),
@@ -1002,7 +1004,7 @@ public partial class DetailPanelBuilder
             Content = new TextBlock { Text = "⚙", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center },
             Visibility = effectiveMethod == NrMethodShortFuse ? Visibility.Visible : Visibility.Collapsed,
         };
-        ToolTipService.SetToolTip(sfCogBtn, "ShortFuse DLSS Tool settings — auto-configure ReShade for FrameGen");
+        ToolTipService.SetToolTip(sfCogBtn, Loc.GetString("NeuralRendering.SfCog.Tooltip"));
         sfCogBtn.Click += async (s, e) =>
         {
             bool currentEnabled = _window.ViewModel.GetSfAutoConfigEnabled(gameName, store);
@@ -1011,7 +1013,7 @@ public partial class DetailPanelBuilder
             var toggleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
             var togLabel = new TextBlock
             {
-                Text = "Auto-configure ReShade for FrameGen",
+                Text = Loc.GetString("NeuralRendering.SfSettings.AutoConfig"),
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -1019,8 +1021,8 @@ public partial class DetailPanelBuilder
             var tog = new ToggleSwitch
             {
                 IsOn = currentEnabled,
-                OnContent = "On",
-                OffContent = "Off",
+                OnContent = LocOpt.T("On"),
+                OffContent = LocOpt.T("Off"),
                 VerticalAlignment = VerticalAlignment.Center,
                 MinWidth = 0,
             };
@@ -1029,12 +1031,7 @@ public partial class DetailPanelBuilder
 
             var desc = new TextBlock
             {
-                Text = "When On, RHI will automatically configure ReShade when installing ShortFuse DLSS Tool:\n" +
-                       "• Rename ReShade to Reshade64.asi\n" +
-                       "• Install ASI Loader (winmm → version → dinput8)\n" +
-                       "• Write HookStreamline=1 and HookDirectX=1 to reshade.ini\n\n" +
-                       "These steps are needed for FrameGen to work correctly after ReShade.\n\n" +
-                       "Note: no longer required on ShortFuse DLSS Tool v0.54 and above.",
+                Text = Loc.GetString("NeuralRendering.SfSettings.Description"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
                 TextWrapping = TextWrapping.Wrap,
@@ -1049,10 +1046,10 @@ public partial class DetailPanelBuilder
 
             var dlg = new ContentDialog
             {
-                Title = "ShortFuse DLSS Tool Settings",
+                Title = Loc.GetString("NeuralRendering.SfSettings.Title"),
                 Content = content,
-                PrimaryButtonText = "Save",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Dialog.Save"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = _window.Content.XamlRoot,
             };
             var result = await DialogService.ShowSafeAsync(dlg);
@@ -1080,21 +1077,21 @@ public partial class DetailPanelBuilder
             // Install button appearance
             if (isFeeder)
             {
-                installBtn.Content = "Install Feeder Addon";
+                installBtn.Content = Loc.GetString("NeuralRendering.Button.InstallFeeder");
                 installBtn.Background  = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush);
                 installBtn.Foreground  = UIFactory.Brush(ResourceKeys.AccentBlueBrush);
                 installBtn.BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush);
             }
             else if (anyInstalled)
             {
-                installBtn.Content = "Reinstall";
+                installBtn.Content = Loc.GetString("NeuralRendering.Button.Reinstall");
                 installBtn.Background  = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
                 installBtn.Foreground  = UIFactory.Brush(ResourceKeys.TextSecondaryBrush);
                 installBtn.BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush);
             }
             else
             {
-                installBtn.Content = "Install Neural Rendering";
+                installBtn.Content = Loc.GetString("NeuralRendering.Button.InstallNeuralRendering");
                 installBtn.Background  = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush);
                 installBtn.Foreground  = UIFactory.Brush(ResourceKeys.AccentBlueBrush);
                 installBtn.BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush);
@@ -1109,25 +1106,25 @@ public partial class DetailPanelBuilder
             // Pack version column (Feeder/Bridge only)
             bool showPackVersion = selKey == NrMethodFeeder || selKey == NrMethodDlss5ToolBridge;
             packVersionStack.Visibility = showPackVersion ? Visibility.Visible : Visibility.Collapsed;
-            packVersionLabel.Text = selKey == NrMethodFeeder ? "Feeder Version" : "Bridge Version";
+            packVersionLabel.Text = selKey == NrMethodFeeder ? Loc.GetString("NeuralRendering.PackVersion.FeederLabel") : Loc.GetString("NeuralRendering.PackVersion.BridgeLabel");
             if (showPackVersion)
             {
                 PopulatePackVersionCombo(selKey);
                 ToolTipService.SetToolTip(packVersionStack,
                     selKey == NrMethodFeeder
-                        ? "Version of dlss5-feed.addon64 to install."
-                        : "Version of dlss5-bridge.addon64 to install.");
+                        ? Loc.GetString("NeuralRendering.PackVersion.Tooltip.Feeder")
+                        : Loc.GetString("NeuralRendering.PackVersion.Tooltip.Bridge"));
             }
 
             // DLSS5 Tool / SF version label
-            addonVersionLabel.Text = selKey == NrMethodShortFuse ? "SF Version" : "DLSS5 Tool Version";
+            addonVersionLabel.Text = selKey == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel") : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
 
             // Addon version combo — enabled always (swap-in-place supported while installed)
             addonVersionStack.Opacity   = 1.0;
             addonVersionCombo.IsEnabled = true;
             ToolTipService.SetToolTip(addonVersionStack, selKey == NrMethodFeeder
-                ? "Version of renodx-dlss5.addon64 deployed as the neural consumer. Changing while installed swaps the file in-place."
-                : "Addon version to install. Changing while installed swaps the file in-place without a full reinstall.");
+                ? Loc.GetString("NeuralRendering.AddonVersion.Tooltip.Installed.Feeder")
+                : Loc.GetString("NeuralRendering.AddonVersion.Tooltip.Installed"));
 
             // Pack version combo — enabled always when visible (swap-in-place supported while installed)
             packVersionStack.Opacity   = showPackVersion ? 1.0 : 0.4;
@@ -1178,7 +1175,7 @@ public partial class DetailPanelBuilder
             methodCombo.IsEnabled  = false;
             installBtn.IsEnabled   = false;
             removeBtn.IsEnabled    = false;
-            installBtn.Content     = "Removing...";
+            installBtn.Content     = Loc.GetString("NeuralRendering.Status.Removing");
 
             try
             {
@@ -1277,7 +1274,7 @@ public partial class DetailPanelBuilder
         {
             installBtn.IsEnabled = false;
             removeBtn.IsEnabled  = false;
-            installBtn.Content   = "Installing...";
+            installBtn.Content   = Loc.GetString("Status.Installing");
 
             var selKey = (methodCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? effectiveMethod;
 
@@ -1303,7 +1300,7 @@ public partial class DetailPanelBuilder
                 // Ensure ReShade is installed first — all NR methods require it
                 if (!card.IsRsInstalled)
                 {
-                    _window.DispatcherQueue?.TryEnqueue(() => installBtn.Content = "Installing ReShade...");
+                    _window.DispatcherQueue?.TryEnqueue(() => installBtn.Content = Loc.GetString("NeuralRendering.Status.InstallingReShade"));
 
                     // For DX9 Feeder: dgVoodoo2 will own d3d9.dll, so ReShade must be dxgi.dll.
                     // Call InstallReShadeInternalAsync directly with the forced filename instead of
@@ -1325,7 +1322,7 @@ public partial class DetailPanelBuilder
                     && card.RsRecord?.InstalledAs?.Equals("d3d9.dll", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     // ReShade already installed as d3d9.dll (wrong for dgVoodoo) — reinstall as dxgi.dll
-                    _window.DispatcherQueue?.TryEnqueue(() => installBtn.Content = "Fixing ReShade filename...");
+                    _window.DispatcherQueue?.TryEnqueue(() => installBtn.Content = Loc.GetString("NeuralRendering.Status.FixingReShadeFilename"));
                     await _window.ViewModel.InstallReShadeInternalAsync(card, "dxgi.dll").ConfigureAwait(false);
                     await Task.Delay(300).ConfigureAwait(false);
                 }
@@ -1396,7 +1393,7 @@ public partial class DetailPanelBuilder
             catch (Exception ex)
             {
                 CrashReporter.Log($"[NeuralRendering.Install] Failed for '{gameName}' — {ex.Message}");
-                _window.DispatcherQueue?.TryEnqueue(() => installBtn.Content = "Install failed");
+                _window.DispatcherQueue?.TryEnqueue(() => installBtn.Content = Loc.GetString("NeuralRendering.Status.InstallFailed"));
             }
             finally
             {
@@ -1414,7 +1411,7 @@ public partial class DetailPanelBuilder
                     RefreshStatus();
                     // Persist NR DLL version selection
                     var nrSel = nrVersionCombo.SelectedItem as string;
-                    _window.ViewModel.SetNrDllVersion(gameName, (string.IsNullOrEmpty(nrSel) || nrSel.StartsWith("Latest")) ? null : nrSel, store);
+                    _window.ViewModel.SetNrDllVersion(gameName, (string.IsNullOrEmpty(nrSel) || nrSel.StartsWith(NrLatestLabel)) ? null : nrSel, store);
                     // Rebuild the full overrides panel so shader mode combo + NR section both refresh
                     var targetCard = _window.ViewModel.AllCards.FirstOrDefault(c =>
                         c.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) &&
@@ -1578,33 +1575,31 @@ public partial class DetailPanelBuilder
             Margin = new Thickness(0, 4, 0, 0) };
         var costScalerLabel = new TextBlock
         {
-            Text = "NR Cost Scaler",
+            Text = Loc.GetString("NeuralRendering.CostScaler.Label"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(costScalerLabel,
-            "When On, installing a Neural Rendering method will also deploy the DLSS NR Cost Scaler proxy. " +
-            "Runs the neural model at reduced resolution (default 75%) for significant GPU savings while keeping native detail.");
+        ToolTipService.SetToolTip(costScalerLabel, Loc.GetString("NeuralRendering.CostScaler.Tooltip"));
         var costScalerToggle = new ToggleSwitch
         {
             IsOn = costScalerPref,
-            OnContent = "On", OffContent = "Off",
+            OnContent = LocOpt.T("On"), OffContent = LocOpt.T("Off"),
             VerticalAlignment = VerticalAlignment.Center,
             MinWidth = 0,
             IsEnabled = costScalerToggleEnabled,
             Opacity = costScalerToggleEnabled ? 1.0 : 0.45,
         };
         if (!costScalerSvc.IsStagingReady)
-            ToolTipService.SetToolTip(costScalerToggle, "Cost Scaler not yet staged — will be available after first launch");
+            ToolTipService.SetToolTip(costScalerToggle, Loc.GetString("NeuralRendering.CostScaler.NotStaged"));
         else if (nrMethodInstalled)
-            ToolTipService.SetToolTip(costScalerToggle, "Remove the installed NR method first, then toggle Cost Scaler On before reinstalling");
+            ToolTipService.SetToolTip(costScalerToggle, Loc.GetString("NeuralRendering.CostScaler.RemoveFirst"));
 
         // Installed indicator
         bool costScalerInstalled = DlssNrCostScalerService.IsInstalled(installPath);
         var costScalerStatus = new TextBlock
         {
-            Text = costScalerInstalled ? "Installed" : "",
+            Text = costScalerInstalled ? Loc.GetString("Status.Installed") : "",
             FontSize = 11,
             Foreground = UIFactory.GetBrush("#5ECB7D"),
             VerticalAlignment = VerticalAlignment.Center,
@@ -1627,7 +1622,7 @@ public partial class DetailPanelBuilder
             costScalerRow.Children.Add(new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(4, 0, 4, 0) });
             costScalerRow.Children.Add(new TextBlock
             {
-                Text = "ZZZ Load Order",
+                Text = Loc.GetString("NeuralRendering.Zzz.Label"),
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -1635,13 +1630,11 @@ public partial class DetailPanelBuilder
             var zzzToggle = new ToggleSwitch
             {
                 IsOn = sfZzzPref,
-                OnContent = "On", OffContent = "Off",
+                OnContent = LocOpt.T("On"), OffContent = LocOpt.T("Off"),
                 VerticalAlignment = VerticalAlignment.Center,
                 MinWidth = 0,
             };
-            ToolTipService.SetToolTip(zzzToggle,
-                "When On, the ShortFuse addon is deployed as zzz_renodx-dlss.addon64 so it loads last in the ReShade addon order. " +
-                "Required for some games where other addons must initialise before the DLSS Tool.");
+            ToolTipService.SetToolTip(zzzToggle, Loc.GetString("NeuralRendering.Zzz.Tooltip"));
             zzzToggle.Toggled += (s, ev) =>
             {
                 bool newVal = zzzToggle.IsOn;
@@ -1670,7 +1663,7 @@ public partial class DetailPanelBuilder
 
             nrBody.Children.Add(new TextBlock
             {
-                Text = "Cost Scaler is built into the ShortFuse addon — this toggle is no longer required but remains available if you prefer the standalone version.",
+                Text = Loc.GetString("NeuralRendering.Zzz.Note"),
                 FontSize = 10,
                 Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
                 TextWrapping = TextWrapping.Wrap,
@@ -1689,10 +1682,10 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
             Padding = new Thickness(0),
         };
-        linksRow.Children.Add(MakeLink("DLSS5 Tool →",  "https://discord.com/channels/1408098019194310818/1543802634991968366"));
-        linksRow.Children.Add(MakeLink("DX11 Bridge →", "https://github.com/NIGos/dlss5-bridge"));
-        linksRow.Children.Add(MakeLink("ShortFuse →",   "https://discord.com/channels/1408098019194310818/1543975158937821315"));
-        linksRow.Children.Add(MakeLink("Feeder →",      "https://github.com/jlrouzies-fr/DLSS5-Feeder"));
+        linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Dlss5Tool"),  "https://discord.com/channels/1408098019194310818/1543802634991968366"));
+        linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Bridge"), "https://github.com/NIGos/dlss5-bridge"));
+        linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.ShortFuse"),   "https://discord.com/channels/1408098019194310818/1543975158937821315"));
+        linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Feeder"),      "https://github.com/jlrouzies-fr/DLSS5-Feeder"));
         nrBody.Children.Add(linksRow);
     }
 
@@ -1714,13 +1707,13 @@ public partial class DetailPanelBuilder
         // Resolve requested addon version
         var requestedVersion = await DispatchAsync<string?>(_window.DispatcherQueue!,
             () => addonVersionCombo.SelectedItem as string).ConfigureAwait(false);
-        bool useLatest = string.IsNullOrEmpty(requestedVersion) || requestedVersion.StartsWith("Latest");
+        bool useLatest = string.IsNullOrEmpty(requestedVersion) || requestedVersion.StartsWith(NrLatestLabel);
 
         string addonSourcePath;
         if (useLatest)
         {
             // Use the flat staging file (latest) — same as before
-            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Staging DLSS5 Tool...");
+            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.StagingDlss5Tool"));
             await rdx5Svc.EnsureStagingAsync().ConfigureAwait(false);
             if (!rdx5Svc.IsStagingReady)
                 throw new InvalidOperationException("DLSS5 Tool staging not ready");
@@ -1731,7 +1724,7 @@ public partial class DetailPanelBuilder
         else
         {
             // Ensure the specific version is staged
-            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = $"Staging DLSS5 Tool v{requestedVersion}...");
+            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.StagingDlss5ToolVersion", requestedVersion));
             var staged = await rdx5Svc.EnsureVersionStagedAsync("dlss5tool", requestedVersion!).ConfigureAwait(false);
             if (!staged)
             {
@@ -1761,7 +1754,7 @@ public partial class DetailPanelBuilder
         }).ConfigureAwait(false);
 
         // Upgrade all DLSS DLLs to latest (SR/RR/FG + NR)
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Upgrading DLSS DLLs...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.UpgradingDlssDlls"));
         await UpgradeDlssDllsAsync(card, dlssSvc, nrVersionCombo).ConfigureAwait(false);
 
         // Append the addon file to the Dlss5Tool component record (DLLs recorded in UpgradeDlssDllsAsync)
@@ -1793,7 +1786,7 @@ public partial class DetailPanelBuilder
                 () => nrVersionCombo.SelectedItem as string).ConfigureAwait(false);
         }
         string? cachedNr;
-        if (string.IsNullOrEmpty(nrSelectedVersion) || nrSelectedVersion == "Latest")
+        if (string.IsNullOrEmpty(nrSelectedVersion) || nrSelectedVersion == NrLatestLabel)
             cachedNr = await dlssSvc.EnsureNewestDlssnrCachedAsync().ConfigureAwait(false);
         else
         {
@@ -1960,9 +1953,9 @@ public partial class DetailPanelBuilder
             requestedBridgeVersion = await DispatchAsync<string?>(_window.DispatcherQueue!,
                 () => packVersionCombo.SelectedItem as string).ConfigureAwait(false);
         }
-        bool useLatestBridge = string.IsNullOrEmpty(requestedBridgeVersion) || requestedBridgeVersion.StartsWith("Latest");
+        bool useLatestBridge = string.IsNullOrEmpty(requestedBridgeVersion) || requestedBridgeVersion.StartsWith(NrLatestLabel);
 
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Downloading DX11 Bridge...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DownloadingBridge"));
 
         // Resolve Bridge staged path — versioned or latest via AddonPackService
         string? bridgeSourcePath = null;
@@ -1996,7 +1989,7 @@ public partial class DetailPanelBuilder
         }
 
         // Deploy — Bridge goes in the game root (next to ReShade / exe), not reshade-addons
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying DX11 Bridge...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingBridge"));
         await Task.Run(() =>
         {
             if (bridgeSourcePath == null || !File.Exists(bridgeSourcePath))
@@ -2025,12 +2018,12 @@ public partial class DetailPanelBuilder
         // Resolve requested addon version
         var requestedVersion = await DispatchAsync<string?>(_window.DispatcherQueue!,
             () => addonVersionCombo.SelectedItem as string).ConfigureAwait(false);
-        bool useLatest = string.IsNullOrEmpty(requestedVersion) || requestedVersion.StartsWith("Latest");
+        bool useLatest = string.IsNullOrEmpty(requestedVersion) || requestedVersion.StartsWith(NrLatestLabel);
 
         string sfSourcePath;
         if (useLatest)
         {
-            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Staging ShortFuse...");
+            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.StagingShortFuse"));
             await rdx5Svc.EnsureSfStagingAsync().ConfigureAwait(false);
             if (!rdx5Svc.IsSfStagingReady)
                 throw new InvalidOperationException("ShortFuse staging not ready");
@@ -2039,7 +2032,7 @@ public partial class DetailPanelBuilder
         }
         else
         {
-            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = $"Staging ShortFuse v{requestedVersion}...");
+            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.StagingShortFuseVersion", requestedVersion));
             var staged = await rdx5Svc.EnsureVersionStagedAsync("dlsstool", requestedVersion!).ConfigureAwait(false);
             if (!staged)
             {
@@ -2057,7 +2050,7 @@ public partial class DetailPanelBuilder
             }
         }
 
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Installing DLSS stack...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.InstallingDlssStack"));
 
         // Deploy the SF addon from the resolved source path
         try
@@ -2089,10 +2082,10 @@ public partial class DetailPanelBuilder
         await rdx5Svc.InstallSfDllsOnlyAsync(installPath, detection.HasAny ? detection : null).ConfigureAwait(false);
 
         // Deploy NR DLL at requested version (or latest)
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying NR DLL...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingNrDll"));
         var nrSelectedVersion = await DispatchAsync<string?>(_window.DispatcherQueue!,
             () => nrVersionCombo.SelectedItem as string).ConfigureAwait(false);
-        bool nrUseLatest = string.IsNullOrEmpty(nrSelectedVersion) || nrSelectedVersion.StartsWith("Latest");
+        bool nrUseLatest = string.IsNullOrEmpty(nrSelectedVersion) || nrSelectedVersion.StartsWith(NrLatestLabel);
         var nrDestPath = Path.Combine(installPath, "nvngx_dlssnr.dll");
         try
         {
@@ -2139,7 +2132,7 @@ public partial class DetailPanelBuilder
         // Apply auto-config (rename ReShade, install UAL, write reshade.ini [INSTALL] keys)
         if (_window.ViewModel.GetSfAutoConfigEnabled(card.GameName, card.Source ?? ""))
         {
-            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Configuring ReShade...");
+            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.ConfiguringReshade"));
             await _window.ViewModel.ApplySfAutoConfigAsync(card).ConfigureAwait(false);
         }
     }
@@ -2261,7 +2254,7 @@ public partial class DetailPanelBuilder
             requestedFeederVersion = await DispatchAsync<string?>(_window.DispatcherQueue!,
                 () => packVersionCombo.SelectedItem as string).ConfigureAwait(false);
         }
-        bool useLatestFeeder = string.IsNullOrEmpty(requestedFeederVersion) || requestedFeederVersion.StartsWith("Latest");
+        bool useLatestFeeder = string.IsNullOrEmpty(requestedFeederVersion) || requestedFeederVersion.StartsWith(NrLatestLabel);
 
         // Resolve requested DLSS5 Tool version (neural consumer) — Latest or pinned
         string? requestedVersion = null;
@@ -2270,9 +2263,9 @@ public partial class DetailPanelBuilder
             requestedVersion = await DispatchAsync<string?>(_window.DispatcherQueue!,
                 () => addonVersionCombo.SelectedItem as string).ConfigureAwait(false);
         }
-        bool useLatestConsumer = string.IsNullOrEmpty(requestedVersion) || requestedVersion.StartsWith("Latest");
+        bool useLatestConsumer = string.IsNullOrEmpty(requestedVersion) || requestedVersion.StartsWith(NrLatestLabel);
 
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Downloading Feeder...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DownloadingFeeder"));
 
         // Resolve Feeder staged path — versioned or latest via AddonPackService
         string? feederSourcePath = null;
@@ -2309,7 +2302,7 @@ public partial class DetailPanelBuilder
             _window.ViewModel.SetNrPackVersion(gameName, null, store); // clear version pin — using latest
         }
 
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying Feeder...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingFeeder"));
         await Task.Run(() =>
         {
             if (feederSourcePath == null || !File.Exists(feederSourcePath))
@@ -2329,7 +2322,7 @@ public partial class DetailPanelBuilder
         // Deploy DLSS5 Tool as neural consumer (Feeder needs renodx-dlss5.addon64 alongside it)
         // For 32-bit games the neural consumer runs in host64\ — it must NOT be in the game folder
         // (32-bit ReShade cannot load .addon64 files).
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying DLSS5 Tool...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingDlss5Tool"));
 
         // Resolve the source path for the neural consumer — versioned or latest
         string? consumerSourcePath = null;
@@ -2369,7 +2362,7 @@ public partial class DetailPanelBuilder
         }
 
         // Deploy newest nvngx_dlss.dll — required by Feeder beside the game exe (install root, not detected plugin path)
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying DLSS SR...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingDlssSr"));
         var cachedDlss = await _dlssStreamlineService.EnsureNewestDlssCachedAsync().ConfigureAwait(false);
         if (cachedDlss != null && new FileInfo(cachedDlss).Length > 0)
         {
@@ -2391,7 +2384,7 @@ public partial class DetailPanelBuilder
         // DLSS5_Feed.fx is seeded from the Feeder addon zip into the DLSS5Feeder staging folder.
         // LumeniteFX is downloaded via the pack system.
         // We do NOT call EnsurePacksAsync for DLSS5Feeder — its URL is a dead fallback that 404s.
-        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying shaders...");
+        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingShaders"));
         try
         {
             // Ensure LumeniteFX is staged (DLSS5Feeder is self-contained — no download needed)
@@ -2443,7 +2436,7 @@ public partial class DetailPanelBuilder
                     // No zip available locally — force re-download the Feeder addon so the zip
                     // is fetched fresh and DLSS5_Feed.fx is extracted from it.
                     CrashReporter.Log("[NeuralRendering] DLSS5_Feed.fx missing and no zip found — re-downloading Feeder addon to seed it");
-                    _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Downloading Feed.fx...");
+                    _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DownloadingFeedFx"));
                     var feederEntry = addonSvc.AvailablePacks.FirstOrDefault(p =>
                         p.PackageName.Equals(FeederPackageName, StringComparison.OrdinalIgnoreCase));
                     if (feederEntry != null)
@@ -2639,7 +2632,7 @@ public partial class DetailPanelBuilder
             var manifest = _window.ViewModel.Manifest;
             if (manifest?.DgVoodooVersions?.Count > 0)
             {
-                _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Deploying dgVoodoo2...");
+                _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DeployingDgVoodoo2"));
                 try
                 {
                     var dgSvc = App.Services.GetRequiredService<DgVoodooService>();
@@ -2651,7 +2644,7 @@ public partial class DetailPanelBuilder
                     else
                     {
                         CrashReporter.Log($"[NeuralRendering] dgVoodoo2 deploy returned no files for '{card.GameName}' — Windows Defender may be blocking the zip. Add %LocalAppData%\\RHI\\dgvoodoo\\ to Defender exclusions.");
-                        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "⚠ dgVoodoo2 blocked by Defender");
+                        _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.DgVoodoo2Blocked"));
                     }
                 }
                 catch (Exception dgEx)
@@ -2667,7 +2660,7 @@ public partial class DetailPanelBuilder
         // Note: NOT gated on isDx9 — host64 is needed for all 32-bit Feeder installs
         if (card.Is32Bit)
         {
-                _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Setting up host64\\...");
+                _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.SettingUpHost64"));
                 await Task.Run(async () =>
                 {
                     try

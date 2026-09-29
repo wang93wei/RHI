@@ -598,7 +598,7 @@ public sealed partial class MainWindow
         // "Components" header text (real TextBlock, not skeleton — matches real layout)
         tableContent.Children.Add(new TextBlock
         {
-            Text = Loc.GetString("Detail.Components"),
+            Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Detail.Components"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
@@ -803,7 +803,7 @@ public sealed partial class MainWindow
         // "Overrides" header text
         overridesContent.Children.Add(new TextBlock
         {
-            Text = Loc.GetString("Dialog.Overrides"),
+            Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Dialog.Overrides"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
@@ -915,7 +915,7 @@ public sealed partial class MainWindow
         // "Manage" header text
         manageContent.Children.Add(new TextBlock
         {
-            Text = Loc.GetString("Dialog.Manage"),
+            Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Dialog.Manage"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),

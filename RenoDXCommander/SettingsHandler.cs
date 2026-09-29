@@ -688,8 +688,8 @@ public class SettingsHandler
         {
             await DialogService.ShowSafeAsync(new ContentDialog
             {
-                Title = "Admin Mode",
-                Content = "UAC is disabled on this system — RHI always runs as administrator.",
+                Title = Loc.GetString("Xaml.AdminMode"),
+                Content = Loc.GetString("Dialog.AdminMode.UacDisabled"),
                 CloseButtonText = "OK",
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
@@ -885,8 +885,8 @@ public class SettingsHandler
             {
                 await DialogService.ShowSafeAsync(new ContentDialog
                 {
-                    Title = "Game Data Copied",
-                    Content = $"Data for {ViewModel.AllCards.Count} games has been gathered and copied to your clipboard. Paste directly into Discord to share.",
+                    Title = Loc.GetString("Dialog.GameDataCopied.Title"),
+                    Content = Loc.GetString("Dialog.GameDataCopied.Content", ViewModel.AllCards.Count),
                     CloseButtonText = "OK",
                     XamlRoot = fe.XamlRoot,
                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
@@ -1775,7 +1775,7 @@ public class SettingsHandler
         var refCheck = new CheckBox { Content = Loc.GetString("Detail.REFramework"), IsChecked = !settings.GlobalSkipRefUpdates, FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), Margin = new Thickness(0, 4, 0, 4) };
 
         var checkPanel = new StackPanel { Spacing = 0 };
-        checkPanel.Children.Add(new TextBlock { Text = "Include components in Update All globally:", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 0, 0, 8) });
+        checkPanel.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.IncludeComponentsInUpdateAll"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 0, 0, 8) });
         checkPanel.Children.Add(rsCheck);
         checkPanel.Children.Add(rdxCheck);
         checkPanel.Children.Add(ulCheck);

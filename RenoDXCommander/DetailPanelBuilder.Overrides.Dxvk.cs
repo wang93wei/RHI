@@ -37,7 +37,7 @@ public partial class DetailPanelBuilder
         };
         var mgmtTitle = new TextBlock
         {
-            Text       = "Management",
+            Text       = Loc.GetString("Xaml.Management"),
             FontSize   = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
