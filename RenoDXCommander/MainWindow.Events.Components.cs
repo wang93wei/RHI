@@ -669,7 +669,7 @@ public sealed partial class MainWindow
 
             var hdrLabel = new TextBlock
             {
-                Text = "HDR Settings",
+                Text = "Engine.ini HDR",
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
