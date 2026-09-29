@@ -53,9 +53,8 @@ public partial class DlssStreamlineService
         {
             result.StreamlineVersion = GetFileVersion(result.StreamlineInterposerPath);
 
-            // If the interposer is an older version than another DLL in the same folder
-            // (e.g. 2.12.128 interposer bundled in a 2.12.129 release), use the highest-versioned
-            // DLL as the display version instead.
+            // If sl.common.dll is an older version than another DLL in the same folder,
+            // use the highest-versioned DLL as the display version instead.
             if (result.StreamlineFolder != null)
             {
                 var bestPath = GetHighestVersionedSlDll(result.StreamlineFolder);
@@ -66,14 +65,14 @@ public partial class DlssStreamlineService
                     {
                         result.StreamlineVersion = bestVersion;
                         result.StreamlineInterposerPath = bestPath;
-                        CrashReporter.Log($"[DlssStreamlineService.Detect] Interposer older than {Path.GetFileName(bestPath)} ({bestVersion}) — using higher version for display");
+                        CrashReporter.Log($"[DlssStreamlineService.Detect] sl.common.dll older than {Path.GetFileName(bestPath)} ({bestVersion}) — using higher version for display");
                     }
                 }
             }
         }
         else if (result.StreamlineFolder != null)
         {
-            // No sl.interposer.dll — find the highest-versioned sl.*.dll as version source
+            // No sl.common.dll — find the highest-versioned sl.*.dll as version source
             var bestPath = GetHighestVersionedSlDll(result.StreamlineFolder);
             if (bestPath != null)
             {
@@ -245,8 +244,13 @@ public partial class DlssStreamlineService
     /// Skips DLSS DLLs in directories containing OptiScaler.ini (those are
     /// OptiScaler's copies, not the game's originals).
     /// </summary>
-    private void SearchDirectory(string directory, DlssDetectionResult result)
+    private void SearchDirectory(string directory, DlssDetectionResult result, int depth = 0)
     {
+        // Guard against circular symlinks and excessively deep directory trees
+        if (depth > 8) return;
+        // Guard against paths that are clearly not game directories (e.g. Unreal Engine editor installs)
+        if (directory.Length > 300) return;
+
         bool hasOptiScalerIni = File.Exists(Path.Combine(directory, "OptiScaler.ini"));
 
         // Check files in the current directory
@@ -304,16 +308,18 @@ public partial class DlssStreamlineService
         }
         catch (UnauthorizedAccessException) { }
         catch (DirectoryNotFoundException) { }
+        catch (IOException) { } // catches path-too-long errors
 
         // Recurse into subdirectories, skipping any that are inaccessible
         try
         {
             foreach (var subDir in Directory.EnumerateDirectories(directory))
             {
-                SearchDirectory(subDir, result);
+                SearchDirectory(subDir, result, depth + 1);
             }
         }
         catch (UnauthorizedAccessException) { }
         catch (DirectoryNotFoundException) { }
+        catch (IOException) { } // catches path-too-long and circular symlink errors
     }
 }

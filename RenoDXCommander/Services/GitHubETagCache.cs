@@ -21,6 +21,16 @@ public class GitHubETagCache
     public bool IsRateLimited => _rateLimited;
 
     /// <summary>
+    /// Removes the cached ETag and body for <paramref name="url"/> so the next
+    /// <see cref="GetWithETagAsync"/> call sends an unconditional GET.
+    /// Use when you know the remote content has changed (e.g. on Refresh).
+    /// </summary>
+    public void Invalidate(string url) => _cache.TryRemove(url, out _);
+
+    /// <summary>Removes all cached ETags and bodies, forcing unconditional GETs on all URLs.</summary>
+    public void InvalidateAll() => _cache.Clear();
+
+    /// <summary>
     /// Sends a GET request with ETag caching. If the resource hasn't changed,
     /// returns the cached body without consuming a rate limit point.
     /// </summary>
@@ -39,6 +49,11 @@ public class GitHubETagCache
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("RHI", "1.0"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+
+        // Add GitHub API token if available (raises rate limit from 60 to 5000 req/hour)
+        var token = DevUnlockService.GitHubApiToken;
+        if (!string.IsNullOrEmpty(token))
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
 
         if (userAgent != null)
         {
@@ -60,13 +75,24 @@ public class GitHubETagCache
 
         if (!response.IsSuccessStatusCode)
         {
-            // Detect rate limiting (403 Forbidden) and set session-wide flag
+            // Detect rate limiting: only set session-wide flag when GitHub explicitly reports
+            // remaining=0, not on every 403. A transient 403 (auth scope, IP block, etc.)
+            // should not kill all API calls for the rest of the session.
             if (response.StatusCode == HttpStatusCode.Forbidden)
             {
-                if (!_rateLimited)
+                var remaining = response.Headers.TryGetValues("X-RateLimit-Remaining", out var vals)
+                    ? vals.FirstOrDefault() : null;
+                bool actuallyRateLimited = remaining == "0";
+                var hasAuthHeader = request.Headers.Contains("Authorization");
+
+                if (actuallyRateLimited && !_rateLimited)
                 {
                     _rateLimited = true;
-                    CrashReporter.Log("[GitHubETagCache] GitHub API rate limited (403 Forbidden) — all further API calls will be skipped this session");
+                    CrashReporter.Log($"[GitHubETagCache] GitHub API rate limited (X-RateLimit-Remaining=0) for {TruncateUrl(url)} — authenticated={hasAuthHeader}");
+                }
+                else if (!actuallyRateLimited)
+                {
+                    CrashReporter.Log($"[GitHubETagCache] 403 Forbidden for {TruncateUrl(url)} (not rate limited, remaining={remaining ?? "unknown"}, authenticated={hasAuthHeader}) — skipping this URL only");
                 }
             }
 

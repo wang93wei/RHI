@@ -15,9 +15,11 @@ public class NexusDownloadService
     private readonly HttpClient _http;
     private readonly SettingsViewModel _settings;
 
-    private const string BaseUrl = "https://api.nexusmods.com/v1";
-    private const string AppName = "RHI";
-    private const string AppVersion = "2.4.3";
+    private const string BaseUrl    = "https://api.nexusmods.com/v1";
+    private const string AppName    = "RHI";
+    // Read from assembly so it stays current across releases
+    private static readonly string AppVersion =
+        typeof(NexusDownloadService).Assembly.GetName().Version?.ToString(3) ?? "2.7.1";
 
     public NexusDownloadService(HttpClient http, SettingsViewModel settings)
     {
@@ -43,7 +45,7 @@ public class NexusDownloadService
             using var request = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/users/validate.json");
             AddHeaders(request, apiKey);
 
-            var response = await _http.SendAsync(request).ConfigureAwait(false);
+            var response = await SendWithRateLimitAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 CrashReporter.Log($"[NexusDownloadService.ValidateApiKeyAsync] HTTP {(int)response.StatusCode}");
@@ -77,7 +79,7 @@ public class NexusDownloadService
                 $"{BaseUrl}/games/{domain}/mods/{modId}/files.json");
             AddHeaders(request);
 
-            var response = await _http.SendAsync(request).ConfigureAwait(false);
+            var response = await SendWithRateLimitAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 CrashReporter.Log($"[NexusDownloadService.GetModFilesAsync] HTTP {(int)response.StatusCode} for {domain}/mods/{modId}");
@@ -123,7 +125,7 @@ public class NexusDownloadService
                 $"{BaseUrl}/games/{domain}/mods/{modId}/files/{fileId}/download_link");
             AddHeaders(request);
 
-            var response = await _http.SendAsync(request).ConfigureAwait(false);
+            var response = await SendWithRateLimitAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 var body = "";
@@ -166,7 +168,7 @@ public class NexusDownloadService
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddHeaders(request);
 
-            var response = await _http.SendAsync(request).ConfigureAwait(false);
+            var response = await SendWithRateLimitAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 var body = "";
@@ -265,6 +267,40 @@ public class NexusDownloadService
             request.Headers.Add("apikey", key);
         request.Headers.Add("Application-Name", AppName);
         request.Headers.Add("Application-Version", AppVersion);
+    }
+
+    /// <summary>
+    /// Sends a request with automatic 429 retry. Inspects Retry-After header and waits
+    /// the indicated number of seconds (capped at 60s) before retrying once.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithRateLimitAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if ((int)response.StatusCode == 429)
+        {
+            // Inspect Retry-After (seconds)
+            int waitSeconds = 30; // default
+            if (response.Headers.TryGetValues("Retry-After", out var retryValues)
+                && int.TryParse(retryValues.FirstOrDefault(), out var parsedWait))
+                waitSeconds = Math.Clamp(parsedWait, 1, 60);
+
+            CrashReporter.Log($"[NexusDownloadService] Rate limited (429) — waiting {waitSeconds}s before retry");
+            await Task.Delay(TimeSpan.FromSeconds(waitSeconds), cancellationToken).ConfigureAwait(false);
+
+            // Rebuild request (HttpRequestMessage can't be sent twice)
+            using var retry = new HttpRequestMessage(request.Method, request.RequestUri);
+            foreach (var header in request.Headers)
+                retry.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            if (request.Content != null)
+                retry.Content = request.Content;
+
+            response = await _http.SendAsync(retry, cancellationToken).ConfigureAwait(false);
+        }
+
+        return response;
     }
 
     private static string? GetFileNameFromResponse(HttpResponseMessage response)

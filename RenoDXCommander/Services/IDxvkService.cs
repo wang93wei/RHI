@@ -55,14 +55,17 @@ public interface IDxvkService
     /// </summary>
     Task InstallAsync(
         GameCardViewModel card,
-        IProgress<(string message, double percent)>? progress = null);
+        IProgress<(string message, double percent)>? progress = null,
+        string? screenshotSavePath = null,
+        string? overlayHotkey = null,
+        string? screenshotHotkey = null);
 
     /// <summary>
     /// Uninstalls DXVK from the specified game folder.
     /// Removes deployed DLLs, restores backups, deletes dxvk.conf if deployed,
     /// and removes the tracking record.
     /// </summary>
-    void Uninstall(GameCardViewModel card);
+    Task UninstallAsync(GameCardViewModel card);
 
     /// <summary>
     /// Updates DXVK in a game folder: re-stages if needed, replaces DLLs,

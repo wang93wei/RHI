@@ -37,14 +37,14 @@ public partial class AuxInstallService
         if (File.Exists(RsIniPath))
             MergeRsIni(gameInstallPath, screenshotSavePath, overlayHotkey, screenshotHotkey);
 
-        var stagedIniPath = Path.Combine(gameInstallPath, "reshade.ini");
+        var stagedIniPath = Path.Combine(gameInstallPath, "ReShade.ini");
 
         // Write [INSTALL] BasePath pointing to the game folder
         ApplyIniBasePath(stagedIniPath, gameInstallPath);
 
         // ── Create symlinks in the GAC directory ──────────────────────────────
         var gacDllLink = Path.Combine(gacDirectory, dllFileName);
-        var gacIniLink = Path.Combine(gacDirectory, "reshade.ini");
+        var gacIniLink = Path.Combine(gacDirectory, "ReShade.ini");
 
         // Remove existing symlinks or files before creating new ones
         RemoveIfExists(gacDllLink);
@@ -67,7 +67,7 @@ public partial class AuxInstallService
     {
         // Remove symlinks from GAC directory
         var gacDllLink = Path.Combine(gacDirectory, dllFileName);
-        var gacIniLink = Path.Combine(gacDirectory, "reshade.ini");
+        var gacIniLink = Path.Combine(gacDirectory, "ReShade.ini");
 
         RemoveIfExists(gacDllLink);
         RemoveIfExists(gacIniLink);

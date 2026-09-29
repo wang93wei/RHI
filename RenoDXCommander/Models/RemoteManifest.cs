@@ -84,6 +84,20 @@ public class RemoteManifest
     public List<string>? LumaDefaultGames { get; set; }
 
     /// <summary>
+    /// Games that require dgVoodoo2 for Luma installation (DX9 games needing a DX11 translation layer).
+    /// When a game is in this list, RHI deploys D3D9.dll + dgVoodoo.conf alongside Luma.
+    /// </summary>
+    [JsonPropertyName("lumaRequiresDgVoodoo")]
+    public List<string>? LumaRequiresDgVoodoo { get; set; }
+
+    /// <summary>
+    /// dgVoodoo2 version → download URL mapping. First entry = default version to use.
+    /// Keyed by version string (e.g. "2.87.3").
+    /// </summary>
+    [JsonPropertyName("dgVoodooVersions")]
+    public Dictionary<string, string>? DgVoodooVersions { get; set; }
+
+    /// <summary>
     /// Custom notes for games in Luma mode (shown in the info dialog when Luma is active).
     /// Supplements or replaces wiki-provided LumaMod notes.
     /// </summary>
@@ -346,6 +360,14 @@ public class RemoteManifest
     /// </summary>
     [JsonPropertyName("renodxIniOverrides")]
     public Dictionary<string, Dictionary<string, string>>? RenodxIniOverrides { get; set; }
+
+    /// <summary>
+    /// Maps game name → filename of a custom Engine.ini file hosted in the rhi-repo engine-files/ folder.
+    /// When present, the file is fetched and merged into the game's Engine.ini instead of the standard HDR keys.
+    /// Multiple games can point to the same filename. Any valid Engine.ini key/section content is supported.
+    /// </summary>
+    [JsonPropertyName("engineIniFiles")]
+    public Dictionary<string, string>? EngineIniFiles { get; set; }
 
     /// <summary>
     /// Extra [renodx] INI toggles to show in the RenoDX cog Compatibility Settings UI.

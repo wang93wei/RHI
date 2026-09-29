@@ -57,6 +57,12 @@
                             BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
                             CornerRadius="8" Padding="12,7" FontSize="12"
                             ToolTipService.ToolTip="Quick Start Guide"/>
+                    <Button x:Name="HdrModsListBtn" Content="Available HDR Mods"
+                            Click="HdrModsListBtn_Click"
+                            Background="{StaticResource SurfaceInputBrush}" Foreground="{StaticResource AccentTealBrush}"
+                            BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
+                            CornerRadius="8" Padding="12,7" FontSize="12"
+                            ToolTipService.ToolTip="Browse all games with available HDR mods"/>
 
                     <Border Width="1" Height="20" Background="{StaticResource BorderSubtleBrush}" Margin="4,0"/>
 
@@ -74,7 +80,7 @@
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
                                 <MenuFlyoutItem x:Name="ChooseShadersItem" Text="Global Shaders" Click="ChooseShadersButton_Click"/>
-                                <MenuFlyoutItem x:Name="ReShadeAddonsItem" Text="ReShade Addons" Click="ReShadeAddonsButton_Click"/>
+                                <MenuFlyoutItem x:Name="ReShadeAddonsItem" Text="Global Addons" Click="ReShadeAddonsButton_Click"/>
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
@@ -123,12 +129,6 @@
 
                     <Border Width="1" Height="20" Background="{StaticResource BorderSubtleBrush}" Margin="4,0"/>
 
-                    <Button x:Name="LayoutToggleBtn" Content="{x:Bind ViewModel.LayoutToggleLabel, Mode=OneWay}"
-                            Click="LayoutToggle_Click"
-                            Background="{StaticResource SurfaceInputBrush}" Foreground="{StaticResource AccentTealBrush}"
-                            BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
-                            CornerRadius="8" Padding="12,7" FontSize="12"
-                            ToolTipService.ToolTip="Toggle between Detail and Simple view"/>
                     <Button x:Name="SettingsBtn" Content="Settings"
                             Click="SettingsButton_Click" IsEnabled="False"
                             Background="{StaticResource SurfaceInputBrush}" Foreground="{StaticResource AccentTealBrush}"
@@ -464,6 +464,7 @@
                                             VerticalAlignment="Center" Visibility="Collapsed">
                                         <TextBlock x:Name="DetailInstalledFile" x:FieldModifier="internal" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
                                     </Border>
+                                    <TextBlock x:Name="DetailModStatusIcon" x:FieldModifier="internal" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"/>
                                     <Border x:Name="DetailGenericBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
                                             Background="{StaticResource ChipDefaultBrush}" BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
                                             VerticalAlignment="Center" Visibility="Collapsed">
@@ -596,7 +597,7 @@
                                         <ColumnDefinition Width="36"/>
                                     </Grid.ColumnDefinitions>
                                     <!-- Collapse header for Components — arrow + title, wired in DetailPanelBuilder -->
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center"
+                                    <StackPanel Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center"
                                                 x:Name="DetailComponentsHeader" x:FieldModifier="internal">
                                         <TextBlock x:Name="DetailComponentsArrow" x:FieldModifier="internal"
                                                    Text="▼" FontSize="10" VerticalAlignment="Center"
@@ -703,7 +704,7 @@
                                     </Button>
                                 </Grid>
 
-                                <!-- Labeled separator: HDR mods — choose one or both -->
+                                <!-- Labeled separator: HDR Mods -->
                                 <Grid x:Name="DetailHdrModSeparator" x:FieldModifier="internal" Margin="0,4,0,4" ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="120"/>
@@ -713,7 +714,7 @@
                                         <ColumnDefinition Width="36"/>
                                         <ColumnDefinition Width="36"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="3" Text="———  HDR Mods — Install one or both  ———" FontSize="11"
+                                    <TextBlock Grid.Column="3" Text="———  HDR Mods  ———" FontSize="11"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
@@ -975,111 +976,6 @@
                                     </Button>
                                 </Grid>
 
-                                <!-- Labeled separator: optional components -->
-                                <Grid x:Name="DetailOptionalSeparator" x:FieldModifier="internal" Margin="0,4,0,4" ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="36"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="3" Text="──  Optional  ──" FontSize="11"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
-
-                                <!-- OptiScaler row -->
-                                <Grid x:Name="DetailOsRow" x:FieldModifier="internal" ColumnSpacing="8" Visibility="Collapsed">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="36"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="DetailOsLabel" x:FieldModifier="internal" Grid.Column="0" Text="OptiScaler" FontSize="12"
-                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="DetailOsStatus" x:FieldModifier="internal" Grid.Column="1" FontSize="12"
-                                               VerticalAlignment="Center" HorizontalTextAlignment="Center"
-                                               PointerPressed="DetailOsStatus_PointerPressed"
-                                               PointerEntered="LinkText_PointerEntered" PointerExited="LinkText_PointerExited"/>
-                                    <Button x:Name="DetailOsInfoBtn" x:FieldModifier="internal" Grid.Column="2"
-                                            Content="Info" FontSize="11" Padding="6,2,6,2"
-                                            Background="{StaticResource SurfaceOverlayBrush}"
-                                            Foreground="{StaticResource TextSecondaryBrush}"
-                                            BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
-                                            CornerRadius="8" Width="36" Height="32"
-                                            Click="InfoButton_Click"/>
-                                    <Button x:Name="DetailOsInstallBtn" x:FieldModifier="internal" Grid.Column="3"
-                                            Click="InstallOsButton_Click"
-                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                            CornerRadius="8" FontSize="12" Height="32"/>
-                                    <Button x:Name="DetailOsIniBtn" x:FieldModifier="internal" Grid.Column="4"
-                                            Click="OsCogButton_Click"
-                                            Background="{StaticResource SurfaceOverlayBrush}" Foreground="{StaticResource TextSecondaryBrush}"
-                                            BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
-                                            CornerRadius="8" Width="36" Height="32" Padding="0"
-                                            ToolTipService.ToolTip="OptiScaler Settings">
-                                        <TextBlock Text="⚙" FontSize="14" HorizontalAlignment="Center"/>
-                                    </Button>
-                                    <Button x:Name="DetailOsDeleteBtn" x:FieldModifier="internal" Grid.Column="5"
-                                            Click="UninstallOsButton_Click"
-                                            Background="{StaticResource AccentRedBgBrush}" Foreground="{StaticResource AccentRedBrush}"
-                                            BorderBrush="{StaticResource AccentPurpleBorderBrush}" BorderThickness="1"
-                                            CornerRadius="8" Width="36" Height="32" Padding="0"
-                                            ToolTipService.ToolTip="Remove OptiScaler" Opacity="0" IsHitTestVisible="False">
-                                        <TextBlock Text="✕" FontSize="12" HorizontalAlignment="Center" Foreground="{StaticResource AccentRedBrush}"/>
-                                    </Button>
-                                </Grid>
-
-                                <!-- DXVK row -->
-                                <Grid x:Name="DetailDxvkRow" x:FieldModifier="internal" ColumnSpacing="8" Visibility="Collapsed">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="36"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="DetailDxvkLabel" x:FieldModifier="internal" Grid.Column="0" Text="DXVK" FontSize="12"
-                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="DetailDxvkStatus" x:FieldModifier="internal" Grid.Column="1" FontSize="12"
-                                               VerticalAlignment="Center" HorizontalTextAlignment="Center"
-                                               PointerPressed="DetailDxvkStatus_PointerPressed"
-                                               PointerEntered="LinkText_PointerEntered" PointerExited="LinkText_PointerExited"/>
-                                    <Button x:Name="DetailDxvkInfoBtn" x:FieldModifier="internal" Grid.Column="2"
-                                            Content="Info" FontSize="11" Padding="6,2,6,2"
-                                            Background="{StaticResource SurfaceOverlayBrush}"
-                                            Foreground="{StaticResource TextSecondaryBrush}"
-                                            BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
-                                            CornerRadius="8" Width="36" Height="32"
-                                            Click="DxvkInfoButton_Click"/>
-                                    <Button x:Name="DetailDxvkInstallBtn" x:FieldModifier="internal" Grid.Column="3"
-                                            Click="InstallDxvkButton_Click"
-                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                            CornerRadius="8" FontSize="12" Height="32"/>
-                                    <Button x:Name="DetailDxvkConfBtn" x:FieldModifier="internal" Grid.Column="4"
-                                            Click="DxvkCogButton_Click"
-                                            Background="{StaticResource SurfaceOverlayBrush}" Foreground="{StaticResource TextSecondaryBrush}"
-                                            BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
-                                            CornerRadius="8" Width="36" Height="32" Padding="0"
-                                            ToolTipService.ToolTip="DXVK Settings">
-                                        <TextBlock Text="⚙" FontSize="14" HorizontalAlignment="Center"/>
-                                    </Button>
-                                    <Button x:Name="DetailDxvkDeleteBtn" x:FieldModifier="internal" Grid.Column="5"
-                                            Click="UninstallDxvkButton_Click"
-                                            Background="{StaticResource AccentRedBgBrush}" Foreground="{StaticResource AccentRedBrush}"
-                                            BorderBrush="{StaticResource AccentPurpleBorderBrush}" BorderThickness="1"
-                                            CornerRadius="8" Width="36" Height="32" Padding="0"
-                                            ToolTipService.ToolTip="Remove DXVK" Opacity="0" IsHitTestVisible="False">
-                                        <TextBlock Text="✕" FontSize="12" HorizontalAlignment="Center" Foreground="{StaticResource AccentRedBrush}"/>
-                                    </Button>
-                                </Grid>
-
                                 <!-- No mod message -->
                                 <Border x:Name="DetailNoModMsg" x:FieldModifier="internal" Visibility="Collapsed"
                                         Background="{StaticResource AccentPurpleBgBrush}" CornerRadius="8" Padding="12,8"
@@ -1111,11 +1007,6 @@
                                                  Maximum="100" Height="3" CornerRadius="2"
                                                  Foreground="{StaticResource AccentBlueBrush}" Background="{StaticResource SurfaceToolbarBrush}"/>
                                     <TextBlock x:Name="DetailDcMessage" x:FieldModifier="internal" FontSize="10" Foreground="{StaticResource AccentBlueBrush}"
-                                               Visibility="Collapsed" TextWrapping="Wrap"/>
-                                    <ProgressBar x:Name="DetailOsProgress" x:FieldModifier="internal" Visibility="Collapsed"
-                                                 Maximum="100" Height="3" CornerRadius="2"
-                                                 Foreground="{StaticResource AccentBlueBrush}" Background="{StaticResource SurfaceToolbarBrush}"/>
-                                    <TextBlock x:Name="DetailOsMessage" x:FieldModifier="internal" FontSize="10" Foreground="{StaticResource AccentBlueBrush}"
                                                Visibility="Collapsed" TextWrapping="Wrap"/>
                                     <ProgressBar x:Name="DetailDofFixProgress" x:FieldModifier="internal" Visibility="Collapsed"
                                                  Maximum="100" Height="3" CornerRadius="2"
@@ -1184,33 +1075,17 @@
                                 Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
                                 BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
                                 Padding="14,12" Visibility="Collapsed">
-                            <StackPanel x:Name="ExtrasPanel" x:FieldModifier="internal" Spacing="6"/>
+                            <StackPanel Spacing="6">
+                                <StackPanel x:Name="ExtrasPanel" x:FieldModifier="internal" Spacing="6"/>
+                                <ProgressBar x:Name="DetailOsProgress" x:FieldModifier="internal" Visibility="Collapsed"
+                                             Maximum="100" Height="3" CornerRadius="2"
+                                             Foreground="{StaticResource AccentBlueBrush}" Background="{StaticResource SurfaceToolbarBrush}"/>
+                                <TextBlock x:Name="DetailOsMessage" x:FieldModifier="internal" FontSize="10" Foreground="{StaticResource AccentBlueBrush}"
+                                           Visibility="Collapsed" TextWrapping="Wrap"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
-
-                    <!-- Compact Nav Arrows — overlaid on content area, visible only in Compact mode -->
-                    <Button x:Name="CompactNavLeft"
-                            Content="◀" Click="CompactNavLeft_Click"
-                            VerticalAlignment="Center" HorizontalAlignment="Left"
-                            Canvas.ZIndex="1"
-                            Visibility="{x:Bind ViewModel.CompactViewVisibility, Mode=OneWay}"
-                            Background="{StaticResource SurfaceInputBrush}"
-                            Foreground="{StaticResource AccentTealBrush}"
-                            BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
-                            CornerRadius="8" FontSize="18"
-                            Padding="8,16" Margin="4,0"/>
-
-                    <Button x:Name="CompactNavRight"
-                            Content="▶" Click="CompactNavRight_Click"
-                            VerticalAlignment="Center" HorizontalAlignment="Right"
-                            Canvas.ZIndex="1"
-                            Visibility="{x:Bind ViewModel.CompactViewVisibility, Mode=OneWay}"
-                            Background="{StaticResource SurfaceInputBrush}"
-                            Foreground="{StaticResource AccentTealBrush}"
-                            BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
-                            CornerRadius="8" FontSize="18"
-                            Padding="8,16" Margin="0,0,4,0"/>
 
                     <!-- Skeleton detail panel overlay (removed programmatically after first load) -->
                     <ScrollViewer x:Name="SkeletonDetailScrollViewer" VerticalScrollBarVisibility="Auto"
@@ -1454,6 +1329,7 @@
                                                  Background="{StaticResource SurfaceInputBrush}"
                                                  Foreground="{StaticResource TextSecondaryBrush}"
                                                  BorderBrush="{StaticResource BorderSubtleBrush}"
+                                                 ToolTipService.ToolTip="Press a key to assign it, or Backspace to clear it."
                                                  PreviewKeyDown="ScreenshotHotkeyBox_PreviewKeyDown"/>
                                         <Button Grid.Column="1" Content="↺" Click="ResetScreenshotHotkey_Click"
                                                 ToolTipService.ToolTip="Reset to Print Screen"
@@ -1545,74 +1421,121 @@
                                 Background="{StaticResource SurfaceRaisedBrush}" CornerRadius="10" Padding="20,16"
                                 BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                             <StackPanel Spacing="12">
-                                <TextBlock Text="Resolution Control" FontSize="15" FontWeight="Bold"
+                                <TextBlock Text="Resolution &amp; Colour Control" FontSize="15" FontWeight="Bold"
                                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                                <Grid ColumnSpacing="0" RowSpacing="8">
+                                <Grid ColumnSpacing="0" RowSpacing="0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="25"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
 
-                                    <!-- Left: description -->
-                                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
-                                        <TextBlock Text="Target Resolution" FontSize="14" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11"
-                                                   Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
-                                                   Text="Desktop resolution to switch to before a game launches. Restored on game exit."/>
+                                    <!-- Left: Target Resolution + Auto-Toggle stacked -->
+                                    <StackPanel Grid.Column="0" Spacing="12">
+                                        <!-- Target Resolution -->
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Target Resolution" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock TextWrapping="Wrap" FontSize="11"
+                                                       Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                                       Text="Desktop resolution to switch to before a game launches. Restored on game exit."/>
+                                            <ComboBox x:Name="ResolutionTargetCombo" x:FieldModifier="internal"
+                                                      FontSize="12" HorizontalAlignment="Stretch"
+                                                      ToolTipService.ToolTip="Select the target desktop resolution."
+                                                      SelectionChanged="ResolutionTargetCombo_SelectionChanged"/>
+                                        </StackPanel>
+
+                                        <!-- Resolution Auto-Toggle -->
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Resolution Auto-Toggle" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock TextWrapping="Wrap" FontSize="11"
+                                                       Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                                       Text="When On, switches to the target resolution on game launch and restores it on exit."/>
+                                            <Grid ColumnSpacing="6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="Resolution Auto-Toggle" FontSize="12"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <ComboBox Grid.Column="1" x:Name="ResAutoToggleCombo" x:FieldModifier="internal"
+                                                          FontSize="12" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                                          SelectionChanged="ResAutoToggleCombo_SelectionChanged">
+                                                    <ComboBoxItem Content="Off"/>
+                                                    <ComboBoxItem Content="On"/>
+                                                </ComboBox>
+                                                <Button Grid.Column="2" Content="⚙" Click="ResSelectMonitors_Click"
+                                                        Background="{StaticResource SurfaceOverlayBrush}"
+                                                        Foreground="{StaticResource ChipTextBrush}"
+                                                        BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                                        CornerRadius="6" Padding="8,4" MinWidth="0" MinHeight="0"
+                                                        FontSize="12" VerticalAlignment="Center"
+                                                        ToolTipService.ToolTip="Select which monitors to change resolution on."/>
+                                            </Grid>
+                                        </StackPanel>
                                     </StackPanel>
 
                                     <!-- Divider -->
-                                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="1"
+                                    <Border Grid.Column="1" Width="1"
                                             Background="{StaticResource BorderDefaultBrush}"
                                             VerticalAlignment="Stretch" Margin="12,0,12,0"/>
 
-                                    <!-- Right: Auto-Toggle On/Off + cog -->
-                                    <StackPanel Grid.Row="0" Grid.Column="2" Spacing="4">
-                                        <TextBlock Text="Resolution Auto-Toggle" FontSize="14" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock TextWrapping="Wrap" FontSize="11"
-                                                   Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
-                                                   Text="When On, switches to the target resolution on game launch and restores it on exit."/>
+                                    <!-- Right: Output Colour Settings -->
+                                    <StackPanel Grid.Column="2" Spacing="12">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Output Colour Settings" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock TextWrapping="Wrap" FontSize="11"
+                                                       Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                                       Text="Set display colour depth and dynamic range without opening NVIDIA Control Panel."/>
+                                        </StackPanel>
+
+                                        <!-- Display selector -->
+                                        <ComboBox x:Name="ColorDisplayCombo" x:FieldModifier="internal"
+                                                  FontSize="12" HorizontalAlignment="Stretch"
+                                                  ToolTipService.ToolTip="Select which display to configure."
+                                                  SelectionChanged="ColorDisplayCombo_SelectionChanged"/>
+
+                                        <!-- Colour Depth + Dynamic Range + Apply -->
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Spacing="4">
+                                                <TextBlock Text="Colour Depth" FontSize="11"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                <ComboBox x:Name="ColorDepthCombo" x:FieldModifier="internal"
+                                                          FontSize="12" HorizontalAlignment="Stretch">
+                                                    <ComboBoxItem Content="8 bpc"/>
+                                                    <ComboBoxItem Content="10 bpc"/>
+                                                    <ComboBoxItem Content="12 bpc"/>
+                                                </ComboBox>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Text="Dynamic Range" FontSize="11"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                <ComboBox x:Name="ColorRangeCombo" x:FieldModifier="internal"
+                                                          FontSize="12" HorizontalAlignment="Stretch">
+                                                    <ComboBoxItem Content="Full"/>
+                                                    <ComboBoxItem Content="Limited"/>
+                                                </ComboBox>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="Apply"
+                                                    x:Name="ColorApplyBtn" x:FieldModifier="internal"
+                                                    Click="ColorApplyBtn_Click"
+                                                    Background="{StaticResource AccentBlueBgBrush}"
+                                                    Foreground="{StaticResource AccentBlueBrush}"
+                                                    BorderBrush="{StaticResource AccentBlueBorderBrush}"
+                                                    BorderThickness="1" CornerRadius="6"
+                                                    Padding="12,6" MinWidth="0" MinHeight="0"
+                                                    FontSize="12" VerticalAlignment="Bottom"/>
+                                        </Grid>
                                     </StackPanel>
-
-                                    <!-- Row 1 Left: Resolution picker ComboBox -->
-                                    <ComboBox Grid.Row="1" Grid.Column="0"
-                                              x:Name="ResolutionTargetCombo" x:FieldModifier="internal"
-                                              FontSize="12" HorizontalAlignment="Stretch"
-                                              ToolTipService.ToolTip="Select the target desktop resolution. Populated from your monitor's supported modes."
-                                              SelectionChanged="ResolutionTargetCombo_SelectionChanged"/>
-
-                                    <!-- Row 1 Right: Auto-Toggle combo + cog -->
-                                    <Grid Grid.Row="1" Grid.Column="2" ColumnSpacing="6" VerticalAlignment="Center">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Resolution Auto-Toggle" FontSize="12"
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                                   VerticalAlignment="Center"/>
-                                        <ComboBox Grid.Column="1" x:Name="ResAutoToggleCombo" x:FieldModifier="internal"
-                                                  FontSize="12" HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                                                  ToolTipService.ToolTip="When On, switches desktop resolution on game launch and restores on exit."
-                                                  SelectionChanged="ResAutoToggleCombo_SelectionChanged">
-                                            <ComboBoxItem Content="Off"/>
-                                            <ComboBoxItem Content="On"/>
-                                        </ComboBox>
-                                        <Button Grid.Column="2" Content="⚙" Click="ResSelectMonitors_Click"
-                                                Background="{StaticResource SurfaceOverlayBrush}"
-                                                Foreground="{StaticResource ChipTextBrush}"
-                                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
-                                                CornerRadius="6" Padding="8,4" MinWidth="0" MinHeight="0"
-                                                FontSize="12" VerticalAlignment="Center"
-                                                ToolTipService.ToolTip="Select which monitors to change resolution on. Empty = primary display only."/>
-                                    </Grid>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -1668,22 +1591,17 @@
                                         <Grid ColumnSpacing="6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <PasswordBox x:Name="NexusApiKeyBox" x:FieldModifier="internal"
-                                                         Grid.Column="0"
-                                                         PlaceholderText="Paste API key here..."
-                                                         FontSize="12" VerticalAlignment="Center"
-                                                         PasswordRevealMode="Peek"/>
                                             <Button x:Name="NexusConnectBtn" x:FieldModifier="internal"
-                                                    Grid.Column="1"
+                                                    Grid.Column="0"
                                                     Content="Connect"
                                                     Click="NexusConnectBtn_Click"
                                                     Background="{StaticResource AccentGreenBrush}"
                                                     Foreground="White"
                                                     BorderThickness="0"
                                                     CornerRadius="6" Padding="12,6" MinWidth="0"
-                                                    FontSize="12" VerticalAlignment="Center"/>
+                                                    FontSize="12" VerticalAlignment="Center"
+                                                    HorizontalAlignment="Left"/>
                                         </Grid>
                                         <TextBlock x:Name="NexusStatusText" x:FieldModifier="internal"
                                                    FontSize="11" TextWrapping="Wrap"
@@ -1725,6 +1643,37 @@
                                                 CornerRadius="6" Padding="12,4" MinWidth="0"
                                                 FontSize="11" HorizontalAlignment="Left"/>
                                     </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ══════════════════════════════════════════════════════════
+                             CARD 2d: RENODX DATA SOURCE (dev-only — hidden by DevUnlockService)
+                             ══════════════════════════════════════════════════════════ -->
+                        <Border x:Name="RenoDxDbSourceCard" x:FieldModifier="internal"
+                                Visibility="Collapsed"
+                                Background="{StaticResource SurfaceRaisedBrush}" CornerRadius="10" Padding="20,16"
+                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="RenoDX Data Source" FontSize="15" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="11"
+                                           Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                           Text="Controls where RHI fetches mod data. RHI Database uses the community-maintained RHI database (recommended). RenoDX Wiki falls back to the RenoDX wiki scraper. Changing this setting triggers an immediate refresh."/>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Source" FontSize="13"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox x:Name="RenoDxDbSourceCombo" x:FieldModifier="internal"
+                                              Grid.Column="1" FontSize="12"
+                                              HorizontalAlignment="Left" MinWidth="160">
+                                        <ComboBoxItem Content="RHI Database" Tag="DbOnly"/>
+                                        <ComboBoxItem Content="RenoDX Wiki" Tag="WikiOnly"/>
+                                    </ComboBox>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -2438,7 +2387,7 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <Button Grid.Row="0" Grid.Column="0" Content="reshade.ini" Click="MassDeployRsIni_Click"
+                                    <Button Grid.Row="0" Grid.Column="0" Content="ReShade.ini" Click="MassDeployRsIni_Click"
                                             Background="{StaticResource AccentBlueBgBrush}" Foreground="{StaticResource AccentBlueBrush}"
                                             BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
                                             CornerRadius="8" Padding="12,7" FontSize="12" HorizontalAlignment="Stretch"/>
@@ -2642,6 +2591,11 @@
                                             BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
                                             CornerRadius="8" Padding="12,6" FontSize="12"
                                             ToolTipService.ToolTip="Creates a zip archive of all logs and copies it to clipboard — paste directly into Discord"/>
+                                    <Button x:Name="ExportGameDataBtn" x:FieldModifier="internal" Content="Export Game Data" Click="ExportGameData_Click"
+                                            Background="{StaticResource AccentBlueBgBrush}" Foreground="{StaticResource AccentBlueBrush}"
+                                            BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" Padding="12,6" FontSize="12"
+                                            ToolTipService.ToolTip="Gathers game library data (APIs, exe paths, engine info) and copies a JSON file to clipboard — paste into Discord to share with the RHI community database"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -3075,9 +3029,12 @@
                            Text="⚠ ReShade, OptiScaler, and DLSS/Streamline modifications may trigger anti-cheat in online/multiplayer games"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Spacing="8">
-                    <TextBlock x:Name="StatusBarVersionText" x:FieldModifier="internal"
-                               FontSize="11" Foreground="{StaticResource TextDisabledBrush}"
-                               VerticalAlignment="Center"/>
+                    <Button x:Name="StatusBarVersionText" x:FieldModifier="internal"
+                            FontSize="11" Foreground="{StaticResource TextDisabledBrush}"
+                            Background="Transparent" BorderThickness="0"
+                            Padding="0,2" VerticalAlignment="Center"
+                            Click="StatusBarVersion_Click"
+                            ToolTipService.ToolTip="Check for app updates"/>
                     <Button Content="Patch Notes"
                             Click="PatchNotesLink_Click"
                             Background="Transparent" BorderThickness="0"

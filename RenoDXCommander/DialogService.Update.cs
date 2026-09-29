@@ -28,15 +28,35 @@ public partial class DialogService
             var updateInfo = await _updateService.CheckForUpdateAsync(ViewModel.BetaOptIn);
             if (updateInfo == null) return; // up to date or check failed
 
-            // Show update dialog on UI thread
-            _dispatcherQueue.TryEnqueue(async () =>
-            {
-                await ShowUpdateDialogAsync(updateInfo);
-            });
+            // Marshal back to the UI thread to show the dialog.
+            // IMPORTANT: do NOT use TryEnqueue(async () => await ShowUpdateDialogAsync(...)) —
+            // that blocks the dispatcher queue thread for up to 10s waiting for the dialog gate.
+            // Instead, enqueue a non-async action that fires a new Task on the UI thread.
+            // The Task runs as an async continuation without ever occupying the queue dispatch slot.
+            _dispatcherQueue.TryEnqueue(() => _ = ShowUpdateDialogAsync(updateInfo));
         }
         catch (Exception ex)
         {
             CrashReporter.Log($"[DialogService.CheckForAppUpdateAsync] Update check error — {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Checks for an app update and returns the result — null means up to date or check failed.
+    /// Used by the version button to show a "no update" dialog when appropriate.
+    /// </summary>
+    public async Task<UpdateInfo?> CheckForUpdateAndReturnAsync(bool betaOptIn)
+    {
+        try
+        {
+            while (_window.Content.XamlRoot == null)
+                await Task.Delay(200);
+            return await _updateService.CheckForUpdateAsync(betaOptIn);
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DialogService.CheckForUpdateAndReturnAsync] Error — {ex.Message}");
+            return null;
         }
     }
 
@@ -207,17 +227,7 @@ public partial class DialogService
                 CrashReporter.Log($"[DialogService.ShowPatchNotesIfNewVersionAsync] Failed to write patch notes marker — {ex.Message}");
             }
 
-            _dispatcherQueue.TryEnqueue(async () =>
-            {
-                try
-                {
-                    await ShowPatchNotesDialogAsync();
-                }
-                catch (Exception ex)
-                {
-                    CrashReporter.Log($"[DialogService.ShowPatchNotesIfNewVersionAsync] Patch notes dialog failed — {ex.Message}");
-                }
-            });
+            _dispatcherQueue.TryEnqueue(() => _ = ShowPatchNotesDialogAsync());
         }
         catch (Exception ex)
         {
@@ -285,14 +295,7 @@ public partial class DialogService
             var motd = await Services.MotdService.CheckAsync(ViewModel.HttpClient);
             if (motd == null) return;
 
-            _dispatcherQueue.TryEnqueue(async () =>
-            {
-                try
-                {
-                    await ShowMotdContentAsync(motd);
-                }
-                catch (Exception ex) { CrashReporter.Log($"[DialogService.ShowMotdIfNewAsync] Dialog failed — {ex.Message}"); }
-            });
+            _dispatcherQueue.TryEnqueue(() => _ = ShowMotdContentAsync(motd));
         }
         catch (Exception ex)
         {

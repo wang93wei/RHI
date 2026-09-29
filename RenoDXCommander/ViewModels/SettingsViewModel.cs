@@ -53,7 +53,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _globalSkipRefUpdates;
     [ObservableProperty] private bool _cacheAllShaders = true;
     [ObservableProperty] private string _lastUpdateCheckUtc = "";
-    [ObservableProperty] private string _dxvkVariant = "Development";
+    [ObservableProperty] private string _dxvkVariant = "LiliumHdr";
     [ObservableProperty] private string _reShadeChannel = "Stable";
     [ObservableProperty] private int _peakNits;
     [ObservableProperty] private bool _peakNitsEnabled = true;
@@ -75,6 +75,9 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Target resolution key in "WxH@Hz" format. Empty = no override.</summary>
     [ObservableProperty] private string _resolutionTarget = "";
     [ObservableProperty] private List<uint> _resTargetDisplays = new();
+    // ── RenoDX Database source (dev-only) ─────────────────────────────────────
+    /// <summary>Controls which data source feeds mod info. Values: "WikiOnly", "DbOnly", "Hybrid".</summary>
+    [ObservableProperty] private string _renoDxDbSource = "DbOnly";
     [ObservableProperty] private bool _dropHelperEnabled = true;
     [ObservableProperty] private bool _closeToTray;
     [ObservableProperty] private bool _recentGamesMenu;
@@ -121,6 +124,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private uint _defaultNrPreset = 0;
     [ObservableProperty] private uint _defaultSrRenderScale = 0;
     [ObservableProperty] private uint _defaultRrRenderScale = 0;
+    /// <summary>When true, Quick Apply / Batch Deploy will enable the NVIDIA driver DLL override for DLSS SR.</summary>
+    [ObservableProperty] private bool _defaultSrDriverOverride = false;
+    /// <summary>When true, Quick Apply / Batch Deploy will enable the NVIDIA driver DLL override for DLSS RR.</summary>
+    [ObservableProperty] private bool _defaultRrDriverOverride = false;
+    /// <summary>When true, Quick Apply / Batch Deploy will enable the NVIDIA driver DLL override for DLSS FG.</summary>
+    [ObservableProperty] private bool _defaultFgDriverOverride = false;
 
     /// <summary>
     /// Optional callback invoked after any settings-specific property changes,
@@ -282,6 +291,12 @@ public partial class SettingsViewModel : ObservableObject
                 var addons = JsonSerializer.Deserialize<List<string>>(egaVal) ?? new();
                 // Migration: remove old "RenoDX DLSS5" name — renamed to "DLSS5 Tool"
                 addons.RemoveAll(a => a.Equals("RenoDX DLSS5", StringComparison.OrdinalIgnoreCase));
+                // Migration: remove NR addons that moved out of the addon picker
+                addons.RemoveAll(a => a.Equals("DLSS5 Tool",           StringComparison.OrdinalIgnoreCase)
+                                   || a.Equals("DLSS Tool (ShortFuse)", StringComparison.OrdinalIgnoreCase)
+                                   || a.Equals("MFG Ada Unlock",        StringComparison.OrdinalIgnoreCase)
+                                   || a.Equals("DLSS5 Feeder",          StringComparison.OrdinalIgnoreCase)
+                                   || a.Equals("DLSS5 DX11 Bridge",     StringComparison.OrdinalIgnoreCase));
                 EnabledGlobalAddons = addons;
             }
             catch { EnabledGlobalAddons = new(); }
@@ -298,7 +313,7 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("GlobalSkipRefUpdates", out var gsrefVal)) GlobalSkipRefUpdates = gsrefVal == "true";
         if (s.TryGetValue("CacheAllShaders", out var casVal)) CacheAllShaders = casVal != "false"; // default true
         if (s.TryGetValue("LastUpdateCheckUtc", out var luc)) LastUpdateCheckUtc = luc;
-        if (s.TryGetValue("DxvkVariant", out var dvVal)) DxvkVariant = dvVal ?? "Development";
+        if (s.TryGetValue("DxvkVariant", out var dvVal)) DxvkVariant = dvVal ?? "LiliumHdr";
         if (s.TryGetValue("ReShadeChannel", out var rscVal)) ReShadeChannel = rscVal ?? "Stable";
         if (s.TryGetValue("PeakNits", out var pnVal) && int.TryParse(pnVal, out var pnInt)) PeakNits = pnInt;
         if (s.TryGetValue("PeakNitsEnabled", out var pneVal)) PeakNitsEnabled = pneVal != "false"; // default true
@@ -324,6 +339,19 @@ public partial class SettingsViewModel : ObservableObject
         {
             try { ResTargetDisplays = System.Text.Json.JsonSerializer.Deserialize<List<uint>>(rtdVal) ?? new(); }
             catch { ResTargetDisplays = new(); }
+        }
+        if (s.TryGetValue("RenoDxDbSource", out var rddsVal)) RenoDxDbSource = rddsVal ?? "DbOnly";
+
+        // One-time migration (v2.7.2): force all existing users onto RHI Database.
+        // "WikiOnly" was the old default; users who never changed it have no persisted key
+        // (absent = already migrates cleanly to new default "DbOnly").
+        // Users who explicitly selected Wiki Only get migrated too — they can switch back.
+        if (!s.ContainsKey("DbSourceMigrated"))
+        {
+            if (string.Equals(RenoDxDbSource, "WikiOnly", StringComparison.OrdinalIgnoreCase))
+                RenoDxDbSource = "DbOnly";
+            s["DbSourceMigrated"] = "1";
+            // SaveSettingsFile will persist the marker and the new source on the next save
         }
         if (s.TryGetValue("DropHelperEnabled", out var dheVal)) DropHelperEnabled = dheVal != "false"; // default true
         if (s.TryGetValue("CloseToTray", out var cttVal)) CloseToTray = cttVal == "true";
@@ -351,6 +379,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("DefaultNrPreset", out var dnrp) && uint.TryParse(dnrp, out var dnrpVal)) DefaultNrPreset = dnrpVal;
         if (s.TryGetValue("DefaultSrRenderScale", out var dsr) && uint.TryParse(dsr, out var dsrVal)) DefaultSrRenderScale = dsrVal;
         if (s.TryGetValue("DefaultRrRenderScale", out var drr) && uint.TryParse(drr, out var drrVal)) DefaultRrRenderScale = drrVal;
+        if (s.TryGetValue("DefaultSrDriverOverride", out var dsdo)) DefaultSrDriverOverride = dsdo == "1";
+        if (s.TryGetValue("DefaultRrDriverOverride", out var drdo)) DefaultRrDriverOverride = drdo == "1";
+        if (s.TryGetValue("DefaultFgDriverOverride", out var dfdo)) DefaultFgDriverOverride = dfdo == "1";
 
         // Digital Vibrance per-display settings
         if (s.TryGetValue("DigitalVibrance", out var dvcVal))
@@ -453,6 +484,9 @@ public partial class SettingsViewModel : ObservableObject
         s["ResolutionAutoToggle"] = ResolutionAutoToggle ? "true" : "false";
         if (!string.IsNullOrEmpty(ResolutionTarget)) s["ResolutionTarget"] = ResolutionTarget;
         if (ResTargetDisplays.Count > 0) s["ResTargetDisplays"] = System.Text.Json.JsonSerializer.Serialize(ResTargetDisplays);
+        if (RenoDxDbSource != "DbOnly") s["RenoDxDbSource"] = RenoDxDbSource;
+        else s.Remove("RenoDxDbSource"); // "DbOnly" is the new default — don't persist it
+        s["DbSourceMigrated"] = "1"; // persists the one-time migration marker
         if (!DropHelperEnabled) s["DropHelperEnabled"] = "false";
         else s["DropHelperEnabled"] = "true";
         s["CloseToTray"] = CloseToTray ? "true" : "false";
@@ -478,6 +512,9 @@ public partial class SettingsViewModel : ObservableObject
         else s.Remove("DefaultSrRenderScale");
         if (DefaultRrRenderScale != 0) s["DefaultRrRenderScale"] = DefaultRrRenderScale.ToString();
         else s.Remove("DefaultRrRenderScale");
+        if (DefaultSrDriverOverride) s["DefaultSrDriverOverride"] = "1"; else s.Remove("DefaultSrDriverOverride");
+        if (DefaultRrDriverOverride) s["DefaultRrDriverOverride"] = "1"; else s.Remove("DefaultRrDriverOverride");
+        if (DefaultFgDriverOverride) s["DefaultFgDriverOverride"] = "1"; else s.Remove("DefaultFgDriverOverride");
 
         // Digital Vibrance per-display settings
         if (DigitalVibranceSettings.Count > 0)

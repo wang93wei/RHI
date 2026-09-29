@@ -51,11 +51,23 @@ public class GameNameService : IGameNameService
     private Dictionary<string, string> _dxvkVariantOverrides = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, int> _liliumPresetOverrides = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Per-game OptiScaler variant override. Key = "GameName|Store", Value = "Stable" or "Nightly".</summary>
+    /// <summary>Per-game OptiScaler variant override. Key = "GameName|Store", Value = "Stable", "Nightly", or "DlssNr".</summary>
     private Dictionary<string, string> _osVariantOverrides = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Per-game NR runtime version override. Key = "GameName|Store", Value = e.g. "310.8.2" or "310.8.SF-v2". Absent = default (310.8.2).</summary>
+    private Dictionary<string, string> _osNrRuntime = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Per-game Neural Rendering method override. Key = "GameName|Store", Value = "DLSS5Tool", "DLSS5ToolBridge", "ShortFuse", or "Feeder". Absent = auto-detect.</summary>
     private Dictionary<string, string> _nrMethodOverrides = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Per-game NR addon version override. Key = "GameName|Store", Value = version string e.g. "5.2.1" / "0.55". Absent = use latest.</summary>
+    private Dictionary<string, string> _nrAddonVersion = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Per-game NR DLL version override. Key = "GameName|Store", Value = version string e.g. "310.8.0". Absent = use latest.</summary>
+    private Dictionary<string, string> _nrDllVersion = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Per-game NR pack version override (Feeder or Bridge). Key = "GameName|Store", Value = version tag e.g. "v1.16.0-beta.4". Absent = use latest.</summary>
+    private Dictionary<string, string> _nrPackVersion = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Per-game HDR auto-toggle overrides. Key = game name, Value = "On" or "Off". Absent = use global default.</summary>
     private Dictionary<string, string> _hdrToggleOverrides = new(StringComparer.OrdinalIgnoreCase);
@@ -111,8 +123,19 @@ public class GameNameService : IGameNameService
     /// <summary>Per-game Ultimate ASI Loader installed DLL name. Key = "GameName|Store", Value = dll filename. Absent = not installed.</summary>
     private Dictionary<string, string> _ualInstalledAs = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Games where ShortFuse auto-config is DISABLED. Composite-keyed "GameName|Store". Absent = enabled (default).</summary>
+    /// <summary>Per-game standalone DLSS Enabler installed DLL name. Key = "GameName|Store", Value = dll filename. Absent = not installed.</summary>
+    private Dictionary<string, string> _deInstalledAs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Games where ShortFuse auto-config is DISABLED. Composite-keyed. Legacy — kept for migration only.</summary>
     private HashSet<string> _sfAutoConfigDisabled = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Games where ShortFuse auto-config is ENABLED. Composite-keyed "GameName|Store". Absent = disabled (default).</summary>
+    private HashSet<string> _sfAutoConfigEnabled = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _dlssNrCostScalerEnabled = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Games where the ShortFuse addon is deployed as zzz_renodx-dlss.addon64 for load order control. Composite-keyed "GameName|Store".</summary>
+    private HashSet<string> _sfZzzMode = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> _rtx40MfgInstalledAs = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> _dlssg2030InstalledAs = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> _dlssg2030GpuGen = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Maps current (renamed) game name → original store-detected name.</summary>
     private Dictionary<string, string> _originalDetectedNames = new(StringComparer.OrdinalIgnoreCase);
@@ -156,10 +179,18 @@ public class GameNameService : IGameNameService
     public Dictionary<string, string> DxvkVariantOverrides => _dxvkVariantOverrides;
     /// <summary>Per-game Lilium HDR DXVK preset index. 0=Safest (default), 5=Experimental. Absent = 0.</summary>
     public Dictionary<string, int> LiliumPresetOverrides => _liliumPresetOverrides;
-    /// <summary>Per-game OptiScaler variant override. Key = "GameName|Store", Value = "Stable" or "Nightly".</summary>
+    /// <summary>Per-game OptiScaler variant override. Key = "GameName|Store", Value = "Stable", "Nightly", or "DlssNr".</summary>
     public Dictionary<string, string> OsVariantOverrides => _osVariantOverrides;
+    /// <summary>Per-game NR runtime version override. Key = "GameName|Store", Value e.g. "310.8.2". Absent = default.</summary>
+    public Dictionary<string, string> OsNrRuntime => _osNrRuntime;
     /// <summary>Per-game Neural Rendering method override. Key = "GameName|Store", Value = "DLSS5Tool", "DLSS5ToolBridge", "ShortFuse", or "Feeder". Absent = auto-detect.</summary>
     public Dictionary<string, string> NrMethodOverrides => _nrMethodOverrides;
+    /// <summary>Per-game NR addon version override. Key = "GameName|Store", Value = version string e.g. "5.2.1". Absent = use latest.</summary>
+    public Dictionary<string, string> NrAddonVersion => _nrAddonVersion;
+    /// <summary>Per-game NR DLL version override.</summary>
+    public Dictionary<string, string> NrDllVersion => _nrDllVersion;
+    /// <summary>Per-game NR pack (Feeder/Bridge) version override. Key = "GameName|Store", Value = version tag. Absent = use latest.</summary>
+    public Dictionary<string, string> NrPackVersion => _nrPackVersion;
     /// <summary>Per-game HDR auto-toggle overrides. "On" or "Off". Absent = use global.</summary>
     public Dictionary<string, string> HdrToggleOverrides => _hdrToggleOverrides;
     /// <summary>Per-game Resolution auto-toggle overrides. "On" or "Off". Absent = use global.</summary>
@@ -207,8 +238,29 @@ public class GameNameService : IGameNameService
     public Dictionary<string, string> OsStreamlineVersion => _osStreamlineVersion;
     /// <summary>Per-game Ultimate ASI Loader installed DLL name. Composite-keyed "GameName|Store".</summary>
     public Dictionary<string, string> UalInstalledAs => _ualInstalledAs;
-    /// <summary>Games where ShortFuse auto-config is disabled. Composite-keyed "GameName|Store". Absent = enabled.</summary>
+    /// <summary>Per-game standalone DLSS Enabler installed DLL name. Composite-keyed "GameName|Store".</summary>
+    public Dictionary<string, string> DeInstalledAs => _deInstalledAs;
+    /// <summary>Games where ShortFuse auto-config is disabled. Legacy — kept for migration only.</summary>
     public HashSet<string> SfAutoConfigDisabled => _sfAutoConfigDisabled;
+    /// <summary>Games where ShortFuse auto-config is explicitly enabled. Composite-keyed "GameName|Store". Absent = disabled.</summary>
+    public HashSet<string> SfAutoConfigEnabled => _sfAutoConfigEnabled;
+    public HashSet<string> DlssNrCostScalerEnabled => _dlssNrCostScalerEnabled;
+    /// <summary>Games where the ShortFuse addon is deployed as zzz_renodx-dlss.addon64. Composite-keyed "GameName|Store".</summary>
+    public HashSet<string> SfZzzMode => _sfZzzMode;
+    public Dictionary<string, string> Rtx40MfgInstalledAs => _rtx40MfgInstalledAs;
+    /// <summary>Per-game 20/30 FG Unlock installed DLL name. Key = "GameName|Store", Value = DLL filename.</summary>
+    public Dictionary<string, string> Dlssg2030InstalledAs => _dlssg2030InstalledAs;
+    /// <summary>Per-game 20/30 FG Unlock GPU generation. Key = "GameName|Store", Value = "RTX 30 Series" or "RTX 20 Series".</summary>
+    public Dictionary<string, string> Dlssg2030GpuGen => _dlssg2030GpuGen;
+
+    // ── Debounce infrastructure for SaveNameMappings ─────────────────────────
+    private Timer? _saveDebounceTimer;
+    private readonly object _saveLock = new();
+    private IDllOverrideService? _pendingDllOverride;
+    private SettingsViewModel? _pendingSettings;
+    private ViewLayout _pendingViewLayout;
+    private string _pendingFilterMode = "";
+    private List<CustomFilter> _pendingCustomFilters = new();
 
     public GameNameService(
         IGameDetectionService gameDetectionService,
@@ -342,10 +394,7 @@ public class GameNameService : IGameNameService
         {
             _perGameShaderSelection = new(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in pgssDict)
-            {
-                if (_perGameShaderMode.ContainsKey(kv.Key))
-                    _perGameShaderSelection[kv.Key] = kv.Value;
-            }
+                _perGameShaderSelection[kv.Key] = kv.Value;
         }
 
         var pgamDict = Load<Dictionary<string, string>?>("PerGameAddonMode", null);
@@ -366,6 +415,13 @@ public class GameNameService : IGameNameService
                 for (int i = 0; i < list.Count; i++)
                     if (list[i].Equals("RenoDX DLSS5", StringComparison.OrdinalIgnoreCase))
                         list[i] = "DLSS5 Tool";
+                // Migration: remove NR addons that moved out of the addon picker
+                list.RemoveAll(a => a.Equals("DLSS5 Tool",           StringComparison.OrdinalIgnoreCase)
+                                 || a.Equals("DLSS Tool (ShortFuse)", StringComparison.OrdinalIgnoreCase)
+                                 || a.Equals("MFG Ada Unlock",        StringComparison.OrdinalIgnoreCase)
+                                 || a.Equals("DLSS5 Feeder",          StringComparison.OrdinalIgnoreCase)
+                                 || a.Equals("DLSS5 DX11 Bridge",     StringComparison.OrdinalIgnoreCase));
+                if (list.Count == 0) pgasDict.Remove(key);
             }
             _perGameAddonSelection = new(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in pgasDict)
@@ -461,10 +517,30 @@ public class GameNameService : IGameNameService
         _osVariantOverrides = new(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in osVariantOvDict) _osVariantOverrides[kv.Key] = kv.Value;
 
+        var osNrRuntimeDict = Load<Dictionary<string, string>>("OsNrRuntime",
+            new(StringComparer.OrdinalIgnoreCase));
+        _osNrRuntime = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in osNrRuntimeDict) _osNrRuntime[kv.Key] = kv.Value;
+
         var nrMethodOvDict = Load<Dictionary<string, string>>("NrMethodOverrides",
             new(StringComparer.OrdinalIgnoreCase));
         _nrMethodOverrides = new(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in nrMethodOvDict) _nrMethodOverrides[kv.Key] = kv.Value;
+
+        var nrAddonVersionDict = Load<Dictionary<string, string>>("NrAddonVersion",
+            new(StringComparer.OrdinalIgnoreCase));
+        _nrAddonVersion = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in nrAddonVersionDict) _nrAddonVersion[kv.Key] = kv.Value;
+
+        var nrDllVersionDict = Load<Dictionary<string, string>>("NrDllVersion",
+            new(StringComparer.OrdinalIgnoreCase));
+        _nrDllVersion = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in nrDllVersionDict) _nrDllVersion[kv.Key] = kv.Value;
+
+        var nrPackVersionDict = Load<Dictionary<string, string>>("NrPackVersion",
+            new(StringComparer.OrdinalIgnoreCase));
+        _nrPackVersion = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in nrPackVersionDict) _nrPackVersion[kv.Key] = kv.Value;
 
         var liliumPresetOvDict = Load<Dictionary<string, int>>("LiliumPresetOverrides",
             new(StringComparer.OrdinalIgnoreCase));
@@ -562,13 +638,30 @@ public class GameNameService : IGameNameService
         _ualInstalledAs = new(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in ualInstalledAsDict) _ualInstalledAs[kv.Key] = kv.Value;
 
+        var deInstalledAsDict = Load<Dictionary<string, string>>("DeInstalledAs", new(StringComparer.OrdinalIgnoreCase));
+        _deInstalledAs = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in deInstalledAsDict) _deInstalledAs[kv.Key] = kv.Value;
+
         _sfAutoConfigDisabled = new HashSet<string>(
             Load<List<string>>("SfAutoConfigDisabled", new()), StringComparer.OrdinalIgnoreCase);
+        _sfAutoConfigEnabled = new HashSet<string>(
+            Load<List<string>>("SfAutoConfigEnabled", new()), StringComparer.OrdinalIgnoreCase);
+        _dlssNrCostScalerEnabled = new HashSet<string>(
+            Load<List<string>>("DlssNrCostScalerEnabled", new()), StringComparer.OrdinalIgnoreCase);
+        _sfZzzMode = new HashSet<string>(
+            Load<List<string>>("SfZzzMode", new()), StringComparer.OrdinalIgnoreCase);
+        _rtx40MfgInstalledAs = new Dictionary<string, string>(
+            Load<Dictionary<string, string>>("Rtx40MfgInstalledAs", new()),
+            StringComparer.OrdinalIgnoreCase);
+        _dlssg2030InstalledAs = new Dictionary<string, string>(
+            Load<Dictionary<string, string>>("Dlssg2030InstalledAs", new()),
+            StringComparer.OrdinalIgnoreCase);
+        _dlssg2030GpuGen = new Dictionary<string, string>(
+            Load<Dictionary<string, string>>("Dlssg2030GpuGen", new()),
+            StringComparer.OrdinalIgnoreCase);
 
-        if (s.TryGetValue("ViewLayout", out var vlVal) && int.TryParse(vlVal, out var vlInt) && Enum.IsDefined(typeof(ViewLayout), vlInt))
-            setViewLayout((ViewLayout)vlInt);
-        else if (s.TryGetValue("GridLayout", out var glVal))  // backward compat
-            setViewLayout(ViewLayout.Detail);
+        // Always force Detail view — Simple view has been removed
+        setViewLayout(ViewLayout.Detail);
 
         if (s.TryGetValue("FilterMode", out var fmVal) && !string.IsNullOrWhiteSpace(fmVal))
             setFilterMode(fmVal);
@@ -592,6 +685,95 @@ public class GameNameService : IGameNameService
     {
         if (isLoadingSettings) return;
 
+        // Capture latest parameters for the debounced save
+        lock (_saveLock)
+        {
+            _pendingDllOverride = dllOverrideService;
+            _pendingSettings = settingsViewModel;
+            _pendingViewLayout = currentViewLayout;
+            _pendingFilterMode = filterMode;
+            _pendingCustomFilters = customFilters.ToList();
+
+            // Reset or start the debounce timer (250ms delay)
+            if (_saveDebounceTimer != null)
+            {
+                _saveDebounceTimer.Change(250, Timeout.Infinite);
+            }
+            else
+            {
+                _saveDebounceTimer = new Timer(_ => DoSaveNameMappings(), null, 250, Timeout.Infinite);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Performs the actual disk write. Called from the debounce timer callback.
+    /// Also call this directly when immediate persistence is required (e.g. game rename, app shutdown).
+    /// </summary>
+    public void SaveNameMappingsImmediate(
+        IDllOverrideService dllOverrideService,
+        SettingsViewModel settingsViewModel,
+        ViewLayout currentViewLayout,
+        string filterMode,
+        List<CustomFilter> customFilters)
+    {
+        // Cancel any pending debounced save — we're doing it now
+        lock (_saveLock)
+        {
+            _saveDebounceTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        DoSaveNameMappingsInternal(dllOverrideService, settingsViewModel, currentViewLayout, filterMode, customFilters);
+    }
+
+    /// <summary>
+    /// Flushes any pending debounced save immediately. Call on app shutdown.
+    /// </summary>
+    public void FlushPendingSave()
+    {
+        Timer? timer;
+        lock (_saveLock)
+        {
+            timer = _saveDebounceTimer;
+            _saveDebounceTimer = null;
+        }
+
+        if (timer != null)
+        {
+            timer.Dispose();
+            DoSaveNameMappings();
+        }
+    }
+
+    private void DoSaveNameMappings()
+    {
+        IDllOverrideService? dllOverride;
+        SettingsViewModel? settings;
+        ViewLayout viewLayout;
+        string filterMode;
+        List<CustomFilter> customFilters;
+
+        lock (_saveLock)
+        {
+            dllOverride = _pendingDllOverride;
+            settings = _pendingSettings;
+            viewLayout = _pendingViewLayout;
+            filterMode = _pendingFilterMode;
+            customFilters = _pendingCustomFilters;
+        }
+
+        if (dllOverride == null || settings == null) return;
+
+        DoSaveNameMappingsInternal(dllOverride, settings, viewLayout, filterMode, customFilters);
+    }
+
+    private void DoSaveNameMappingsInternal(
+        IDllOverrideService dllOverrideService,
+        SettingsViewModel settingsViewModel,
+        ViewLayout currentViewLayout,
+        string filterMode,
+        List<CustomFilter> customFilters)
+    {
         // Retry with short delays to handle file contention from concurrent background tasks
         for (int attempt = 0; attempt < 3; attempt++)
         {
@@ -639,6 +821,12 @@ public class GameNameService : IGameNameService
                 s["LiliumPresetOverrides"] = JsonSerializer.Serialize(_liliumPresetOverrides);
                 s["OsVariantOverrides"] = JsonSerializer.Serialize(_osVariantOverrides);
                 s["NrMethodOverrides"] = JsonSerializer.Serialize(_nrMethodOverrides);
+                if (_nrAddonVersion.Count > 0) s["NrAddonVersion"] = JsonSerializer.Serialize(_nrAddonVersion);
+                else s.Remove("NrAddonVersion");
+                if (_nrDllVersion.Count > 0) s["NrDllVersion"] = JsonSerializer.Serialize(_nrDllVersion);
+                else s.Remove("NrDllVersion");
+                if (_nrPackVersion.Count > 0) s["NrPackVersion"] = JsonSerializer.Serialize(_nrPackVersion);
+                else s.Remove("NrPackVersion");
                 s["HdrToggleOverrides"] = JsonSerializer.Serialize(_hdrToggleOverrides);
                 s["ResToggleOverrides"] = JsonSerializer.Serialize(_resToggleOverrides);
                 s["LaunchExeOverrides"] = JsonSerializer.Serialize(_launchExeOverrides);
@@ -659,18 +847,34 @@ public class GameNameService : IGameNameService
                 s["OsFsrFgSwapchain"] = JsonSerializer.Serialize(_osFsrFgSwapchain.ToList());
                 s["OsUpscalerPlugin"] = JsonSerializer.Serialize(_osUpscalerPlugin.ToList());
                 if (_osStreamlineVersion.Count > 0) s["OsStreamlineVersion"] = JsonSerializer.Serialize(_osStreamlineVersion);
+                if (_osNrRuntime.Count > 0) s["OsNrRuntime"] = JsonSerializer.Serialize(_osNrRuntime);
                 if (_ualInstalledAs.Count > 0) s["UalInstalledAs"] = JsonSerializer.Serialize(_ualInstalledAs);
-                if (_sfAutoConfigDisabled.Count > 0) s["SfAutoConfigDisabled"] = JsonSerializer.Serialize(_sfAutoConfigDisabled.ToList());
-                else s.Remove("SfAutoConfigDisabled");
+                if (_deInstalledAs.Count > 0) s["DeInstalledAs"] = JsonSerializer.Serialize(_deInstalledAs);
+                else s.Remove("DeInstalledAs");
+                if (_sfAutoConfigEnabled.Count > 0) s["SfAutoConfigEnabled"] = JsonSerializer.Serialize(_sfAutoConfigEnabled.ToList());
+                else s.Remove("SfAutoConfigEnabled");
+                if (_dlssNrCostScalerEnabled.Count > 0) s["DlssNrCostScalerEnabled"] = JsonSerializer.Serialize(_dlssNrCostScalerEnabled.ToList());
+                else s.Remove("DlssNrCostScalerEnabled");
+                if (_sfZzzMode.Count > 0) s["SfZzzMode"] = JsonSerializer.Serialize(_sfZzzMode.ToList());
+                else s.Remove("SfZzzMode");
+                if (_rtx40MfgInstalledAs.Count > 0) s["Rtx40MfgInstalledAs"] = JsonSerializer.Serialize(_rtx40MfgInstalledAs);
+                else s.Remove("Rtx40MfgInstalledAs");
+                if (_dlssg2030InstalledAs.Count > 0) s["Dlssg2030InstalledAs"] = JsonSerializer.Serialize(_dlssg2030InstalledAs);
+                else s.Remove("Dlssg2030InstalledAs");
+                if (_dlssg2030GpuGen.Count > 0) s["Dlssg2030GpuGen"] = JsonSerializer.Serialize(_dlssg2030GpuGen);
+                else s.Remove("Dlssg2030GpuGen");
+                s.Remove("Rtx40MfgInstalled"); // remove legacy key
+                s.Remove("SfAutoConfigDisabled"); // legacy — no longer written
                 s["ViewLayout"]          = ((int)currentViewLayout).ToString();
                 s["FilterMode"]          = filterMode;
                 s["CustomFilters"]       = JsonSerializer.Serialize(customFilters);
                 SettingsViewModel.SaveSettingsFile(s);
                 return;
             }
-            catch (IOException) when (attempt < 2)
+            catch (IOException ex) when (attempt < 2)
             {
-                Thread.Sleep(50 * (attempt + 1)); // 50ms, 100ms
+                CrashReporter.Log($"[GameNameService.SaveNameMappings] IO retry {attempt + 1}: {ex.Message}");
+                // Don't sleep on UI thread — just log and retry immediately on next attempt
             }
             catch (Exception ex)
             {
@@ -793,8 +997,16 @@ public class GameNameService : IGameNameService
         MigrateCompositeHashSet(_osFsrFgSwapchain, oldName, newName);
         MigrateCompositeHashSet(_osUpscalerPlugin, oldName, newName);
         MigrateCompositeDict(_osStreamlineVersion, oldName, newName);
+        MigrateCompositeDict(_osNrRuntime, oldName, newName);
         MigrateCompositeDict(_ualInstalledAs, oldName, newName);
+        MigrateCompositeDict(_deInstalledAs, oldName, newName);
         MigrateCompositeHashSet(_sfAutoConfigDisabled, oldName, newName);
+        MigrateCompositeHashSet(_sfAutoConfigEnabled, oldName, newName);
+        MigrateCompositeHashSet(_dlssNrCostScalerEnabled, oldName, newName);
+        MigrateCompositeHashSet(_sfZzzMode, oldName, newName);
+        MigrateCompositeDict(_rtx40MfgInstalledAs, oldName, newName);
+        MigrateCompositeDict(_dlssg2030InstalledAs, oldName, newName);
+        MigrateCompositeDict(_dlssg2030GpuGen, oldName, newName);
 
         // Migrate name-only HashSets (shared across stores)
         MigrateHashSet(_wikiExclusions, oldName, newName);
@@ -817,6 +1029,9 @@ public class GameNameService : IGameNameService
         MigrateCompositeDict(_customReShadeSelection, oldName, newName);
         MigrateCompositeDict(_osVariantOverrides, oldName, newName);
         MigrateCompositeDict(_nrMethodOverrides, oldName, newName);
+        MigrateCompositeDict(_nrAddonVersion, oldName, newName);
+        MigrateCompositeDict(_nrDllVersion, oldName, newName);
+        MigrateCompositeDict(_nrPackVersion, oldName, newName);
         // These four are name-only (not per-store) — use name-only migration
         MigrateDict(_hdrToggleOverrides, oldName, newName);
         MigrateDict(_resToggleOverrides, oldName, newName);

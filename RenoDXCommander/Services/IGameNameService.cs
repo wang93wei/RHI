@@ -98,11 +98,22 @@ public interface IGameNameService
     /// <summary>Per-game Lilium HDR DXVK preset index. 0=Safest (default), 5=Experimental. Absent = 0.</summary>
     Dictionary<string, int> LiliumPresetOverrides { get; }
 
-    /// <summary>Per-game OptiScaler variant override. Key = "GameName|Store", Value = "Stable" or "Nightly".</summary>
+    /// <summary>Per-game OptiScaler variant override. Key = "GameName|Store", Value = "Stable", "Nightly", or "DlssNr".</summary>
     Dictionary<string, string> OsVariantOverrides { get; }
+    /// <summary>Per-game NR runtime version override. Key = "GameName|Store", Value e.g. "310.8.2". Absent = default.</summary>
+    Dictionary<string, string> OsNrRuntime { get; }
 
     /// <summary>Per-game Neural Rendering method override. Key = "GameName|Store", Value = "DLSS5Tool", "DLSS5ToolBridge", "ShortFuse", or "Feeder". Absent = auto-detect.</summary>
     Dictionary<string, string> NrMethodOverrides { get; }
+
+    /// <summary>Per-game NR addon version override. Key = "GameName|Store", Value = version string e.g. "5.2.1". Absent = use latest.</summary>
+    Dictionary<string, string> NrAddonVersion { get; }
+
+    /// <summary>Per-game NR DLL version override.</summary>
+    Dictionary<string, string> NrDllVersion { get; }
+
+    /// <summary>Per-game NR pack (Feeder/Bridge) version override. Key = "GameName|Store", Value = version tag. Absent = use latest.</summary>
+    Dictionary<string, string> NrPackVersion { get; }
 
     /// <summary>Per-game HDR auto-toggle overrides. "On" or "Off". Absent = use global.</summary>
     Dictionary<string, string> HdrToggleOverrides { get; }
@@ -159,8 +170,21 @@ public interface IGameNameService
     Dictionary<string, string> OsStreamlineVersion { get; }
     /// <summary>Per-game UAL installed DLL name. Composite-keyed "GameName|Store".</summary>
     Dictionary<string, string> UalInstalledAs { get; }
-    /// <summary>Games where ShortFuse auto-config is disabled. Absent = enabled.</summary>
+    /// <summary>Per-game standalone DLSS Enabler installed DLL name. Composite-keyed "GameName|Store".</summary>
+    Dictionary<string, string> DeInstalledAs { get; }
+    /// <summary>Legacy — games where ShortFuse auto-config was disabled. Kept for migration only.</summary>
     HashSet<string> SfAutoConfigDisabled { get; }
+    /// <summary>Games where ShortFuse auto-config is explicitly enabled. Absent = disabled.</summary>
+    HashSet<string> SfAutoConfigEnabled { get; }
+    HashSet<string> DlssNrCostScalerEnabled { get; }
+    /// <summary>Games where the ShortFuse addon is deployed as zzz_renodx-dlss.addon64. Composite-keyed.</summary>
+    HashSet<string> SfZzzMode { get; }
+    /// <summary>Per-game RTX 40 MFG installed DLL name. Key = "GameName|Store", Value = DLL filename (e.g. "version.dll").</summary>
+    Dictionary<string, string> Rtx40MfgInstalledAs { get; }
+    /// <summary>Per-game 20/30 FG Unlock installed DLL name. Key = "GameName|Store", Value = DLL filename.</summary>
+    Dictionary<string, string> Dlssg2030InstalledAs { get; }
+    /// <summary>Per-game 20/30 FG Unlock GPU generation. Key = "GameName|Store", Value = "RTX 30 Series" or "RTX 20 Series".</summary>
+    Dictionary<string, string> Dlssg2030GpuGen { get; }
 
     // ── Load / Save ───────────────────────────────────────────────────────────
 
@@ -175,7 +199,7 @@ public interface IGameNameService
         Action<string> setFilterMode,
         Action<List<CustomFilter>> setCustomFilters);
 
-    /// <summary>Persists all settings to disk.</summary>
+    /// <summary>Persists all settings to disk (debounced — 250ms delay coalesces rapid calls).</summary>
     void SaveNameMappings(
         IDllOverrideService dllOverrideService,
         SettingsViewModel settingsViewModel,
@@ -183,6 +207,22 @@ public interface IGameNameService
         bool isLoadingSettings,
         string filterMode,
         List<CustomFilter> customFilters);
+
+    /// <summary>
+    /// Persists all settings to disk immediately (bypasses debounce).
+    /// Use for game rename and app shutdown where immediate persistence is required.
+    /// </summary>
+    void SaveNameMappingsImmediate(
+        IDllOverrideService dllOverrideService,
+        SettingsViewModel settingsViewModel,
+        ViewLayout currentViewLayout,
+        string filterMode,
+        List<CustomFilter> customFilters);
+
+    /// <summary>
+    /// Flushes any pending debounced save immediately. Call on app shutdown.
+    /// </summary>
+    void FlushPendingSave();
 
     // ── Name mapping CRUD ─────────────────────────────────────────────────────
 

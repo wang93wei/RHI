@@ -148,20 +148,12 @@ public partial class DlssPresetService
         try
         {
             unsafe { new Span<byte>((void*)ptr, STRUCT_SIZE).Clear(); }
-
-            // version at offset 0: size | (1 << 16)
             Marshal.WriteInt32(ptr, 0, STRUCT_SIZE | (1 << 16));
-            // settingId at offset 4100
             Marshal.WriteInt32(ptr, 4100, (int)settingId);
-            // settingType at offset 4104: 1 = BINARY (matches NVPI's NVDRS_BINARY_TYPE enum)
             Marshal.WriteInt32(ptr, 4104, 1);
-            // settingLocation at offset 4108: 0 = CURRENT_PROFILE_LOCATION
             Marshal.WriteInt32(ptr, 4108, 0);
-
-            // currentValue union at offset 8220:
-            // NVPI's binaryValue layout: [int32 length][data bytes]
-            Marshal.WriteInt32(ptr, 8220, data.Length);
-            Marshal.Copy(data, 0, ptr + 8224, data.Length);
+            Marshal.WriteInt32(ptr, 8216, data.Length);
+            Marshal.Copy(data, 0, ptr + 8220, data.Length);
 
             int result = _nativeSetSettingPtr(sessionHandle, profileHandle, ptr, 0, 0);
             if (result != 0)
@@ -169,21 +161,55 @@ public partial class DlssPresetService
                 CrashReporter.Log($"[DlssPresetService.SetBinarySettingRawNvApi] NvAPI_DRS_SetSetting returned {result} for 0x{settingId:X8} (len={data.Length})");
                 return false;
             }
-
             int saveResult = _nativeSaveSettings(sessionHandle);
             if (saveResult != 0)
             {
                 CrashReporter.Log($"[DlssPresetService.SetBinarySettingRawNvApi] NvAPI_DRS_SaveSettings returned {saveResult}");
                 return false;
             }
-
             CrashReporter.Log($"[DlssPresetService.SetBinarySettingRawNvApi] Set BINARY 0x{settingId:X8} (len={data.Length}) via raw NVAPI");
             return true;
         }
-        finally
+        finally { Marshal.FreeHGlobal(ptr); }
+    }
+
+    /// <summary>
+    /// Sets a QWORD (64-bit integer) setting directly via raw NVAPI (settingType=4 / DRS_DWORD64).
+    /// Used for ReBAR Size Limit (0x000F00FF) which the driver stores as a 64-bit integer.
+    /// NvAPIWrapper has no UInt64 overload and incorrectly encodes it as Binary — use this instead.
+    /// </summary>
+    private bool SetQwordSettingRawNvApi(IntPtr sessionHandle, IntPtr profileHandle, uint settingId, ulong value)
+    {
+        EnsureNativeFunctions();
+        if (_nativeSetSettingPtr == null || _nativeSaveSettings == null) return false;
+
+        const int STRUCT_SIZE = 12320;
+        var ptr = Marshal.AllocHGlobal(STRUCT_SIZE);
+        try
         {
-            Marshal.FreeHGlobal(ptr);
+            unsafe { new Span<byte>((void*)ptr, STRUCT_SIZE).Clear(); }
+            Marshal.WriteInt32(ptr, 0, STRUCT_SIZE | (1 << 16)); // version
+            Marshal.WriteInt32(ptr, 4100, (int)settingId);        // settingId
+            Marshal.WriteInt32(ptr, 4104, 4);                     // settingType = 4 (DRS_DWORD64)
+            Marshal.WriteInt32(ptr, 4108, 0);                     // settingLocation = CURRENT_PROFILE
+            Marshal.WriteInt64(ptr, 8220, (long)value);           // 64-bit value at same offset as DWORD
+
+            int result = _nativeSetSettingPtr(sessionHandle, profileHandle, ptr, 0, 0);
+            if (result != 0)
+            {
+                CrashReporter.Log($"[DlssPresetService.SetQwordSettingRawNvApi] NvAPI_DRS_SetSetting returned {result} for 0x{settingId:X8}");
+                return false;
+            }
+            int saveResult = _nativeSaveSettings(sessionHandle);
+            if (saveResult != 0)
+            {
+                CrashReporter.Log($"[DlssPresetService.SetQwordSettingRawNvApi] NvAPI_DRS_SaveSettings returned {saveResult}");
+                return false;
+            }
+            CrashReporter.Log($"[DlssPresetService.SetQwordSettingRawNvApi] Set QWORD 0x{settingId:X8} = 0x{value:X16}");
+            return true;
         }
+        finally { Marshal.FreeHGlobal(ptr); }
     }
 
     /// <summary>
@@ -451,11 +477,13 @@ public partial class DlssPresetService
             catch { DriverVersionString = ""; }
 
             _session = DriverSettingsSession.CreateAndLoad();
-            _cachedProfiles = new Dictionary<string, DriverSettingsProfile>(StringComparer.OrdinalIgnoreCase);
+            // Build the profile cache into a local dict first, then assign atomically.
+            // This prevents a race where GetPreset/FindProfile reads the field while
+            // Initialize() is still enumerating _session.Profiles to populate it.
+            var newProfiles = new Dictionary<string, DriverSettingsProfile>(StringComparer.OrdinalIgnoreCase);
             foreach (var profile in _session.Profiles)
-            {
-                _cachedProfiles.TryAdd(profile.Name, profile);
-            }
+                newProfiles.TryAdd(profile.Name, profile);
+            _cachedProfiles = newProfiles;  // single atomic assignment — no partial state visible to readers
             InvalidateProfileLookupCache();
             _isSupported = true;
 
@@ -599,6 +627,37 @@ public partial class DlssPresetService
     /// <summary>Returns true if the NVIDIA driver is overriding the game's DLSS NR DLL.</summary>
     public bool IsNrDriverOverrideActive(string gameName, string installPath)
         => GetPreset(gameName, installPath, DLSS_NR_LATEST_DLL_ID) == 1;
+
+    // ── Enable / disable the driver "Latest DLL" overrides ────────────────────
+
+    /// <summary>Writes 1 to DLSS_SR_LATEST_DLL_ID so the driver injects its own SR DLL for this game.</summary>
+    public bool SetSrDriverOverride(string gameName, string installPath, bool enable)
+    {
+        if (!enable) return DeletePreset(gameName, installPath, DLSS_SR_LATEST_DLL_ID);
+        return SetPreset(gameName, installPath, DLSS_SR_LATEST_DLL_ID, 1u);
+    }
+
+    /// <summary>Writes 1 to DLSS_RR_LATEST_DLL_ID so the driver injects its own RR DLL for this game.</summary>
+    public bool SetRrDriverOverride(string gameName, string installPath, bool enable)
+    {
+        if (!enable) return DeletePreset(gameName, installPath, DLSS_RR_LATEST_DLL_ID);
+        return SetPreset(gameName, installPath, DLSS_RR_LATEST_DLL_ID, 1u);
+    }
+
+    /// <summary>Writes 1 to DLSS_FG_LATEST_DLL_ID so the driver injects its own FG DLL for this game.</summary>
+    public bool SetFgDriverOverride(string gameName, string installPath, bool enable)
+    {
+        if (!enable) return DeletePreset(gameName, installPath, DLSS_FG_LATEST_DLL_ID);
+        return SetPreset(gameName, installPath, DLSS_FG_LATEST_DLL_ID, 1u);
+    }
+
+    /// <summary>Clears all three Latest DLL driver overrides for a game (called by Restore DLSS/SL).</summary>
+    public void ClearAllDriverOverrides(string gameName, string installPath)
+    {
+        DeletePreset(gameName, installPath, DLSS_SR_LATEST_DLL_ID);
+        DeletePreset(gameName, installPath, DLSS_RR_LATEST_DLL_ID);
+        DeletePreset(gameName, installPath, DLSS_FG_LATEST_DLL_ID);
+    }
 
     // ── Set presets ───────────────────────────────────────────────────────────
 

@@ -1173,10 +1173,41 @@ $session.Save()
         if (!_isSupported || _session == null) return 0;
         try
         {
-            var baseProfile = _session.BaseProfile;
-            var setting = baseProfile.GetSetting(REBAR_SIZE_LIMIT_ID);
-            if (setting.CurrentValue is byte[] bytes && bytes.Length >= 8)
-                return BitConverter.ToUInt64(bytes, 0);
+            var sessionH = GetHandlePtr(_session.Handle);
+            var baseH = GetHandlePtr(_session.BaseProfile.Handle);
+            if (sessionH != IntPtr.Zero && baseH != IntPtr.Zero)
+            {
+                EnsureNativeFunctions();
+                if (_nativeGetSettingPtr != null)
+                {
+                    const int STRUCT_SIZE = 12320;
+                    var ptr = Marshal.AllocHGlobal(STRUCT_SIZE);
+                    try
+                    {
+                        unsafe { new Span<byte>((void*)ptr, STRUCT_SIZE).Clear(); }
+                        Marshal.WriteInt32(ptr, 0, STRUCT_SIZE | (1 << 16));
+                        uint extraParam = 0;
+                        int result = _nativeGetSettingPtr(sessionH, baseH, REBAR_SIZE_LIMIT_ID, ptr, ref extraParam);
+                        if (result == 0)
+                        {
+                            var settingType = Marshal.ReadInt32(ptr, 4104);
+                            if (settingType == 4) // QWORD — value directly at 8220
+                                return (ulong)Marshal.ReadInt64(ptr, 8220);
+                            if (settingType == 1) // BINARY — length at 8216, data at 8220
+                            {
+                                var binLen = Marshal.ReadInt32(ptr, 8216);
+                                if (binLen >= 8) return (ulong)Marshal.ReadInt64(ptr, 8220);
+                            }
+                            if (settingType == 0) // DWORD
+                            {
+                                var dword = (uint)Marshal.ReadInt32(ptr, 8220);
+                                if (dword != 0) return dword;
+                            }
+                        }
+                    }
+                    finally { Marshal.FreeHGlobal(ptr); }
+                }
+            }
             return 0;
         }
         catch { return 0; }
@@ -1187,22 +1218,12 @@ $session.Save()
     {
         if (!_isSupported || _session == null) return false;
 
-        // Try raw NVAPI binary write first (same approach as NVPI)
         var sessionH = GetHandlePtr(_session.Handle);
         var baseH = GetHandlePtr(_session.BaseProfile.Handle);
-        if (sessionH != IntPtr.Zero && baseH != IntPtr.Zero)
-        {
-            var data = BitConverter.GetBytes(sizeBytes);
-            if (SetBinarySettingRawNvApi(sessionH, baseH, REBAR_SIZE_LIMIT_ID, data))
-            {
-                CrashReporter.Log($"[DlssPresetService.SetGlobalReBarSizeLimit] Set 0x{sizeBytes:X16} via raw binary NVAPI");
-                return true;
-            }
-        }
+        if (sessionH == IntPtr.Zero || baseH == IntPtr.Zero) return false;
 
-        // Fallback to PS helper
-        CrashReporter.Log($"[DlssPresetService.SetGlobalReBarSizeLimit] Raw write failed, trying PS helper...");
-        return SetReBarSizeLimitViaPs(null, sizeBytes, useBaseProfile: true);
+        CrashReporter.Log($"[DlssPresetService.SetGlobalReBarSizeLimit] Writing 0x{sizeBytes:X16} via QWORD raw NVAPI");
+        return SetQwordSettingRawNvApi(sessionH, baseH, REBAR_SIZE_LIMIT_ID, sizeBytes);
     }
 
     // ── RTX HDR settings ──────────────────────────────────────────────────────
@@ -1292,5 +1313,69 @@ $session.Save()
     public bool SetRtxHdrPeakBrightness(string gameName, string installPath, uint value) => SetRtxHdrRaw(gameName, installPath, RTX_HDR_PEAK_BRIGHTNESS_ID, value);
     public bool SetRtxHdrMiddleGrey(string gameName, string installPath, uint value) => SetRtxHdrRaw(gameName, installPath, RTX_HDR_MIDDLE_GREY_ID, value);
     public bool SetRtxHdrDebanding(string gameName, string installPath, uint value) => SetRtxHdrRaw(gameName, installPath, RTX_HDR_DEBANDING_ID, value);
+
+    // ── Bulk fetch for Settings page ──────────────────────────────────────────
+
+    /// <summary>
+    /// Fetches all global NVAPI settings on a background thread with a timeout.
+    /// Returns <see cref="NvApiSettingsSnapshot.Default"/> if the fetch times out or fails.
+    /// This prevents the UI from freezing if NVAPI becomes unresponsive after GPU sleep/wake.
+    /// </summary>
+    /// <param name="timeoutMs">Timeout in milliseconds (default 5 seconds).</param>
+    public async Task<NvApiSettingsSnapshot> FetchNvApiSettingsAsync(int timeoutMs = 5000)
+    {
+        if (!_isSupported)
+        {
+            CrashReporter.Log("[DlssPresetService.FetchNvApiSettingsAsync] NVAPI not supported, returning defaults");
+            return NvApiSettingsSnapshot.Default;
+        }
+
+        try
+        {
+            var fetchTask = Task.Run(() =>
+            {
+                CrashReporter.Log("[DlssPresetService.FetchNvApiSettingsAsync] Starting NVAPI reads on background thread");
+                var sw = Stopwatch.StartNew();
+
+                var snapshot = new NvApiSettingsSnapshot
+                {
+                    ShaderCacheSize = GetShaderCacheSize(),
+                    ShaderPrecompile = GetShaderPrecompile(),
+                    GSyncMode = GetGSyncMode(),
+                    GSyncEnabled = GetGlobalGSyncEnabled(),
+                    GSyncIndicator = GetGSyncIndicator(),
+                    FpsLimit = GetGlobalFpsLimit(),
+                    PreferredRefreshRate = GetPreferredRefreshRate(),
+                    DmfgFrameCount = GetGlobalDmfgFrameCount(),
+                    DmfgTargetFps = GetGlobalDmfgTargetFps(),
+                    ReBarEnableMode = GetGlobalReBarEnableMode(),
+                    ReBarSizeLimit = GetGlobalReBarSizeLimit(),
+                    VSyncMode = GetGlobalVSyncMode(),
+                    PowerMode = GetGlobalPowerMode()
+                };
+
+                sw.Stop();
+                CrashReporter.Log($"[DlssPresetService.FetchNvApiSettingsAsync] NVAPI reads completed in {sw.ElapsedMilliseconds}ms");
+                return snapshot;
+            });
+
+            var completedTask = await Task.WhenAny(fetchTask, Task.Delay(timeoutMs));
+
+            if (completedTask == fetchTask)
+            {
+                return await fetchTask;
+            }
+            else
+            {
+                CrashReporter.Log($"[DlssPresetService.FetchNvApiSettingsAsync] NVAPI reads timed out after {timeoutMs}ms — returning defaults");
+                return NvApiSettingsSnapshot.Default;
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DlssPresetService.FetchNvApiSettingsAsync] Exception: {ex.Message}");
+            return NvApiSettingsSnapshot.Default;
+        }
+    }
 
 }

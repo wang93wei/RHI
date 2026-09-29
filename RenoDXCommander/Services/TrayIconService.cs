@@ -133,16 +133,22 @@ public static class TrayIconService
     {
         try
         {
+            var cdl = (ICustomDestinationList)new CoClass_DestinationList();
+            cdl.SetAppID(AppId);
+
+            object removedItems;
+            cdl.BeginList(out uint maxSlots, out removedItems);
+
+            var col = (IObjectCollection)new CoClass_EnumerableObjectCollection();
             var exePath = Environment.ProcessPath!;
 
-            foreach (var game in recentGames.Take(5))
+            foreach (var game in recentGames.Take((int)Math.Min(maxSlots, 5)))
             {
                 var link = (IShellLinkW)new CoClass_ShellLink();
                 link.SetPath(exePath);
                 link.SetArguments($"--launch \"{game}\"");
                 link.SetDescription(game);
 
-                // Set System.Title so the jump list shows the game name
                 var store = (IPropertyStore)link;
                 var titleKey = new PROPERTYKEY { fmtid = new Guid("F29F85E0-4FF9-1068-AB91-08002B27B3D9"), pid = 2 };
                 var pv = new PROPVARIANT { vt = 31, pwszVal = Marshal.StringToCoTaskMemUni(game) };
@@ -150,13 +156,13 @@ public static class TrayIconService
                 store.Commit();
                 Marshal.FreeCoTaskMem(pv.pwszVal);
 
-                // Pass IShellLink directly to SHAddToRecentDocs
-                var linkPtr = Marshal.GetComInterfaceForObject(link, typeof(IShellLinkW));
-                SHAddToRecentDocsPtr(SHARD_LINK, linkPtr);
-                Marshal.Release(linkPtr);
+                col.AddObject(link);
             }
 
-            CrashReporter.Log($"[TrayIconService.UpdateJumpList] Added {recentGames.Count} games via SHAddToRecentDocs (SHARD_LINK)");
+            cdl.AppendCategory("Recent", col);
+            cdl.CommitList();
+
+            CrashReporter.Log($"[TrayIconService.UpdateJumpList] Set {recentGames.Count} games via ICustomDestinationList");
         }
         catch (Exception ex)
         {
@@ -166,14 +172,20 @@ public static class TrayIconService
 
     public static void ClearJumpList()
     {
-        // SHAddToRecentDocs items can't be selectively removed by the app.
-        // Clear all recent docs for this process (only affects our own entries).
         try
         {
-            SHAddToRecentDocsPtr(SHARD_PIDL, IntPtr.Zero);
+            var cdl = (ICustomDestinationList)new CoClass_DestinationList();
+            cdl.SetAppID(AppId);
+            cdl.DeleteList(AppId);
+            CrashReporter.Log("[TrayIconService.ClearJumpList] Cleared via ICustomDestinationList.DeleteList");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[TrayIconService.ClearJumpList] Failed — {ex.GetType().Name}: {ex.Message}");
+        }
     }
+
+    private static Guid _iObjectArrayGuid = typeof(IObjectArray).GUID;
 
     // ── P/Invoke ────────────────────────────────────────────────────────────────
 

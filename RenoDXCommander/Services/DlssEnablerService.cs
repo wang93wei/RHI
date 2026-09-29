@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using RenoDXCommander.Models;
+using RenoDXCommander.ViewModels;
 
 namespace RenoDXCommander.Services;
 
@@ -242,6 +245,101 @@ public class DlssEnablerService
     public bool IsInstalledIn(string optiScalerPath)
         => !string.IsNullOrEmpty(optiScalerPath)
         && File.Exists(Path.Combine(optiScalerPath, DeployFileName));
+
+    // ── Standalone install (game root, user-chosen DLL name) ─────────────────
+
+    /// <summary>
+    /// Installs DLSS Enabler as a standalone DLL in the game folder root.
+    /// If reinstalling under a different name, removes the old file first.
+    /// </summary>
+    public async Task<bool> InstallStandaloneAsync(
+        string gameName, string installPath, string store,
+        string dllName, string? existingInstalledAs,
+        IProgress<(string message, double percent)>? progress = null)
+    {
+        if (string.IsNullOrEmpty(installPath)) return false;
+
+        await EnsureStagingAsync(progress).ConfigureAwait(false);
+        if (!IsStagingReady)
+        {
+            _crashReporter.Log("[DlssEnablerService.InstallStandaloneAsync] Staging not ready");
+            return false;
+        }
+
+        // Remove old install if renaming
+        if (!string.IsNullOrEmpty(existingInstalledAs) &&
+            !existingInstalledAs.Equals(dllName, StringComparison.OrdinalIgnoreCase))
+        {
+            var oldPath = Path.Combine(installPath, existingInstalledAs);
+            try { if (File.Exists(oldPath)) File.Delete(oldPath); }
+            catch (Exception ex) { _crashReporter.Log($"[DlssEnablerService.InstallStandaloneAsync] Old file cleanup failed — {ex.Message}"); }
+        }
+
+        var src  = Path.Combine(_stagingDir, StagedFileName);
+        var dest = Path.Combine(installPath, dllName);
+
+        try
+        {
+            File.Copy(src, dest, overwrite: true);
+            _crashReporter.Log($"[DlssEnablerService.InstallStandaloneAsync] Installed as '{dllName}' in '{installPath}'");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[DlssEnablerService.InstallStandaloneAsync] Copy failed — {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Removes the standalone DLSS Enabler DLL from the game folder.</summary>
+    public bool UninstallStandalone(string installPath, string dllName)
+    {
+        if (string.IsNullOrEmpty(installPath) || string.IsNullOrEmpty(dllName)) return false;
+        var filePath = Path.Combine(installPath, dllName);
+        try
+        {
+            if (File.Exists(filePath)) File.Delete(filePath);
+            _crashReporter.Log($"[DlssEnablerService.UninstallStandalone] Removed '{dllName}' from '{installPath}'");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[DlssEnablerService.UninstallStandalone] Failed — {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Returns true if the standalone DLL is installed (the tracked DLL name exists on disk).</summary>
+    public bool IsStandaloneInstalledIn(string installPath, string? dllName)
+        => !string.IsNullOrEmpty(installPath) && !string.IsNullOrEmpty(dllName)
+        && File.Exists(Path.Combine(installPath, dllName));
+
+    /// <summary>
+    /// After EnsureStagingAsync downloads a new version, auto-redeploy to all games
+    /// with standalone DLSS Enabler installed (tracked by DeInstalledAs dict).
+    /// </summary>
+    public void AutoUpdateStandaloneInstalls(IReadOnlyList<GameCardViewModel> cards, MainViewModel viewModel)
+    {
+        if (!IsStagingReady) return;
+        var src = Path.Combine(_stagingDir, StagedFileName);
+        foreach (var card in cards)
+        {
+            if (string.IsNullOrEmpty(card.InstallPath)) continue;
+            var installedAs = viewModel.GetDeInstalledAs(card.GameName, card.Source ?? "");
+            if (string.IsNullOrEmpty(installedAs)) continue;
+            var dest = Path.Combine(card.InstallPath, installedAs);
+            if (!File.Exists(dest)) continue; // only update if already deployed
+            try
+            {
+                File.Copy(src, dest, overwrite: true);
+                _crashReporter.Log($"[DlssEnablerService.AutoUpdateStandaloneInstalls] Updated '{card.GameName}' → '{installedAs}'");
+            }
+            catch (Exception ex)
+            {
+                _crashReporter.Log($"[DlssEnablerService.AutoUpdateStandaloneInstalls] Failed for '{card.GameName}' — {ex.Message}");
+            }
+        }
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 

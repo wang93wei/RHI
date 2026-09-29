@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using RenoDXCommander.Models;
 using RenoDXCommander.Services;
 using RenoDXCommander.ViewModels;
 
@@ -260,6 +261,7 @@ public class InstallEventHandler
             }
 
             card.OsActionMessage = "✅ OptiScaler installed!";
+            card.OsStatus = GameStatus.Installed;
             card.NotifyAll();
             card.FadeMessage(m => card.OsActionMessage = m, card.OsActionMessage);
 
@@ -268,7 +270,7 @@ public class InstallEventHandler
             _dlssStreamlineService.RecordDlssFound(card.GameName);
 
             // ── Post-install: Deploy Streamline and DLSS Enabler if pre-enabled ──
-            if (osVariant == "Nightly" && !string.IsNullOrEmpty(card.InstallPath))
+            if ((osVariant == "Nightly" || osVariant == "DlssNr") && !string.IsNullOrEmpty(card.InstallPath))
             {
                 if (ViewModel.GetOsDeployStreamline(card.GameName, card.Source ?? ""))
                 {
@@ -306,6 +308,11 @@ public class InstallEventHandler
         finally
         {
             card.OsIsInstalling = false;
+            _window.DispatcherQueue?.TryEnqueue(() =>
+            {
+                card.NotifyAll();
+                _window.PopulateDetailPanel(card);
+            });
         }
     }
 
@@ -365,6 +372,7 @@ public class InstallEventHandler
             catch (Exception cleanEx) { CrashReporter.Log($"[InstallEventHandler.UninstallOptiScaler] Settings cleanup failed — {cleanEx.Message}"); }
 
             card.OsActionMessage = "✖ OptiScaler removed.";
+            card.OsStatus = GameStatus.Available;
             card.NotifyAll();
             card.FadeMessage(m => card.OsActionMessage = m, card.OsActionMessage);
         }
@@ -372,6 +380,12 @@ public class InstallEventHandler
         {
             card.OsActionMessage = $"❌ Uninstall failed: {ex.Message}";
         }
+
+        _window.DispatcherQueue?.TryEnqueue(() =>
+        {
+            card.NotifyAll();
+            _window.PopulateDetailPanel(card);
+        });
     }
 
     public void CopyOsIniButton_Click(object sender, RoutedEventArgs e)

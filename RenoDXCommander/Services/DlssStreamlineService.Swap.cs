@@ -235,25 +235,11 @@ public partial class DlssStreamlineService
 
     public void Restore(string dllPath)
     {
-        var backupPath = dllPath + BackupExtension;
-        if (!File.Exists(backupPath))
-        {
-            CrashReporter.Log($"[DlssStreamlineService.Restore] No backup found for '{dllPath}'");
-            return;
-        }
-
-        try
-        {
-            File.Delete(dllPath);
-            File.Move(backupPath, dllPath);
-            // Clean up any custom marker for this DLL
-            try { File.Delete(dllPath + ".rhi_custom"); } catch { }
-            CrashReporter.Log($"[DlssStreamlineService.Restore] Restored '{dllPath}' from backup");
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[DlssStreamlineService.Restore] Failed to restore '{dllPath}' — {ex.Message}");
-        }
+        // SentinelRestore handles 0-byte sentinel (delete) and real backup (restore).
+        // Returns silently if no .original exists (not placed by RHI).
+        AuxInstallService.SentinelRestore(dllPath);
+        // Clean up any custom marker sidecar regardless
+        try { File.Delete(dllPath + ".rhi_custom"); } catch { }
     }
 
     public void RestoreStreamline(string gameFolder)
@@ -380,14 +366,11 @@ public partial class DlssStreamlineService
     /// </summary>
     private void BackupAndReplace(string targetPath, string sourcePath)
     {
-        var backupPath = targetPath + BackupExtension;
-
-        // Only create backup if one doesn't already exist (preserve the true original)
-        if (!File.Exists(backupPath))
-        {
-            File.Copy(targetPath, backupPath, overwrite: false);
-        }
-
+        // SentinelBackup handles all three cases:
+        //   file exists, no .original  → real backup (File.Move)
+        //   file exists, .original exists → no-op (preserve existing backup)
+        //   file absent → 0-byte sentinel so Restore knows to clean up entirely
+        AuxInstallService.SentinelBackup(targetPath);
         File.Copy(sourcePath, targetPath, overwrite: true);
     }
 

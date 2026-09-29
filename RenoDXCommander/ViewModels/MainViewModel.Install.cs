@@ -1,6 +1,7 @@
 // MainViewModel.Install.cs -- Install/uninstall commands for RenoDX, ReShade, ReLimiter, RE Framework, and Luma.
 
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.Services;
 
@@ -281,7 +282,25 @@ public partial class MainViewModel
         if (!nowExtended && wasInstalled && !string.IsNullOrEmpty(card.InstallPath))
         {
             AuxInstallService.RemoveRenoDxNativeHdrSettings(card.InstallPath);
+
+            string? engineIniFilenameToggle = null;
+            _manifest?.EngineIniFiles?.TryGetValue(card.GameName, out engineIniFilenameToggle);
+            if (!string.IsNullOrEmpty(engineIniFilenameToggle))
+            {
+                var cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RHI", "engine-files");
+                var cachePath = Path.Combine(cacheDir, engineIniFilenameToggle);
+                if (File.Exists(cachePath))
+                {
+                    var entries = AuxInstallService.ParseEngineIniEntries(File.ReadAllText(cachePath));
+                    if (entries.Count > 0)
+                        AuxInstallService.RemoveEngineIniCustomKeys(card.InstallPath,
+                            entries.Select(e => e.Key), card.EngineIniProjectOverride, card.GameName, card.Source);
+                }
+            }
+
             AuxInstallService.RemoveEngineIniHdrSettings(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
+            AuxInstallService.RemoveEngineIniLutSetting(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
         }
 
         // Clear the install record — the old addon was deleted
@@ -775,6 +794,7 @@ public partial class MainViewModel
         }
 
         _allCards.Add(card);
+        card.DispatcherQueue = DispatcherQueue;  // Set dispatcher for newly added card
         _allCards = _allCards.OrderBy(c => c.GameName, StringComparer.OrdinalIgnoreCase).ToList();
         SaveLibrary();
         _filterViewModel.SetAllCards(_allCards);
@@ -825,6 +845,16 @@ public partial class MainViewModel
             return;
         }
 
+        // Bespoke pre-install dialog for Control Ultimate Edition
+        if (string.Equals(card.GameName, ControlUePostInstallService.GameName, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!await ControlUePostInstallService.ShowInstallDialogAsync(card.InstallPath))
+            {
+                if (swappedTo32 && originalSnapshotUrl != null) card.Mod.SnapshotUrl = originalSnapshotUrl;
+                return;
+            }
+        }
+
         card.IsInstalling = true;
         card.ActionMessage = "Starting download...";
         _crashReporter.Log($"[MainViewModel.InstallModAsync] Install started: {card.GameName} → {card.InstallPath}");
@@ -846,19 +876,55 @@ public partial class MainViewModel
             }
 
             // Apply [renodx] Native HDR settings for UE-Extended games
-            // UE4: Set_Path=1 (SDR upgrade path) — UE4 games don't have native HDR pipelines
-            // UE5: Set_Path=0 (native HDR path) — upgrade the game's existing HDR output
+            // Priority: DB entry (Method field) > manifest ueExtendedCompatibility > UE4/UE5 detection
             if (card.UseUeExtended)
             {
                 bool isUe4 = card.EngineHint?.Contains("Unreal Engine 4") == true;
-                AuxInstallService.ApplyRenoDxNativeHdrSettings(card.InstallPath, usesSdrPath: isUe4);
+
+                // DB-driven configuration — only when dev-unlocked and source is not WikiOnly
+                var dbEntry = !string.Equals(_settingsViewModel.RenoDxDbSource, "WikiOnly", StringComparison.OrdinalIgnoreCase)
+                    ? GetDbUnrealEntry(card.GameName)
+                    : null;
+
+                if (dbEntry != null)
+                {
+                    // DB Method takes priority over engine-hint detection
+                    (string Key, string Value)? upgradeOverride = null;
+                    if (dbEntry.UpgradeIniKey != null && dbEntry.UpgradeIniValue != null)
+                        upgradeOverride = (dbEntry.UpgradeIniKey, dbEntry.UpgradeIniValue);
+
+                    AuxInstallService.ApplyRenoDxNativeHdrSettings(
+                        card.InstallPath,
+                        usesSdrPath: dbEntry.UsesSdrPath,
+                        upgradeOverride: upgradeOverride);
+
+                    _crashReporter.Log($"[MainViewModel.InstallModAsync] DB UEE config for '{card.GameName}': Method={dbEntry.Method}, SdrPath={dbEntry.UsesSdrPath}, UpgradeKey={dbEntry.UpgradeIniKey ?? "none"}");
+                }
+                else
+                {
+                    // Fallback: engine-hint detection (UE4 → SDR, UE5 → HDR)
+                    AuxInstallService.ApplyRenoDxNativeHdrSettings(card.InstallPath, usesSdrPath: isUe4);
+                }
             }
 
             // Pre-populate [renodx] key placeholders for generic UE/Unity addons (addon fills values on first launch)
             if (!card.UseUeExtended && card.EngineHint?.Contains("Unreal") == true)
                 AuxInstallService.ApplyRenodxKeyPlaceholders(card.InstallPath, "Unreal");
             else if (!card.UseUeExtended && card.EngineHint?.Contains("Unity") == true)
+            {
                 AuxInstallService.ApplyRenodxKeyPlaceholders(card.InstallPath, "Unity");
+
+                // Apply per-game DB upgrades on top of the placeholders
+                {
+                    var unityEntry = GetDbUnityEntry(card.GameName);
+                    var upgrades   = unityEntry?.ParsedUpgrades;
+                    if (upgrades?.Count > 0)
+                    {
+                        AuxInstallService.ApplyUnityRenodxUpgrades(card.InstallPath, upgrades);
+                        _crashReporter.Log($"[MainViewModel.InstallModAsync] Unity DB upgrades applied for '{card.GameName}': {upgrades.Count} key(s)");
+                    }
+                }
+            }
 
             // Apply per-game [renodx] INI overrides from manifest
             if (_manifest?.RenodxIniOverrides != null
@@ -866,14 +932,38 @@ public partial class MainViewModel
                 AuxInstallService.ApplyRenodxIniOverrides(card.InstallPath, iniOverrides, forceOverwrite: true);
 
             // Deploy Engine.ini HDR settings for UE-Extended games
-            // Priority: ueExtendedCompatibility entry > UE4 detection > default (deploy for UE5)
+            // Priority: DB entry > manifest ueExtendedCompatibility > UE4/UE5 detection
             bool isUe4Game = card.EngineHint?.Contains("Unreal Engine 4") == true;
             var compatEntry = _manifestUeExtendedCompat.TryGetValue(card.GameName, out var ce) ? ce : null;
-            bool deployHdr = compatEntry?.Hdr ?? !isUe4Game;  // compat overrides; else UE4=false, UE5=true
-            bool deployLut = compatEntry?.Lut ?? true;         // compat overrides; else always true
 
-            if (card.UseUeExtended && record.EngineIniHdr != false && deployHdr)
+            // Resolve db entry once more (already looked up above, re-use for Engine.ini decision)
+            var dbEntryForEngineIni = !string.Equals(_settingsViewModel.RenoDxDbSource, "WikiOnly", StringComparison.OrdinalIgnoreCase)
+                ? GetDbUnrealEntry(card.GameName)
+                : null;
+
+            bool deployHdr;
+            bool deployLut = compatEntry?.Lut ?? true; // compat overrides; else always true
+            if (dbEntryForEngineIni != null)
+                deployHdr = dbEntryForEngineIni.DeployEngineIniHdr; // DB Method="ini" → true, others → false
+            else
+                deployHdr = compatEntry?.Hdr ?? !isUe4Game;         // compat overrides; else UE4=false, UE5=true
+
+            // Custom Engine.ini file overrides the standard HDR keys entirely — applied regardless of deployHdr
+            string? engineIniFilename = null;
+            _manifest?.EngineIniFiles?.TryGetValue(card.GameName, out engineIniFilename);
+
+            if (card.UseUeExtended && !string.IsNullOrEmpty(engineIniFilename))
+            {
+                await AuxInstallService.ApplyEngineIniFromFileAsync(_http, engineIniFilename, card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source).ConfigureAwait(false);
+                // Custom file manages Engine.ini — mark standard HDR/LUT as off so cog reflects reality
+                record.EngineIniHdr = false;
+                record.EngineIniLut = false;
+                _installer.SaveRecordPublic(record);
+            }
+            else if (card.UseUeExtended && record.EngineIniHdr != false && deployHdr)
+            {
                 AuxInstallService.ApplyEngineIniHdrSettings(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
+            }
             else if (card.UseUeExtended && !deployHdr)
             {
                 // HDR intentionally not deployed — record Off so cog dialog shows correctly
@@ -881,9 +971,49 @@ public partial class MainViewModel
                 _installer.SaveRecordPublic(record);
             }
 
-            // Deploy r.LUT.UpdateEveryFrame=1 (skip if user disabled or compat entry says no)
-            if (card.EngineHint?.Contains("Unreal") == true && card.InstalledRecord?.EngineIniLut != false && deployLut)
+            // Deploy r.LUT.UpdateEveryFrame=1 (skip if user disabled, compat entry says no, or custom Engine.ini file is in use)
+            if (card.EngineHint?.Contains("Unreal") == true && card.InstalledRecord?.EngineIniLut != false && deployLut
+                && string.IsNullOrEmpty(engineIniFilename))
                 AuxInstallService.ApplyEngineIniLutSetting(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
+
+            // ── Control Ultimate Edition special post-install ──────────────────
+            if (ControlUePostInstallService.IsControlAddon(record.AddonFileName))
+            {
+                await ControlUePostInstallService.RunAsync(card.GameName, card.InstallPath).ConfigureAwait(false);
+
+                // Rescan DLSS — nvngx_dlss.dll and nvngx_dlssd.dll were just deployed.
+                // Update the card's detection result and rebuild the overrides panel so
+                // the NVIDIA Profile section reflects the new DLLs immediately.
+                try
+                {
+                    var dlssSvc = App.Services.GetRequiredService<IDlssStreamlineService>();
+                    var detection = dlssSvc.Detect(card.InstallPath);
+                    if (detection.HasAny)
+                    {
+                        dlssSvc.RecordDlssFound(card.GameName);
+                        dlssSvc.RecordTrustedPath(card.GameName, detection);
+                    }
+                    // Apply detection to the live card on the UI thread, then rebuild the panel
+                    DispatcherQueue?.TryEnqueue(() =>
+                    {
+                        var live = _allCards.FirstOrDefault(c =>
+                            c.GameName.Equals(card.GameName, StringComparison.OrdinalIgnoreCase)
+                            && c.Source == card.Source) ?? card;
+                        live.DlssDetection = detection;
+                        live.ApplyDlssDetection(detection);
+                        live.RefreshDlssVersions(dlssSvc);
+                        // PopulateDetailPanel updates the components panel (badges, mod rows).
+                        // RequestOverridesPanelRebuild rebuilds the overrides panel which contains
+                        // the NVIDIA Profile section (DLSS columns + driver settings).
+                        RequestDetailPanelRebuild?.Invoke(live);
+                        RequestOverridesPanelRebuild?.Invoke(live);
+                    });
+                }
+                catch (Exception dlssEx)
+                {
+                    _crashReporter.Log($"[InstallModAsync] Control UE DLSS rescan failed — {dlssEx.Message}");
+                }
+            }
 
             // Update only this card's observable properties in-place.
             // The card is already in DisplayedGames — WinUI bindings update the
@@ -912,15 +1042,18 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            card.ActionMessage = $"❌ Failed: {ex.Message}";
+            DispatcherQueue?.TryEnqueue(() => card.ActionMessage = $"❌ Failed: {ex.Message}");
             _crashReporter.WriteCrashReport("InstallModAsync", ex, note: $"Game: {card.GameName}, Path: {card.InstallPath}");
         }
         finally
         {
-            card.IsInstalling = false;
-            // Restore original URL if we swapped to 32-bit for the install
-            if (swappedTo32 && card.Mod != null && originalSnapshotUrl != null)
-                card.Mod.SnapshotUrl = originalSnapshotUrl;
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                card.IsInstalling = false;
+                // Restore original URL if we swapped to 32-bit for the install
+                if (swappedTo32 && card.Mod != null && originalSnapshotUrl != null)
+                    card.Mod.SnapshotUrl = originalSnapshotUrl;
+            });
         }
     }
 
@@ -961,7 +1094,27 @@ public partial class MainViewModel
         if (card.UseUeExtended && !string.IsNullOrEmpty(card.InstallPath))
         {
             AuxInstallService.RemoveRenoDxNativeHdrSettings(card.InstallPath);
+
+            // If a custom Engine.ini file was used, remove its keys from the cached file
+            string? engineIniFilename = null;
+            _manifest?.EngineIniFiles?.TryGetValue(card.GameName, out engineIniFilename);
+            if (!string.IsNullOrEmpty(engineIniFilename))
+            {
+                var cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RHI", "engine-files");
+                var cachePath = Path.Combine(cacheDir, engineIniFilename);
+                if (File.Exists(cachePath))
+                {
+                    var content = File.ReadAllText(cachePath);
+                    var entries = AuxInstallService.ParseEngineIniEntries(content);
+                    if (entries.Count > 0)
+                        AuxInstallService.RemoveEngineIniCustomKeys(card.InstallPath,
+                            entries.Select(e => e.Key), card.EngineIniProjectOverride, card.GameName, card.Source);
+                }
+            }
+
             AuxInstallService.RemoveEngineIniHdrSettings(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
+            AuxInstallService.RemoveEngineIniLutSetting(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
         }
         // Clean up [renodx] section for generic UE/Unity games to avoid stale values conflicting with a different addon
         else if (!string.IsNullOrEmpty(card.InstallPath)
