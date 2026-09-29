@@ -669,7 +669,7 @@ public sealed partial class MainWindow
 
             var hdrLabel = new TextBlock
             {
-                Text = Loc.GetString("Xaml.HdrSettings"),
+Text = Loc.GetString("Xaml.EngineIniHdr"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
