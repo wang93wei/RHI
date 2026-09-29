@@ -94,9 +94,9 @@ public sealed partial class MainWindow
                     && AuxInstallService.GlobalManifest.RenodxIniOverrides.TryGetValue(card.GameName, out var cogIniOvr))
                     AuxInstallService.ApplyRenodxIniOverrides(card.InstallPath, cogIniOvr, forceOverwrite: true);
 
-                card.RsActionMessage = "✅ ReShade.ini deployed.";
+                card.RsActionMessage = Loc.GetString("Rs.Status.ReshadeIniDeployed");
             }
-            catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
         content.Children.Add(deployIniBtn);
 
@@ -117,12 +117,12 @@ public sealed partial class MainWindow
             try
             {
                 AuxInstallService.CopyRsPresetIniIfPresent(card.InstallPath);
-                card.RsActionMessage = "✅ ReShadePreset.ini deployed.";
+                card.RsActionMessage = Loc.GetString("Rs.Status.ReshadePresetIniDeployed");
             }
-            catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
         if (!rsPresetExists)
-            ToolTipService.SetToolTip(deployPresetBtn, "No ReShadePreset.ini found in RHI config folder");
+            ToolTipService.SetToolTip(deployPresetBtn, Loc.GetString("Dialog.ReshadePresetIni.NotFound"));
         content.Children.Add(deployPresetBtn);
 
         // Open ReShade.ini
@@ -195,10 +195,10 @@ public sealed partial class MainWindow
                     dataPackage.SetStorageItems(new[] { storageFile });
                     Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
                     Windows.ApplicationModel.DataTransfer.Clipboard.Flush();
-                    card.RsActionMessage = "✅ ReShade.log copied to clipboard.";
+                    card.RsActionMessage = Loc.GetString("Rs.Status.ReshadeLogCopied");
                     card.FadeMessage(m => card.RsActionMessage = m, card.RsActionMessage);
                 }
-                catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             }
         };
         content.Children.Add(copyLogBtn);
@@ -218,7 +218,7 @@ public sealed partial class MainWindow
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(hotkeyBox, "Click here then press your desired key. Written to all reshade*.ini files for this game.");
+        ToolTipService.SetToolTip(hotkeyBox, Loc.GetString("Dialog.ReshadeHotkeys.BoxTooltip"));
         hotkeyBox.GotFocus  += (s, ev) => hotkeyBox.Text = Loc.GetString("Xaml.PressAKey");
         hotkeyBox.KeyDown   += (s, ev) =>
         {
@@ -231,7 +231,7 @@ public sealed partial class MainWindow
             hotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(hotkeyString);
             ev.Handled = true;
         };
-        hotkeyBox.LostFocus += (s, ev) => { if (hotkeyBox.Text == "Press a key...") hotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(hotkeyString); };
+        hotkeyBox.LostFocus += (s, ev) => { if (hotkeyBox.Text == Loc.GetString("Xaml.PressAKey")) hotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(hotkeyString); };
 
         var applyKeyBtn = new Button { Content = Loc.GetString("Dialog.Apply"), FontSize = 12, Padding = new Thickness(16, 7, 16, 7), HorizontalAlignment = HorizontalAlignment.Right };
         applyKeyBtn.Click += async (s, ev) =>
@@ -255,11 +255,11 @@ public sealed partial class MainWindow
                     }
                     catch (Exception ex) { return (0, ex.Message); }
                 });
-                if (error != null) { card.RsActionMessage = $"❌ {error}"; return; }
+                if (error != null) { card.RsActionMessage = Loc.GetString("Status.FailedShort", error); return; }
                 applyKeyBtn.Content = Loc.GetString("Dialog.Applied");
                 _crashReporter.Log($"[RsCogButton_Click] Applied overlay key '{hotkeyString}' to {count} ini file(s) for '{card.GameName}'");
             }
-            catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
 
         var screenshotHotkeyBox = new TextBox
@@ -270,7 +270,7 @@ public sealed partial class MainWindow
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(screenshotHotkeyBox, "Press a key to assign it, or Backspace to clear it. Written to all reshade*.ini files for this game.");
+        ToolTipService.SetToolTip(screenshotHotkeyBox, Loc.GetString("Dialog.ReshadeHotkeys.ScreenshotBoxTooltip"));
         screenshotHotkeyBox.GotFocus  += (s, ev) => screenshotHotkeyBox.Text = Loc.GetString("Xaml.PressAKey");
         screenshotHotkeyBox.KeyDown   += (s, ev) =>
         {
@@ -283,7 +283,7 @@ public sealed partial class MainWindow
             screenshotHotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(screenshotHotkeyString);
             ev.Handled = true;
         };
-        screenshotHotkeyBox.LostFocus += (s, ev) => { if (screenshotHotkeyBox.Text == "Press a key...") screenshotHotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(screenshotHotkeyString); };
+        screenshotHotkeyBox.LostFocus += (s, ev) => { if (screenshotHotkeyBox.Text == Loc.GetString("Xaml.PressAKey")) screenshotHotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(screenshotHotkeyString); };
 
         var applyScreenshotKeyBtn = new Button { Content = Loc.GetString("Dialog.Apply"), FontSize = 12, Padding = new Thickness(16, 7, 16, 7), HorizontalAlignment = HorizontalAlignment.Right };
         applyScreenshotKeyBtn.Click += async (s, ev) =>
@@ -307,11 +307,11 @@ public sealed partial class MainWindow
                     }
                     catch (Exception ex) { return (0, ex.Message); }
                 });
-                if (error != null) { card.RsActionMessage = $"❌ {error}"; return; }
+                if (error != null) { card.RsActionMessage = Loc.GetString("Status.FailedShort", error); return; }
                 applyScreenshotKeyBtn.Content = Loc.GetString("Dialog.Applied");
                 _crashReporter.Log($"[RsCogButton_Click] Applied screenshot key '{screenshotHotkeyString}' to {count} ini file(s) for '{card.GameName}'");
             }
-            catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
 
         // Side-by-side layout: [Overlay label+box+btn] | [gap] | [Screenshot label+box+btn]
@@ -509,7 +509,7 @@ public sealed partial class MainWindow
             {
                 if (!int.TryParse(nitsValue, out var val) || val <= 0)
                 {
-                    card.ActionMessage = "❌ Enter a valid number.";
+                    card.ActionMessage = Loc.GetString("Rdx.Status.EnterValidNumber");
                     return;
                 }
                 try
@@ -531,10 +531,10 @@ public sealed partial class MainWindow
                     }
                     AuxInstallService.WriteIni(iniPath, freshIni);
                     nitsBox.Text = val.ToString();
-                    card.ActionMessage = $"✅ Set toneMapPeakNits={val} in {updated} preset(s).";
+                    card.ActionMessage = Loc.GetString("Rdx.Status.NitsSet", val, updated);
                     card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
                 }
-                catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             }
 
             // Enter key in TextBox applies the value and deselects
@@ -565,7 +565,7 @@ public sealed partial class MainWindow
                 {
                     var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(
                         Windows.Devices.Display.DisplayMonitor.GetDeviceSelector());
-                    if (devices.Count == 0) { card.ActionMessage = "❌ No display found."; return; }
+                    if (devices.Count == 0) { card.ActionMessage = Loc.GetString("Rdx.Status.NoDisplayFound"); return; }
 
                     float maxNitsFound = 0;
                     foreach (var device in devices)
@@ -579,11 +579,11 @@ public sealed partial class MainWindow
                         catch { }
                     }
                     var peakNits = (int)maxNitsFound;
-                    if (peakNits <= 0) { card.ActionMessage = "❌ Could not read peak brightness."; return; }
+                    if (peakNits <= 0) { card.ActionMessage = Loc.GetString("Rdx.Status.CouldNotReadPeakBrightness"); return; }
 
                     ApplyNitsValue(peakNits.ToString());
                 }
-                catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             };
 
             // nitsBox on its own row
@@ -637,8 +637,8 @@ public sealed partial class MainWindow
             topGrid.Children.Add(upLabel);
 
             var upCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
-            upCombo.Items.Add("HDR / Off");
-            upCombo.Items.Add("SDR / On");
+            upCombo.Items.Add(LocOpt.T("HDR / Off"));
+            upCombo.Items.Add(LocOpt.T("SDR / On"));
             int.TryParse(renodxSection["Set_Path"], out var setPathVal);
             upCombo.SelectedIndex = setPathVal >= 0 && setPathVal < 2 ? setPathVal : 0;
             upCombo.SelectionChanged += (s, ev) =>
@@ -653,7 +653,7 @@ public sealed partial class MainWindow
                         AuxInstallService.WriteIni(iniPath, freshIni);
                     }
                 }
-                catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             };
             Grid.SetRow(upCombo, rightGridRow);
             Grid.SetColumn(upCombo, 4);
@@ -679,18 +679,18 @@ public sealed partial class MainWindow
             topGrid.Children.Add(hdrLabel);
 
             var hdrCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
-            hdrCombo.Items.Add("Off");
-            hdrCombo.Items.Add("On");
+            hdrCombo.Items.Add(LocOpt.T("Off"));
+            hdrCombo.Items.Add(LocOpt.T("On"));
             if (hasCustomEngineIniFile)
             {
                 hdrCombo.IsEnabled = false;
                 hdrCombo.Opacity = 0.4;
-                ToolTipService.SetToolTip(hdrCombo, "Managed by custom Engine.ini file — not available for this game.");
+                ToolTipService.SetToolTip(hdrCombo, Loc.GetString("Dialog.EngineIni.ManagedByCustomFile"));
                 hdrCombo.SelectedIndex = 0;
             }
             else
             {
-                ToolTipService.SetToolTip(hdrCombo, "Deploys Engine.ini with HDR flags for games that don't have an ingame HDR option. Disable for SDR.");
+                ToolTipService.SetToolTip(hdrCombo, Loc.GetString("Dialog.EngineIni.HdrTooltip"));
                 bool hdrActive = card.InstalledRecord?.EngineIniHdr ?? true;
                 hdrCombo.SelectedIndex = hdrActive ? 1 : 0;
                 hdrCombo.SelectionChanged += (s, ev) =>
@@ -699,13 +699,13 @@ public sealed partial class MainWindow
                     {
                         AuxInstallService.ApplyEngineIniHdrSettings(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
                         if (card.InstalledRecord != null) card.InstalledRecord.EngineIniHdr = true;
-                        card.ActionMessage = "✅ Engine.ini HDR settings deployed.";
+                        card.ActionMessage = Loc.GetString("Rdx.Status.EngineIniHdrDeployed");
                     }
                     else
                     {
                         AuxInstallService.RemoveEngineIniHdrSettings(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
                         if (card.InstalledRecord != null) card.InstalledRecord.EngineIniHdr = false;
-                        card.ActionMessage = "✅ Engine.ini HDR settings removed.";
+                        card.ActionMessage = Loc.GetString("Rdx.Status.EngineIniHdrRemoved");
                     }
                     if (card.InstalledRecord != null)
                         App.Services.GetRequiredService<IModInstallService>().SaveRecordPublic(card.InstalledRecord);
@@ -736,18 +736,18 @@ public sealed partial class MainWindow
             topGrid.Children.Add(lutLabel);
 
             var lutCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
-            lutCombo.Items.Add("Off");
-            lutCombo.Items.Add("On");
+            lutCombo.Items.Add(LocOpt.T("Off"));
+            lutCombo.Items.Add(LocOpt.T("On"));
             if (hasCustomEngineIniFile)
             {
                 lutCombo.IsEnabled = false;
                 lutCombo.Opacity = 0.4;
-                ToolTipService.SetToolTip(lutCombo, "Managed by custom Engine.ini file — not available for this game.");
+                ToolTipService.SetToolTip(lutCombo, Loc.GetString("Dialog.EngineIni.ManagedByCustomFile"));
                 lutCombo.SelectedIndex = 0;
             }
             else
             {
-                ToolTipService.SetToolTip(lutCombo, "Writes r.LUT.UpdateEveryFrame=1 to Engine.ini. Ensures the game recalculates LUTs each frame for accurate HDR color.");
+                ToolTipService.SetToolTip(lutCombo, Loc.GetString("Dialog.EngineIni.LutTooltip"));
                 bool lutActive = card.InstalledRecord?.EngineIniLut ?? true;
                 lutCombo.SelectedIndex = lutActive ? 1 : 0;
                 lutCombo.SelectionChanged += (s, ev) =>
@@ -756,13 +756,13 @@ public sealed partial class MainWindow
                     {
                         AuxInstallService.ApplyEngineIniLutSetting(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
                         if (card.InstalledRecord != null) card.InstalledRecord.EngineIniLut = true;
-                        card.ActionMessage = "✅ LUT Update Every Frame enabled in Engine.ini.";
+                        card.ActionMessage = Loc.GetString("Rdx.Status.LutUpdateEnabled");
                     }
                     else
                     {
                         AuxInstallService.RemoveEngineIniLutSetting(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
                         if (card.InstalledRecord != null) card.InstalledRecord.EngineIniLut = false;
-                        card.ActionMessage = "✅ LUT Update Every Frame removed from Engine.ini.";
+                        card.ActionMessage = Loc.GetString("Rdx.Status.LutUpdateRemoved");
                     }
                     if (card.InstalledRecord != null)
                         App.Services.GetRequiredService<IModInstallService>().SaveRecordPublic(card.InstalledRecord);
@@ -856,15 +856,15 @@ public sealed partial class MainWindow
                     bool isBinaryToggle = isSetPath || isDumpLut || isUnityBool;
 
                     // Label text
-                    string labelText = isSetPath ? "Upgrade Path"
-                        : isDumpLut          ? "Dump LUT Shaders"
-                        : isSwapchainProxy   ? "Swapchain Proxy"
-                        : isSwapchainEncoding? "Swapchain Encoding"
-                        : isUseScrGb         ? "Swapchain Format"
-                        : isCopyDest         ? "Copy Destinations"
-                        : isSettingsMode     ? "Proxy Revert State"
-                        : isSwapChainCompat  ? "Swapchain Compat"
-                        : isProxyRevert      ? "Proxy Revert State"
+                    string labelText = isSetPath ? Loc.GetString("Dialog.Renodx.UpgradePath")
+                        : isDumpLut          ? Loc.GetString("Dialog.Renodx.DumpLutShaders")
+                        : isSwapchainProxy   ? Loc.GetString("Dialog.Renodx.SwapchainProxy")
+                        : isSwapchainEncoding? Loc.GetString("Dialog.Renodx.SwapchainEncoding")
+                        : isUseScrGb         ? Loc.GetString("Dialog.Renodx.SwapchainFormat")
+                        : isCopyDest         ? Loc.GetString("Dialog.Renodx.CopyDestinations")
+                        : isSettingsMode     ? Loc.GetString("Dialog.Renodx.ProxyRevertState")
+                        : isSwapChainCompat  ? Loc.GetString("Dialog.Renodx.SwapchainCompat")
+                        : isProxyRevert      ? Loc.GetString("Dialog.Renodx.ProxyRevertState")
                         : kv.Key.StartsWith("Upgrade_", StringComparison.OrdinalIgnoreCase) ? kv.Key.Substring(8)
                         : kv.Key.Replace('_', ' ');
 
@@ -880,17 +880,17 @@ public sealed partial class MainWindow
 
                     var combo = new ComboBox { FontSize = 11, MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Stretch };
 
-                    if (isSetPath) { combo.Items.Add("HDR / Off"); combo.Items.Add("SDR / On"); }
-                    else if (isDumpLut) { combo.Items.Add("Off"); combo.Items.Add("On"); }
-                    else if (isSwapchainProxy) { combo.Items.Add("Off"); combo.Items.Add("On"); combo.Items.Add("On (Compat)"); }
-                    else if (isSwapchainEncoding) { combo.Items.Add("Linear"); combo.Items.Add("Gamma"); }
-                    else if (isBlitCopyHack) { combo.Items.Add("Off"); combo.Items.Add("Auto"); combo.Items.Add("On"); combo.Items.Add("Scaling Only"); }
-                    else if (isCopyDest) { combo.Items.Add("Off"); combo.Items.Add("On"); combo.Items.Add("Auto Upgrade"); }
-                    else if (isUseScrGb) { combo.Items.Add("HDR10"); combo.Items.Add("scRGB"); }
-                    else if (isSettingsMode || isSwapChainCompat || isProxyRevert) { combo.Items.Add("Off"); combo.Items.Add("On"); }
+                    if (isSetPath) { combo.Items.Add(LocOpt.T("HDR / Off")); combo.Items.Add(LocOpt.T("SDR / On")); }
+                    else if (isDumpLut) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("On")); }
+                    else if (isSwapchainProxy) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("On")); combo.Items.Add(Loc.GetString("Dialog.Renodx.OnCompat")); }
+                    else if (isSwapchainEncoding) { combo.Items.Add(Loc.GetString("Dialog.Renodx.Linear")); combo.Items.Add(Loc.GetString("Dialog.Renodx.Gamma")); }
+                    else if (isBlitCopyHack) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("Auto")); combo.Items.Add(LocOpt.T("On")); combo.Items.Add(Loc.GetString("Dialog.Renodx.ScalingOnly")); }
+                    else if (isCopyDest) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("On")); combo.Items.Add(Loc.GetString("Dialog.Renodx.AutoUpgrade")); }
+                    else if (isUseScrGb) { combo.Items.Add(Loc.GetString("Dialog.Renodx.Hdr10")); combo.Items.Add(Loc.GetString("Dialog.Renodx.ScRgb")); }
+                    else if (isSettingsMode || isSwapChainCompat || isProxyRevert) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("On")); }
                     else if (isOffsetRange) { for (int v = 0; v <= 5; v++) combo.Items.Add(v.ToString()); }
-                    else if (isUnityBool) { combo.Items.Add("Off"); combo.Items.Add("On"); }
-                    else { combo.Items.Add("Off"); combo.Items.Add("Output size"); combo.Items.Add("Output ratio"); combo.Items.Add("Any size"); }
+                    else if (isUnityBool) { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("On")); }
+                    else { combo.Items.Add(LocOpt.T("Off")); combo.Items.Add(LocOpt.T("Output size")); combo.Items.Add(LocOpt.T("Output ratio")); combo.Items.Add(LocOpt.T("Any size")); }
 
                     int.TryParse(kv.Value, out var currentVal);
                     combo.SelectedIndex = (isBinaryToggle || isSwapchainProxy || isSwapchainEncoding || isOffsetRange || isBlitCopyHack || isCopyDest || isUseScrGb || isSettingsMode || isSwapChainCompat || isProxyRevert)
@@ -910,7 +910,7 @@ public sealed partial class MainWindow
                                 AuxInstallService.WriteIni(iniPath, iniForWrite);
                             }
                         }
-                        catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+                        catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
                     };
 
                     Grid.SetRow(combo, row);
@@ -952,7 +952,7 @@ public sealed partial class MainWindow
 
                         var options = setting.Options?.Count > 0
                             ? setting.Options
-                            : new List<RenodxExtraOption> { new() { Value = "0", Name = "Off" }, new() { Value = "1", Name = "On" } };
+                            : new List<RenodxExtraOption> { new() { Value = "0", Name = LocOpt.T("Off") }, new() { Value = "1", Name = LocOpt.T("On") } };
 
                         foreach (var opt in options)
                             extraCombo.Items.Add(opt.Name);
@@ -977,7 +977,7 @@ public sealed partial class MainWindow
                                     AuxInstallService.WriteIni(iniPath, iniForWrite);
                                 }
                             }
-                            catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+                            catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
                         };
 
                         Grid.SetRow(extraCombo, row);
@@ -1060,14 +1060,14 @@ public sealed partial class MainWindow
 
                 if (presetLines.Count == 0)
                 {
-                    card.ActionMessage = "❌ No [renodx-preset*] sections found.";
+                    card.ActionMessage = Loc.GetString("Rdx.Status.NoPresetSectionsFound");
                     return;
                 }
 
                 // Add header comment
-                presetLines.Insert(0, $"; RenoDX Preset exported from: {card.GameName}");
-                presetLines.Insert(1, "; To import: place this file in the game folder and click 'Import Presets' in RHI,");
-                presetLines.Insert(2, "; or paste the [renodx-preset*] sections into reshade.ini manually.");
+                presetLines.Insert(0, Loc.GetString("Dialog.Renodx.ExportHeaderSource", card.GameName));
+                presetLines.Insert(1, Loc.GetString("Dialog.Renodx.ExportHeaderImport1"));
+                presetLines.Insert(2, Loc.GetString("Dialog.Renodx.ExportHeaderImport2"));
                 presetLines.Insert(3, "");
 
                 File.WriteAllLines(presetPath, presetLines);
@@ -1081,10 +1081,10 @@ public sealed partial class MainWindow
                     Windows.ApplicationModel.DataTransfer.Clipboard.Flush();
                 }
                 catch { /* clipboard copy is best-effort */ }
-                card.ActionMessage = $"✅ Exported {presetLines.Count(l => l.StartsWith("["))} preset(s) & copied to clipboard.";
+                card.ActionMessage = Loc.GetString("Rdx.Status.PresetsExported", presetLines.Count(l => l.StartsWith("[")));
                 card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
             }
-            catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
         ToolTipService.SetToolTip(exportBtn, Loc.GetString("Dialog.ExportPresets.Tooltip"));
         presetRow.Children.Add(exportBtn);
@@ -1139,13 +1139,13 @@ public sealed partial class MainWindow
                 filtered.AddRange(presetLines);
 
                 File.WriteAllLines(iniPath, filtered);
-                card.ActionMessage = $"✅ Imported {presetSections.Count} preset(s).";
+                card.ActionMessage = Loc.GetString("Rdx.Status.PresetsImported", presetSections.Count);
                 card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
             }
-            catch (Exception ex) { card.ActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.ActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
         if (!presetExists)
-            ToolTipService.SetToolTip(importBtn, "No RHI-RenoDX-Preset.txt file found. Export first.");
+            ToolTipService.SetToolTip(importBtn, Loc.GetString("Dialog.ImportPresets.TooltipMissing"));
         else
             ToolTipService.SetToolTip(importBtn, Loc.GetString("Dialog.ImportPresets.Tooltip"));
         presetRow.Children.Add(importBtn);
@@ -1504,11 +1504,11 @@ public sealed partial class MainWindow
         // ── Debanding ─────────────────────────────────────────────────────────
         var debandingOptions = new (string name, uint value)[]
         {
-            ("No Debanding", 0x06),
-            ("Low Debanding", 0x0A),
-            ("High Debanding", 0x02),
-            ("High Debanding (Indicator)", 0x03),
-            ("High Debanding (Indicator + Debug)", 0x23),
+            (Loc.GetString("Dialog.RtxHdr.DebandingNo"), 0x06),
+            (Loc.GetString("Dialog.RtxHdr.DebandingLow"), 0x0A),
+            (Loc.GetString("Dialog.RtxHdr.DebandingHigh"), 0x02),
+            (Loc.GetString("Dialog.RtxHdr.DebandingHighIndicator"), 0x03),
+            (Loc.GetString("Dialog.RtxHdr.DebandingHighIndicatorDebug"), 0x23),
         };
         bool isAdmin = VulkanLayerService.IsRunningAsAdmin();
         var debandingCombo = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = isAdmin, Opacity = isAdmin ? 1.0 : 0.4 };
@@ -1642,7 +1642,7 @@ public sealed partial class MainWindow
             dlssPresetService.SetRtxHdrDebanding(card.GameName, card.InstallPath, debanding);
             CrashReporter.Log($"[RtxHdrConfigButton_Click] Applied RTX HDR settings for '{card.GameName}': PeakNits={peakNits}, Contrast={contrastStored}, Sat={satStored}, MidGrey={middleGrey}, Deband=0x{debanding:X2}");
         });
-        card.ActionMessage = "✅ RTX HDR settings applied.";
+        card.ActionMessage = Loc.GetString("Rdx.Status.RtxHdrApplied");
         card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
     }
 
@@ -1666,9 +1666,9 @@ public sealed partial class MainWindow
             try
             {
                 AuxInstallService.CopyUlIni(card.InstallPath);
-                card.UlActionMessage = "✅ relimiter.ini copied to game folder.";
+                card.UlActionMessage = Loc.GetString("Ul.Status.RelimiterIniCopied");
             }
-            catch (Exception ex) { card.UlActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
         content.Children.Add(deployBtn);
 
@@ -1732,10 +1732,10 @@ public sealed partial class MainWindow
                     dataPackage.SetStorageItems(new[] { storageFile });
                     Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
                     Windows.ApplicationModel.DataTransfer.Clipboard.Flush();
-                    card.UlActionMessage = $"✅ {Path.GetFileName(logFile)} copied to clipboard.";
+                    card.UlActionMessage = Loc.GetString("Ul.Status.RelimiterLogCopied", Path.GetFileName(logFile));
                     card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
                 }
-                catch (Exception ex) { card.UlActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             }
         };
         content.Children.Add(copyLogBtn);
@@ -1774,20 +1774,20 @@ public sealed partial class MainWindow
         // VRR preset options (same as global settings)
         var vrrPresets = new (int Fps, string Label)[]
         {
-            (59,  "59 (60Hz VRR)"),
-            (73,  "73 (75Hz VRR)"),
-            (97,  "97 (100Hz VRR)"),
-            (116, "116 (120Hz VRR)"),
-            (138, "138 (144Hz VRR)"),
-            (157, "157 (165Hz VRR)"),
-            (171, "171 (180Hz VRR)"),
-            (189, "189 (200Hz VRR)"),
-            (224, "224 (240Hz VRR)"),
-            (258, "258 (280Hz VRR)"),
-            (275, "275 (300Hz VRR)"),
-            (324, "324 (360Hz VRR)"),
-            (416, "416 (480Hz VRR)"),
-            (431, "431 (500Hz VRR)"),
+            (59,  LocOpt.T("59 (60Hz VRR)")),
+            (73,  LocOpt.T("73 (75Hz VRR)")),
+            (97,  LocOpt.T("97 (100Hz VRR)")),
+            (116, LocOpt.T("116 (120Hz VRR)")),
+            (138, LocOpt.T("138 (144Hz VRR)")),
+            (157, LocOpt.T("157 (165Hz VRR)")),
+            (171, LocOpt.T("171 (180Hz VRR)")),
+            (189, LocOpt.T("189 (200Hz VRR)")),
+            (224, LocOpt.T("224 (240Hz VRR)")),
+            (258, LocOpt.T("258 (280Hz VRR)")),
+            (275, LocOpt.T("275 (300Hz VRR)")),
+            (324, LocOpt.T("324 (360Hz VRR)")),
+            (416, LocOpt.T("416 (480Hz VRR)")),
+            (431, LocOpt.T("431 (500Hz VRR)")),
         };
         var vrrFpsSet = new HashSet<int>(vrrPresets.Select(p => p.Fps));
 
@@ -1827,7 +1827,7 @@ public sealed partial class MainWindow
 
         // If current value is a custom FPS (not in presets), insert it before "Custom..."
         if (currentTargetFps > 0 && !vrrFpsSet.Contains(currentTargetFps))
-            targetFpsCombo.Items.Add($"{currentTargetFps} (Custom)");
+            targetFpsCombo.Items.Add(Loc.GetString("Dialog.CustomFpsFormat", currentTargetFps));
 
         targetFpsCombo.Items.Add(LocOpt.T("Custom..."));
 
@@ -1857,7 +1857,7 @@ public sealed partial class MainWindow
             foreach (var preset in vrrPresets)
                 targetFpsCombo.Items.Add(preset.Label);
             if (newFps > 0 && !vrrFpsSet.Contains(newFps))
-                targetFpsCombo.Items.Add($"{newFps} (Custom)");
+                targetFpsCombo.Items.Add(Loc.GetString("Dialog.CustomFpsFormat", newFps));
             targetFpsCombo.Items.Add(LocOpt.T("Custom..."));
 
             if (newFps == 0)
@@ -1908,11 +1908,11 @@ public sealed partial class MainWindow
                     AuxInstallService.ApplyUlTargetFps(iniFile, newFps);
                     currentTargetFps = newFps;
                     card.UlActionMessage = newFps == 0
-                        ? "✅ Target FPS disabled for this game."
-                        : $"✅ Target FPS set to {newFps} for this game.";
+                        ? Loc.GetString("Ul.Status.TargetFpsDisabled")
+                        : Loc.GetString("Ul.Status.TargetFpsSet", newFps);
                     card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
                 }
-                catch (Exception ex) { card.UlActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             }
         };
 
@@ -1928,11 +1928,11 @@ public sealed partial class MainWindow
                     try
                     {
                         AuxInstallService.ApplyUlTargetFps(iniFile, customFps);
-                        card.UlActionMessage = $"✅ Target FPS set to {customFps} for this game.";
+                        card.UlActionMessage = Loc.GetString("Ul.Status.TargetFpsSet", customFps);
                         card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
                         RefreshFpsCombo(customFps);
                     }
-                    catch (Exception ex) { card.UlActionMessage = $"❌ {ex.Message}"; }
+                    catch (Exception ex) { card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
                 }
             }
         };
@@ -1951,11 +1951,11 @@ public sealed partial class MainWindow
                         try
                         {
                             AuxInstallService.ApplyUlTargetFps(iniFile, customFps);
-                            card.UlActionMessage = $"✅ Target FPS set to {customFps} for this game.";
+                            card.UlActionMessage = Loc.GetString("Ul.Status.TargetFpsSet", customFps);
                             card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
                             RefreshFpsCombo(customFps);
                         }
-                        catch (Exception ex) { card.UlActionMessage = $"❌ {ex.Message}"; }
+                        catch (Exception ex) { card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
                     }
                 }
             }
@@ -2036,11 +2036,11 @@ public sealed partial class MainWindow
                 {
                     AuxInstallService.ApplyUlDlssHooks(ulIniFile, dlssHooksCombo.SelectedIndex == 1);
                     card.UlActionMessage = dlssHooksCombo.SelectedIndex == 1
-                        ? "✅ DLSS Hooks enabled for this game."
-                        : "✅ DLSS Hooks disabled for this game.";
+                        ? Loc.GetString("Ul.Status.DlssHooksEnabled")
+                        : Loc.GetString("Ul.Status.DlssHooksDisabled");
                     card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
                 }
-                catch (Exception ex) { card.UlActionMessage = $"❌ {ex.Message}"; }
+                catch (Exception ex) { card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
             }
         };
         content.Children.Add(dlssHooksPanel);
@@ -2081,10 +2081,10 @@ public sealed partial class MainWindow
             try
             {
                 AuxInstallService.CopyDcIni(card.InstallPath);
-                card.DcActionMessage = "✅ DisplayCommander.ini copied to game folder.";
+                card.DcActionMessage = Loc.GetString("Dc.Status.DisplayCommanderIniCopied");
                 card.FadeMessage(m => card.DcActionMessage = m, card.DcActionMessage);
             }
-            catch (Exception ex) { card.DcActionMessage = $"❌ {ex.Message}"; }
+            catch (Exception ex) { card.DcActionMessage = Loc.GetString("Status.FailedShort", ex.Message); }
         };
         content.Children.Add(deployBtn);
 
@@ -2183,12 +2183,12 @@ public sealed partial class MainWindow
         }
         fpsLimitCombo.SelectedIndex = Array.IndexOf(fpsRawLabels, currentFpsStr);
 
-        AddRow(unifiedGrid, 0, "OptiScaler Version",
+        AddRow(unifiedGrid, 0, Loc.GetString("Dialog.OptiScaler.Version"),
             new ComboBox { ItemsSource = new[] { "Stable", "Nightly", "DLSS NR" }, SelectedItem = ViewModel.GetOsVariant(card.GameName, card.Source ?? "") == "DlssNr" ? "DLSS NR" : ViewModel.GetOsVariant(card.GameName, card.Source ?? ""), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch },
-            "Framerate Limit", fpsLimitCombo);
+            Loc.GetString("Dialog.OptiScaler.FramerateLimit"), fpsLimitCombo);
         // Grab the variant combo we just added
         var variantCombo = (ComboBox)unifiedGrid.Children.Cast<UIElement>().Where(c => c is ComboBox).First();
-        ToolTipService.SetToolTip(variantCombo, "Stable: official release. Nightly: daily build. DLSS NR: Neural Rendering fork with multi-pass NR support.");
+        ToolTipService.SetToolTip(variantCombo, Loc.GetString("Dialog.OptiScaler.VariantTooltip"));
 
         fpsLimitCombo.SelectionChanged += (s, ev) =>
         {
@@ -2693,15 +2693,15 @@ public sealed partial class MainWindow
                 if (!string.IsNullOrEmpty(currentNrRuntime) && !nrVersions.Contains(currentNrRuntime))
                     nrVersions.Insert(0, currentNrRuntime);
                 nrRuntimeCombo = new ComboBox { ItemsSource = nrVersions, SelectedItem = currentNrRuntime };
-                ToolTipService.SetToolTip(nrRuntimeCombo, "NR runtime: 310.8.2 = original NVIDIA (RTX 50). 310.8.SF-v2 = ShortFuse cross-gen (RTX 20/30/40).");
+                ToolTipService.SetToolTip(nrRuntimeCombo, Loc.GetString("Dialog.OptiScaler.NrRuntimeTooltip"));
 
                 var nrEnabledRaw = ReadNrIni("Enabled");
                 nrEnabledCombo = new ComboBox { ItemsSource = new[] { "Default", "On", "Off" },
                     SelectedItem = nrEnabledRaw.Equals("true", StringComparison.OrdinalIgnoreCase) ? "On"
                                  : nrEnabledRaw.Equals("false", StringComparison.OrdinalIgnoreCase) ? "Off"
                                  : "Default" };
-                ToolTipService.SetToolTip(nrEnabledCombo, "Enable DLSS Neural Rendering. Requires nvngx_dlssnr.dll + nvngx.dll_dlssnr.dll in game folder.");
-                AddRow(nrGrid, 0, "NR Runtime", nrRuntimeCombo!, "NR Enabled", nrEnabledCombo!);
+                ToolTipService.SetToolTip(nrEnabledCombo, Loc.GetString("Dialog.OptiScaler.NrEnabledTooltip"));
+                AddRow(nrGrid, 0, Loc.GetString("Dialog.OptiScaler.NrRuntime"), nrRuntimeCombo!, Loc.GetString("Dialog.OptiScaler.NrEnabled"), nrEnabledCombo!);
 
                 // Row 1: Run Before SR | Passes
                 var nrRunBeforeRaw = ReadNrIni("RunBeforeSR");
@@ -2709,26 +2709,26 @@ public sealed partial class MainWindow
                     SelectedItem = nrRunBeforeRaw.Equals("true", StringComparison.OrdinalIgnoreCase) ? "On"
                                  : nrRunBeforeRaw.Equals("false", StringComparison.OrdinalIgnoreCase) ? "Off"
                                  : "Default" };
-                ToolTipService.SetToolTip(nrRunBeforeSrCombo, "Run NR before Super Resolution. On = before upscaling; Off = after upscaling.");
+                ToolTipService.SetToolTip(nrRunBeforeSrCombo, Loc.GetString("Dialog.OptiScaler.NrRunBeforeSrTooltip"));
 
                 var nrPassesRaw = ReadNrIni("Passes");
                 nrPassesCombo = new ComboBox { ItemsSource = new[] { "Default", "1", "2", "3" },
                     SelectedItem = nrPassesRaw is "1" or "2" or "3" ? nrPassesRaw : "Default" };
-                ToolTipService.SetToolTip(nrPassesCombo, "Number of NR model passes. Each extra pass costs ~2x the model time but increases quality.");
-                AddRow(nrGrid, 1, "Run Before SR", nrRunBeforeSrCombo!, "Passes", nrPassesCombo!);
+                ToolTipService.SetToolTip(nrPassesCombo, Loc.GetString("Dialog.OptiScaler.NrPassesTooltip"));
+                AddRow(nrGrid, 1, Loc.GetString("Dialog.OptiScaler.NrRunBeforeSR"), nrRunBeforeSrCombo!, Loc.GetString("Dialog.OptiScaler.NrPasses"), nrPassesCombo!);
 
                 // Row 2: Working Scale | Finished Picture
                 var nrScaleRaw = ReadNrIni("WorkingScale");
                 nrScaleMap = new[] { ("Default", "auto"), ("0.5x (half)", "0.5"), ("0.75x", "0.75"), ("1.0x (full)", "1.0"), ("1.5x (supersample)", "1.5") };
                 var nrScaleSelected = nrScaleMap.FirstOrDefault(p => p.Item2 == nrScaleRaw).Item1 ?? "Default";
                 nrWorkingScaleCombo = new ComboBox { ItemsSource = nrScaleMap.Select(p => p.Item1).ToArray(), SelectedItem = nrScaleSelected };
-                ToolTipService.SetToolTip(nrWorkingScaleCombo, "Model work resolution as a fraction of frame size. Lower = faster; above 1.0 supersamples the model.");
+                ToolTipService.SetToolTip(nrWorkingScaleCombo, Loc.GetString("Dialog.OptiScaler.NrWorkingScaleTooltip"));
 
                 var nrFinishedRaw = ReadNrIni("FinishedPicture");
                 nrFinishedPicCombo = new ComboBox { ItemsSource = new[] { "Default", "On" },
                     SelectedItem = nrFinishedRaw.Equals("true", StringComparison.OrdinalIgnoreCase) ? "On" : "Default" };
-                ToolTipService.SetToolTip(nrFinishedPicCombo, "Apply NR to the finished picture (after all game lighting and effects). Helps with green noise. DX12 native only.");
-                AddRow(nrGrid, 2, "Working Scale", nrWorkingScaleCombo!, "Apply to Finished Picture", nrFinishedPicCombo!);
+                ToolTipService.SetToolTip(nrFinishedPicCombo, Loc.GetString("Dialog.OptiScaler.NrFinishedPictureTooltip"));
+                AddRow(nrGrid, 2, Loc.GetString("Dialog.OptiScaler.NrWorkingScale"), nrWorkingScaleCombo!, Loc.GetString("Dialog.OptiScaler.NrApplyToFinishedPicture"), nrFinishedPicCombo!);
 
                 content.Children.Add(nrGrid);
 
@@ -3210,7 +3210,7 @@ public sealed partial class MainWindow
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(variantLabel, "Development: latest nightly build. Stable: last stable release. Lilium HDR: HDR-optimised variant (default).");
+        ToolTipService.SetToolTip(variantLabel, Loc.GetString("Dialog.Dxvk.VariantTooltip"));
         Grid.SetRow(variantLabel, 0); Grid.SetColumn(variantLabel, 0);
         variantGrid.Children.Add(variantLabel);
 
@@ -3241,7 +3241,7 @@ public sealed partial class MainWindow
             Visibility = isLiliumSelected ? Visibility.Visible : Visibility.Collapsed,
         };
         ToolTipService.SetToolTip(liliumPresetLabel,
-            "Safest = swap chain only (near 100% compatible).\nHigher tiers upgrade back buffers and render targets — better HDR but may cause visual issues.");
+            Loc.GetString("Dialog.Dxvk.LiliumPresetTooltip"));
         Grid.SetRow(liliumPresetLabel, 1); Grid.SetColumn(liliumPresetLabel, 0);
         variantGrid.Children.Add(liliumPresetLabel);
 
@@ -3378,8 +3378,8 @@ public sealed partial class MainWindow
 
         var flagOptions = new (string Label, uint Value)[]
         {
-            ("Standard",    0x000802A5u),
-            ("Alternative", 0x00080004u),
+            (LocOpt.T("Standard"),    0x000802A5u),
+            (Loc.GetString("Dialog.Dxvk.Alternative"), 0x00080004u),
         };
         var flagsCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
         foreach (var (lbl, _) in flagOptions) flagsCombo.Items.Add(lbl);

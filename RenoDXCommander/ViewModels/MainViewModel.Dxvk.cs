@@ -76,7 +76,7 @@ public partial class MainViewModel
         _dxvkService.LiliumPresetIndex = GetLiliumPreset(card.GameName, card.Source ?? "");
 
         card.DxvkIsInstalling = true;
-        card.DxvkActionMessage = "Installing DXVK...";
+        card.DxvkActionMessage = Loc.GetString("Status.InstallingDxvk");
         card.DxvkProgress = 0;
         try
         {
@@ -94,7 +94,7 @@ public partial class MainViewModel
                 overlayHotkey: _settingsViewModel.OverlayHotkey,
                 screenshotHotkey: _settingsViewModel.ScreenshotHotkey);
 
-            card.DxvkActionMessage = "✅ DXVK installed!";
+            card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
             card.NotifyAll();
             card.FadeMessage(m => card.DxvkActionMessage = m, card.DxvkActionMessage);
 
@@ -120,7 +120,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            card.DxvkActionMessage = $"❌ Install failed: {ex.Message}";
+            card.DxvkActionMessage = Loc.GetString("Status.InstallFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("InstallDxvk", ex, note: $"Game: {card.GameName}");
         }
         finally
@@ -141,7 +141,7 @@ public partial class MainViewModel
         if (string.IsNullOrEmpty(card.InstallPath)) return;
 
         card.DxvkIsInstalling = true;
-        card.DxvkActionMessage = "Removing DXVK...";
+        card.DxvkActionMessage = Loc.GetString("Status.RemovingDxvk");
         try
         {
             await _dxvkService.UninstallAsync(card);
@@ -160,7 +160,7 @@ public partial class MainViewModel
                 SaveGameApiCache();
             }
             
-            card.DxvkActionMessage = "✖ DXVK removed.";
+            card.DxvkActionMessage = Loc.GetString("Status.DxvkRemoved");
             card.NotifyAll();
             card.FadeMessage(m => card.DxvkActionMessage = m, card.DxvkActionMessage);
             SaveLibrary();
@@ -170,7 +170,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            card.DxvkActionMessage = $"❌ Uninstall failed: {ex.Message}";
+            card.DxvkActionMessage = Loc.GetString("Status.UninstallFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("UninstallDxvk", ex, note: $"Game: {card.GameName}");
         }
         finally
@@ -193,7 +193,7 @@ public partial class MainViewModel
         if (string.IsNullOrEmpty(card.InstallPath)) return;
 
         card.DxvkIsInstalling = true;
-        card.DxvkActionMessage = "Updating DXVK...";
+        card.DxvkActionMessage = Loc.GetString("Dialog.UpdatingDxvk");
         card.DxvkProgress = 0;
         try
         {
@@ -217,7 +217,7 @@ public partial class MainViewModel
 
             _dxvkService.SelectedVariant = savedVariant;
 
-            card.DxvkActionMessage = "✅ DXVK updated!";
+            card.DxvkActionMessage = Loc.GetString("Status.DxvkUpdated");
             card.DxvkStatus = GameStatus.Installed;
             card.NotifyAll();
             card.FadeMessage(m => card.DxvkActionMessage = m, card.DxvkActionMessage);
@@ -230,7 +230,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            card.DxvkActionMessage = $"❌ Update failed: {ex.Message}";
+            card.DxvkActionMessage = Loc.GetString("Status.UpdateFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("UpdateDxvk", ex, note: $"Game: {card.GameName}");
         }
         finally
@@ -250,12 +250,12 @@ public partial class MainViewModel
         try
         {
             _dxvkService.CopyConfToGame(card);
-            card.DxvkActionMessage = "✅ dxvk.conf copied to game folder.";
+            card.DxvkActionMessage = Loc.GetString("Status.DxvkConfCopied");
             card.FadeMessage(m => card.DxvkActionMessage = m, card.DxvkActionMessage);
         }
         catch (Exception ex)
         {
-            card.DxvkActionMessage = $"❌ {ex.Message}";
+            card.DxvkActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 

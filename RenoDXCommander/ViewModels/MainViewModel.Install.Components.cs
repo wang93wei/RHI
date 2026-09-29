@@ -3,6 +3,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.Services;
 
@@ -149,7 +150,7 @@ public partial class MainViewModel
             return;
 
         card.IsInstalling = true;
-        card.ActionMessage = "Installing emulator addons...";
+        card.ActionMessage = Loc.GetString("Status.InstallingEmulatorAddons");
         _crashReporter.Log($"[MainViewModel.InstallEmulatorAddonsAsync] Starting bundle install for {card.GameName}");
 
         int installed = 0;
@@ -188,7 +189,7 @@ public partial class MainViewModel
                     failed++;
                     continue;
                 }
-                card.ActionMessage = $"Downloading {wikiName}... ({installed + 1}/{card.EmulatorAddonNames.Count})";
+                card.ActionMessage = Loc.GetString("Status.DownloadingProgress", wikiName, installed + 1, card.EmulatorAddonNames.Count);
 
                 try
                 {
@@ -225,8 +226,8 @@ public partial class MainViewModel
                 card.Status = installed > 0 ? GameStatus.Installed : GameStatus.Available;
                 card.InstalledAddonFileName = $"{installed} addons";
                 card.ActionMessage = failed == 0
-                    ? $"✅ {installed} addons installed!"
-                    : $"✅ {installed} installed, {failed} failed.";
+                    ? Loc.GetString("Status.AddonsInstalled", installed)
+                    : Loc.GetString("Status.AddonsInstalledPartial", installed, failed);
                 card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
                 card.NotifyAll();
                 _filterViewModel.UpdateCounts();
@@ -235,7 +236,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            card.ActionMessage = $"❌ Failed: {ex.Message}";
+            card.ActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("InstallEmulatorAddonsAsync", ex, note: $"Game: {card.GameName}");
         }
         finally
@@ -281,7 +282,7 @@ public partial class MainViewModel
 
         card.Status = GameStatus.Available;
         card.InstalledAddonFileName = null;
-        card.ActionMessage = $"✖ {removed} addons removed.";
+        card.ActionMessage = Loc.GetString("Status.AddonsRemoved", removed);
         card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
         card.NotifyAll();
         SaveLibrary();
@@ -322,7 +323,7 @@ public partial class MainViewModel
         if (!await CheckInstallWarningAsync(card.GameName, "relimiter")) return;
 
         card.UlIsInstalling = true;
-        card.UlActionMessage = "Downloading ReLimiter...";
+        card.UlActionMessage = Loc.GetString("Status.DownloadingRelimiter");
         card.UlProgress = 0;
         try
         {
@@ -401,7 +402,7 @@ public partial class MainViewModel
                 card.UlInstalledVersion = _latestUlVersion?.TrimStart('v', 'V')
                     ?? ReadUlInstalledVersion(card.Is32Bit);
                 card.UlStatus = GameStatus.Installed;
-                card.UlActionMessage = "✅ ReLimiter installed!";
+                card.UlActionMessage = Loc.GetString("Status.RelimiterInstalled");
                 card.UlIsInstalling = false;
                 card.NotifyAll();
                 card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
@@ -411,7 +412,7 @@ public partial class MainViewModel
         {
             DispatcherQueue?.TryEnqueue(() =>
             {
-                card.UlActionMessage = $"❌ Install failed: {ex.Message}";
+                card.UlActionMessage = Loc.GetString("Status.InstallFailedWithReason", ex.Message);
                 card.UlIsInstalling = false;
                 card.NotifyAll();
             });
@@ -427,7 +428,7 @@ public partial class MainViewModel
     {
         if (File.Exists(GetUlCachePath(is32Bit)))
         {
-            progress?.Report(("Installing from cache...", 50));
+            progress?.Report((Loc.GetString("Status.InstallingFromCache"), 50));
             return;
         }
 
@@ -448,7 +449,7 @@ public partial class MainViewModel
         Directory.CreateDirectory(DownloadPaths.FrameLimiter);
         var tempPath = GetUlCachePath(is32Bit) + ".tmp";
 
-        progress?.Report(("Downloading...", 0));
+        progress?.Report((Loc.GetString("Dialog.Downloading"), 0));
         using var resp = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         resp.EnsureSuccessStatusCode();
 
@@ -465,7 +466,7 @@ public partial class MainViewModel
                 await file.WriteAsync(buffer.AsMemory(0, read));
                 downloaded += read;
                 if (total > 0)
-                    progress?.Report(($"Downloading... {downloaded / 1024} KB", (double)downloaded / total * 100));
+                    progress?.Report((Loc.GetString("Status.DownloadingProgressWithKb", downloaded / 1024), (double)downloaded / total * 100));
             }
         }
 
@@ -475,7 +476,7 @@ public partial class MainViewModel
         // Save version metadata for update detection
         if (!string.IsNullOrEmpty(_latestUlVersion))
             SaveUlMeta(_latestUlVersion, is32Bit);
-        progress?.Report(("Downloaded!", 100));
+        progress?.Report((Loc.GetString("Status.Downloaded"), 100));
     }
 
     private async Task FetchLatestUlReleaseInfoAsync(bool is32Bit)
@@ -565,13 +566,13 @@ public partial class MainViewModel
             card.UlInstalledFile = null;
             card.UlInstalledVersion = null;
             card.UlStatus = GameStatus.NotInstalled;
-            card.UlActionMessage = "✖ ReLimiter removed.";
+            card.UlActionMessage = Loc.GetString("Status.RelimiterRemoved");
             card.NotifyAll();
             card.FadeMessage(m => card.UlActionMessage = m, card.UlActionMessage);
         }
         catch (Exception ex)
         {
-            card.UlActionMessage = $"❌ Uninstall failed: {ex.Message}";
+            card.UlActionMessage = Loc.GetString("Status.UninstallFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("UninstallUl", ex, note: $"Game: {card.GameName}");
         }
     }
@@ -641,7 +642,7 @@ public partial class MainViewModel
 
         if (File.Exists(GetDcCachePath(is32Bit)))
         {
-            progress?.Report(("Installing from cache...", 50));
+            progress?.Report((Loc.GetString("Status.InstallingFromCache"), 50));
             return;
         }
 
@@ -662,7 +663,7 @@ public partial class MainViewModel
         Directory.CreateDirectory(DownloadPaths.FrameLimiter);
         var tempPath = GetDcCachePath(is32Bit) + ".tmp";
 
-        progress?.Report(("Downloading...", 0));
+        progress?.Report((Loc.GetString("Dialog.Downloading"), 0));
         using var resp = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         resp.EnsureSuccessStatusCode();
 
@@ -679,7 +680,7 @@ public partial class MainViewModel
                 await file.WriteAsync(buffer.AsMemory(0, read));
                 downloaded += read;
                 if (total > 0)
-                    progress?.Report(($"Downloading... {downloaded / 1024} KB", (double)downloaded / total * 100));
+                    progress?.Report((Loc.GetString("Status.DownloadingProgressWithKb", downloaded / 1024), (double)downloaded / total * 100));
             }
         }
 
@@ -689,7 +690,7 @@ public partial class MainViewModel
         // Save version metadata for update detection
         if (!string.IsNullOrEmpty(_latestDcVersion))
             SaveDcMeta(_latestDcVersion, is32Bit);
-        progress?.Report(("Downloaded!", 100));
+        progress?.Report((Loc.GetString("Status.Downloaded"), 100));
     }
 
     private async Task FetchLatestDcReleaseInfoAsync(bool is32Bit)
@@ -766,7 +767,7 @@ public partial class MainViewModel
         if (!await CheckInstallWarningAsync(card.GameName, "dc")) return;
 
         card.DcIsInstalling = true;
-        card.DcActionMessage = "Downloading Display Commander...";
+        card.DcActionMessage = Loc.GetString("Status.DownloadingDisplayCommander");
         card.DcProgress = 0;
         try
         {
@@ -847,7 +848,7 @@ public partial class MainViewModel
                 if (cachedVersion == "latest_build") cachedVersion = null;
                 card.DcInstalledVersion = peVersion ?? cachedVersion ?? ReadDcInstalledVersion(card.Is32Bit);
                 card.DcStatus = GameStatus.Installed;
-                card.DcActionMessage = "✅ Display Commander installed!";
+                card.DcActionMessage = Loc.GetString("Status.DisplayCommanderInstalled");
                 card.DcIsInstalling = false;
                 card.NotifyAll();
                 card.FadeMessage(m => card.DcActionMessage = m, card.DcActionMessage);
@@ -857,7 +858,7 @@ public partial class MainViewModel
         {
             DispatcherQueue?.TryEnqueue(() =>
             {
-                card.DcActionMessage = $"❌ Install failed: {ex.Message}";
+                card.DcActionMessage = Loc.GetString("Status.InstallFailedWithReason", ex.Message);
                 card.DcIsInstalling = false;
                 card.NotifyAll();
             });
@@ -896,13 +897,13 @@ public partial class MainViewModel
             card.DcInstalledFile = null;
             card.DcInstalledVersion = null;
             card.DcStatus = GameStatus.NotInstalled;
-            card.DcActionMessage = "✖ Display Commander removed.";
+            card.DcActionMessage = Loc.GetString("Status.DisplayCommanderRemoved");
             card.NotifyAll();
             card.FadeMessage(m => card.DcActionMessage = m, card.DcActionMessage);
         }
         catch (Exception ex)
         {
-            card.DcActionMessage = $"❌ Uninstall failed: {ex.Message}";
+            card.DcActionMessage = Loc.GetString("Status.UninstallFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("UninstallDc", ex, note: $"Game: {card.GameName}");
         }
     }
@@ -1001,7 +1002,7 @@ public partial class MainViewModel
             sections.Add((currentHeader, currentBody.ToString().TrimEnd()));
 
         if (sections.Count == 0)
-            return "(No changelog entries found)";
+            return App.Services.GetRequiredService<ILocalizationService>().GetString("Status.NoChangelogEntries");
 
         // Find the section matching the installed version
         int startIndex = 0;

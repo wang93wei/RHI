@@ -48,7 +48,7 @@ public class SettingsHandler
         _window.LoadingPanel.Visibility = Visibility.Collapsed;
         // Sync toggle state with ViewModel
         _window.CustomShadersCombo.SelectedIndex = ViewModel.Settings.GlobalShadersOff ? 0 : (ViewModel.Settings.UseCustomShaders ? 2 : 1);
-        _window.AboutVersionText.Text = $"v{CrashReporter.AppVersion}  ·  Simplified PC Gaming by RankFTW";
+        _window.AboutVersionText.Text = $"v{CrashReporter.AppVersion}  ·  {Loc.GetString("App.Subtitle")} {Loc.GetString("Xaml.ByRankftw")}";
         // Populate addon watch folder textbox
         _window.AddonWatchFolderBox.Text = ViewModel.Settings.AddonWatchFolder;
         // Populate screenshot path and per-game combo
@@ -583,7 +583,7 @@ public class SettingsHandler
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.PeakNits.Title"),
-            Content = $"Applied peak nits ({peakNits}) to {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
+            Content = Loc.GetString("Dialog.PeakNits.Applied", peakNits, updatedCount),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -713,8 +713,8 @@ public class SettingsHandler
             {
                 Title = Loc.GetString("Dialog.AdminMode.Title"),
                 Content = enable
-                    ? "Admin Mode enabled. Restart RHI for it to take effect."
-                    : "Admin Mode disabled. RHI will launch normally on next start.",
+                    ? Loc.GetString("Dialog.AdminMode.Enabled")
+                    : Loc.GetString("Dialog.AdminMode.Disabled"),
                 CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
@@ -1191,7 +1191,7 @@ public class SettingsHandler
             var resultDialog = new ContentDialog
             {
                 Title = Loc.GetString("Dialog.CachePurged"),
-                Content = $"Deleted {filesDeleted} files, freed {sizeStr} of disk space.",
+                Content = Loc.GetString("Dialog.CachePurged.Content", filesDeleted, sizeStr),
                 CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
@@ -1204,7 +1204,7 @@ public class SettingsHandler
             var errDialog = new ContentDialog
             {
                 Title = Loc.GetString("Dialog.PurgeFailed"),
-                Content = $"An error occurred: {ex.Message}",
+                Content = Loc.GetString("Dialog.PurgeFailed.Content", ex.Message),
                 CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
@@ -1317,7 +1317,7 @@ public class SettingsHandler
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.OverlayHotkey.Title"),
-            Content = $"Updated {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
+            Content = Loc.GetString("Dialog.OverlayHotkey.Applied", updatedCount),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -1372,7 +1372,7 @@ public class SettingsHandler
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.ReShadeHotkeys.Title"),
-            Content = $"Updated {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
+            Content = Loc.GetString("Dialog.ReShadeHotkeys.Applied", updatedCount),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -1465,7 +1465,7 @@ public class SettingsHandler
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.ReshadeScreenshotHotkey"),
-            Content = $"Updated {updatedCount} reshade.ini file{(updatedCount == 1 ? "" : "s")}.",
+            Content = Loc.GetString("Dialog.ReShadeHotkeys.Applied", updatedCount),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -1587,7 +1587,7 @@ public class SettingsHandler
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Xaml.RelimiterSettings"),
-            Content = $"Updated {updatedCount} relimiter.ini file{(updatedCount == 1 ? "" : "s")}.",
+            Content = Loc.GetString("Dialog.RelimiterHotkey.Applied", updatedCount),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -1831,7 +1831,7 @@ public class SettingsHandler
             });
             tb.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run
             {
-                Text = isOn ? "On" : "Off",
+                Text = isOn ? Loc.GetString("Xaml.On") : Loc.GetString("Xaml.Off"),
                 Foreground = UIFactory.Brush(isOn ? ResourceKeys.AccentGreenBrush : ResourceKeys.AccentRedBrush),
             });
             if (i < items.Length - 1)
@@ -1918,7 +1918,7 @@ public class SettingsHandler
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.OptiscalerHotkey"),
-            Content = $"Updated {updatedCount} OptiScaler.ini file{(updatedCount == 1 ? "" : "s")}.",
+            Content = Loc.GetString("Dialog.OptiscalerHotkey.Applied", updatedCount),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -1982,18 +1982,18 @@ public class SettingsHandler
 
         var variantLabel = newVariant switch
         {
-            DxvkVariant.Stable => "Stable",
-            DxvkVariant.LiliumHdr => "Lilium HDR",
-            _ => "Development",
+            DxvkVariant.Stable => Loc.GetString("Option.Stable"),
+            DxvkVariant.LiliumHdr => Loc.GetString("Option.Lilium HDR"),
+            _ => Loc.GetString("Option.Development"),
         };
 
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.DxvkVariantChanged"),
-            Content = $"DXVK variant changed to {variantLabel}."
+            Content = Loc.GetString("Dialog.DxvkVariantChanged.Content", variantLabel)
                 + (gamesWithDxvk.Count > 0
-                    ? $"\n\nSwitching {gamesWithDxvk.Count} game(s) to the {variantLabel} build."
-                    : "\n\nNo games currently have DXVK installed."),
+                    ? Loc.GetString("Dialog.DxvkVariantChanged.Switching", gamesWithDxvk.Count, variantLabel)
+                    : Loc.GetString("Dialog.DxvkVariantChanged.NoGames")),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -2139,16 +2139,16 @@ public class SettingsHandler
         var totalCount = gamesWithRs.Count;
         var vulkanCount = ViewModel.AllCards.Count(c => c.RequiresVulkanInstall && c.IsRsInstalled);
         var channelLabel = string.Equals(newChannel, "Nightly", StringComparison.OrdinalIgnoreCase)
-            ? "Nightly" : "Stable";
+            ? Loc.GetString("Option.Nightly") : Loc.GetString("Option.Stable");
 
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.ReshadeBuildChannelChanged"),
-            Content = $"ReShade build channel changed to {channelLabel}.\n\n"
+            Content = Loc.GetString("Dialog.ReshadeBuildChannelChanged.Content", channelLabel)
                 + (totalCount > 0
-                    ? $"Switching {totalCount} game(s) to the {channelLabel} build."
-                      + (vulkanCount > 0 ? $"\n{vulkanCount} Vulkan game(s) updated via global layer." : "")
-                    : "No games currently have ReShade installed."),
+                    ? Loc.GetString("Dialog.ReshadeBuildChannelChanged.Switching", totalCount, channelLabel)
+                      + (vulkanCount > 0 ? Loc.GetString("Dialog.ReshadeBuildChannelChanged.VulkanLayer", vulkanCount) : "")
+                    : Loc.GetString("Dialog.ReshadeBuildChannelChanged.NoGames")),
             CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,

@@ -834,7 +834,7 @@ public partial class MainViewModel
             card.Mod.SnapshotUrl = card.Mod.SnapshotUrl32;
         if (string.IsNullOrEmpty(card.InstallPath))
         {
-            card.ActionMessage = "No install path — use 📁 to pick the game folder.";
+            card.ActionMessage = Loc.GetString("Status.NoInstallPath");
             return;
         }
 
@@ -856,7 +856,7 @@ public partial class MainViewModel
         }
 
         card.IsInstalling = true;
-        card.ActionMessage = "Starting download...";
+        card.ActionMessage = Loc.GetString("Dialog.StartingDownload");
         _crashReporter.Log($"[MainViewModel.InstallModAsync] Install started: {card.GameName} → {card.InstallPath}");
         try
         {
@@ -1025,7 +1025,7 @@ public partial class MainViewModel
                 card.InstalledAddonFileName = record.AddonFileName;
                 card.RdxInstalledVersion    = AuxInstallService.ReadInstalledVersion(record.InstallPath, record.AddonFileName);
                 card.Status                 = GameStatus.Installed;
-                card.FadeMessage(m => card.ActionMessage = m, "✅ Installed! Press Home in-game to open ReShade.");
+                card.FadeMessage(m => card.ActionMessage = m, Loc.GetString("Status.InstalledPressHomeHint"));
                 _crashReporter.Log($"[MainViewModel.InstallModAsync] Install complete: {card.GameName} — {record.AddonFileName}");
                 // Reset Nexus baseline so update indicator clears after install
                 _nexusUpdateService.ResetBaseline(card.GameName);
@@ -1042,7 +1042,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            DispatcherQueue?.TryEnqueue(() => card.ActionMessage = $"❌ Failed: {ex.Message}");
+            DispatcherQueue?.TryEnqueue(() => card.ActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message));
             _crashReporter.WriteCrashReport("InstallModAsync", ex, note: $"Game: {card.GameName}, Path: {card.InstallPath}");
         }
         finally
@@ -1084,7 +1084,7 @@ public partial class MainViewModel
         card.InstalledAddonFileName = null;
         card.RdxInstalledVersion    = null;
         card.Status                 = GameStatus.Available;
-        card.ActionMessage          = "✖ Mod removed.";
+        card.ActionMessage          = Loc.GetString("Status.ModRemoved");
         card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
         // Clear the addon file cache so the next Refresh doesn't think a file is still there.
         if (!string.IsNullOrEmpty(card.InstallPath))

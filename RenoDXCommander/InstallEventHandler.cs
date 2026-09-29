@@ -221,7 +221,7 @@ public class InstallEventHandler
         var osVariant = ViewModel.GetOsVariant(card.GameName, card.Source ?? "");
 
         card.OsIsInstalling = true;
-        card.OsActionMessage = "Installing OptiScaler...";
+        card.OsActionMessage = Loc.GetString("Status.InstallingOptiScaler");
         card.OsProgress = 0;
         try
         {
@@ -243,7 +243,7 @@ public class InstallEventHandler
             {
                 try
                 {
-                    card.OsActionMessage = "Installing PD-Upscaler REFramework...";
+                    card.OsActionMessage = Loc.GetString("Status.InstallingPdUpscalerReframework");
                     await _reFrameworkService.InstallPdUpscalerAsync(
                         card.GameName, card.InstallPath, pdArtifact,
                         new Progress<(string message, double percent)>(p =>
@@ -261,7 +261,7 @@ public class InstallEventHandler
                 }
             }
 
-            card.OsActionMessage = "✅ OptiScaler installed!";
+            card.OsActionMessage = Loc.GetString("Status.OptiScalerInstalled");
             card.OsStatus = GameStatus.Installed;
             card.NotifyAll();
             card.FadeMessage(m => card.OsActionMessage = m, card.OsActionMessage);
@@ -304,7 +304,7 @@ public class InstallEventHandler
         }
         catch (Exception ex)
         {
-            card.OsActionMessage = $"❌ Install failed: {ex.Message}";
+            card.OsActionMessage = Loc.GetString("Status.InstallFailedWithReason", ex.Message);
         }
         finally
         {
@@ -372,14 +372,14 @@ public class InstallEventHandler
             }
             catch (Exception cleanEx) { CrashReporter.Log($"[InstallEventHandler.UninstallOptiScaler] Settings cleanup failed — {cleanEx.Message}"); }
 
-            card.OsActionMessage = "✖ OptiScaler removed.";
+            card.OsActionMessage = Loc.GetString("Status.OptiScalerRemoved");
             card.OsStatus = GameStatus.Available;
             card.NotifyAll();
             card.FadeMessage(m => card.OsActionMessage = m, card.OsActionMessage);
         }
         catch (Exception ex)
         {
-            card.OsActionMessage = $"❌ Uninstall failed: {ex.Message}";
+            card.OsActionMessage = Loc.GetString("Status.UninstallFailedWithReason", ex.Message);
         }
 
         _window.DispatcherQueue?.TryEnqueue(() =>
@@ -401,12 +401,12 @@ public class InstallEventHandler
             var fgOutput = ViewModel.GetOsFgOutput(card.GameName, card.Source ?? "");
             var fgNvngx = ViewModel.GetOsFgNvngxReplacement(card.GameName, card.Source ?? "");
             OptiScalerService.ApplyFgSettings(card.InstallPath, fgInput, fgOutput, fgNvngx);
-            card.OsActionMessage = "✅ OptiScaler.ini copied to game folder.";
+            card.OsActionMessage = Loc.GetString("Status.OptiScalerIniCopied");
             card.FadeMessage(m => card.OsActionMessage = m, card.OsActionMessage);
         }
         catch (Exception ex)
         {
-            card.OsActionMessage = $"❌ {ex.Message}";
+            card.OsActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -515,7 +515,7 @@ public class InstallEventHandler
         ViewModel.ToggleUeExtended(card);
 
         // Directly update the badge text based on the new state
-        string newLabel = card.UseUeExtended ? "UE Extended" : "Generic UE";
+        string newLabel = card.UseUeExtended ? Loc.GetString("Card.UeExtended") : Loc.GetString("Card.GenericUe");
         _window.DetailGenericText.Text = newLabel;
 
         // Update the UE button styling
@@ -534,7 +534,9 @@ public class InstallEventHandler
 
         // Update tooltip
         ToolTipService.SetToolTip(_window.DetailUeExtendedBtn,
-            card.UseUeExtended ? "Disable UE Extended" : "Enable UE Extended");
+            card.UseUeExtended
+                ? Loc.GetString("Dialog.UeExtended.DisableTooltip")
+                : Loc.GetString("Dialog.UeExtended.EnableTooltip"));
 
         // Show inline message or warning dialog
         if (card.UseUeExtended)

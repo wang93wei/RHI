@@ -1,4 +1,4 @@
-﻿// MainWindow.Events.cs — Button click handlers and user-initiated event handlers.
+// MainWindow.Events.cs — Button click handlers and user-initiated event handlers.
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
@@ -168,11 +168,11 @@ public sealed partial class MainWindow
             if (requiresVulkan)
                 ViewModel.DeployShadersForCard(gameName);
 
-            card.RsActionMessage = "✅ reshade.ini merged into game folder.";
+            card.RsActionMessage = Loc.GetString("Status.ReshadeIniMerged");
         }
         catch (Exception ex)
         {
-            card.RsActionMessage = $"❌ {ex.Message}";
+            card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -229,14 +229,16 @@ public sealed partial class MainWindow
                 {
                     AuxInstallService.RemoveLumaReshadeIniValue(card.InstallPath, "EnableHDR");
                     AuxInstallService.RemoveLumaReshadeIniValue(card.InstallPath, "DisplayMode");
-                    card.LumaActionMessage = "✅ HDR reset to Luma default.";
+                    card.LumaActionMessage = Loc.GetString("Status.Luma.HdrResetOk");
                 }
                 else
                 {
                     bool hdrOn = hdrCombo.SelectedIndex == 2;
                     AuxInstallService.SetLumaReshadeIniValue(card.InstallPath, "EnableHDR", hdrOn ? "1" : "0");
                     AuxInstallService.SetLumaReshadeIniValue(card.InstallPath, "DisplayMode", hdrOn ? "1" : "0");
-                    card.LumaActionMessage = hdrOn ? "✅ HDR enabled in reshade.ini." : "✅ HDR disabled in reshade.ini.";
+                    card.LumaActionMessage = hdrOn
+                        ? Loc.GetString("Status.Luma.HdrEnabled")
+                        : Loc.GetString("Status.Luma.HdrDisabled");
                 }
                 card.FadeMessage(m => card.LumaActionMessage = m, card.LumaActionMessage);
             };
@@ -277,7 +279,7 @@ public sealed partial class MainWindow
                     AuxInstallService.ApplyEngineIniCustomKeys(
                         card.InstallPath, taaKeys, card.EngineIniProjectOverride, card.GameName, card.Source);
                     ViewModel.SetLumaTaaEnabled(card.GameName, true);
-                    card.LumaActionMessage = "✅ TAA settings written to Engine.ini.";
+                    card.LumaActionMessage = Loc.GetString("Status.Luma.TaaWritten");
                 }
                 else
                 {
@@ -286,7 +288,7 @@ public sealed partial class MainWindow
                         taaKeys.Select(k => k.Key),
                         card.EngineIniProjectOverride, card.GameName, card.Source);
                     ViewModel.SetLumaTaaEnabled(card.GameName, false);
-                    card.LumaActionMessage = "✅ TAA settings removed from Engine.ini.";
+                    card.LumaActionMessage = Loc.GetString("Status.Luma.TaaRemoved");
                 }
                 card.FadeMessage(m => card.LumaActionMessage = m, card.LumaActionMessage);
             };
@@ -451,11 +453,11 @@ public sealed partial class MainWindow
             if (requiresVulkan)
                 ViewModel.DeployShadersForCard(gameName);
 
-            card.RsActionMessage = "✅ reshade.ini merged into game folder.";
+            card.RsActionMessage = Loc.GetString("Status.ReshadeIniMerged");
         }
         catch (Exception ex)
         {
-            card.RsActionMessage = $"❌ {ex.Message}";
+            card.RsActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -467,11 +469,11 @@ public sealed partial class MainWindow
         {
             var installPath = card.InstallPath;
             await Task.Run(() => AuxInstallService.CopyUlIni(installPath));
-            card.UlActionMessage = "✅ relimiter.ini copied to game folder.";
+            card.UlActionMessage = Loc.GetString("Status.RelimiterIniCopied");
         }
         catch (Exception ex)
         {
-            card.UlActionMessage = $"❌ {ex.Message}";
+            card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -483,12 +485,12 @@ public sealed partial class MainWindow
         {
             var installPath = card.InstallPath;
             await Task.Run(() => AuxInstallService.CopyDcIni(installPath));
-            card.DcActionMessage = "✅ DisplayCommander.ini copied to game folder.";
+            card.DcActionMessage = Loc.GetString("Status.DisplayCommanderIniCopied");
             card.FadeMessage(m => card.DcActionMessage = m, card.DcActionMessage);
         }
         catch (Exception ex)
         {
-            card.DcActionMessage = $"❌ {ex.Message}";
+            card.DcActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -501,7 +503,7 @@ public sealed partial class MainWindow
             var sourceIni = Services.OptiScalerService.OsIniPath;
             if (!File.Exists(sourceIni))
             {
-                card.OsActionMessage = "❌ No OptiScaler.ini found in INIs folder.";
+                card.OsActionMessage = Loc.GetString("Status.OptiScalerIniMissing");
                 return;
             }
             var installPath = card.InstallPath;
@@ -511,12 +513,12 @@ public sealed partial class MainWindow
                 File.Copy(sourceIni, destIni, overwrite: true);
                 Services.OptiScalerService.EnforceLoadReshade(destIni);
             });
-            card.OsActionMessage = "✅ OptiScaler.ini copied to game folder.";
+            card.OsActionMessage = Loc.GetString("Status.OptiScalerIniCopied");
             card.FadeMessage(m => card.OsActionMessage = m, card.OsActionMessage);
         }
         catch (Exception ex)
         {
-            card.OsActionMessage = $"❌ {ex.Message}";
+            card.OsActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 

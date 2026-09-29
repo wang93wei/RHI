@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.ViewModels;
 
@@ -10,6 +11,8 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class UpdateOrchestrationService : IUpdateOrchestrationService
 {
+    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     private readonly IModInstallService _installer;
     private readonly IAuxInstallService _auxInstaller;
     private readonly ICrashReporter _crashReporter;
@@ -63,7 +66,7 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
         foreach (var card in targets)
         {
             card.IsInstalling  = true;
-            card.ActionMessage = "Updating...";
+            card.ActionMessage = Loc.GetString("Status.Updating");
 
             string? originalSnapshotUrl = card.Mod!.SnapshotUrl;
             bool swappedTo32 = card.Is32Bit && card.Mod.SnapshotUrl32 != null;
@@ -147,14 +150,14 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
                     card.InstalledAddonFileName = record.AddonFileName;
                     card.RdxInstalledVersion    = AuxInstallService.ReadInstalledVersion(record.InstallPath, record.AddonFileName);
                     card.Status                 = GameStatus.Installed;
-                    card.ActionMessage          = "✅ Updated!";
+                    card.ActionMessage          = Loc.GetString("Status.Updated");
                     card.NotifyAll();
                     card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
                 });
             }
             catch (Exception ex)
             {
-                card.ActionMessage = $"❌ Failed: {ex.Message}";
+                card.ActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message);
             }
             finally
             {
@@ -207,7 +210,7 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
                         _crashReporter.Log($"[UpdateOrchestrationService.UpdateAllReShade] Skipping {card.GameName} — foreign dxgi.dll detected");
                         dispatcherQueue?.TryEnqueue(() =>
                         {
-                            card.RsActionMessage = "⚠ Skipped — unknown dxgi.dll";
+                            card.RsActionMessage = Loc.GetString("Status.SkippedUnknownDxgi");
                         });
                         continue;
                     }
@@ -215,7 +218,7 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
             }
 
             card.RsIsInstalling  = true;
-            card.RsActionMessage = "Updating...";
+            card.RsActionMessage = Loc.GetString("Status.Updating");
             try
             {
                 var progress = new Progress<(string msg, double pct)>(p =>
@@ -251,14 +254,14 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
                     card.RsInstalledFile    = record.InstalledAs;
                     card.RsInstalledVersion = _auxFileService.ReadInstalledVersion(record.InstallPath, record.InstalledAs);
                     card.RsStatus           = GameStatus.Installed;
-                    card.RsActionMessage    = "✅ Updated!";
+                    card.RsActionMessage    = Loc.GetString("Status.Updated");
                     card.NotifyAll();
                     card.FadeMessage(m => card.RsActionMessage = m, card.RsActionMessage);
                 });
             }
             catch (Exception ex)
             {
-                card.RsActionMessage = $"❌ Failed: {ex.Message}";
+                card.RsActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message);
                 _crashReporter.WriteCrashReport("UpdateAllReShade", ex, note: $"Game: {card.GameName}");
             }
             finally { dispatcherQueue?.TryEnqueue(() => card.RsIsInstalling = false); }
@@ -395,7 +398,7 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
             foreach (var vCard in vulkanTargets)
             {
                 vCard.RsIsInstalling = true;
-                vCard.RsActionMessage = "Updating Vulkan ReShade...";
+                vCard.RsActionMessage = Loc.GetString("Status.UpdatingVulkanReshade");
                 try
                 {
                     if (keepRsIniUpdatedResolver == null || keepRsIniUpdatedResolver(vCard.GameName, vCard.Source ?? ""))
@@ -407,14 +410,14 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
                     {
                         vCard.RsInstalledVersion = vulkanVersion;
                         vCard.RsStatus = GameStatus.Installed;
-                        vCard.RsActionMessage = layerUpdated ? "✅ Updated!" : "✅ Up to date";
+                        vCard.RsActionMessage = layerUpdated ? Loc.GetString("Status.Updated") : Loc.GetString("Status.UpToDate");
                         vCard.NotifyAll();
                         vCard.FadeMessage(m => vCard.RsActionMessage = m, vCard.RsActionMessage);
                     });
                 }
                 catch (Exception ex)
                 {
-                    vCard.RsActionMessage = $"❌ Failed: {ex.Message}";
+                    vCard.RsActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message);
                     _crashReporter.WriteCrashReport("UpdateAllReShade.Vulkan", ex, note: $"Game: {vCard.GameName}");
                 }
                 finally { dispatcherQueue?.TryEnqueue(() => vCard.RsIsInstalling = false); }
@@ -468,7 +471,7 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
         foreach (var card in targets)
         {
             card.RefIsInstalling = true;
-            card.RefActionMessage = "Updating...";
+            card.RefActionMessage = Loc.GetString("Status.Updating");
             try
             {
                 var progress = new Progress<(string msg, double pct)>(p =>
@@ -483,14 +486,14 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
                     card.RefRecord = record;
                     card.RefInstalledVersion = record.InstalledVersion;
                     card.RefStatus = GameStatus.Installed;
-                    card.RefActionMessage = "✅ Updated!";
+                    card.RefActionMessage = Loc.GetString("Status.Updated");
                     card.NotifyAll();
                     card.FadeMessage(m => card.RefActionMessage = m, card.RefActionMessage);
                 });
             }
             catch (Exception ex)
             {
-                card.RefActionMessage = $"❌ Failed: {ex.Message}";
+                card.RefActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message);
                 _crashReporter.WriteCrashReport("UpdateAllREFramework", ex, note: $"Game: {card.GameName}");
             }
             finally { dispatcherQueue?.TryEnqueue(() => card.RefIsInstalling = false); }
@@ -513,7 +516,7 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
         foreach (var card in targets)
         {
             card.DofFixIsInstalling = true;
-            card.DofFixActionMessage = "Updating...";
+            card.DofFixActionMessage = Loc.GetString("Status.Updating");
             try
             {
                 var progress = new Progress<(string msg, double pct)>(p =>
@@ -529,19 +532,19 @@ public class UpdateOrchestrationService : IUpdateOrchestrationService
                     {
                         card.DofFixInstalledVersion = dofFixService.StagedVersion;
                         card.DofFixStatus = GameStatus.Installed;
-                        card.DofFixActionMessage = "✅ Updated!";
+                        card.DofFixActionMessage = Loc.GetString("Status.Updated");
                         card.NotifyAll();
                         card.FadeMessage(m => card.DofFixActionMessage = m, card.DofFixActionMessage);
                     }
                     else
                     {
-                        card.DofFixActionMessage = "❌ Update failed";
+                        card.DofFixActionMessage = Loc.GetString("Status.UpdateFailed");
                     }
                 });
             }
             catch (Exception ex)
             {
-                card.DofFixActionMessage = $"❌ Failed: {ex.Message}";
+                card.DofFixActionMessage = Loc.GetString("Status.FailedWithReason", ex.Message);
                 _crashReporter.WriteCrashReport("UpdateAllDofFix", ex, note: $"Game: {card.GameName}");
             }
             finally { dispatcherQueue?.TryEnqueue(() => card.DofFixIsInstalling = false); }

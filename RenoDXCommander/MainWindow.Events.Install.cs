@@ -137,11 +137,11 @@ public sealed partial class MainWindow
         try
         {
             AuxInstallService.CopyUlIni(card.InstallPath);
-            card.UlActionMessage = "✅ relimiter.ini copied to game folder.";
+            card.UlActionMessage = Loc.GetString("Status.RelimiterIniCopied");
         }
         catch (Exception ex)
         {
-            card.UlActionMessage = $"❌ {ex.Message}";
+            card.UlActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -152,12 +152,12 @@ public sealed partial class MainWindow
         try
         {
             AuxInstallService.CopyDcIni(card.InstallPath);
-            card.DcActionMessage = "✅ DisplayCommander.ini copied to game folder.";
+            card.DcActionMessage = Loc.GetString("Status.DisplayCommanderIniCopied");
             card.FadeMessage(m => card.DcActionMessage = m, card.DcActionMessage);
         }
         catch (Exception ex)
         {
-            card.DcActionMessage = $"❌ {ex.Message}";
+            card.DcActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
     }
 
@@ -299,7 +299,7 @@ public sealed partial class MainWindow
         if (card.DofFixIsInstalling || string.IsNullOrEmpty(card.InstallPath)) return;
 
         card.DofFixIsInstalling = true;
-        card.DofFixActionMessage = "Installing DOF Fix...";
+        card.DofFixActionMessage = Loc.GetString("Status.InstallingDofFix");
         card.DofFixProgress = 0;
         try
         {
@@ -313,18 +313,18 @@ public sealed partial class MainWindow
             {
                 card.DofFixInstalledVersion = _dofFixService.StagedVersion;
                 card.DofFixStatus = Models.GameStatus.Installed;
-                card.DofFixActionMessage = "✅ DOF Fix installed!";
+                card.DofFixActionMessage = Loc.GetString("Status.DofFixInstalled");
                 card.NotifyAll();
                 card.FadeMessage(m => card.DofFixActionMessage = m, card.DofFixActionMessage);
             }
             else
             {
-                card.DofFixActionMessage = "❌ Install failed";
+                card.DofFixActionMessage = Loc.GetString("Dialog.InstallFailed");
             }
         }
         catch (Exception ex)
         {
-            card.DofFixActionMessage = $"❌ {ex.Message}";
+            card.DofFixActionMessage = Loc.GetString("Status.FailedShort", ex.Message);
         }
         finally
         {
@@ -342,13 +342,13 @@ public sealed partial class MainWindow
         {
             card.DofFixStatus = Models.GameStatus.NotInstalled;
             card.DofFixInstalledVersion = null;
-            card.DofFixActionMessage = "✖ DOF Fix removed.";
+            card.DofFixActionMessage = Loc.GetString("Status.DofFixRemoved");
             card.NotifyAll();
             card.FadeMessage(m => card.DofFixActionMessage = m, card.DofFixActionMessage);
         }
         else
         {
-            card.DofFixActionMessage = "❌ Uninstall failed";
+            card.DofFixActionMessage = Loc.GetString("Dialog.UninstallFailed");
         }
     }
 
@@ -1024,14 +1024,14 @@ public sealed partial class MainWindow
         {
             // Build a list of installed components to show in the dialog
             var installed = new List<string>();
-            if (card.RsRecord != null || card.RsStatus == Models.GameStatus.Installed) installed.Add("ReShade");
-            if (card.InstalledRecord != null) installed.Add("RenoDX");
-            if (card.IsUlInstalled) installed.Add("ReLimiter");
-            if (card.IsDcInstalled) installed.Add("Display Commander");
-            if (card.LumaRecord != null) installed.Add("Luma");
-            if (card.IsRefInstalled) installed.Add("RE Framework");
-            if (card.IsOsInstalled) installed.Add("OptiScaler");
-            if (card.DxvkStatus == Models.GameStatus.Installed) installed.Add("DXVK");
+            if (card.RsRecord != null || card.RsStatus == Models.GameStatus.Installed) installed.Add(Loc.GetString("Detail.ReShade"));
+            if (card.InstalledRecord != null) installed.Add(Loc.GetString("Detail.RenoDX"));
+            if (card.IsUlInstalled) installed.Add(Loc.GetString("Detail.ReLimiter"));
+            if (card.IsDcInstalled) installed.Add(Loc.GetString("Detail.DisplayCommander"));
+            if (card.LumaRecord != null) installed.Add(Loc.GetString("Detail.Luma"));
+            if (card.IsRefInstalled) installed.Add(Loc.GetString("Detail.REFramework"));
+            if (card.IsOsInstalled) installed.Add(Loc.GetString("Detail.OptiScaler"));
+            if (card.DxvkStatus == Models.GameStatus.Installed) installed.Add(Loc.GetString("Detail.DXVK"));
 
             ContentDialogResult result;
             bool uninstallComponents = false;
