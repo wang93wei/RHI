@@ -1,4 +1,4 @@
-﻿// DetailPanelBuilder.Overrides.DriverSettings.cs — Driver Profile Settings (VSync, Latency, Smooth Motion, Power/CPU, ReBAR).
+// DetailPanelBuilder.Overrides.DriverSettings.cs — Driver Profile Settings (VSync, Latency, Smooth Motion, Power/CPU, ReBAR).
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -10,18 +10,169 @@ namespace RenoDXCommander;
 
 public partial class DetailPanelBuilder
 {
+    // Set by BuildNvidiaProfileSection so BuildDriverProfileSection appends to the body, not the panel root
+    private StackPanel? _nvBodyPanel;
+    // Set by BuildNvidiaProfileSection so BuildNvidiaProfileBody can append the collapsed summary
+    private StackPanel? _nvHeaderRow;
+
+    // Snapshot of all NVAPI values needed to build the driver profile section — fetched off the UI thread.
+    private sealed record DriverProfileData(
+        uint VSyncMode, uint? GlobalVSyncMode,
+        uint VSyncTearControl,
+        uint LowLatencyMode,
+        uint SmoothMotionEnable,
+        uint SmoothMotionApis,
+        uint SmoothMotionFlipPacingFs,
+        uint PowerManagementMode,
+        bool PerGameGSyncEnabled,
+        ulong ReBarSizeLimit,
+        uint ReBarEnableMode,
+        uint ReBarMode,
+        ulong GlobalReBarSizeLimit,
+        bool IsAdmin);
+
     private void BuildDriverProfileSection(GameCardViewModel card, string capturedName)
     {
+        var nvidiaPresetService = _dlssPresetService;
+        if (!nvidiaPresetService.IsSupported)
+        {
+            // Just add the admin notice
+            bool elevated = VulkanLayerService.IsRunningAsAdmin();
+            (_nvBodyPanel ?? _window.NvidiaProfilePanel).Children.Add(new TextBlock
+            {
+                Text = elevated
+                    ? Loc.GetString("Overrides.AdminNotice.Elevated")
+                    : Loc.GetString("Overrides.AdminNotice.NotElevated"),
+                FontSize = 10,
+                Foreground = UIFactory.Brush(elevated ? ResourceKeys.TextTertiaryBrush : ResourceKeys.AccentAmberDimBrush),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 8, 0, 0),
+            });
+            return;
+        }
 
+        // Capture stable references before going off-thread
+        var gameName = card.GameName;
+        var installPath = card.InstallPath ?? "";
+        var gameSource = card.Source ?? "";
+        var targetCard = card;
+        var svc = nvidiaPresetService;
+        var nvBodySnapshot = _nvBodyPanel;
+
+        // Create a dedicated container for the driver profile section.
+        // This lets us replace only the driver content when the live scan completes,
+        // without touching the DLSS rows above it in nvBodySnapshot.
+        var driverContainer = new StackPanel();
+        nvBodySnapshot?.Children.Add(driverContainer);
+
+        // Fetch all NVAPI values off the UI thread, then build UI synchronously on dispatcher
+        var scanToken = _panelScanCts.Token;
+        _ = Task.Run(async () =>
+        {
+            // Skip if the user navigated away before we even acquire the semaphore —
+            // the cached render is already showing; no need to do the NVAPI scan.
+            if (_window.ViewModel.SelectedGame?.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) != true
+                || _window.ViewModel.SelectedGame?.Source != gameSource)
+                return;
+
+            CrashReporter.Log($"[BuildDriverProfileSection] Waiting for semaphore: '{gameName}'");
+            try { await _panelScanSemaphore.WaitAsync(scanToken).ConfigureAwait(false); }
+            catch (OperationCanceledException) { CrashReporter.Log($"[BuildDriverProfileSection] Semaphore cancelled: '{gameName}'"); return; }
+            CrashReporter.Log($"[BuildDriverProfileSection] Semaphore acquired, reading NVAPI: '{gameName}'");
+            DriverProfileData? data = null;
+            try
+            {
+                // Use a 4s cancellation token for the exe scan inside FindProfile.
+                // This is shorter than the 5s WhenAny timeout so the scan thread exits
+                // cleanly before the outer timeout fires — preventing thread pool starvation.
+                using var scanCts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+                var scanCt = scanCts.Token;
+
+                // Wrap NVAPI reads in a timeout — they can hang indefinitely after sleep/wake
+                var nvapiTask = Task.Run(() =>
+                {
+                    // Prime the profile lookup cache with the cancellable token first.
+                    // All subsequent Get* calls will hit the in-memory _profileLookupCache
+                    // and never run the expensive exe scan again.
+                    svc.PrimeProfileCache(gameName, installPath, scanCt);
+                    return new DriverProfileData(
+                        VSyncMode:              svc.GetVSyncMode(gameName, installPath),
+                        GlobalVSyncMode:        svc.GetGlobalVSyncMode(),
+                        VSyncTearControl:       svc.GetVSyncTearControl(gameName, installPath),
+                        LowLatencyMode:         svc.GetLowLatencyMode(gameName, installPath),
+                        SmoothMotionEnable:     svc.GetSmoothMotionEnable(gameName, installPath),
+                        SmoothMotionApis:       svc.GetSmoothMotionApis(gameName, installPath),
+                        SmoothMotionFlipPacingFs: svc.GetSmoothMotionFlipPacingFs(gameName, installPath),
+                        PowerManagementMode:    svc.GetPowerManagementMode(gameName, installPath),
+                        PerGameGSyncEnabled:    svc.GetPerGameGSyncEnabled(gameName, installPath),
+                        ReBarSizeLimit:         svc.GetReBarSizeLimit(gameName, installPath),
+                        ReBarEnableMode:        svc.GetReBarEnableMode(gameName, installPath),
+                        ReBarMode:              svc.GetReBarMode(gameName, installPath),
+                        GlobalReBarSizeLimit:   svc.GetGlobalReBarSizeLimit(),
+                        IsAdmin:                VulkanLayerService.IsRunningAsAdmin());
+                }, scanCt);
+                using var delayCts = new CancellationTokenSource();
+                var delayTask = Task.Delay(5000, delayCts.Token);
+                var completed = await Task.WhenAny(nvapiTask, delayTask).ConfigureAwait(false);
+                delayCts.Cancel(); // cancel the delay timer immediately so it doesn't hold a thread
+                if (completed == nvapiTask)
+                    data = await nvapiTask.ConfigureAwait(false);
+                else
+                    CrashReporter.Log($"[BuildDriverProfileSection] NVAPI reads timed out for '{gameName}' — using defaults");            }
+            finally
+            {
+                CrashReporter.Log($"[BuildDriverProfileSection] Semaphore releasing: '{gameName}'");
+                _panelScanSemaphore.Release();
+            }
+
+            _window.DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                // Bail if a newer BuildNvidiaProfileSection call has started (e.g. user changed a preset)
+                if (scanToken.IsCancellationRequested) return;
+
+                // Guard: if the user has navigated away, the body panel may have been replaced
+                var currentCard = _window.ViewModel.SelectedGame;
+                if (currentCard == null || !currentCard.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)
+                    || currentCard.Source != gameSource)
+                    return;
+
+                _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData({gameName})");
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                // Build into a throwaway container first, then swap atomically.
+                var tempDriver = new StackPanel();
+                BuildDriverProfileSectionWithData(targetCard, capturedName, svc, tempDriver, data);
+                sw.Stop();
+                if (sw.ElapsedMilliseconds > 50)
+                    CrashReporter.Log($"[BuildDriverProfileSectionWithData] SLOW build: '{gameName}' took {sw.ElapsedMilliseconds}ms");
+                _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:AddToTree({gameName})");
+                var sw2 = System.Diagnostics.Stopwatch.StartNew();
+                driverContainer.Children.Clear();
+                // Pre-measure the element at the container's actual width before adding to
+                // the live tree. WinUI caches the result so the Children.Add layout pass
+                // reuses it instead of recomputing the expensive star-column measurement.
+                var availW = driverContainer.ActualWidth > 0 ? driverContainer.ActualWidth : _window.NvidiaProfilePanel.ActualWidth;
+                if (availW > 0)
+                    tempDriver.Measure(new Windows.Foundation.Size(availW, double.PositiveInfinity));
+                driverContainer.Children.Add(tempDriver);
+                sw2.Stop();
+                if (sw2.ElapsedMilliseconds > 50)
+                    CrashReporter.Log($"[BuildDriverProfileSectionWithData] SLOW AddToTree: '{gameName}' took {sw2.ElapsedMilliseconds}ms on UI thread");
+            });
+        });
+    }
+
+    private void BuildDriverProfileSectionWithData(GameCardViewModel card, string capturedName,
+        DlssPresetService nvidiaPresetService, StackPanel? nvBody, DriverProfileData d)
+    {
         // ══════════════════════════════════════════════════════════════════════
         // Nvidia Profile Settings — VSync, Latency, Smooth Motion, Power/CPU, ReBAR
         // ══════════════════════════════════════════════════════════════════════
-        var nvidiaPresetService = _dlssPresetService;
         if (nvidiaPresetService.IsSupported)
         {
-            bool isAdmin = VulkanLayerService.IsRunningAsAdmin();
+            bool isAdmin = d.IsAdmin;
 
-            _window.NvidiaProfilePanel.Children.Add(UIFactory.MakeSeparator());
+            (nvBody ?? _window.NvidiaProfilePanel).Children.Add(UIFactory.MakeSeparator());
+            _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:GridSetup({capturedName})");
 
             var nvidiaGrid = new Grid { ColumnSpacing = 12, Opacity = isAdmin ? 1.0 : 0.4, IsHitTestVisible = isAdmin };
             // 4 columns with dividers between: col0 | div1 | col2 | div3 | col4 | div5 | col6
@@ -45,8 +196,8 @@ public partial class DetailPanelBuilder
             {
                 vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Mode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.VSyncModeOptions;
-                uint current = nvidiaPresetService.GetVSyncMode(card.GameName, installPathSafe);
-                var globalVSync = nvidiaPresetService.GetGlobalVSyncMode();
+                uint current = d.VSyncMode;
+                var globalVSync = d.GlobalVSyncMode;
 
                 var itemsList = new List<string>();
                 if (globalVSync.HasValue)
@@ -91,13 +242,17 @@ public partial class DetailPanelBuilder
                     if (globalVSync.HasValue && i == 0) // "Global (...)" entry
                     {
                         // Inherit from global — write the global value
-                        nvidiaPresetService.SetVSyncMode(card.GameName, installPathSafe, globalVSync ?? options[0].Value);
+                        var valueToWrite = globalVSync ?? options[0].Value;
+                        _ = Task.Run(() => nvidiaPresetService.SetVSyncMode(capturedName, installPathSafe, valueToWrite));
                     }
                     else
                     {
                         int optIdx = globalVSync.HasValue ? i - 1 : i;
                         if (optIdx >= 0 && optIdx < options.Length)
-                            nvidiaPresetService.SetVSyncMode(card.GameName, installPathSafe, options[optIdx].Value);
+                        {
+                            var valueToWrite = options[optIdx].Value;
+                            _ = Task.Run(() => nvidiaPresetService.SetVSyncMode(capturedName, installPathSafe, valueToWrite));
+                        }
                     }
                 };
                 vsyncCol.Children.Add(combo);
@@ -108,7 +263,7 @@ public partial class DetailPanelBuilder
             {
                 vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.TearControl"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.VSyncTearControlOptions;
-                uint current = nvidiaPresetService.GetVSyncTearControl(card.GameName, installPathSafe);
+                uint current = d.VSyncTearControl;
                 var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
@@ -127,7 +282,8 @@ public partial class DetailPanelBuilder
                     if (init) return;
                     int i = combo.SelectedIndex;
                     if (i < 0 || i >= options.Length) return;
-                    nvidiaPresetService.SetVSyncTearControl(card.GameName, installPathSafe, options[i].Value);
+                    var valueToWrite = options[i].Value;
+                    _ = Task.Run(() => nvidiaPresetService.SetVSyncTearControl(capturedName, installPathSafe, valueToWrite));
                 };
                 vsyncCol.Children.Add(combo);
                 init = false;
@@ -137,12 +293,12 @@ public partial class DetailPanelBuilder
             {
                 vsyncCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.LowLatency"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.LowLatencyModeOptions;
-                uint current = nvidiaPresetService.GetLowLatencyMode(card.GameName, installPathSafe);
+                uint current = d.LowLatencyMode;
                 var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
                 // Locked to Ultra while Smooth Motion is enabled — must turn off Smooth Motion first
-                bool smoothOn = nvidiaPresetService.GetSmoothMotionEnable(card.GameName, installPathSafe) != 0;
+                bool smoothOn = d.SmoothMotionEnable != 0;
                 bool latencyLocked = smoothOn;
                 var combo2 = new ComboBox
                 {
@@ -163,7 +319,8 @@ public partial class DetailPanelBuilder
                     if (init2) return;
                     int i = combo2.SelectedIndex;
                     if (i < 0 || i >= options.Length) return;
-                    nvidiaPresetService.SetLowLatencyMode(card.GameName, installPathSafe, options[i].Value);
+                    var valueToWrite = options[i].Value;
+                    _ = Task.Run(() => nvidiaPresetService.SetLowLatencyMode(capturedName, installPathSafe, valueToWrite));
                 };
                 vsyncCol.Children.Add(combo2);
                 init2 = false;
@@ -172,6 +329,7 @@ public partial class DetailPanelBuilder
             Grid.SetColumn(vsyncCol, 0);
             nvidiaGrid.Children.Add(vsyncCol);
             nvidiaGrid.Children.Add(MakeDlssDivider(1));
+            _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:VSync done({capturedName})");
 
             // ── Column 4: Smooth Motion ──
             var smoothCol = new StackPanel { Spacing = 4 };
@@ -184,7 +342,7 @@ public partial class DetailPanelBuilder
             {
                 smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Enable"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionEnableOptions;
-                uint current = nvidiaPresetService.GetSmoothMotionEnable(card.GameName, installPathSafe);
+                uint current = d.SmoothMotionEnable;
                 smoothMotionEnabled = current != 0;
                 var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
@@ -204,26 +362,34 @@ public partial class DetailPanelBuilder
                     if (init) return;
                     int i = combo.SelectedIndex;
                     if (i < 0 || i >= options.Length) return;
-                    nvidiaPresetService.SetSmoothMotionEnable(card.GameName, installPathSafe, options[i].Value);
-                    // Cascade: set APIs to All when enabling, None when disabling
-                    bool enabling = options[i].Value != 0;
-                    nvidiaPresetService.SetSmoothMotionApis(card.GameName, installPathSafe, enabling ? 0x00000007u : 0x00000000u);
-                    // Cascade Low Latency: Ultra when enabling, restore previous value when disabling
+                    var selectedValue = options[i].Value;
+                    bool enabling = selectedValue != 0;
                     const uint LowLatencyOff   = 0x00000000;
                     const uint LowLatencyUltra = 0x00000002;
-                    if (enabling)
+                    _ = Task.Run(() =>
                     {
-                        uint prevLatency = nvidiaPresetService.GetLowLatencyMode(card.GameName, installPathSafe);
-                        // Save previous value only if it's not already Ultra (nothing to restore)
-                        card.PreSmoothMotionLowLatency = prevLatency != LowLatencyUltra ? prevLatency : (uint?)null;
-                        nvidiaPresetService.SetLowLatencyMode(card.GameName, installPathSafe, LowLatencyUltra);
-                    }
-                    else
-                    {
-                        uint restoreValue = card.PreSmoothMotionLowLatency ?? LowLatencyOff;
-                        nvidiaPresetService.SetLowLatencyMode(card.GameName, installPathSafe, restoreValue);
-                        card.PreSmoothMotionLowLatency = null;
-                    }
+                        nvidiaPresetService.SetSmoothMotionEnable(capturedName, installPathSafe, selectedValue);
+                        // Cascade: set APIs to All when enabling, None when disabling
+                        nvidiaPresetService.SetSmoothMotionApis(capturedName, installPathSafe, enabling ? 0x00000007u : 0x00000000u);
+                        // Cascade Low Latency: Ultra when enabling, restore previous value when disabling
+                        uint? savedLatency = null;
+                        if (enabling)
+                        {
+                            uint prevLatency = nvidiaPresetService.GetLowLatencyMode(capturedName, installPathSafe);
+                            savedLatency = prevLatency != LowLatencyUltra ? prevLatency : (uint?)null;
+                            nvidiaPresetService.SetLowLatencyMode(capturedName, installPathSafe, LowLatencyUltra);
+                        }
+                        else
+                        {
+                            uint restoreValue = card.PreSmoothMotionLowLatency ?? LowLatencyOff;
+                            nvidiaPresetService.SetLowLatencyMode(capturedName, installPathSafe, restoreValue);
+                        }
+                        // Marshal card state mutation back to UI thread
+                        _window.DispatcherQueue?.TryEnqueue(() =>
+                        {
+                            card.PreSmoothMotionLowLatency = enabling ? savedLatency : null;
+                        });
+                    });
                     _window.DispatcherQueue?.TryEnqueue(() => BuildOverridesPanel(card));
                 };
                 smoothCol.Children.Add(combo);
@@ -234,7 +400,7 @@ public partial class DetailPanelBuilder
             {
                 smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.AllowedApis"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionApisOptions;
-                uint current = nvidiaPresetService.GetSmoothMotionApis(card.GameName, installPathSafe);
+                uint current = d.SmoothMotionApis;
                 var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
@@ -255,7 +421,8 @@ public partial class DetailPanelBuilder
                     if (init) return;
                     int i = combo.SelectedIndex;
                     if (i < 0 || i >= options.Length) return;
-                    nvidiaPresetService.SetSmoothMotionApis(card.GameName, installPathSafe, options[i].Value);
+                    var valueToWrite = options[i].Value;
+                    _ = Task.Run(() => nvidiaPresetService.SetSmoothMotionApis(capturedName, installPathSafe, valueToWrite));
                 };
                 smoothCol.Children.Add(combo);
                 init = false;
@@ -265,7 +432,7 @@ public partial class DetailPanelBuilder
             {
                 smoothCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.FlipPacing"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.SmoothMotionFlipPacingFsOptions;
-                uint current = nvidiaPresetService.GetSmoothMotionFlipPacingFs(card.GameName, installPathSafe);
+                uint current = d.SmoothMotionFlipPacingFs;
                 var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
@@ -286,10 +453,14 @@ public partial class DetailPanelBuilder
                     if (init) return;
                     int i = combo.SelectedIndex;
                     if (i < 0 || i >= options.Length) return;
-                    nvidiaPresetService.SetSmoothMotionFlipPacingFs(card.GameName, installPathSafe, options[i].Value);
+                    var fsValue = options[i].Value;
                     // Also set windowed pacing to the same value (use 0x00000001 for "On" instead of 0xFFFFFFFF)
-                    uint winValue = options[i].Value == 0xFFFFFFFF ? 0x00000001 : options[i].Value;
-                    nvidiaPresetService.SetSmoothMotionFlipPacingWin(card.GameName, installPathSafe, winValue);
+                    var winValue = fsValue == 0xFFFFFFFF ? 0x00000001u : fsValue;
+                    _ = Task.Run(() =>
+                    {
+                        nvidiaPresetService.SetSmoothMotionFlipPacingFs(capturedName, installPathSafe, fsValue);
+                        nvidiaPresetService.SetSmoothMotionFlipPacingWin(capturedName, installPathSafe, winValue);
+                    });
                 };
                 smoothCol.Children.Add(combo);
                 init = false;
@@ -298,6 +469,7 @@ public partial class DetailPanelBuilder
             Grid.SetColumn(smoothCol, 4);
             nvidiaGrid.Children.Add(smoothCol);
             nvidiaGrid.Children.Add(MakeDlssDivider(5));
+            _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:SmoothMotion done({capturedName})");
 
             // ── Column 6: Other (Power, G-Sync, Restore) ──
             var powerCol = new StackPanel { Spacing = 4 };
@@ -309,7 +481,7 @@ public partial class DetailPanelBuilder
             {
                 powerCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.PowerMode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var options = DlssPresetService.PowerManagementOptions;
-                uint current = nvidiaPresetService.GetPowerManagementMode(card.GameName, installPathSafe);
+                uint current = d.PowerManagementMode;
                 var items = options.Select(o => LocOpt.T(o.Name)).ToArray();
                 int idx = Array.FindIndex(options, o => o.Value == current);
                 if (idx < 0) idx = 0;
@@ -328,7 +500,8 @@ public partial class DetailPanelBuilder
                     if (init) return;
                     int i = combo.SelectedIndex;
                     if (i < 0 || i >= options.Length) return;
-                    nvidiaPresetService.SetPowerManagementMode(card.GameName, installPathSafe, options[i].Value);
+                    var valueToWrite = options[i].Value;
+                    _ = Task.Run(() => nvidiaPresetService.SetPowerManagementMode(capturedName, installPathSafe, valueToWrite));
                 };
                 powerCol.Children.Add(combo);
                 init = false;
@@ -337,7 +510,7 @@ public partial class DetailPanelBuilder
             // G-Sync per-game toggle
             {
                 powerCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.GSync"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
-                bool gsyncEnabled = nvidiaPresetService.GetPerGameGSyncEnabled(card.GameName, installPathSafe);
+                bool gsyncEnabled = d.PerGameGSyncEnabled;
                 var gsyncCombo = new ComboBox
                 {
                     ItemsSource = new[] { Loc.GetString("Xaml.Enabled"), Loc.GetString("Xaml.Disabled") },
@@ -352,7 +525,7 @@ public partial class DetailPanelBuilder
                 {
                     if (gsyncInit) return;
                     bool enabled = gsyncCombo.SelectedIndex == 0;
-                    nvidiaPresetService.SetPerGameGSyncEnabled(card.GameName, installPathSafe, enabled);
+                    _ = Task.Run(() => nvidiaPresetService.SetPerGameGSyncEnabled(capturedName, installPathSafe, enabled));
                 };
                 powerCol.Children.Add(gsyncCombo);
                 gsyncInit = false;
@@ -418,6 +591,7 @@ public partial class DetailPanelBuilder
 
             Grid.SetColumn(powerCol, 6);
             nvidiaGrid.Children.Add(powerCol);
+            _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:Power done({capturedName})");
 
             // ── Column 8: ReBAR ──
             var rebarCol = new StackPanel { Spacing = 4 };
@@ -425,72 +599,46 @@ public partial class DetailPanelBuilder
             ToolTipService.SetToolTip(rebarLabel, Loc.GetString("Overrides.Rebar.Tooltip"));
             rebarCol.Children.Add(rebarLabel);
 
-            bool rebarEnabled = nvidiaPresetService.GetReBarEnabled(card.GameName, installPathSafe);
-            ulong rebarSizeLimit = nvidiaPresetService.GetReBarSizeLimit(card.GameName, installPathSafe);
-            var globalReBarState = nvidiaPresetService.GetGlobalReBarEnabled();
+            bool rebarEnabled = false; // set inside Enable block below
+            ulong rebarSizeLimit = d.ReBarSizeLimit;
 
-            // Enable — with Global (On/Off) option when global is set
+            // Enable — Auto (Default) / Off / On using new 0x000BFA21 setting
             {
                 rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Enable"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
-                var enableItems = new List<string>();
-                if (globalReBarState.HasValue)
-                    enableItems.Add(LocOpt.Global(LocOpt.T(globalReBarState.Value ? "On" : "Off")));
-                enableItems.Add(LocOpt.T("Off"));
-                enableItems.Add(LocOpt.T("On"));
 
-                // Determine selected index
-                int enableIdx;
-                if (globalReBarState.HasValue)
-                {
-                    // If per-game matches global, show "Global" selected; otherwise show the per-game value
-                    bool perGameMatchesGlobal = rebarEnabled == globalReBarState.Value;
-                    enableIdx = perGameMatchesGlobal ? 0 : (rebarEnabled ? 2 : 1); // Global=0, Off=1, On=2
-                }
-                else
-                {
-                    enableIdx = rebarEnabled ? 1 : 0; // Off=0, On=1
-                }
+                uint rebarEnableMode = d.ReBarEnableMode;
+                // 0=Off→index 1, 1=Auto→index 0, 2=On→index 2
+                int enableIdx = rebarEnableMode == 0 ? 1 : rebarEnableMode == 2 ? 2 : 0;
 
                 var rebarEnableCombo = new ComboBox
                 {
-                    ItemsSource = enableItems,
+                    ItemsSource = new[] { LocOpt.T("Auto (Default)"), LocOpt.T("Off"), LocOpt.T("On") },
                     SelectedIndex = enableIdx,
                     FontSize = 11,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     CornerRadius = new CornerRadius(6),
                 };
-                ToolTipService.SetToolTip(rebarEnableCombo, globalReBarState.HasValue
-                    ? Loc.GetString("Overrides.RebarEnable.Tooltip.Global")
-                    : Loc.GetString("Overrides.RebarEnable.Tooltip"));
+                ToolTipService.SetToolTip(rebarEnableCombo, Loc.GetString("Overrides.RebarEnable.Tooltip"));
                 var rebarComboInit = true;
                 rebarEnableCombo.SelectionChanged += (s, ev) =>
                 {
                     if (rebarComboInit) return;
-                    int selIdx = rebarEnableCombo.SelectedIndex;
-                    if (selIdx < 0) return;
-                    if (globalReBarState.HasValue && selIdx == 0) // "Global (...)" entry
-                    {
-                        // Remove per-game override — inherit from global
-                        // Delete the per-game setting by setting it to match global
-                        bool globalVal = globalReBarState ?? false;
-                        nvidiaPresetService.SetReBarEnabled(card.GameName, installPathSafe, globalVal, 2);
-                    }
-                    else
-                    {
-                        // Global=0, Off=1, On=2 when global is set; otherwise Off=0, On=1
-                        bool enabling = globalReBarState.HasValue ? selIdx == 2 : selIdx == 1;
-                        nvidiaPresetService.SetReBarEnabled(card.GameName, installPathSafe, enabling, 2);
-                    }
+                    // index 0=Auto(1), 1=Off(0), 2=On(2)
+                    uint mode = rebarEnableCombo.SelectedIndex switch { 1 => 0u, 2 => 2u, _ => 1u };
+                    _ = Task.Run(() => nvidiaPresetService.SetReBarEnableMode(capturedName, installPathSafe, mode));
                     _window.DispatcherQueue?.TryEnqueue(() => BuildOverridesPanel(card));
                 };
                 rebarCol.Children.Add(rebarEnableCombo);
                 rebarComboInit = false;
+
+                // Derive enabled state for Mode/Size combos: only On enables them, Auto and Off grey them
+                rebarEnabled = rebarEnableMode == 2;
             }
 
             // Mode
             {
                 rebarCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Mode"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) });
-                uint rebarMode = nvidiaPresetService.GetReBarMode(card.GameName, installPathSafe);
+                uint rebarMode = d.ReBarMode;
                 var modeItems = DlssPresetService.ReBarModes.Select(m => LocOpt.T(m.Name)).ToList();
 
                 // Select current effective mode: per-game value, or default to Standard (index 0)
@@ -515,7 +663,7 @@ public partial class DetailPanelBuilder
                     int idx = rebarModeCombo.SelectedIndex;
                     if (idx < 0) return;
                     uint newMode = DlssPresetService.ReBarModes[idx].Value;
-                    nvidiaPresetService.SetReBarMode(card.GameName, installPathSafe, newMode);
+                    _ = Task.Run(() => nvidiaPresetService.SetReBarMode(capturedName, installPathSafe, newMode));
                 };
                 rebarCol.Children.Add(rebarModeCombo);
                 modeComboInit = false;
@@ -534,7 +682,7 @@ public partial class DetailPanelBuilder
                 }
 
                 // Select the current effective size: per-game override, or global, or 1GB default
-                ulong globalSize = nvidiaPresetService.GetGlobalReBarSizeLimit();
+                ulong globalSize = d.GlobalReBarSizeLimit;
                 ulong effectiveSize = rebarSizeLimit != 0 ? rebarSizeLimit : (globalSize != 0 ? globalSize : 0x0000000040000000);
                 int sizeIdx;
                 var matchIdx = sizeValues.IndexOf(effectiveSize);
@@ -558,7 +706,7 @@ public partial class DetailPanelBuilder
                     int idx = rebarSizeCombo.SelectedIndex;
                     if (idx < 0) return;
                     ulong newSize = sizeValues[idx];
-                    nvidiaPresetService.SetReBarSizeLimit(card.GameName, installPathSafe, newSize);
+                    _ = Task.Run(() => nvidiaPresetService.SetReBarSizeLimit(capturedName, installPathSafe, newSize));
                 };
                 rebarCol.Children.Add(rebarSizeCombo);
                 sizeComboInit = false;
@@ -567,22 +715,51 @@ public partial class DetailPanelBuilder
             Grid.SetColumn(rebarCol, 2);
             nvidiaGrid.Children.Add(rebarCol);
             nvidiaGrid.Children.Add(MakeDlssDivider(3));
+            _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:ReBAR done({capturedName})");
 
-            _window.NvidiaProfilePanel.Children.Add(nvidiaGrid);
+            // Defer adding the fully-built driver grid to the visual tree so WinUI can
+            // finish any queued layout work from the DLSS columns above before committing
+            // another large grid. Prevents the UI freeze seen on games with all five
+            // DLSS components (S.T.A.L.K.E.R. 2 and similar).
+            var targetPanel = nvBody ?? _window.NvidiaProfilePanel;
+            var isElevatedCapture = d.IsAdmin;
+            _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:AddToTree({capturedName})");
+            _window.DispatcherQueue?.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () =>
+                {
+                    targetPanel.Children.Add(nvidiaGrid);
+
+                    // Admin notice appended after the grid so it stays at the bottom
+                    targetPanel.Children.Add(new TextBlock
+                    {
+                        Text = isElevatedCapture
+                            ? "✓ Running as admin — all driver profile settings are writable."
+                            : "⚠ Admin rights required to write driver profile settings. Enable Admin Mode in Settings or restart as admin.",
+                        FontSize = 10,
+                        Foreground = UIFactory.Brush(isElevatedCapture ? ResourceKeys.TextTertiaryBrush : ResourceKeys.AccentAmberDimBrush),
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 8, 0, 0),
+                    });
+                });
         }
-
-        // Admin notice at the bottom of the Nvidia Profile section
-        bool isElevated = VulkanLayerService.IsRunningAsAdmin();
-        _window.NvidiaProfilePanel.Children.Add(new TextBlock
+        // Admin notice is now added inside the deferred TryEnqueue above when nvidiaPresetService.IsSupported.
+        // When not supported we still need to add it immediately.
+        if (!nvidiaPresetService.IsSupported)
         {
-            Text = isElevated
-                ? Loc.GetString("Overrides.AdminNotice.Elevated")
-                : Loc.GetString("Overrides.AdminNotice.NotElevated"),
-            FontSize = 10,
-            Foreground = UIFactory.Brush(isElevated ? ResourceKeys.TextTertiaryBrush : ResourceKeys.AccentAmberDimBrush),
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 8, 0, 0),
-        });
-
+            bool isElevated = d.IsAdmin;
+            (nvBody ?? _window.NvidiaProfilePanel).Children.Add(new TextBlock
+            {
+                Text = isElevated
+                    ? Loc.GetString("Overrides.AdminNotice.Elevated")
+                    : Loc.GetString("Overrides.AdminNotice.NotElevated"),
+                FontSize = 10,
+                Foreground = UIFactory.Brush(isElevated ? ResourceKeys.TextTertiaryBrush : ResourceKeys.AccentAmberDimBrush),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 8, 0, 0),
+            });
+        }
     }
 }
+
+// v2.7.7 fix: cancel Task.Delay on NVAPI completion to prevent thread pool starvation

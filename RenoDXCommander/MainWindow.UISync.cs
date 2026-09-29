@@ -47,6 +47,30 @@ public sealed partial class MainWindow
                         TryRestoreSelection();
                         RefreshFilterButtonStyles();
                         RebuildCustomFilterChips();
+                        // On Refresh (silent=true), the ListView still has its old item selected
+                        // so SelectionChanged never fires and PopulateDetailPanel never runs.
+                        // Force a panel rebuild for the currently displayed card.
+                        if (silent)
+                        {
+                            var selected = GameList.SelectedItem as GameCardViewModel
+                                ?? ViewModel.SelectedGame;
+                            if (selected != null)
+                                DispatcherQueue.TryEnqueue(() =>
+                                {
+                                    // Re-find the card in the new list (same game, new object)
+                                    var refreshed = ViewModel.DisplayedGames.FirstOrDefault(c =>
+                                        c.GameName.Equals(selected.GameName, StringComparison.OrdinalIgnoreCase)
+                                        && (string.IsNullOrEmpty(selected.Source) || c.Source == selected.Source));
+                                    if (refreshed != null)
+                                    {
+                                        GameList.SelectedItem = refreshed;
+                                        ViewModel.SelectedGame = refreshed;
+                                        PopulateDetailPanel(refreshed);
+                                        BuildOverridesPanel(refreshed);
+                                        _detailPanelBuilder?.ApplySectionOrder();
+                                    }
+                                });
+                        }
                     }
                     break;
                 case nameof(ViewModel.StatusText):
@@ -57,16 +81,10 @@ public sealed partial class MainWindow
                         + (string.IsNullOrEmpty(ViewModel.SubStatusText) ? "" : $"  —  {ViewModel.SubStatusText}");
                     break;
                 case nameof(ViewModel.InstalledCount):
-                    InstalledCountText.Text = $"{ViewModel.InstalledCount} installed";
+                    InstalledCountText.Text = $"{ViewModel.InstalledCount} ReShade";
                     break;
                 case nameof(ViewModel.TotalGames):
                     GameCountText.Text = $"{ViewModel.TotalGames} shown";
-                    if (ViewModel.CurrentViewLayout == ViewLayout.Compact
-                        && ViewModel.SelectedGame is { } compactCard)
-                    {
-                        _compactViewBuilder?.RebuildCurrentPage(
-                            compactCard, ViewModel.CompactPageIndex);
-                    }
                     break;
                 case nameof(ViewModel.HiddenCount):
                     HiddenCountText.Text = ViewModel.HiddenCount > 0
@@ -176,13 +194,21 @@ public sealed partial class MainWindow
 
     // ── Detail panel delegation ───────────────────────────────────────────────────
 
-    internal void PopulateDetailPanel(GameCardViewModel card) => _detailPanelBuilder.PopulateDetailPanel(card);
+    internal void PopulateDetailPanel(GameCardViewModel card)
+    {
+        ViewModel.SetLastUiAction($"PopulateDetailPanel({card.GameName})");
+        _detailPanelBuilder.PopulateDetailPanel(card);
+    }
 
     private void UpdateDetailComponentRows(GameCardViewModel card) => _detailPanelBuilder.UpdateDetailComponentRows(card);
 
     private void DetailCard_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => _detailPanelBuilder.DetailCard_PropertyChanged(sender, e);
 
-    internal void BuildOverridesPanel(GameCardViewModel card) => _detailPanelBuilder.BuildOverridesPanel(card);
+    internal void BuildOverridesPanel(GameCardViewModel card)
+    {
+        ViewModel.SetLastUiAction($"BuildOverridesPanel({card.GameName})");
+        _detailPanelBuilder.BuildOverridesPanel(card);
+    }
 
     internal void UpdateLumaToggleStyle(bool isLumaMode)
     {

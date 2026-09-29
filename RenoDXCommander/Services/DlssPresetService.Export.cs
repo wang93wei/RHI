@@ -17,7 +17,7 @@ public partial class DlssPresetService
         POWER_MANAGEMENT_MODE_ID, CPU_EXPR_MODES_ID,
         LATENCY_ULL_ENABLE_ID, LATENCY_ULL_MODE_ID, LATENCY_MAX_PRE_RENDERED_FRAMES_ID,
         SMOOTH_MOTION_ENABLE_ID, SMOOTH_MOTION_APIS_ID, SMOOTH_MOTION_FLIP_PACING_FS_ID, SMOOTH_MOTION_FLIP_PACING_WIN_ID,
-        REBAR_FEATURE_ID, REBAR_EXPR_MODES_ID,
+        REBAR_ENABLE_ID, REBAR_FEATURE_ID, REBAR_EXPR_MODES_ID,
         GSYNC_GLOBAL_FEATURE_ID, GSYNC_REQUESTED_STATE_ID, GSYNC_STATE_ID,
         NGX_DLSS_SR_OVERRIDE_RENDER_PRESET_SELECTION_ID, NGX_DLSS_RR_OVERRIDE_RENDER_PRESET_SELECTION_ID, NGX_DLSS_FG_OVERRIDE_RENDER_PRESET_SELECTION_ID, NGX_DLSS_NR_OVERRIDE_RENDER_PRESET_SELECTION_ID,
         DLSS_SR_PRESET_OVERRIDE_ID,
@@ -114,7 +114,7 @@ public partial class DlssPresetService
             var globalDword = new Dictionary<string, uint>();
 
             // Read global DWORD settings
-            uint[] globalSettingIds = { SHADER_CACHE_SIZE_ID, SHADER_PRECOMPILE_ID, GSYNC_APP_MODE_ID, GSYNC_GLOBAL_MODE_ID, PREFERRED_REFRESH_RATE_ID, REBAR_FEATURE_ID, REBAR_EXPR_MODES_ID };
+            uint[] globalSettingIds = { SHADER_CACHE_SIZE_ID, SHADER_PRECOMPILE_ID, GSYNC_APP_MODE_ID, GSYNC_GLOBAL_MODE_ID, PREFERRED_REFRESH_RATE_ID, REBAR_ENABLE_ID, REBAR_FEATURE_ID, REBAR_EXPR_MODES_ID };
             var baseProfile = _session.BaseProfile;
             var baseHandle = GetHandlePtr(baseProfile.Handle);
             if (sessionHandle != IntPtr.Zero && baseHandle != IntPtr.Zero)
@@ -151,6 +151,32 @@ public partial class DlssPresetService
         }
 
         CrashReporter.Log($"[DlssPresetService.ExportProfiles] Exported {result.Count} profiles with custom settings");
+
+        // Export display colour settings (Output Colour Depth + Dynamic Range)
+        try
+        {
+            var displays = NvColorService.GetDisplays();
+            if (displays.Count > 0)
+            {
+                var colorExport = new Dictionary<string, object>();
+                foreach (var display in displays)
+                {
+                    var colorData = NvColorService.GetColorData(display.DisplayId);
+                    if (colorData != null)
+                        colorExport[display.Name] = new { displayId = display.DisplayId, bpc = colorData.Bpc, dynamicRange = colorData.DynamicRange };
+                }
+                if (colorExport.Count > 0)
+                {
+                    result["__displayColor__"] = colorExport;
+                    CrashReporter.Log($"[DlssPresetService.ExportProfiles] Exported colour data for {colorExport.Count} display(s)");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DlssPresetService.ExportProfiles] Display colour export failed: {ex.Message}");
+        }
+
         return result;
     }
 
@@ -308,6 +334,41 @@ public partial class DlssPresetService
             _session.Save();
 
         CrashReporter.Log($"[DlssPresetService.ImportProfiles] Imported {importedCount} profiles");
+
+        // Restore display colour settings
+        try
+        {
+            if (data.TryGetValue("__displayColor__", out var colorObj)
+                && colorObj is System.Text.Json.JsonElement colorElem
+                && colorElem.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var colorKvp in colorElem.EnumerateObject())
+                {
+                    try
+                    {
+                        if (colorKvp.Value.TryGetProperty("bpc", out var bpcElem)
+                            && colorKvp.Value.TryGetProperty("dynamicRange", out var drElem)
+                            && colorKvp.Value.TryGetProperty("displayId", out var idElem))
+                        {
+                            byte bpc = (byte)bpcElem.GetInt32();
+                            byte dr  = (byte)drElem.GetInt32();
+                            uint id  = idElem.GetUInt32();
+                            bool ok  = NvColorService.SetColorData(id, bpc, dr);
+                            CrashReporter.Log($"[DlssPresetService.ImportProfiles] Colour restore '{colorKvp.Name}' bpc={bpc} dr={dr} → {(ok ? "OK" : "FAIL")}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrashReporter.Log($"[DlssPresetService.ImportProfiles] Colour restore failed for '{colorKvp.Name}': {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DlssPresetService.ImportProfiles] Display colour import failed: {ex.Message}");
+        }
+
         return importedCount;
     }
 

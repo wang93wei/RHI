@@ -17,7 +17,7 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     private const string DlssdDllName = "nvngx_dlssd.dll";
     private const string DlssgDllName = "nvngx_dlssg.dll";
     private const string DlssnrDllName = "nvngx_dlssnr.dll";
-    private const string StreamlineIndicator = "sl.interposer.dll";
+    private const string StreamlineIndicator = "sl.common.dll";
     private const string BackupExtension = ".original";
 
     /// <summary>Known Streamline DLL filenames.</summary>
@@ -224,8 +224,8 @@ public partial class DlssStreamlineService : IDlssStreamlineService
 
     /// <summary>
     /// Returns the path of the sl.*.dll with the highest file version in the given folder,
-    /// excluding sl.interposer.dll (which may be absent in some Streamline builds).
-    /// Used as the version source when sl.interposer.dll is not present.
+    /// excluding sl.common.dll (which is the primary version source).
+    /// Used as the version source when sl.common.dll is not present.
     /// </summary>
     private string? GetHighestVersionedSlDll(string folder)
     {
@@ -294,6 +294,7 @@ public partial class DlssStreamlineService : IDlssStreamlineService
 
     private static readonly string ScanSkipCachePath = Path.Combine(BaseStagingDir, "dlss_scan_cache.json");
     private Dictionary<string, int>? _scanSkipCache;
+    private static readonly object _scanSkipCacheLock = new();
     private const int SkipThreshold = 3;
 
     /// <summary>
@@ -301,8 +302,11 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     /// </summary>
     public bool ShouldSkipScan(string gameName)
     {
-        EnsureScanCacheLoaded();
-        return _scanSkipCache!.TryGetValue(gameName, out var count) && count >= SkipThreshold;
+        lock (_scanSkipCacheLock)
+        {
+            EnsureScanCacheLoaded_Unlocked();
+            return _scanSkipCache!.TryGetValue(gameName, out var count) && count >= SkipThreshold;
+        }
     }
 
     /// <summary>
@@ -310,9 +314,12 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     /// </summary>
     public void RecordNoDlssFound(string gameName)
     {
-        EnsureScanCacheLoaded();
-        _scanSkipCache!.TryGetValue(gameName, out var count);
-        _scanSkipCache[gameName] = count + 1;
+        lock (_scanSkipCacheLock)
+        {
+            EnsureScanCacheLoaded_Unlocked();
+            _scanSkipCache!.TryGetValue(gameName, out var count);
+            _scanSkipCache[gameName] = count + 1;
+        }
         SaveScanCache();
     }
 
@@ -321,8 +328,13 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     /// </summary>
     public void RecordDlssFound(string gameName)
     {
-        EnsureScanCacheLoaded();
-        if (_scanSkipCache!.Remove(gameName))
+        bool removed;
+        lock (_scanSkipCacheLock)
+        {
+            EnsureScanCacheLoaded_Unlocked();
+            removed = _scanSkipCache!.Remove(gameName);
+        }
+        if (removed)
             SaveScanCache();
     }
 
@@ -335,9 +347,14 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     /// </summary>
     public void RecheckSkipList(IReadOnlyList<DetectedGame> games)
     {
-        EnsureScanCacheLoaded();
-        CrashReporter.Log($"[DlssStreamlineService.RecheckSkipList] Starting recheck, skip cache has {_scanSkipCache!.Count} entries");
-        if (_scanSkipCache!.Count == 0) return;
+        int cacheCount;
+        lock (_scanSkipCacheLock)
+        {
+            EnsureScanCacheLoaded_Unlocked();
+            cacheCount = _scanSkipCache!.Count;
+        }
+        CrashReporter.Log($"[DlssStreamlineService.RecheckSkipList] Starting recheck, skip cache has {cacheCount} entries");
+        if (cacheCount == 0) return;
 
         var toRemove = new List<string>();
         foreach (var game in games)
@@ -362,8 +379,11 @@ public partial class DlssStreamlineService : IDlssStreamlineService
 
         if (toRemove.Count > 0)
         {
-            foreach (var name in toRemove)
-                _scanSkipCache!.Remove(name);
+            lock (_scanSkipCacheLock)
+            {
+                foreach (var name in toRemove)
+                    _scanSkipCache!.Remove(name);
+            }
             SaveScanCache();
             CrashReporter.Log($"[DlssStreamlineService.RecheckSkipList] Removed {toRemove.Count} game(s) from skip cache");
         }
@@ -384,13 +404,19 @@ public partial class DlssStreamlineService : IDlssStreamlineService
     public void ClearScanCaches()
     {
         // Clear the scan skip cache entirely — reinstalled games may now have DLSS
-        EnsureScanCacheLoaded();
-        if (_scanSkipCache!.Count > 0)
+        bool hadEntries;
+        lock (_scanSkipCacheLock)
         {
-            CrashReporter.Log($"[DlssStreamlineService.ClearScanCaches] Clearing scan skip cache ({_scanSkipCache.Count} entries)");
-            _scanSkipCache.Clear();
-            SaveScanCache();
+            EnsureScanCacheLoaded_Unlocked();
+            hadEntries = _scanSkipCache!.Count > 0;
+            if (hadEntries)
+            {
+                CrashReporter.Log($"[DlssStreamlineService.ClearScanCaches] Clearing scan skip cache ({_scanSkipCache.Count} entries)");
+                _scanSkipCache.Clear();
+            }
         }
+        if (hadEntries)
+            SaveScanCache();
 
         // Invalidate trusted entries that are:
         // - Partial (any required path is null) — new DLLs may have appeared
@@ -412,7 +438,10 @@ public partial class DlssStreamlineService : IDlssStreamlineService
         }
     }
 
-    private void EnsureScanCacheLoaded()
+    /// <summary>
+    /// Must be called while holding _scanSkipCacheLock.
+    /// </summary>
+    private void EnsureScanCacheLoaded_Unlocked()
     {
         if (_scanSkipCache != null) return;
         try
@@ -501,8 +530,8 @@ public partial class DlssStreamlineService : IDlssStreamlineService
         }
         if (entry.StreamlineFolder != null)
         {
-            var interposerPath = Path.Combine(entry.StreamlineFolder, StreamlineIndicator);
-            var versionSourcePath = File.Exists(interposerPath) ? interposerPath
+            var commonPath = Path.Combine(entry.StreamlineFolder, StreamlineIndicator);
+            var versionSourcePath = File.Exists(commonPath) ? commonPath
                 : GetHighestVersionedSlDll(entry.StreamlineFolder);
 
             if (versionSourcePath != null)
@@ -557,8 +586,10 @@ public partial class DlssStreamlineService : IDlssStreamlineService
         }
         if (result.StreamlineInterposerPath != null && entry.OriginalStreamlineVersion == null)
         {
-            var backup = result.StreamlineInterposerPath + ".original";
-            result.OriginalStreamlineVersion = File.Exists(backup) ? GetFileVersion(backup) : result.StreamlineVersion;
+            var inGameBackup = result.StreamlineInterposerPath + ".original";
+            result.OriginalStreamlineVersion = File.Exists(inGameBackup)
+                ? GetFileVersion(inGameBackup)
+                : result.StreamlineVersion;
             entry.OriginalStreamlineVersion = result.OriginalStreamlineVersion;
             needsSave = true;
         }
@@ -750,6 +781,38 @@ public partial class DlssStreamlineService : IDlssStreamlineService
             return cachedDll;
 
         await DownloadAndCacheAsync(newest.Url, cachedDir, DlssnrDllName).ConfigureAwait(false);
+        return File.Exists(cachedDll) ? cachedDll : null;
+    }
+
+    /// <inheritdoc />
+    public string? GetCachedNrDllPath()
+    {
+        var newest = _manifest?.Dlssnr?.FirstOrDefault();
+        if (newest == null) return null;
+        var cachedDll = Path.Combine(DlssnrCacheDir, newest.Version, DlssnrDllName);
+        return File.Exists(cachedDll) ? cachedDll : null;
+    }
+
+    /// <summary>
+    /// Returns the cached path for a specific DLSS NR DLL version (e.g. "310.8.2"), downloading if needed.
+    /// Returns null if the version is not in the manifest or download fails.
+    /// </summary>
+    public async Task<string?> EnsureSpecificDlssnrCachedAsync(string version)
+    {
+        var entry = FindDlssnrEntry(version);
+        if (entry == null)
+        {
+            CrashReporter.Log($"[DlssStreamlineService.EnsureSpecificDlssnrCachedAsync] Version '{version}' not found in manifest");
+            return null;
+        }
+
+        var cachedDir = Path.Combine(DlssnrCacheDir, version);
+        var cachedDll = Path.Combine(cachedDir, DlssnrDllName);
+
+        if (File.Exists(cachedDll))
+            return cachedDll;
+
+        await DownloadAndCacheAsync(entry.Url, cachedDir, DlssnrDllName).ConfigureAwait(false);
         return File.Exists(cachedDll) ? cachedDll : null;
     }
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 
 namespace RenoDXCommander.Services;
@@ -18,9 +19,11 @@ public class Renodx5AddonService
     private const string TagPrefix        = "renodx-dlss5-";
 
     // ── ShortFuse SF variant ──────────────────────────────────────────────────
-    private const string SfStagedFileName = "renodx-dlss.addon64";
-    private const string SfDeployFileName = "renodx-dlss.addon64";
-    private const string SfTagPrefix      = "renodx-dlss-SF-";
+    private const string SfStagedFileName   = "renodx-dlss.addon64";
+    private const string SfDeployFileName   = "renodx-dlss.addon64";
+    /// <summary>zzz_ variant filename used when load order control is enabled for a game.</summary>
+    public const string SfZzzDeployFileName = "zzz_renodx-dlss.addon64";
+    private const string SfTagPrefix        = "renodx-dlss-SF-";
 
     private static readonly string GitHubApiUrl =
         "https://api.github.com/repos/RankFTW/rhi-repo/releases?per_page=100";
@@ -50,6 +53,10 @@ public class Renodx5AddonService
             "RHI", "rdx5");
         _versionFile   = Path.Combine(_stagingDir, "version.txt");
         _sfVersionFile = Path.Combine(_stagingDir, "version-sf.txt");
+
+        // Pre-load version list from disk cache so the NR section addon version combo
+        // is populated immediately on first panel open, without waiting for the update check.
+        LoadVersionsFromCache();
     }
 
     // ── Original properties ───────────────────────────────────────────────────
@@ -91,8 +98,20 @@ public class Renodx5AddonService
     {
         if (IsStagingReady && !HasUpdate)
         {
-            _crashReporter.Log("[Renodx5AddonService.EnsureStagingAsync] Staging already valid — skipping");
-            return;
+            // Also check against the in-memory version list — the list may know about a newer
+            // version than what CheckForUpdateAsync last reported (e.g. cooldown was active).
+            var knownLatest = GetLatestAvailableVersion(Dlss5ToolSubDir);
+            if (!string.IsNullOrEmpty(knownLatest) &&
+                !string.Equals(StagedVersion, knownLatest, StringComparison.OrdinalIgnoreCase))
+            {
+                _crashReporter.Log($"[Renodx5AddonService.EnsureStagingAsync] Flat file is v{StagedVersion ?? "(none)"} but known latest is v{knownLatest} — re-downloading");
+                // fall through to DownloadAndStageAsync
+            }
+            else
+            {
+                _crashReporter.Log("[Renodx5AddonService.EnsureStagingAsync] Staging already valid — skipping");
+                return;
+            }
         }
         await DownloadAndStageAsync(TagPrefix, StagedFileName, "renodx-dlss5", _versionFile,
             "RenoDX DLSS5 addon", progress,
@@ -100,22 +119,30 @@ public class Renodx5AddonService
             () => AutoRedeployAsync(StagedFileName, DeployFileName, "Renodx5AddonService.AutoRedeployAsync")).ConfigureAwait(false);
     }
 
-    public async Task DeployNrDllIfAbsentAsync(string installPath)
+    public async Task DeployNrDllIfAbsentAsync(string installPath, string component = "Dlss5Tool")
     {
         if (string.IsNullOrEmpty(installPath)) return;
         var nrDllDest = Path.Combine(installPath, "nvngx_dlssnr.dll");
-        if (File.Exists(nrDllDest))
+        var sentinel  = nrDllDest + ".original";
+
+        // Sentinel exists → already deployed by RHI, just register ownership
+        if (File.Exists(sentinel))
         {
-            _crashReporter.Log($"[Renodx5AddonService.DeployNrDllIfAbsentAsync] nvngx_dlssnr.dll already present — skipping");
+            RhiInstallManifest.AddSharedFileOwner(installPath, "nvngx_dlssnr.dll", component);
             return;
         }
+        // File exists without sentinel → game-original, don't touch
+        if (File.Exists(nrDllDest)) return;
+
         try
         {
             var cachedNr = await _dlssStreamlineService.EnsureNewestDlssnrCachedAsync().ConfigureAwait(false);
             if (cachedNr != null)
             {
                 File.Copy(cachedNr, nrDllDest, overwrite: false);
-                _crashReporter.Log($"[Renodx5AddonService.DeployNrDllIfAbsentAsync] Deployed nvngx_dlssnr.dll to '{installPath}'");
+                File.WriteAllBytes(sentinel, Array.Empty<byte>()); // 0-byte sentinel — RHI placed this
+                RhiInstallManifest.AddSharedFileOwner(installPath, "nvngx_dlssnr.dll", component);
+                _crashReporter.Log($"[Renodx5AddonService.DeployNrDllIfAbsentAsync] Deployed nvngx_dlssnr.dll to '{installPath}' (sentinel written, owner={component})");
             }
         }
         catch (Exception ex)
@@ -149,12 +176,75 @@ public class Renodx5AddonService
         if (string.IsNullOrEmpty(installPath)) return;
         var deployDir = ModInstallService.GetAddonDeployPath(installPath);
         TryDelete(Path.Combine(deployDir, DeployFileName), "Renodx5AddonService.Uninstall");
+
+        // Use ownership tracking — only remove nvngx_dlssnr.dll if Dlss5Tool is the last owner
+        if (!RhiInstallManifest.RemoveSharedFileOwner(installPath, "nvngx_dlssnr.dll", "Dlss5Tool"))
+            return; // another component still needs it
+
+        var nrDllPath = Path.Combine(installPath, "nvngx_dlssnr.dll");
+        var sentinel  = nrDllPath + ".original";
+        if (File.Exists(sentinel))
+        {
+            var info = new FileInfo(sentinel);
+            if (info.Length == 0)
+            {
+                TryDelete(nrDllPath, "Renodx5AddonService.Uninstall (sentinel cleanup)");
+                TryDelete(sentinel,  "Renodx5AddonService.Uninstall (sentinel delete)");
+            }
+            else
+            {
+                try { File.Copy(sentinel, nrDllPath, overwrite: true); File.Delete(sentinel); }
+                catch (Exception ex) { _crashReporter.Log($"[Renodx5AddonService.Uninstall] Restore failed — {ex.Message}"); }
+            }
+        }
+        else
+        {
+            _crashReporter.Log($"[Renodx5AddonService.Uninstall] No sentinel for nvngx_dlssnr.dll — leaving untouched");
+        }
+
+        // Clear Dlss5Tool component record from rhi_install.txt
+        Models.RhiInstallManifest.RemoveComponent(installPath, "Dlss5Tool");
     }
 
     public bool IsInstalledIn(string installPath)
     {
         if (string.IsNullOrEmpty(installPath)) return false;
         return File.Exists(Path.Combine(ModInstallService.GetAddonDeployPath(installPath), DeployFileName));
+    }
+
+    /// <summary>
+    /// Removes nvngx_dlssnr.dll from the game folder using the sentinel pattern.
+    /// Called when DLSS5 Tool addon is removed (e.g. switching back to Global addons).
+    /// </summary>
+    public void RemoveNrDll(string installPath, string component = "Dlss5Tool")
+    {
+        if (string.IsNullOrEmpty(installPath)) return;
+        var nrDllPath = Path.Combine(installPath, "nvngx_dlssnr.dll");
+        var sentinel  = nrDllPath + ".original";
+
+        // Check ownership — only remove if this component is the last owner
+        if (!RhiInstallManifest.RemoveSharedFileOwner(installPath, "nvngx_dlssnr.dll", component))
+        {
+            _crashReporter.Log($"[Renodx5AddonService.RemoveNrDll] Skipping nvngx_dlssnr.dll — still owned by other components");
+            return;
+        }
+
+        if (!File.Exists(sentinel))
+        {
+            _crashReporter.Log($"[Renodx5AddonService.RemoveNrDll] No sentinel — leaving nvngx_dlssnr.dll untouched");
+            return;
+        }
+        var info = new FileInfo(sentinel);
+        if (info.Length == 0)
+        {
+            TryDelete(nrDllPath, "Renodx5AddonService.RemoveNrDll (sentinel cleanup)");
+            TryDelete(sentinel,  "Renodx5AddonService.RemoveNrDll (sentinel delete)");
+        }
+        else
+        {
+            try { File.Copy(sentinel, nrDllPath, overwrite: true); File.Delete(sentinel); }
+            catch (Exception ex) { _crashReporter.Log($"[Renodx5AddonService.RemoveNrDll] Restore failed — {ex.Message}"); }
+        }
     }
 
     // ── SF public API ─────────────────────────────────────────────────────────
@@ -178,8 +268,17 @@ public class Renodx5AddonService
     {
         if (IsSfStagingReady && !SfHasUpdate)
         {
-            _crashReporter.Log("[Renodx5AddonService.EnsureSfStagingAsync] Staging already valid — skipping");
-            return;
+            var knownLatest = GetLatestAvailableVersion(DlssToolSubDir);
+            if (!string.IsNullOrEmpty(knownLatest) &&
+                !string.Equals(SfStagedVersion, knownLatest, StringComparison.OrdinalIgnoreCase))
+            {
+                _crashReporter.Log($"[Renodx5AddonService.EnsureSfStagingAsync] Flat file is v{SfStagedVersion ?? "(none)"} but known latest is v{knownLatest} — re-downloading");
+            }
+            else
+            {
+                _crashReporter.Log("[Renodx5AddonService.EnsureSfStagingAsync] Staging already valid — skipping");
+                return;
+            }
         }
         await DownloadAndStageAsync(SfTagPrefix, SfStagedFileName, "renodx-dlss", _sfVersionFile,
             "DLSS Tool (ShortFuse)", progress,
@@ -210,6 +309,12 @@ public class Renodx5AddonService
 
         // Co-deploy DLSS/Streamline files using sentinel .original pattern
         await DeploySfDllsAsync(installPath, detection).ConfigureAwait(false);
+
+        // Add the addon file to the ShortFuse component record (DLLs were added by DeploySfDllsAsync)
+        var existingRec = Models.RhiInstallManifest.GetComponentFiles(installPath, "ShortFuse").ToList();
+        if (!existingRec.Contains(SfDeployFileName, StringComparer.OrdinalIgnoreCase))
+            existingRec.Insert(0, SfDeployFileName);
+        Models.RhiInstallManifest.SetComponent(installPath, "ShortFuse", existingRec);
     }
 
     public void UninstallSf(string installPath, DlssDetectionResult? detection = null)
@@ -217,15 +322,21 @@ public class Renodx5AddonService
         if (string.IsNullOrEmpty(installPath)) return;
         var deployDir = ModInstallService.GetAddonDeployPath(installPath);
         TryDelete(Path.Combine(deployDir, SfDeployFileName), "Renodx5AddonService.UninstallSf");
+        TryDelete(Path.Combine(deployDir, SfZzzDeployFileName), "Renodx5AddonService.UninstallSf (zzz)");
 
         // Restore co-deployed DLLs using .original sentinel pattern
         RestoreSfDlls(installPath, detection);
+
+        // Clear ShortFuse component record from rhi_install.txt
+        Models.RhiInstallManifest.RemoveComponent(installPath, "ShortFuse");
     }
 
     public bool IsSfInstalledIn(string installPath)
     {
         if (string.IsNullOrEmpty(installPath)) return false;
-        return File.Exists(Path.Combine(ModInstallService.GetAddonDeployPath(installPath), SfDeployFileName));
+        var deployDir = ModInstallService.GetAddonDeployPath(installPath);
+        return File.Exists(Path.Combine(deployDir, SfDeployFileName))
+            || File.Exists(Path.Combine(deployDir, SfZzzDeployFileName));
     }
 
     // ── SF DLL co-deploy / restore (sentinel .original pattern) ──────────────
@@ -249,6 +360,7 @@ public class Renodx5AddonService
         var cachedSlDir = await _dlssStreamlineService.EnsureNewestStreamlineCachedAsync().ConfigureAwait(false);
 
         var sources = new[] { cachedSr, cachedRr, cachedFg, cachedNr };
+        var deployedFiles = new List<string>();
 
         for (int i = 0; i < dllMappings.Length; i++)
         {
@@ -258,6 +370,9 @@ public class Renodx5AddonService
 
             var dest = detectedPath ?? Path.Combine(installPath, dllName);
             SentinelDeploy(src, dest, $"[Renodx5AddonService.DeploySfDlls] {dllName}");
+            // Register ShortFuse as owner of this shared DLSS file
+            RhiInstallManifest.AddSharedFileOwner(installPath, dllName, "ShortFuse");
+            deployedFiles.Add(dllName);
         }
 
         // Streamline — deploy DLLs to detected folder or install root
@@ -273,8 +388,13 @@ public class Renodx5AddonService
                 if (!File.Exists(srcPath)) continue;
                 var destPath = Path.Combine(slDest, slDll);
                 SentinelDeploy(srcPath, destPath, $"[Renodx5AddonService.DeploySfDlls] {slDll}");
+                deployedFiles.Add(slDll);
             }
         }
+
+        // Record what ShortFuse deployed in rhi_install.txt for redundant cleanup tracking
+        // The addon file itself (renodx-dlss.addon64) is added by the caller (InstallSfAsync/InstallShortFuseAsync)
+        Models.RhiInstallManifest.SetComponent(installPath, "ShortFuse", deployedFiles);
     }
 
     private void RestoreSfDlls(string installPath, DlssDetectionResult? detection)
@@ -287,11 +407,16 @@ public class Renodx5AddonService
 
         for (int i = 0; i < dllNames.Length; i++)
         {
-            var dest = detectedPaths[i] ?? Path.Combine(installPath, dllNames[i]);
-            SentinelRestore(dest, $"[Renodx5AddonService.RestoreSfDlls] {dllNames[i]}");
+            var dllName = dllNames[i];
+            // Only restore if ShortFuse is the last owner — if OptiScaler still needs this file, leave it
+            if (!RhiInstallManifest.RemoveSharedFileOwner(installPath, dllName, "ShortFuse"))
+                continue;
+
+            var dest = detectedPaths[i] ?? Path.Combine(installPath, dllName);
+            SentinelRestore(dest, $"[Renodx5AddonService.RestoreSfDlls] {dllName}");
         }
 
-        // Streamline DLLs
+        // Streamline DLLs — not shared with OptiScaler, restore unconditionally
         var slFolder = !string.IsNullOrEmpty(detection?.StreamlineFolder)
             ? detection!.StreamlineFolder
             : installPath;
@@ -365,8 +490,12 @@ public class Renodx5AddonService
     private void RemoveSfAddonFromFolder(string deployDir, string installPath)
     {
         TryDelete(Path.Combine(deployDir, SfDeployFileName), "[Renodx5AddonService] mutual exclusivity remove SF");
+        TryDelete(Path.Combine(deployDir, SfZzzDeployFileName), "[Renodx5AddonService] mutual exclusivity remove SF (zzz)");
         if (!deployDir.Equals(installPath, StringComparison.OrdinalIgnoreCase))
+        {
             TryDelete(Path.Combine(installPath, SfDeployFileName), "[Renodx5AddonService] mutual exclusivity remove SF (root)");
+            TryDelete(Path.Combine(installPath, SfZzzDeployFileName), "[Renodx5AddonService] mutual exclusivity remove SF zzz (root)");
+        }
     }
 
     private void RemoveOriginalAddonFromFolder(string deployDir, string installPath)
@@ -401,23 +530,55 @@ public class Renodx5AddonService
                     bool inDeploy = File.Exists(dest);
                     bool inRoot   = !dest.Equals(destRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(destRoot);
 
+                    // Also check zzz-prefixed variant for SF addon (load order rename)
+                    bool isSfAddon = string.Equals(deployFileName, SfDeployFileName, StringComparison.OrdinalIgnoreCase);
+                    string? zzzDest     = isSfAddon ? Path.Combine(deployDir, SfZzzDeployFileName) : null;
+                    string? zzzDestRoot = isSfAddon ? Path.Combine(game.InstallPath!, SfZzzDeployFileName) : null;
+                    bool inZzzDeploy = zzzDest != null && File.Exists(zzzDest);
+                    bool inZzzRoot   = zzzDestRoot != null && !zzzDest!.Equals(zzzDestRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(zzzDestRoot);
+
                     // Only redeploy if the file exists AND is tracked in addon_deployments.json
                     // This prevents re-adding files the user intentionally removed
                     if (inDeploy)
                     {
                         bool tracked = AddonPackService.IsAddonTrackedInDeployments(deployDir, deployFileName)
-                                    || AddonPackService.IsAddonTrackedInDeployments(game.InstallPath!, deployFileName);
+                                    || AddonPackService.IsAddonTrackedInDeployments(game.InstallPath!, deployFileName)
+                                    || Models.RhiInstallManifest.GetComponentFiles(game.InstallPath!, "ShortFuse")
+                                        .Any(f => string.Equals(Path.GetFileName(f), deployFileName, StringComparison.OrdinalIgnoreCase))
+                                    || Models.RhiInstallManifest.GetComponentFiles(game.InstallPath!, "Dlss5Tool")
+                                        .Any(f => string.Equals(Path.GetFileName(f), deployFileName, StringComparison.OrdinalIgnoreCase));
                         if (!tracked) { inDeploy = false; }
                     }
                     if (inRoot)
                     {
-                        bool tracked = AddonPackService.IsAddonTrackedInDeployments(game.InstallPath!, deployFileName);
+                        bool tracked = AddonPackService.IsAddonTrackedInDeployments(game.InstallPath!, deployFileName)
+                                    || Models.RhiInstallManifest.GetComponentFiles(game.InstallPath!, "ShortFuse")
+                                        .Any(f => string.Equals(Path.GetFileName(f), deployFileName, StringComparison.OrdinalIgnoreCase))
+                                    || Models.RhiInstallManifest.GetComponentFiles(game.InstallPath!, "Dlss5Tool")
+                                        .Any(f => string.Equals(Path.GetFileName(f), deployFileName, StringComparison.OrdinalIgnoreCase));
                         if (!tracked) { inRoot = false; }
                     }
+                    // Tracking check for zzz variants (ShortFuse only)
+                    if (inZzzDeploy)
+                    {
+                        bool tracked = AddonPackService.IsAddonTrackedInDeployments(deployDir, SfZzzDeployFileName)
+                                    || AddonPackService.IsAddonTrackedInDeployments(deployDir, SfDeployFileName)
+                                    || Models.RhiInstallManifest.GetComponentFiles(game.InstallPath!, "ShortFuse").Any();
+                        if (!tracked) { inZzzDeploy = false; }
+                    }
+                    if (inZzzRoot)
+                    {
+                        bool tracked = AddonPackService.IsAddonTrackedInDeployments(game.InstallPath!, SfZzzDeployFileName)
+                                    || AddonPackService.IsAddonTrackedInDeployments(game.InstallPath!, SfDeployFileName)
+                                    || Models.RhiInstallManifest.GetComponentFiles(game.InstallPath!, "ShortFuse").Any();
+                        if (!tracked) { inZzzRoot = false; }
+                    }
 
-                    if (!inDeploy && !inRoot) continue;
-                    if (inDeploy) { File.Copy(staged, dest, overwrite: true); _crashReporter.Log($"[{logCtx}] Updated '{game.Name}' at '{deployDir}'"); }
-                    if (inRoot)   { File.Copy(staged, destRoot, overwrite: true); _crashReporter.Log($"[{logCtx}] Updated '{game.Name}' at root"); }
+                    if (!inDeploy && !inRoot && !inZzzDeploy && !inZzzRoot) continue;
+                    if (inDeploy)    { File.Copy(staged, dest, overwrite: true);             _crashReporter.Log($"[{logCtx}] Updated '{game.Name}' at '{deployDir}'"); }
+                    if (inRoot)      { File.Copy(staged, destRoot, overwrite: true);         _crashReporter.Log($"[{logCtx}] Updated '{game.Name}' at root"); }
+                    if (inZzzDeploy) { File.Copy(staged, zzzDest!, overwrite: true);         _crashReporter.Log($"[{logCtx}] Updated (zzz) '{game.Name}' at '{deployDir}'"); }
+                    if (inZzzRoot)   { File.Copy(staged, zzzDestRoot!, overwrite: true);     _crashReporter.Log($"[{logCtx}] Updated (zzz) '{game.Name}' at root"); }
                 }
                 catch (Exception ex) { _crashReporter.Log($"[{logCtx}] Failed for '{game.Name}' — {ex.Message}"); }
             }
@@ -450,12 +611,16 @@ public class Renodx5AddonService
 
             if (downloadUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
-                var tempZip = Path.Combine(_stagingDir, "_dl_tmp.zip");
+                // Use a variant-specific temp filename to avoid races between concurrent downloads
+                var tempZip = Path.Combine(_stagingDir, $"_dl_tmp_{Path.GetFileNameWithoutExtension(stagedFileName)}.zip");
                 await File.WriteAllBytesAsync(tempZip, bytes).ConfigureAwait(false);
                 using (var zip = System.IO.Compression.ZipFile.OpenRead(tempZip))
                 {
+                    // Try exact filename first, then fall back to any .addon64 entry
                     var entry = zip.Entries.FirstOrDefault(e =>
-                        string.Equals(e.Name, stagedFileName, StringComparison.OrdinalIgnoreCase));
+                        string.Equals(e.Name, stagedFileName, StringComparison.OrdinalIgnoreCase))
+                        ?? zip.Entries.FirstOrDefault(e =>
+                        e.Name.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase));
                     if (entry == null)
                     {
                         _crashReporter.Log($"[Renodx5AddonService] '{stagedFileName}' not found in zip");
@@ -495,7 +660,6 @@ public class Renodx5AddonService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, GitHubApiUrl);
-            request.Headers.Add("User-Agent", "RHI");
             request.Headers.Add("Accept", "application/vnd.github+json");
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -540,7 +704,7 @@ public class Renodx5AddonService
 
                 if (string.IsNullOrEmpty(downloadUrl)) continue;
 
-                candidates.Add(Version.TryParse(version, out var parsed)
+                candidates.Add(Version.TryParse(version.Contains('-') ? version.Substring(0, version.IndexOf('-')) : version, out var parsed)
                     ? (version, downloadUrl!, parsed)
                     : (version, downloadUrl!, new Version(0, 0)));
             }
@@ -551,13 +715,471 @@ public class Renodx5AddonService
                 return (null, null);
             }
 
-            var best = candidates.OrderByDescending(c => c.parsed).First();
+            var best = candidates.OrderByDescending(c => c.parsed)
+                                 .ThenByDescending(c => ExtractRcNumber(c.version))
+                                 .First();
             return (best.version, best.downloadUrl);
         }
         catch (Exception ex)
         {
             _crashReporter.Log($"[Renodx5AddonService] FetchLatestReleaseInfo failed — {ex.Message}");
             return (null, null);
+        }
+    }
+
+    // ── SF DLL-only co-deploy (for versioned NR section install) ─────────────
+
+    /// <summary>
+    /// Co-deploys DLSS SR/RR/FG/NR + Streamline DLLs using the sentinel pattern,
+    /// without re-downloading the SF addon file itself. Called from the NR section
+    /// when the versioned addon file was already deployed separately.
+    /// </summary>
+    public async Task InstallSfDllsOnlyAsync(string installPath, DlssDetectionResult? detection)
+    {
+        await DeploySfDllsAsync(installPath, detection).ConfigureAwait(false);
+    }
+
+    // ── Versioned staging for per-game NR section version picker ─────────────
+    // The flat rdx5\renodx-dlss5.addon64 / renodx-dlss.addon64 files are unchanged
+    // and continue to be the single "latest" copy used everywhere except the NR section.
+    // The versioned subdirs are additional staging used only by the NR section install.
+
+    private const string Dlss5ToolSubDir = "dlss5tool";
+    private const string DlssToolSubDir  = "dlsstool";
+    public const string FeederSubDir     = "feeder";
+    public const string BridgeSubDir     = "bridge";
+
+    private const string FeederStagedFileName = "dlss5-feed.addon64";
+    private const string BridgeStagedFileName = "dlss5-bridge.addon64";
+
+    private static readonly string FeederApiUrl = "https://api.github.com/repos/jlrouzies-fr/DLSS5-Feeder/releases?per_page=100";
+    private static readonly string BridgeApiUrl = "https://api.github.com/repos/NIGos/dlss5-bridge/releases?per_page=100";
+
+    /// <summary>
+    /// Path to the available_versions.json cache (list of all released versions for each addon).
+    /// Populated by FetchAndCacheAvailableVersionsAsync at startup.
+    /// </summary>
+    private string AvailableVersionsFilePath => Path.Combine(_stagingDir, "available_versions.json");
+
+    // ── In-memory cache populated at startup ─────────────────────────────────
+    private List<(string Version, string DownloadUrl)> _dlss5ToolVersions = new();
+    private List<(string Version, string DownloadUrl)> _dlssToolVersions  = new();
+    private List<(string Version, string DownloadUrl)> _feederVersions    = new();
+    private List<(string Version, string DownloadUrl)> _bridgeVersions    = new();
+
+    /// <summary>
+    /// Returns all available versions for the given addon type ("dlss5tool" or "dlsstool"),
+    /// newest first. Reads from in-memory cache populated by FetchAndCacheAvailableVersionsAsync.
+    /// Returns empty list if cache is not yet populated.
+    /// </summary>
+    public IReadOnlyList<string> GetAvailableVersions(string addonType)
+    {
+        var list = addonType.Equals(Dlss5ToolSubDir, StringComparison.OrdinalIgnoreCase) ? _dlss5ToolVersions
+                 : addonType.Equals(DlssToolSubDir,  StringComparison.OrdinalIgnoreCase) ? _dlssToolVersions
+                 : addonType.Equals(FeederSubDir,    StringComparison.OrdinalIgnoreCase) ? _feederVersions
+                 : addonType.Equals(BridgeSubDir,    StringComparison.OrdinalIgnoreCase) ? _bridgeVersions
+                 : _dlss5ToolVersions;
+        return list.Select(e => e.Version).ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Returns the latest available version string for the given addon type,
+    /// or null if the list is empty.
+    /// </summary>
+    public string? GetLatestAvailableVersion(string addonType) =>
+        GetAvailableVersions(addonType).FirstOrDefault();
+
+    /// <summary>
+    /// Fetches all released versions for both addon types from the GitHub API,
+    /// caches them in available_versions.json and in-memory.
+    /// No-op if the cache was written in the last hour (unless forceRefresh = true).
+    /// </summary>
+    public async Task FetchAndCacheAvailableVersionsAsync(bool forceRefresh = false)
+    {
+        // Respect a 1-hour cooldown to avoid hitting the API on every startup
+        if (!forceRefresh && File.Exists(AvailableVersionsFilePath))
+        {
+            var age = DateTime.UtcNow - File.GetLastWriteTimeUtc(AvailableVersionsFilePath);
+            if (age.TotalHours < 1)
+            {
+                LoadVersionsFromCache();
+                _crashReporter.Log($"[Renodx5AddonService.FetchAndCacheAvailableVersionsAsync] Using cached version list (age={age.TotalMinutes:F0}min)");
+                return;
+            }
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, GitHubApiUrl);
+            request.Headers.Add("Accept", "application/vnd.github+json");
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _crashReporter.Log($"[Renodx5AddonService.FetchAndCacheAvailableVersionsAsync] GitHub API {response.StatusCode} — using stale cache");
+                LoadVersionsFromCache();
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(json);
+
+            var dlss5 = new List<(string Version, string DownloadUrl, System.Version Parsed)>();
+            var dlssSf = new List<(string Version, string DownloadUrl, System.Version Parsed)>();
+
+            foreach (var release in doc.RootElement.EnumerateArray())
+            {
+                if (!release.TryGetProperty("tag_name", out var tagEl)) continue;
+                var tag = tagEl.GetString();
+                if (tag == null) continue;
+
+                string? version = null;
+                string? addonType = null;
+
+                if (tag.StartsWith(TagPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    version   = tag.Substring(TagPrefix.Length);
+                    addonType = Dlss5ToolSubDir;
+                }
+                else if (tag.StartsWith(SfTagPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    version   = tag.Substring(SfTagPrefix.Length);
+                    addonType = DlssToolSubDir;
+                }
+                else continue;
+
+                // Find the download URL from assets
+                string? downloadUrl = null;
+                if (release.TryGetProperty("assets", out var assets))
+                {
+                    foreach (var asset in assets.EnumerateArray())
+                    {
+                        var assetName = asset.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+                        if (assetName == null) continue;
+                        bool isAddon = assetName.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase);
+                        bool isZip   = assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+                        if ((isAddon || isZip) && asset.TryGetProperty("browser_download_url", out var urlEl))
+                        {
+                            downloadUrl = urlEl.GetString();
+                            break;
+                        }
+                    }
+                }
+                if (string.IsNullOrEmpty(downloadUrl)) continue;
+
+                // Strip pre-release suffix (e.g. "7.0.0-rc1" → "7.0.0") for version comparison only
+                var versionForParse = version.Contains('-') ? version.Substring(0, version.IndexOf('-')) : version;
+                var parsed = System.Version.TryParse(versionForParse, out var p) ? p : new System.Version(0, 0);
+
+                if (addonType == Dlss5ToolSubDir)
+                    dlss5.Add((version, downloadUrl!, parsed));
+                else
+                    dlssSf.Add((version, downloadUrl!, parsed));
+            }
+
+            // Sort newest first — secondary sort by RC number so rc10 > rc5 when base version is equal
+            _dlss5ToolVersions = dlss5.OrderByDescending(e => e.Parsed).ThenByDescending(e => ExtractRcNumber(e.Version)).Select(e => (e.Version, e.DownloadUrl)).ToList();
+            _dlssToolVersions  = dlssSf.OrderByDescending(e => e.Parsed).ThenByDescending(e => ExtractRcNumber(e.Version)).Select(e => (e.Version, e.DownloadUrl)).ToList();
+
+            // ── Fetch Feeder and Bridge versions from their own repos ─────────
+            _feederVersions = await FetchSimpleRepoVersionsAsync(FeederApiUrl, FeederStagedFileName).ConfigureAwait(false);
+            _bridgeVersions = await FetchSimpleRepoVersionsAsync(BridgeApiUrl, BridgeStagedFileName).ConfigureAwait(false);
+
+            // Persist cache
+            Directory.CreateDirectory(_stagingDir);
+            var cacheObj = new
+            {
+                dlss5tool = _dlss5ToolVersions.Select(e => new { version = e.Version, url = e.DownloadUrl }),
+                dlsstool  = _dlssToolVersions.Select(e => new { version = e.Version, url = e.DownloadUrl }),
+                feeder    = _feederVersions.Select(e => new { version = e.Version, url = e.DownloadUrl }),
+                bridge    = _bridgeVersions.Select(e => new { version = e.Version, url = e.DownloadUrl }),
+            };
+            await File.WriteAllTextAsync(AvailableVersionsFilePath,
+                JsonSerializer.Serialize(cacheObj, new JsonSerializerOptions { WriteIndented = false })).ConfigureAwait(false);
+
+            _crashReporter.Log($"[Renodx5AddonService.FetchAndCacheAvailableVersionsAsync] " +
+                $"Cached {_dlss5ToolVersions.Count} DLSS5 Tool, {_dlssToolVersions.Count} ShortFuse, " +
+                $"{_feederVersions.Count} Feeder, {_bridgeVersions.Count} Bridge versions");
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[Renodx5AddonService.FetchAndCacheAvailableVersionsAsync] Failed — {ex.Message}");
+            LoadVersionsFromCache(); // fall back to stale cache
+        }
+    }
+
+    /// <summary>Loads version lists from available_versions.json into memory. Called at startup if cache is fresh.</summary>
+    private void LoadVersionsFromCache()
+    {
+        if (!File.Exists(AvailableVersionsFilePath)) return;
+        try
+        {
+            var json = File.ReadAllText(AvailableVersionsFilePath);
+            using var doc = JsonDocument.Parse(json);
+
+            static List<(string Version, string DownloadUrl)> ParseList(JsonElement root, string key)
+            {
+                if (!root.TryGetProperty(key, out var arr)) return new();
+                var list = new List<(string, string)>();
+                foreach (var item in arr.EnumerateArray())
+                {
+                    var v = item.TryGetProperty("version", out var ve) ? ve.GetString() : null;
+                    var u = item.TryGetProperty("url",     out var ue) ? ue.GetString() : null;
+                    if (!string.IsNullOrEmpty(v) && !string.IsNullOrEmpty(u))
+                        list.Add((v!, u!));
+                }
+                return list;
+            }
+
+            _dlss5ToolVersions = ParseList(doc.RootElement, "dlss5tool");
+            _dlssToolVersions  = ParseList(doc.RootElement, "dlsstool");
+            _feederVersions    = ParseList(doc.RootElement, "feeder");
+            _bridgeVersions    = ParseList(doc.RootElement, "bridge");
+
+            // Self-healing: if feeder/bridge lists are suspiciously short (old per_page=30 cache),
+            // delete the cache file so the cooldown check in FetchAndCacheAvailableVersionsAsync
+            // sees no file and forces a fresh fetch.
+            if (_feederVersions.Count < 10 || _bridgeVersions.Count < 10)
+            {
+                _crashReporter.Log($"[Renodx5AddonService.LoadVersionsFromCache] Stale cache detected (feeder={_feederVersions.Count}, bridge={_bridgeVersions.Count}) — wiping for re-fetch");
+                _feederVersions.Clear();
+                _bridgeVersions.Clear();
+                try { File.Delete(AvailableVersionsFilePath); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[Renodx5AddonService.LoadVersionsFromCache] Failed — {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Returns the staged .addon64 file path for a specific version.
+    /// Returns null if not staged yet.
+    /// </summary>
+    public string? GetVersionedStagedFilePath(string addonType, string version)
+    {
+        var (subDir, fileName) = ResolveSubDirAndFileName(addonType);
+        return Path.Combine(_stagingDir, subDir, version, fileName);
+    }
+
+    private (string SubDir, string FileName) ResolveSubDirAndFileName(string addonType) =>
+        addonType.Equals(Dlss5ToolSubDir, StringComparison.OrdinalIgnoreCase) ? (Dlss5ToolSubDir, StagedFileName) :
+        addonType.Equals(DlssToolSubDir,  StringComparison.OrdinalIgnoreCase) ? (DlssToolSubDir,  SfStagedFileName) :
+        addonType.Equals(FeederSubDir,    StringComparison.OrdinalIgnoreCase) ? (FeederSubDir,    FeederStagedFileName) :
+        addonType.Equals(BridgeSubDir,    StringComparison.OrdinalIgnoreCase) ? (BridgeSubDir,    BridgeStagedFileName) :
+        (Dlss5ToolSubDir, StagedFileName);
+
+    /// <summary>
+    /// Extracts the RC number from a version string like "8.5.0-rc10" → 10.
+    /// Returns 0 for non-pre-release versions (treating them as effectively rc0 = stable, sorts after rc*).
+    /// Returns int.MaxValue for stable releases so they sort above any rc.
+    /// </summary>
+    private static int ExtractRcNumber(string version)
+    {
+        var dashIdx = version.IndexOf('-');
+        if (dashIdx < 0) return int.MaxValue; // stable release — sorts highest
+        var suffix = version.Substring(dashIdx + 1).ToLowerInvariant();
+        if (suffix.StartsWith("rc") && int.TryParse(suffix.Substring(2), out var n))
+            return n;
+        return 0;
+    }
+
+    private List<(string Version, string DownloadUrl)> GetVersionList(string addonType) =>
+        addonType.Equals(Dlss5ToolSubDir, StringComparison.OrdinalIgnoreCase) ? _dlss5ToolVersions :
+        addonType.Equals(DlssToolSubDir,  StringComparison.OrdinalIgnoreCase) ? _dlssToolVersions :
+        addonType.Equals(FeederSubDir,    StringComparison.OrdinalIgnoreCase) ? _feederVersions :
+        addonType.Equals(BridgeSubDir,    StringComparison.OrdinalIgnoreCase) ? _bridgeVersions :
+        _dlss5ToolVersions;
+
+    /// <summary>True if the given version is already staged on disk.</summary>
+    public bool IsVersionStaged(string addonType, string version) =>
+        File.Exists(GetVersionedStagedFilePath(addonType, version));
+
+    /// <summary>
+    /// Fetches release versions from a simple GitHub repo (any tags, picks .addon64 asset).
+    /// Used for Feeder and Bridge which have their own repos separate from the rhi-repo.
+    /// </summary>
+    private async Task<List<(string Version, string DownloadUrl)>> FetchSimpleRepoVersionsAsync(
+        string apiUrl, string targetFileName)
+    {
+        var result = new List<(string Version, string DownloadUrl, System.Version Parsed, bool IsPreRelease)>();
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+            req.Headers.Add("Accept", "application/vnd.github+json");
+            using var resp = await _http.SendAsync(req).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _crashReporter.Log($"[Renodx5AddonService.FetchSimpleRepoVersionsAsync] {apiUrl} → {resp.StatusCode}");
+                return result.Select(e => (e.Version, e.DownloadUrl)).ToList();
+            }
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(json);
+            foreach (var release in doc.RootElement.EnumerateArray())
+            {
+                var tag = release.TryGetProperty("tag_name", out var tEl) ? tEl.GetString() : null;
+                if (string.IsNullOrEmpty(tag)) continue;
+                if (release.TryGetProperty("draft", out var d) && d.GetBoolean()) continue;
+                string? downloadUrl = null;
+                if (release.TryGetProperty("assets", out var assets))
+                {
+                    foreach (var asset in assets.EnumerateArray())
+                    {
+                        var name = asset.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
+                        if (name == null) continue;
+                        // Match target filename (e.g. dlss5-feed.addon64) — exact match first
+                        if (name.Equals(targetFileName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (asset.TryGetProperty("browser_download_url", out var urlEl))
+                            {
+                                downloadUrl = urlEl.GetString();
+                                break; // exact match — stop looking
+                            }
+                        }
+                        // Accept .zip archives (newer releases bundle the addon inside a zip)
+                        if (downloadUrl == null && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (asset.TryGetProperty("browser_download_url", out var urlEl))
+                                downloadUrl = urlEl.GetString();
+                            // don't break — keep looking for an exact .addon64 match
+                        }
+                        // Also accept any loose .addon64 as fallback
+                        if (downloadUrl == null && name.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (asset.TryGetProperty("browser_download_url", out var urlEl))
+                                downloadUrl = urlEl.GetString();
+                        }
+                    }
+                }
+                if (string.IsNullOrEmpty(downloadUrl)) continue;
+                var versionStr = tag.TrimStart('v', 'V');
+                // Strip semver pre-release suffix (e.g. "1.16.0-beta.4" → "1.16.0") before parsing
+                var versionCore = versionStr.Contains('-') ? versionStr.Substring(0, versionStr.IndexOf('-')) : versionStr;
+                var isPreRelease = versionStr.Contains('-');
+                var parsed = System.Version.TryParse(versionCore, out var p) ? p : new System.Version(0, 0);
+                result.Add((tag, downloadUrl!, parsed, isPreRelease));
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[Renodx5AddonService.FetchSimpleRepoVersionsAsync] Failed for {apiUrl} — {ex.Message}");
+        }
+        return result.OrderByDescending(e => e.Parsed).ThenBy(e => e.IsPreRelease).Select(e => (e.Version, e.DownloadUrl)).ToList();
+    }
+
+    /// <summary>
+    /// Ensures a specific version of the addon is staged in its versioned subfolder.
+    /// Downloads only if not already present. No-op if already staged.
+    /// </summary>
+    public async Task<bool> EnsureVersionStagedAsync(string addonType, string version)
+    {
+        if (IsVersionStaged(addonType, version))
+        {
+            _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] v{version} ({addonType}) already staged");
+            return true;
+        }
+
+        // Find download URL from in-memory cache
+        var list = GetVersionList(addonType);
+        var entry = list.FirstOrDefault(e => string.Equals(e.Version, version, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrEmpty(entry.DownloadUrl))
+        {
+            _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] No URL found for v{version} ({addonType}) — falling back to API");
+            await FetchAndCacheAvailableVersionsAsync(forceRefresh: true).ConfigureAwait(false);
+            list  = GetVersionList(addonType);
+            entry = list.FirstOrDefault(e => string.Equals(e.Version, version, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrEmpty(entry.DownloadUrl))
+            {
+                _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Version v{version} ({addonType}) not found — cannot stage");
+                return false;
+            }
+        }
+
+        try
+        {
+            var (subDir, fileName) = ResolveSubDirAndFileName(addonType);
+            var versionDir = Path.Combine(_stagingDir, subDir, version);
+            Directory.CreateDirectory(versionDir);
+            var destPath = Path.Combine(versionDir, fileName);
+
+            _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Downloading v{version} ({addonType}) from {entry.DownloadUrl}");
+
+            var bytes = await _http.GetByteArrayAsync(entry.DownloadUrl).ConfigureAwait(false);
+
+            if (entry.DownloadUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                var tempZip = Path.Combine(versionDir, "_tmp.zip");
+                await File.WriteAllBytesAsync(tempZip, bytes).ConfigureAwait(false);
+                using (var zip = System.IO.Compression.ZipFile.OpenRead(tempZip))
+                {
+                    var zipEntry = zip.Entries.FirstOrDefault(e =>
+                        string.Equals(e.Name, fileName, StringComparison.OrdinalIgnoreCase))
+                        ?? zip.Entries.FirstOrDefault(e =>
+                            e.Name.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase));
+                    if (zipEntry == null)
+                    {
+                        _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] .addon64 not found in zip for v{version}");
+                        File.Delete(tempZip);
+                        return false;
+                    }
+                    using var es = zipEntry.Open();
+                    using var os = File.Create(destPath);
+                    await es.CopyToAsync(os).ConfigureAwait(false);
+
+                    // Also extract DLSS5_Feed.fx if present — it lives inside the Feeder zip
+                    var feedFxEntry = zip.Entries.FirstOrDefault(e =>
+                        string.Equals(e.Name, "DLSS5_Feed.fx", StringComparison.OrdinalIgnoreCase));
+                    if (feedFxEntry != null)
+                    {
+                        var feederShadersDir = Path.Combine(ShaderPackService.ShadersDir, "DLSS5Feeder");
+                        Directory.CreateDirectory(feederShadersDir);
+                        var fxDestPath = Path.Combine(feederShadersDir, "DLSS5_Feed.fx");
+                        using var fxStream = feedFxEntry.Open();
+                        using var fxOut = File.Create(fxDestPath);
+                        await fxStream.CopyToAsync(fxOut).ConfigureAwait(false);
+                        _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Extracted DLSS5_Feed.fx v{version} → '{fxDestPath}'");
+                        await Task.Run(() => App.Services.GetRequiredService<IShaderPackService>().RecordExtractedFilesFromDir("DLSS5Feeder")).ConfigureAwait(false);
+                    }
+
+                    // Also extract host64\dlss5-feed-host64.exe — needed for 32-bit games
+                    var hostExeEntry = zip.Entries.FirstOrDefault(e =>
+                        e.Name.EndsWith("-host64.exe", StringComparison.OrdinalIgnoreCase)
+                        && e.FullName.Contains("host64", StringComparison.OrdinalIgnoreCase));
+                    if (hostExeEntry != null)
+                    {
+                        // Stage in versioned dir
+                        var hostExeVersioned = Path.Combine(versionDir, "dlss5-feed-host64.exe");
+                        using (var hexStreamV = hostExeEntry.Open())
+                        using (var hexOutV = File.Create(hostExeVersioned))
+                            await hexStreamV.CopyToAsync(hexOutV).ConfigureAwait(false);
+
+                        // Also write to the flat addon staging dir so FindStagedAddon("DLSS5 Feeder", ".exe") finds it
+                        var addonStagingDir = AddonPackService.GetStagingDir();
+                        if (!string.IsNullOrEmpty(addonStagingDir) && Directory.Exists(addonStagingDir))
+                        {
+                            var hostExeFlat = Path.Combine(addonStagingDir, "DLSS5 Feeder_host64.exe");
+                            using var hexStreamF = hostExeEntry.Open();
+                            using var hexOutF = File.Create(hostExeFlat);
+                            await hexStreamF.CopyToAsync(hexOutF).ConfigureAwait(false);
+                        }
+                        _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Extracted host64 exe v{version} → '{hostExeVersioned}'");
+                    }
+                }
+                File.Delete(tempZip);
+            }
+            else
+            {
+                await File.WriteAllBytesAsync(destPath, bytes).ConfigureAwait(false);
+            }
+
+            _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Staged v{version} ({addonType}) → '{destPath}' ({new FileInfo(destPath).Length} bytes)");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Download failed for v{version} ({addonType}) — {ex.Message}");
+            return false;
         }
     }
 }

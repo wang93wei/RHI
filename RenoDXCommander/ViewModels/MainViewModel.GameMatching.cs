@@ -2,6 +2,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.Services;
 
@@ -133,11 +134,24 @@ public partial class MainViewModel
                 && !_manifestDllOverrideOptOuts.Contains(card.GameName)) continue;
 
             // ── RS reconciliation ──────────────────────────────────────────────
+            // Skip when ShortFuse is installed — it intentionally renames ReShade to
+            // Reshade64.asi; reconciling back to dxgi.dll would break the FrameGen setup.
+            bool _sfInstalled = !string.IsNullOrEmpty(card.InstallPath)
+                && App.Services.GetRequiredService<Renodx5AddonService>().IsSfInstalledIn(card.InstallPath);
+
             // Resolve the correct default ReShade filename for this game's API.
             // DX9 games should use d3d9.dll, OpenGL should use opengl32.dll, etc.
             // Only rename if the current filename doesn't match the API-correct default.
+            // Exception: DX9 games running DLSS5 Feeder have dgVoodoo2 installed as D3D9.dll,
+            // so ReShade must stay as dxgi.dll — skip reconciliation for that combination.
+            bool isDx9FeederGame = card.DetectedApis.Contains(GraphicsApiType.DirectX9)
+                && card.Is32Bit
+                && File.Exists(Path.Combine(card.InstallPath, "dgVoodoo.conf"));
+            if (isDx9FeederGame) continue;
+
             var rsDefaultName = ResolveAutoReShadeFilename(card.DetectedApis) ?? AuxInstallService.RsNormalName;
-            if (card.RsRecord != null
+            if (!_sfInstalled
+                && card.RsRecord != null
                 && !string.IsNullOrEmpty(card.RsRecord.InstalledAs)
                 && !card.RsRecord.InstalledAs.Equals(rsDefaultName, StringComparison.OrdinalIgnoreCase))
             {
@@ -368,14 +382,32 @@ public partial class MainViewModel
             };
         }
 
+        // Unity: boot.config is the most reliable source — check before cache since cache
+        // may contain stale values from before Unity detection was added.
+        var unityEarlyResult = GraphicsApiDetector.DetectUnityFromBootConfig(installPath);
+        if (unityEarlyResult != GraphicsApiType.Unknown)
+        {
+            // Update the cache so subsequent hits return the correct value
+            CacheGameApi(installPath, unityEarlyResult, new System.Collections.Generic.HashSet<GraphicsApiType> { unityEarlyResult });
+            return unityEarlyResult;
+        }
+
         // ── Game-level cache: skip all filesystem scanning if cached ──────────
         if (_gameApiCache.TryGetValue(installPath, out var cached))
             return cached.Primary;
 
-        // Unity: boot.config is the most reliable source (PE imports are misleading)
-        var unityResult = GraphicsApiDetector.DetectUnityFromBootConfig(installPath);
-        if (unityResult != GraphicsApiType.Unknown)
-            return unityResult;
+        // Check for D3D12Core.dll (Agility SDK) before PE scanning — this is a definitive
+        // DX12 signal even when the PE imports only show d3d11.dll (e.g. RE Engine games
+        // that load D3D12 dynamically via LoadLibrary).
+        try
+        {
+            foreach (var dir in Directory.GetDirectories(installPath))
+            {
+                if (File.Exists(Path.Combine(dir, "D3D12Core.dll")))
+                    return GraphicsApiType.DirectX12;
+            }
+        }
+        catch (Exception ex) { _crashReporter.Log($"[DetectGraphicsApi] D3D12Core pre-scan failed for '{installPath}' — {ex.Message}"); }
 
         // Track best detected API across all file-based checks.
         // We don't return OpenGL immediately because Unity and Unreal statically
@@ -538,6 +570,17 @@ public partial class MainViewModel
         // ── Game-level cache: skip filesystem scanning if cached ──────────
         if (_gameApiCache.TryGetValue(installPath, out var cached))
             return cached.All;
+
+        // Check for D3D12Core.dll (Agility SDK) — definitive DX12 signal
+        try
+        {
+            foreach (var dir in Directory.GetDirectories(installPath))
+            {
+                if (File.Exists(Path.Combine(dir, "D3D12Core.dll")))
+                    return new HashSet<GraphicsApiType> { GraphicsApiType.DirectX12 };
+            }
+        }
+        catch { }
 
         // Scan all exes in the install directory
         ScanAllExesInDir(installPath, result);

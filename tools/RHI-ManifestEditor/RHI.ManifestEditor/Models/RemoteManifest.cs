@@ -79,6 +79,12 @@ public class RemoteManifest
     [JsonPropertyName("lumaDefaultGames")]
     public List<string>? LumaDefaultGames { get; set; }
 
+    [JsonPropertyName("lumaRequiresDgVoodoo")]
+    public List<string>? LumaRequiresDgVoodoo { get; set; }
+
+    [JsonPropertyName("dgVoodooVersions")]
+    public Dictionary<string, string>? DgVoodooVersions { get; set; }
+
     // ── Install Behaviour ─────────────────────────────────────────────────────
     [JsonPropertyName("installWarnings")]
     public Dictionary<string, Dictionary<string, string>>? InstallWarnings { get; set; }
@@ -103,6 +109,14 @@ public class RemoteManifest
 
     [JsonPropertyName("renodxIniOverrides")]
     public Dictionary<string, Dictionary<string, string>>? RenodxIniOverrides { get; set; }
+
+    /// <summary>
+    /// Maps game name → filename of a custom Engine.ini file hosted in the rhi-repo engine-files/ folder.
+    /// When present, the file is fetched and merged into the game's Engine.ini instead of the standard HDR keys.
+    /// Multiple games can point to the same filename. Any valid Engine.ini key/section content is supported.
+    /// </summary>
+    [JsonPropertyName("engineIniFiles")]
+    public Dictionary<string, string>? EngineIniFiles { get; set; }
 
     [JsonPropertyName("legacyReShadeVersions")]
     public Dictionary<string, string>? LegacyReShadeVersions { get; set; }
@@ -353,6 +367,9 @@ public class ManifestAddonPack
 
     [JsonPropertyName("deployFileName")]
     public string? DeployFileName { get; set; }
+
+    [JsonPropertyName("releaseApiUrl")]
+    public string? ReleaseApiUrl { get; set; }
 
     [JsonPropertyName("disabled")]
     public bool? Disabled { get; set; }

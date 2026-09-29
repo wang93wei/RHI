@@ -9,6 +9,35 @@ namespace RenoDXCommander.ViewModels;
 public partial class MainViewModel
 {
     private System.Threading.Timer? _updateCheckTimer;
+    private System.Threading.Timer? _heartbeatTimer;
+    private volatile string _lastUiAction = "none";
+
+    /// <summary>Tracks the last action dispatched to the UI thread for freeze diagnostics.</summary>
+    internal void SetLastUiAction(string action) => _lastUiAction = action;
+
+    /// <summary>
+    /// Starts a 10-second heartbeat timer. On each tick it posts a quick probe to the UI thread.
+    /// If the probe doesn't come back within 3 seconds, logs the last known UI action — that's
+    /// what the UI thread was doing when it froze.
+    /// </summary>
+    internal void StartHeartbeatTimer()
+    {
+        _heartbeatTimer = new System.Threading.Timer(_ =>
+        {
+            var probeReceived = false;
+            DispatcherQueue?.TryEnqueue(() => { probeReceived = true; });
+
+            // Wait up to 3 seconds for the UI thread to process the probe
+            var deadline = Environment.TickCount64 + 3000;
+            while (!probeReceived && Environment.TickCount64 < deadline)
+                System.Threading.Thread.Sleep(100);
+
+            if (probeReceived)
+                _crashReporter.Log($"[Heartbeat] UI responsive — last action: {_lastUiAction}");
+            else
+                _crashReporter.Log($"[Heartbeat] *** UI FROZEN *** last action before freeze: {_lastUiAction}");
+        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
 
     /// <summary>
     /// Starts a repeating 4-hour timer that re-runs all update checks.
@@ -50,7 +79,7 @@ public partial class MainViewModel
 
                         // Detect new wiki mods
                         var currentModNames = _allMods
-                            .Where(m => m.SnapshotUrl != null)
+                            .Where(m => m.SnapshotUrl != null || m.NexusUrl != null)
                             .Select(m => m.Name)
                             .ToList();
                         _crashReporter.Log($"[MainViewModel] Periodic wiki mods check: {currentModNames.Count} downloadable mods");
@@ -100,6 +129,55 @@ public partial class MainViewModel
                 try { await _dlssStreamlineService.FetchManifestAsync(); }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic DLSS manifest fetch failed — {ex.Message}"); }
 
+                // Check and re-stage Cost Scaler + RTX40MFG, auto-deploy to installed games
+                try
+                {
+                    await _nrCostScalerService.CheckForUpdateAsync(forceRefresh: true);
+                    if (_nrCostScalerService.HasUpdate)
+                    {
+                        await _nrCostScalerService.EnsureStagingAsync();
+                        if (_nrCostScalerService.IsStagingReady)
+                            foreach (var c in _allCards.Where(c => !string.IsNullOrEmpty(c.InstallPath)
+                                && DlssNrCostScalerService.IsInstalled(c.InstallPath)))
+                                _nrCostScalerService.Install(c.InstallPath);
+                    }
+                }
+                catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic NR Cost Scaler check failed — {ex.Message}"); }
+
+                try
+                {
+                    await _rtx40MfgService.CheckForUpdateAsync(forceRefresh: true);
+                    if (_rtx40MfgService.HasUpdate)
+                    {
+                        await _rtx40MfgService.EnsureStagingAsync();
+                        if (_rtx40MfgService.IsStagingReady)
+                            foreach (var c in _allCards.Where(c => !string.IsNullOrEmpty(c.InstallPath)))
+                            {
+                                var installedAs = GetRtx40MfgInstalledAs(c.GameName, c.Source ?? "");
+                                if (!string.IsNullOrEmpty(installedAs) && File.Exists(Path.Combine(c.InstallPath!, installedAs)))
+                                    _rtx40MfgService.Install(c.InstallPath!, installedAs);
+                            }
+                    }
+                }
+                catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic RTX40MFG check failed — {ex.Message}"); }
+
+                try
+                {
+                    await _dlssg2030Service.CheckForUpdateAsync();
+                    if (_dlssg2030Service.HasUpdate)
+                    {
+                        await _dlssg2030Service.EnsureStagingAsync();
+                        if (_dlssg2030Service.IsStagingReady)
+                            foreach (var c in _allCards.Where(c => !string.IsNullOrEmpty(c.InstallPath)))
+                            {
+                                var installedAs = GetDlssg2030InstalledAs(c.GameName, c.Source ?? "");
+                                if (!string.IsNullOrEmpty(installedAs) && File.Exists(Path.Combine(c.InstallPath!, installedAs)))
+                                    _dlssg2030Service.Update(c.InstallPath!, installedAs, GetDlssg2030GpuGen(c.GameName, c.Source ?? ""));
+                            }
+                    }
+                }
+                catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic Dlssg2030 check failed — {ex.Message}"); }
+
                 _forceUpdateCheck = true; // bypass cooldown since we ARE the cooldown
                 var records = _installer.LoadAll();
                 var auxRecords = _auxInstaller.LoadAll();
@@ -134,6 +212,9 @@ public partial class MainViewModel
 
     /// <summary>Callback set by MainWindow to trigger app update check from the periodic timer.</summary>
     public Action? PeriodicAppUpdateCheck { get; set; }
+
+    /// <summary>Triggers a silent auto-install pass — safe to call from any thread.</summary>
+    public void TriggerAutoUpdate() => _autoUpdateService.TriggerAsync();
 
     internal void NotifyUpdateButtonChanged()
     {
@@ -625,7 +706,7 @@ public partial class MainViewModel
             var tempPath = GetDcCachePath(is32Bit) + ".precache.tmp";
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true, NoStore = true };
-            var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
             if (!resp.IsSuccessStatusCode) return;
 
             using (var net = await resp.Content.ReadAsStreamAsync())
@@ -703,7 +784,7 @@ public partial class MainViewModel
             var tempPath = GetUlCachePath(is32Bit) + ".precache.tmp";
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true, NoStore = true };
-            var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
             if (!resp.IsSuccessStatusCode) return;
 
             using (var net = await resp.Content.ReadAsStreamAsync())
@@ -893,8 +974,9 @@ public partial class MainViewModel
         var osCards = _allCards.Where(c => c.OsStatus == GameStatus.UpdateAvailable && !c.IsHidden && !c.ExcludeFromUpdateAllOs).ToList();
         if (osCards.Count == 0) return;
 
-        var stableCards = osCards.Where(c => GetOsVariant(c.GameName, c.Source ?? "") != "Nightly").ToList();
+        var stableCards  = osCards.Where(c => GetOsVariant(c.GameName, c.Source ?? "") == "Stable" || GetOsVariant(c.GameName, c.Source ?? "") == "").ToList();
         var nightlyCards = osCards.Where(c => GetOsVariant(c.GameName, c.Source ?? "") == "Nightly").ToList();
+        var dlssNrCards  = osCards.Where(c => GetOsVariant(c.GameName, c.Source ?? "") == "DlssNr").ToList();
 
         // Ensure stable staging if any stable cards need updating
         if (stableCards.Count > 0 && !_optiScalerService.IsStagingReady)
@@ -910,9 +992,17 @@ public partial class MainViewModel
             catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] Nightly staging failed — {ex.Message}"); return; }
         }
 
+        // Ensure DLSS NR staging if any DlssNr cards need updating
+        if (dlssNrCards.Count > 0 && !_optiScalerService.IsStagingReadyDlssNr)
+        {
+            try { await _optiScalerService.EnsureDlssNrStagingAsync(); }
+            catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] DLSS NR staging failed — {ex.Message}"); return; }
+        }
+
         foreach (var card in osCards)
         {
-            try { await _optiScalerService.UpdateAsync(card); }
+            var cardVariant = GetOsVariant(card.GameName, card.Source ?? "");
+            try { await _optiScalerService.UpdateAsync(card, variantHint: cardVariant); }
             catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] Failed for '{card.GameName}': {ex.Message}"); }
         }
 
@@ -1003,6 +1093,21 @@ public partial class MainViewModel
             }
         }
 
+        // Patch RS record channels to reflect the current per-game override before the update check.
+        // The update service uses card.RsRecord.Channel (not auxRecords) for the pinned-channel guard.
+        // If the user changed the channel to Custom after the last install, the record's Channel
+        // is stale — patch it here so CheckReShadeUpdateLocal correctly skips custom/legacy channels.
+        foreach (var card in cards)
+        {
+            if (card.RsRecord == null) continue;
+            var effectiveChannel = ResolveReShadeChannel(card.GameName, card.Source ?? "");
+            if (!string.Equals(card.RsRecord.Channel, effectiveChannel, StringComparison.OrdinalIgnoreCase))
+            {
+                _crashReporter.Log($"[CheckForUpdatesAsync] Patching RS channel for '{card.GameName}': '{card.RsRecord.Channel}' → '{effectiveChannel}'");
+                card.RsRecord.Channel = effectiveChannel;
+            }
+        }
+
         await _updateOrchestrationService.CheckForUpdatesAsync(
             cards, records, auxRecords, DispatcherQueue,
             () =>
@@ -1062,6 +1167,39 @@ public partial class MainViewModel
             catch (Exception ex)
             {
                 _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Nexus update check failed (rate-limited path) — {ex.Message}");
+            }
+
+            // ── Nexus update check for Luma mods (rate-limited path) ─────────────
+            try
+            {
+                var lumaModsToCheck = cards
+                    .Where(c => c.LumaStatus == GameStatus.Installed
+                             && !c.IsHidden
+                             && c.LumaNexusUrl != null
+                             && c.LumaRecord?.NexusFileId != null)  // only premium installs have a reliable baseline
+                    .Select(c => (c.GameName, c.LumaNexusUrl!, c.LumaRecord!.NexusFileId!.Value.ToString()))
+                    .ToList();
+
+                if (lumaModsToCheck.Count > 0)
+                {
+                    _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Checking {lumaModsToCheck.Count} Luma Nexus mod(s) for updates (rate-limited path)");
+                    var lumaUpdated = await _nexusUpdateService.CheckForUpdatesAsync(lumaModsToCheck).ConfigureAwait(false);
+                    if (lumaUpdated.Count > 0)
+                    {
+                        DispatcherQueue?.TryEnqueue(() =>
+                        {
+                            foreach (var card in cards.Where(c => lumaUpdated.Contains(c.GameName)))
+                            {
+                                if (card.LumaStatus == GameStatus.Installed)
+                                    card.LumaStatus = GameStatus.UpdateAvailable;
+                            }
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Luma Nexus update check failed (rate-limited path) — {ex.Message}");
             }
 
             // Record successful check time even if rate-limited, so we don't hammer the API again immediately
@@ -1145,12 +1283,24 @@ public partial class MainViewModel
                 _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] OS nightly update result: {_optiScalerService.HasUpdateNightly}");
             }
 
+            // Also check DLSS NR if any installed game uses it
+            bool anyDlssNr = cards.Any(c => c.OsStatus == GameStatus.Installed && GetOsVariant(c.GameName, c.Source ?? "") == "DlssNr");
+            if (anyDlssNr)
+            {
+                await _optiScalerService.CheckForDlssNrUpdateAsync().ConfigureAwait(false);
+                _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] OS DLSS NR update result: {_optiScalerService.HasUpdateDlssNr}");
+            }
+
             DispatcherQueue?.TryEnqueue(() =>
             {
                 foreach (var card in cards.Where(c => c.OsStatus == GameStatus.Installed))
                 {
                     var osVariant = GetOsVariant(card.GameName, card.Source ?? "");
-                    bool osHasUpdate = osVariant == "Nightly" ? _optiScalerService.HasUpdateNightly : _optiScalerService.HasUpdate;
+                    bool osHasUpdate = osVariant switch {
+                        "Nightly" => _optiScalerService.HasUpdateNightly,
+                        "DlssNr"  => _optiScalerService.HasUpdateDlssNr,
+                        _         => _optiScalerService.HasUpdate
+                    };
                     if (osHasUpdate) card.OsStatus = GameStatus.UpdateAvailable;
                 }
 
@@ -1182,7 +1332,10 @@ public partial class MainViewModel
                 var dlssEnablerService = App.Services.GetRequiredService<DlssEnablerService>();
                 bool deHasUpdate = await dlssEnablerService.CheckForUpdateAsync().ConfigureAwait(false);
                 if (deHasUpdate)
+                {
                     await dlssEnablerService.EnsureStagingAsync().ConfigureAwait(false);
+                    dlssEnablerService.AutoUpdateStandaloneInstalls(_allCards, this);
+                }
             }
             catch (Exception ex)
             {
@@ -1196,6 +1349,8 @@ public partial class MainViewModel
                 bool rdx5HasUpdate = await rdx5Service.CheckForUpdateAsync().ConfigureAwait(false);
                 if (rdx5HasUpdate)
                     await rdx5Service.EnsureStagingAsync().ConfigureAwait(false);
+                // Also refresh the available versions cache (used by the NR section addon version picker)
+                await rdx5Service.FetchAndCacheAvailableVersionsAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -1319,7 +1474,38 @@ public partial class MainViewModel
             _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Nexus update check failed — {ex.Message}");
         }
 
-        // ── Emulator update check (check each bundled addon for size changes) ──
+        // ── Nexus Mods update check for Luma mods ─────────────────────────────
+        try
+        {
+            var lumaModsToCheck = cards
+                .Where(c => c.LumaStatus == GameStatus.Installed
+                         && !c.IsHidden
+                         && c.LumaNexusUrl != null
+                         && c.LumaRecord?.NexusFileId != null)  // only premium installs have a reliable baseline
+                .Select(c => (c.GameName, c.LumaNexusUrl!, c.LumaRecord!.NexusFileId!.Value.ToString()))
+                .ToList();
+
+            if (lumaModsToCheck.Count > 0)
+            {
+                _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Checking {lumaModsToCheck.Count} Luma Nexus mod(s) for updates");
+                var lumaUpdated = await _nexusUpdateService.CheckForUpdatesAsync(lumaModsToCheck).ConfigureAwait(false);
+                if (lumaUpdated.Count > 0)
+                {
+                    DispatcherQueue?.TryEnqueue(() =>
+                    {
+                        foreach (var card in cards.Where(c => lumaUpdated.Contains(c.GameName)))
+                        {
+                            if (card.LumaStatus == GameStatus.Installed)
+                                card.LumaStatus = GameStatus.UpdateAvailable;
+                        }
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Luma Nexus update check failed — {ex.Message}");
+        }
         try
         {
             var emuCards = cards.Where(c => c.IsEmulator && c.Status == GameStatus.Installed && c.EmulatorAddonNames?.Count > 0).ToList();

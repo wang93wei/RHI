@@ -51,6 +51,11 @@ public partial class App : Application
 
             var client = new HttpClient(handler);
             client.DefaultRequestHeaders.Add("User-Agent", "RHI/2.0");
+            // GitHub API token — raises rate limit from 60 to 5000 req/hour for all services.
+            // Set as a default header so every service inherits it without per-request wiring.
+            var ghToken = DevUnlockService.GitHubApiToken;
+            if (!string.IsNullOrEmpty(ghToken))
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ghToken}");
             // Per-request timeout — generous enough for large files on slow connections.
             // Individual services can set per-request timeouts via CancellationTokenSource
             // if they need tighter control.
@@ -109,14 +114,21 @@ public partial class App : Application
         services.AddSingleton<IDlssStreamlineService, DlssStreamlineService>();
         services.AddSingleton<DlssPresetService>();
         services.AddSingleton<DofFixService>();
+        services.AddSingleton<UltimateAsiLoaderService>();
+        services.AddSingleton<DlssNrCostScalerService>();
+        services.AddSingleton<Rtx40MfgService>();
+        services.AddSingleton<Dlssg20_30Service>();
         services.AddSingleton<AutoUpdateService>();
         services.AddSingleton<DlssEnablerService>();
+        services.AddSingleton<DgVoodooService>();
         services.AddSingleton<Renodx5AddonService>();
         services.AddSingleton<CustomReShadeHashService>();
         services.AddSingleton<SeenWikiModsService>();
         services.AddSingleton<SeenUltraPlusModsService>();
         services.AddSingleton<SeenLumaModsService>();
+        services.AddSingleton<IRenoDXDbService, RenoDXDbService>();
         services.AddSingleton<NexusDownloadService>();
+        services.AddSingleton<NexusSsoService>();
         // Lazy<IDlssStreamlineService> breaks the circular dependency between OptiScalerService ↔ DlssStreamlineService
         services.AddSingleton<Lazy<IDlssStreamlineService>>(sp => new Lazy<IDlssStreamlineService>(() => sp.GetRequiredService<IDlssStreamlineService>()));
 
@@ -344,7 +356,7 @@ public partial class App : Application
         if (path == "--activate")
         {
             if (_window is MainWindow mw0)
-                mw0.DispatcherQueue.TryEnqueue(() => mw0.Activate());
+                mw0.DispatcherQueue.TryEnqueue(() => mw0.BringToFront());
             return;
         }
         if (path.StartsWith("--launch:"))
@@ -353,10 +365,10 @@ public partial class App : Application
             if (_window is MainWindow mw)
                 mw.DispatcherQueue.TryEnqueue(() =>
                 {
-                    mw.Activate();
+                    mw.BringToFront();
                     var card = mw.ViewModel.AllCards.FirstOrDefault(c =>
                         c.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase));
-                    if (card != null) mw.LaunchGame(card);
+                    if (card != null) _ = mw.LaunchGameAsync(card);
                 });
             return;
         }

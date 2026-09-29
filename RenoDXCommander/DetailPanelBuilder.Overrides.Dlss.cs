@@ -1,4 +1,4 @@
-﻿// DetailPanelBuilder.Overrides.Dlss.cs — DLSS/Streamline column builder helpers.
+// DetailPanelBuilder.Overrides.Dlss.cs — DLSS/Streamline column builder helpers.
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -18,7 +18,8 @@ public partial class DetailPanelBuilder
         (string Name, uint Value)[]? presets, uint currentPreset,
         Func<string, Task> onVersionSelected, Action<uint>? onPresetSelected,
         uint currentRenderScale = 0, Action<uint>? onRenderScaleSelected = null,
-        string? originalVersion = null, bool driverOverrideActive = false)
+        string? originalVersion = null, bool driverOverrideActive = false,
+        Action<bool>? onDriverOverrideToggled = null)
     {
         var col = new StackPanel { Spacing = 4, Opacity = isPresent ? 1.0 : 0.4 };
 
@@ -40,8 +41,10 @@ public partial class DetailPanelBuilder
         // installed version (bare version string), Value = what onVersionSelected receives
         // ("Default" for (Default)-marked entries).
         var entries = new List<(string Display, string MatchKey, string Value)>();
+        // Logical value for the driver-injected "NVIDIA Override" entry (display text is localized)
+        const string DriverOverrideValue = "NVIDIA Override";
 
-        if (!isPresent && installedVersion == null)
+        if (!isPresent && installedVersion == null && onDriverOverrideToggled == null)
         {
             // Game truly doesn't have this component — show "None"
             entries.Add((LocOpt.T("None"), "None", "None"));
@@ -70,22 +73,30 @@ public partial class DetailPanelBuilder
             // If original version isn't in the managed list, insert it at top with (Default)
             if (!defaultInList && formattedOriginal != null)
                 entries.Insert(0, (Loc.GetString("Option.VersionDefaultFormat", formattedOriginal), formattedOriginal, "Default"));
+
+            // "NVIDIA Override" as a selectable option when the caller supports it
+            if (onDriverOverrideToggled != null)
+                entries.Add((LocOpt.T(DriverOverrideValue), DriverOverrideValue, DriverOverrideValue));
         }
 
-        var items = entries.Select(e => e.Display).ToList();
-
-        // Find selected index based on installed version
+        // Find selected index based on installed version (or NVIDIA Override if active)
         int selectedIndex = 0;
-        if (installedVersion != null && isPresent)
+        if (driverOverrideActive && onDriverOverrideToggled != null)
+        {
+            // Select the "NVIDIA Override" entry at the end of the list
+            selectedIndex = entries.Count - 1;
+        }
+        else if (installedVersion != null && (isPresent || onDriverOverrideToggled != null))
         {
             if (installedVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
             {
-                selectedIndex = entries.Count - 1;
+                // "Custom" is second-to-last (before "NVIDIA Override" if present)
+                selectedIndex = onDriverOverrideToggled != null ? entries.Count - 2 : entries.Count - 1;
             }
             else
             {
                 bool matched = false;
-                for (int i = 0; i < items.Count; i++)
+                for (int i = 0; i < entries.Count; i++)
                 {
                     var itemBase = entries[i].MatchKey;
                     if (installedVersion.Equals(itemBase, StringComparison.OrdinalIgnoreCase)
@@ -102,26 +113,33 @@ public partial class DetailPanelBuilder
                 // Insert it before "Custom" so it shows correctly rather than falling back to (Default)
                 if (!matched)
                 {
-                    var insertIdx = entries.Count - 1; // before "Custom"
+                    var insertIdx = onDriverOverrideToggled != null ? entries.Count - 2 : entries.Count - 1; // before Custom / NVIDIA Override
                     entries.Insert(insertIdx, (installedVersion, installedVersion, installedVersion));
                     selectedIndex = insertIdx;
                 }
             }
         }
 
+        // Materialize the display list only after every insertion so the combo matches entries
+        var items = entries.Select(e => e.Display).ToList();
+
         var versionCombo = new ComboBox
         {
-            ItemsSource = driverOverrideActive ? new List<string> { LocOpt.T("Driver Override Active") } : items,
-            SelectedIndex = driverOverrideActive ? 0 : selectedIndex,
+            ItemsSource = items,
+            SelectedIndex = selectedIndex,
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            IsEnabled = isPresent && !driverOverrideActive,
-            Opacity = driverOverrideActive ? 0.4 : 1.0,
+            IsEnabled = isPresent || (onDriverOverrideToggled != null),
+            Opacity = 1.0,
         };
+
         if (driverOverrideActive)
             ToolTipService.SetToolTip(versionCombo, Loc.GetString("Overrides.Dlss.DriverOverride.ComboTooltip"));
+        else if (onDriverOverrideToggled != null)
+            ToolTipService.SetToolTip(versionCombo, Loc.GetString("Overrides.Dlss.Version.ComboTooltip.NvidiaOverride"));
+        else
+            ToolTipService.SetToolTip(versionCombo, Loc.GetString("Overrides.Dlss.Version.ComboTooltip"));
 
-        // When driver override is active, tooltip is already on the combo — no extra text needed
         col.Children.Add(versionCombo);
 
         bool versionInit = true;
@@ -130,7 +148,28 @@ public partial class DetailPanelBuilder
             if (versionInit) return;
             int i = versionCombo.SelectedIndex;
             if (i < 0 || i >= entries.Count) return;
-            await onVersionSelected(entries[i].Value);
+            var selectedValue = entries[i].Value;
+
+            if (selectedValue == DriverOverrideValue)
+            {
+                // Enable driver DLL override — no DLL swap needed
+                onDriverOverrideToggled?.Invoke(true);
+                return;
+            }
+
+            // If we were on NVIDIA Override and switched away, disable it first
+            if (driverOverrideActive || (ev.RemovedItems.Count > 0 && ev.RemovedItems[0] as string == LocOpt.T(DriverOverrideValue)))
+                onDriverOverrideToggled?.Invoke(false);
+
+            versionCombo.IsEnabled = false;
+            try
+            {
+                await onVersionSelected(selectedValue);
+            }
+            finally
+            {
+                versionCombo.IsEnabled = isPresent || (onDriverOverrideToggled != null);
+            }
         };
         versionInit = false;
 
@@ -235,6 +274,12 @@ public partial class DetailPanelBuilder
                     {
                         if (ke.Key == Windows.System.VirtualKey.Enter)
                         {
+                            ke.Handled = true;
+                            // Defocus the TextBox by briefly disabling it — WinUI 3 has no
+                            // direct "clear focus" API, and FocusManager.TryMoveFocus is
+                            // unreliable in imperative panel contexts.
+                            inputBox.IsEnabled = false;
+                            inputBox.IsEnabled = true;
                             if (uint.TryParse(inputBox.Text, out var val) && val >= 33 && val <= 100)
                             {
                                 onRenderScaleSelected(val);
@@ -247,6 +292,9 @@ public partial class DetailPanelBuilder
                         }
                         else if (ke.Key == Windows.System.VirtualKey.Escape)
                         {
+                            ke.Handled = true;
+                            inputBox.IsEnabled = false;
+                            inputBox.IsEnabled = true;
                             // Cancel — revert
                             onRenderScaleSelected(currentRenderScale);
                         }

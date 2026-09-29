@@ -21,7 +21,7 @@ public partial class AuxInstallService
         if (!File.Exists(templatePath))
             throw new FileNotFoundException("reshade.ini not found in inis folder.", templatePath);
 
-        var gamePath = Path.Combine(gameDir, "reshade.ini");
+        var gamePath = Path.Combine(gameDir, "ReShade.ini");
 
         if (!File.Exists(gamePath))
         {
@@ -115,7 +115,7 @@ public partial class AuxInstallService
         if (!File.Exists(templatePath))
             throw new FileNotFoundException("Neither reshade.vulkan.ini nor reshade.ini found in inis folder.", templatePath);
 
-        var gamePath = Path.Combine(gameDir, "reshade.ini");
+        var gamePath = Path.Combine(gameDir, "ReShade.ini");
 
         if (!File.Exists(gamePath))
         {
@@ -251,7 +251,7 @@ public partial class AuxInstallService
     {
         if (!File.Exists(RsIniPath))
             throw new FileNotFoundException("reshade.ini not found in inis folder.", RsIniPath);
-        File.Copy(RsIniPath, Path.Combine(gameDir, "reshade.ini"), overwrite: true);
+        File.Copy(RsIniPath, Path.Combine(gameDir, "ReShade.ini"), overwrite: true);
     }
 
     /// <summary>
@@ -361,7 +361,15 @@ public partial class AuxInstallService
     /// If the [renodx] section already exists with the correct keys, no changes are made.
     /// Other sections in the file are preserved untouched.
     /// </summary>
-    public static void ApplyRenoDxNativeHdrSettings(string gameDir, bool usesSdrPath = false)
+    /// <param name="gameDir">Game install directory.</param>
+    /// <param name="usesSdrPath">When true writes Set_Path=1 (SDR upgrade); false writes Set_Path=0 (HDR).</param>
+    /// <param name="upgradeOverride">
+    /// Optional db-driven upgrade: (key, value) pair to force-write into the [renodx] section,
+    /// overwriting any existing value. e.g. ("Upgrade_B8G8R8A8_TYPELESS", "1").
+    /// Used when the RenoDX db specifies Method="upgrade" for this game.
+    /// </param>
+    public static void ApplyRenoDxNativeHdrSettings(string gameDir, bool usesSdrPath = false,
+        (string Key, string Value)? upgradeOverride = null)
     {
         var iniFilePath = Path.Combine(gameDir, "reshade.ini");
         if (!File.Exists(iniFilePath)) return;
@@ -396,14 +404,17 @@ public partial class AuxInstallService
                 ["Upgrade_UseSCRGB"] = "",
             };
 
+            bool changed = false;
+
             if (!ini.TryGetValue(section, out var existingKeys))
             {
-                ini[section] = new OrderedDict(requiredKeys);
+                existingKeys = new OrderedDict(requiredKeys);
+                ini[section] = existingKeys;
+                changed = true;
             }
             else
             {
                 // Only add keys that are missing — never overwrite user-modified values
-                bool changed = false;
                 foreach (var (key, value) in requiredKeys)
                 {
                     if (!existingKeys.ContainsKey(key))
@@ -412,8 +423,24 @@ public partial class AuxInstallService
                         changed = true;
                     }
                 }
-                if (!changed) return; // All keys already present — no write needed
             }
+
+            // Force-write the db-specified upgrade key, overwriting any stale existing value.
+            // This is the only key we authoratively set — all others respect user modifications.
+            if (upgradeOverride.HasValue
+                && !string.IsNullOrEmpty(upgradeOverride.Value.Key)
+                && !string.IsNullOrEmpty(upgradeOverride.Value.Value))
+            {
+                var (ovKey, ovVal) = upgradeOverride.Value;
+                if (!existingKeys.TryGetValue(ovKey, out var existing) || existing != ovVal)
+                {
+                    existingKeys[ovKey] = ovVal;
+                    changed = true;
+                    CrashReporter.Log($"[AuxInstallService.ApplyRenoDxNativeHdrSettings] DB upgrade override: {ovKey}={ovVal} for '{gameDir}'");
+                }
+            }
+
+            if (!changed) return; // All keys already present and correct — no write needed
 
             WriteIni(iniFilePath, ini);
             CrashReporter.Log($"[AuxInstallService.ApplyRenoDxNativeHdrSettings] Applied [renodx] section to '{iniFilePath}'");
@@ -493,6 +520,47 @@ public partial class AuxInstallService
         catch (Exception ex)
         {
             CrashReporter.Log($"[AuxInstallService.ApplyRenodxKeyPlaceholders] Failed for '{gameDir}' — {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Applies per-game [renodx] INI upgrades from the Unity DB to the game's reshade.ini.
+    /// Each (Key, Value) pair is force-written into the [renodx] section, overwriting any
+    /// existing value. Keys not present in the list are left untouched.
+    /// No-op when upgrades is empty or reshade.ini doesn't exist.
+    /// </summary>
+    /// <param name="gameDir">Game install directory.</param>
+    /// <param name="upgrades">Parsed upgrade pairs from RenoDXDbUnityEntry.ParsedUpgrades.</param>
+    public static void ApplyUnityRenodxUpgrades(string gameDir, List<(string Key, string Value)> upgrades)
+    {
+        if (upgrades == null || upgrades.Count == 0) return;
+
+        var iniFilePath = Path.Combine(gameDir, "reshade.ini");
+        if (!File.Exists(iniFilePath)) return;
+
+        try
+        {
+            var ini = ParseIni(File.ReadAllLines(iniFilePath));
+            const string section = "renodx";
+
+            if (!ini.TryGetValue(section, out var keys))
+            {
+                keys = new OrderedDict();
+                ini[section] = keys;
+            }
+
+            foreach (var (key, value) in upgrades)
+            {
+                keys[key] = value;
+                CrashReporter.Log($"[AuxInstallService.ApplyUnityRenodxUpgrades] {key}={value} in '{gameDir}'");
+            }
+
+            WriteIni(iniFilePath, ini);
+            CrashReporter.Log($"[AuxInstallService.ApplyUnityRenodxUpgrades] Applied {upgrades.Count} upgrade(s) to '{iniFilePath}'");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[AuxInstallService.ApplyUnityRenodxUpgrades] Failed for '{gameDir}' — {ex.Message}");
         }
     }
 
@@ -1651,5 +1719,212 @@ public partial class AuxInstallService
         {
             CrashReporter.Log($"[AuxInstallService.RemoveLumaReshadeIniValue] Failed for '{gameDir}' — {ex.Message}");
         }
+    }
+
+    // ── Engine.ini file override (fetched from GitHub) ────────────────────────
+
+    private const string EngineIniFilesBaseUrl = "https://raw.githubusercontent.com/RankFTW/rhi-repo/main/engine-files/";
+    private static readonly string EngineIniFilesCacheDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RHI", "engine-files");
+
+    /// <summary>
+    /// Fetches a custom Engine.ini file from the rhi-repo engine-files/ folder.
+    /// Caches to disk at %LocalAppData%\RHI\engine-files\{filename} for the session.
+    /// Returns null on failure — callers should fall back to ApplyEngineIniHdrSettings.
+    /// </summary>
+    public static async Task<string?> FetchEngineIniFileAsync(HttpClient http, string filename)
+    {
+        try
+        {
+            Directory.CreateDirectory(EngineIniFilesCacheDir);
+            var cachePath = Path.Combine(EngineIniFilesCacheDir, filename);
+            var url = EngineIniFilesBaseUrl + Uri.EscapeDataString(filename);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var response = await http.GetAsync(url, cts.Token).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                CrashReporter.Log($"[AuxInstallService.FetchEngineIniFileAsync] HTTP {(int)response.StatusCode} for '{filename}'");
+                // Return cached version if available
+                if (File.Exists(cachePath)) return await File.ReadAllTextAsync(cachePath).ConfigureAwait(false);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+            await File.WriteAllTextAsync(cachePath, content).ConfigureAwait(false);
+            CrashReporter.Log($"[AuxInstallService.FetchEngineIniFileAsync] Fetched '{filename}' ({content.Length} chars)");
+            return content;
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[AuxInstallService.FetchEngineIniFileAsync] Failed for '{filename}' — {ex.Message}");
+            // Try disk cache as fallback
+            try
+            {
+                var cachePath = Path.Combine(EngineIniFilesCacheDir, filename);
+                if (File.Exists(cachePath)) return await File.ReadAllTextAsync(cachePath).ConfigureAwait(false);
+            }
+            catch { }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Parses a raw Engine.ini text into (Section, Key, Value) tuples.
+    /// Handles standard INI format: [SectionName] headers and Key=Value lines.
+    /// Blank lines and lines starting with ; or // are ignored.
+    /// </summary>
+    public static List<(string Section, string Key, string Value)> ParseEngineIniEntries(string iniText)
+    {
+        var result = new List<(string Section, string Key, string Value)>();
+        var currentSection = "SystemSettings"; // default section if file starts without a header
+
+        foreach (var rawLine in iniText.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrEmpty(line) || line.StartsWith(';') || line.StartsWith("//"))
+                continue;
+
+            if (line.StartsWith('[') && line.Contains(']'))
+            {
+                var end = line.IndexOf(']');
+                currentSection = line[1..end].Trim();
+                continue;
+            }
+
+            var eq = line.IndexOf('=');
+            if (eq <= 0) continue;
+
+            var key   = line[..eq].Trim();
+            var value = line[(eq + 1)..].Trim();
+            if (!string.IsNullOrEmpty(key))
+                result.Add((currentSection, key, value));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Fetches a custom Engine.ini file and merges it into the game's Engine.ini.
+    /// Uses the same section-aware merge algorithm as ApplyEngineIniCustomKeys.
+    /// Falls back to ApplyEngineIniHdrSettings on any fetch/parse failure.
+    /// Returns true if the custom file was applied, false if fallback was used.
+    /// </summary>
+    public static async Task<bool> ApplyEngineIniFromFileAsync(
+        HttpClient http,
+        string filename,
+        string installPath,
+        string? projectNameOverride = null,
+        string? gameName = null,
+        string? store = null)
+    {
+        var content = await FetchEngineIniFileAsync(http, filename).ConfigureAwait(false);
+        if (content == null)
+        {
+            CrashReporter.Log($"[AuxInstallService.ApplyEngineIniFromFileAsync] Fetch failed for '{filename}', falling back to standard HDR keys");
+            ApplyEngineIniHdrSettings(installPath, projectNameOverride, gameName, store);
+            return false;
+        }
+
+        var entries = ParseEngineIniEntries(content);
+        if (entries.Count == 0)
+        {
+            CrashReporter.Log($"[AuxInstallService.ApplyEngineIniFromFileAsync] No entries parsed from '{filename}', falling back");
+            ApplyEngineIniHdrSettings(installPath, projectNameOverride, gameName, store);
+            return false;
+        }
+
+        ApplyEngineIniCustomKeys(installPath, entries, projectNameOverride, gameName, store);
+        CrashReporter.Log($"[AuxInstallService.ApplyEngineIniFromFileAsync] Applied {entries.Count} key(s) from '{filename}' to '{gameName ?? installPath}'");
+        return true;
+    }
+
+    // ── AppData / game config root resolution ────────────────────────────────────
+
+    /// <summary>
+    /// Resolves the game's AppData / Documents config root folder.
+    /// Used to determine whether the AppData button should be shown for a game.
+    /// Pre-compute this on a background thread (BuildCards / CacheLoad) and cache
+    /// the result on <see cref="ViewModels.GameCardViewModel.GameConfigRootPath"/> so
+    /// the UI thread never performs filesystem I/O when painting the detail panel.
+    /// Returns null when no resolvable config folder is found.
+    /// </summary>
+    public static string? ResolveGameConfigRoot(string installPath, string? engineIniProjectOverride, string? gameName)
+    {
+        var projectName = engineIniProjectOverride ?? ResolveUeProjectName(installPath ?? "");
+
+        // If the override is a full path (or pipe-separated paths), resolve directly
+        if (!string.IsNullOrEmpty(engineIniProjectOverride)
+            && (engineIniProjectOverride.Contains('\\') || engineIniProjectOverride.Contains('/')))
+        {
+            var candidates = engineIniProjectOverride.Split('|');
+            foreach (var candidate in candidates)
+            {
+                var expanded = Environment.ExpandEnvironmentVariables(candidate.Trim());
+                if (Directory.Exists(expanded)) return expanded;
+            }
+            return null;
+        }
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        // Check %LocalAppData%\{projectName}\
+        if (!string.IsNullOrEmpty(projectName))
+        {
+            var dir = Path.Combine(localAppData, projectName);
+            if (Directory.Exists(dir)) return dir;
+        }
+
+        // Check Documents\My Games\{gameName}\
+        if (!string.IsNullOrEmpty(gameName))
+        {
+            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var myGamesDir = Path.Combine(docs, "My Games", gameName);
+            if (Directory.Exists(myGamesDir)) return myGamesDir;
+
+            // Try stripped name (® ™ ©)
+            var stripped = gameName.Replace("®", "").Replace("™", "").Replace("©", "").Trim();
+            if (stripped != gameName)
+            {
+                myGamesDir = Path.Combine(docs, "My Games", stripped);
+                if (Directory.Exists(myGamesDir)) return myGamesDir;
+            }
+        }
+
+        // Check in-game directory: {GameRoot}\{ProjectName}\Saved\
+        if (!string.IsNullOrEmpty(installPath))
+        {
+            var normalized = installPath.Replace('/', '\\').TrimEnd('\\');
+            var parts = normalized.Split('\\');
+            for (int i = parts.Length - 1; i > 0; i--)
+            {
+                if (parts[i].Equals("Binaries", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Project folder is immediately above Binaries
+                    var projectDir = string.Join('\\', parts.Take(i));
+                    var savedDir = Path.Combine(projectDir, "Saved");
+                    if (Directory.Exists(savedDir)) return projectDir;
+
+                    // Also check sibling folders in the game root
+                    if (i - 1 > 0)
+                    {
+                        var gameRoot = string.Join('\\', parts.Take(i - 1));
+                        try
+                        {
+                            foreach (var subDir in Directory.EnumerateDirectories(gameRoot))
+                            {
+                                var subSaved = Path.Combine(subDir, "Saved");
+                                if (Directory.Exists(subSaved)) return subDir;
+                            }
+                        }
+                        catch { }
+                    }
+                    break;
+                }
+            }
+        }
+
+        return null;
     }
 }

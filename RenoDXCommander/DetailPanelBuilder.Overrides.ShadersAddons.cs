@@ -1,4 +1,4 @@
-﻿// DetailPanelBuilder.Overrides.ShadersAddons.cs — Shaders, Addons, Launch, and Reset Overrides sections.
+// DetailPanelBuilder.Overrides.ShadersAddons.cs — Shaders, Addons, Launch, and Reset Overrides sections.
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -13,6 +13,7 @@ public partial class DetailPanelBuilder
     /// <summary>Builds the Shaders/Addons row, Launch executable, and Reset Overrides handler.</summary>
     private void BuildShadersAddonsSection(OverridesPanelCtx ctx)
     {
+        _window.ViewModel.SetLastUiAction($"BuildShadersAddonsSection({ctx.Card.GameName})");
         var card = ctx.Card;
         var gameName = ctx.GameName;
         var isLumaMode = ctx.IsLumaMode;
@@ -132,7 +133,8 @@ public partial class DetailPanelBuilder
                     _window.Content.XamlRoot,
                     addonPackService,
                     current,
-                    AddonPopupHelper.PopupContext.PerGame);
+                    AddonPopupHelper.PopupContext.PerGame,
+                    ctx.Card.InstallPath);
                 if (result != null)
                 {
                     _gameNameService.PerGameAddonSelection[addonSelKey] = result;
@@ -227,7 +229,9 @@ public partial class DetailPanelBuilder
                             var refreshCard = _window.ViewModel.AllCards.FirstOrDefault(c =>
                                 c.GameName.Equals(ctx.CapturedName, StringComparison.OrdinalIgnoreCase));
                             if (refreshCard != null)
-                                BuildOverridesPanel(refreshCard);
+                                _window.DispatcherQueue?.TryEnqueue(
+                                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                                    () => BuildOverridesPanel(refreshCard));
                         }
                     }
                 }
@@ -270,25 +274,45 @@ public partial class DetailPanelBuilder
             ? Path.GetFileName(currentLaunchExe)
             : (_window.ViewModel.Manifest?.LaunchExeOverrides?.TryGetValue(ctx.CapturedName, out var manifestExe) == true && !string.IsNullOrEmpty(manifestExe)
                 ? Path.GetFileName(manifestExe)
-                : (!string.IsNullOrEmpty(card.InstallPath) && Directory.Exists(card.InstallPath)
-                    ? Directory.GetFiles(card.InstallPath, "*.exe", SearchOption.TopDirectoryOnly)
-                        .Where(e => !_exeExclusions.Contains(Path.GetFileNameWithoutExtension(e)))
-                        .OrderByDescending(e => new FileInfo(e).Length)
-                        .Select(Path.GetFileName)
-                        .FirstOrDefault()
-                    : null));
+                : null); // exe scan deferred — label updates asynchronously
 
         var headerText = string.IsNullOrEmpty(effectiveExe)
             ? Loc.GetString("Overrides.LaunchExe")
             : Loc.GetString("Overrides.LaunchExe.Named", effectiveExe);
-        launchExeHeaderPanel.Children.Add(new TextBlock
+        var exeHeaderText = new TextBlock
         {
             Text = headerText,
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             TextWrapping = TextWrapping.NoWrap,
             TextTrimming = TextTrimming.CharacterEllipsis,
-        });
+        };
+        launchExeHeaderPanel.Children.Add(exeHeaderText);
+
+        // Async exe scan — updates the label without blocking the UI thread
+        if (effectiveExe == null)
+        {
+            _ = Task.Run(() =>
+            {
+                string? scannedExe = null;
+                try
+                {
+                    if (!string.IsNullOrEmpty(card.InstallPath) && Directory.Exists(card.InstallPath))
+                        scannedExe = Directory.GetFiles(card.InstallPath, "*.exe", SearchOption.TopDirectoryOnly)
+                            .Where(e => !_exeExclusions.Contains(Path.GetFileNameWithoutExtension(e)))
+                            .OrderByDescending(e => new FileInfo(e).Length)
+                            .Select(Path.GetFileName)
+                            .FirstOrDefault();
+                }
+                catch { }
+                if (scannedExe != null)
+                    _window.DispatcherQueue?.TryEnqueue(() =>
+                    {
+                        if (_window.ViewModel.SelectedGame == card)
+                            exeHeaderText.Text = $"Launch executable  —  {scannedExe}";
+                    });
+            });
+        }
         // Invisible spacer matching the "Shaders" / "Addons" sub-label height
         launchExeHeaderPanel.Children.Add(new TextBlock
         {
@@ -452,7 +476,7 @@ public partial class DetailPanelBuilder
             addonModeCombo.SelectedItem = LocOpt.T("Global");
             addonComboInitializing = false;
             if (ctx.RenderPathCombo != null) ctx.RenderPathCombo.SelectedItem = "DirectX";
-            ctx.DllOverrideToggle.IsOn = false;
+            ctx.ResetDllOverrides?.Invoke();
             // Reset update inclusion to all-included
             if (_window.ViewModel.IsUpdateAllExcludedReShade(ctx.CapturedName, card.Source))
                 _window.ViewModel.ToggleUpdateAllExclusionReShade(ctx.CapturedName, card.Source);
@@ -504,7 +528,10 @@ public partial class DetailPanelBuilder
                 var targetCard = _window.ViewModel.AllCards.FirstOrDefault(c =>
                     c.GameName.Equals(ctx.CapturedName, StringComparison.OrdinalIgnoreCase));
                 if (targetCard != null)
+                {
                     _window.ViewModel.DisableDllOverride(targetCard);
+                    targetCard.NotifyAll();
+                }
             }
 
             // Include all in Update All
@@ -531,15 +558,18 @@ public partial class DetailPanelBuilder
                     _window.ViewModel.SetUseNormalReShade(targetCard, false);
             }
 
-            // Reset DXVK toggles
-            if (ctx.DxvkToggle != null)
+            // Reset DXVK — uninstall if active, clear variant override and Lilium preset
             {
-                ctx.DxvkToggle.IsOn = false;
                 var targetCard = _window.ViewModel.AllCards.FirstOrDefault(c =>
-                    c.GameName.Equals(ctx.CapturedName, StringComparison.OrdinalIgnoreCase));
-                if (targetCard != null && targetCard.DxvkEnabled)
+                    c.GameName.Equals(ctx.CapturedName, StringComparison.OrdinalIgnoreCase)
+                    && (string.IsNullOrEmpty(card.Source) || c.Source == card.Source));
+                if (targetCard != null && (targetCard.DxvkEnabled
+                    || targetCard.DxvkStatus == GameStatus.Installed
+                    || targetCard.DxvkStatus == GameStatus.UpdateAvailable))
                     _ = _window.ViewModel.HandleDxvkToggleAsync(targetCard, false, _window.Content.XamlRoot);
             }
+            _window.ViewModel.SetDxvkVariantOverride(ctx.CapturedName, null, ctx.Card.Source);
+            _window.ViewModel.SetLiliumPreset(ctx.CapturedName, 0, ctx.Card.Source);
 
             // Reset DXVK update exclusion via the shared Update Inclusion system
             if (_window.ViewModel.IsUpdateAllExcludedDxvk(ctx.CapturedName, card.Source))

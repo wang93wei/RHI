@@ -210,7 +210,7 @@ public partial class MainViewModel
             {
                 // Use 7-Zip for extraction (same as the rest of RHI)
                 var sevenZip = App.Services.GetRequiredService<ISevenZipExtractor>();
-                var sevenZipExe = sevenZip.Find7ZipExe();
+                var sevenZipExe = await sevenZip.Find7ZipExeAsync();
                 if (!string.IsNullOrEmpty(sevenZipExe))
                 {
                     var psi = new System.Diagnostics.ProcessStartInfo(sevenZipExe,
@@ -222,7 +222,9 @@ public partial class MainViewModel
                         RedirectStandardError  = true,
                     };
                     using var proc = System.Diagnostics.Process.Start(psi)!;
-                    proc.WaitForExit(60_000);
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                    try { await proc.WaitForExitAsync(cts.Token); }
+                    catch (OperationCanceledException) { try { proc.Kill(); } catch { } }
                 }
                 else
                 {
@@ -291,10 +293,21 @@ public partial class MainViewModel
                 bool deployHdr  = compatEntry?.Hdr ?? !isUe4Game;
                 bool deployLut  = compatEntry?.Lut ?? true;
 
-                if (card.UseUeExtended && record.EngineIniHdr != false && deployHdr)
+                string? engineIniFilename = null;
+                _manifest?.EngineIniFiles?.TryGetValue(card.GameName, out engineIniFilename);
+
+                if (card.UseUeExtended && !string.IsNullOrEmpty(engineIniFilename))
+                {
+                    await AuxInstallService.ApplyEngineIniFromFileAsync(_http, engineIniFilename, card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source).ConfigureAwait(false);
+                    record.EngineIniHdr = false;
+                    record.EngineIniLut = false;
+                    App.Services.GetRequiredService<IModInstallService>().SaveRecordPublic(record);
+                }
+                else if (card.UseUeExtended && record.EngineIniHdr != false && deployHdr)
                     AuxInstallService.ApplyEngineIniHdrSettings(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
 
-                if (card.EngineHint?.Contains("Unreal") == true && card.InstalledRecord?.EngineIniLut != false && deployLut)
+                if (card.EngineHint?.Contains("Unreal") == true && card.InstalledRecord?.EngineIniLut != false && deployLut
+                    && string.IsNullOrEmpty(engineIniFilename))
                     AuxInstallService.ApplyEngineIniLutSetting(card.InstallPath, card.EngineIniProjectOverride, card.GameName, card.Source);
 
                 // Update Nexus baseline so update indicator clears
@@ -321,8 +334,8 @@ public partial class MainViewModel
                         _addonFileCache[card.InstallPath.ToLowerInvariant()] = addonFileName;
 
                     card.NotifyAll();
-                    SaveLibrary();
                 });
+                _ = Task.Run(() => SaveLibrary());
             }
             finally
             {

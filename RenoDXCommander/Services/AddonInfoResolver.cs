@@ -98,6 +98,22 @@ public class AddonInfoResolver
         var fallbackText = (addon == AddonType.RenoDX && card.IsNativeHdrGame)
             ? FallbackNativeHdr
             : GetFallbackText(addon);
+
+        // For NativeHDR/UE-Extended games, append DB Comments from card.Notes.
+        // BuildNotes() populates card.Notes with the HDR warning + any DB comment.
+        // Extract just the comment portion (everything after the HDR warning line).
+        if (addon == AddonType.RenoDX && card.IsNativeHdrGame
+            && !string.IsNullOrWhiteSpace(card.Notes))
+        {
+            // card.Notes = "⚠ In-game HDR must be turned ON..." + optional "\n\n{dbComment}"
+            // Strip the warning line to get just the DB comment portion.
+            var notesWithoutWarning = card.Notes
+                .Replace("⚠ In-game HDR must be turned ON for UE-Extended to work correctly in this title.", "")
+                .Trim();
+            if (!string.IsNullOrWhiteSpace(notesWithoutWarning))
+                fallbackText = fallbackText + "\n\n" + notesWithoutWarning;
+        }
+
         // If the only content is generic fallback AND there's an HDR database entry,
         // upgrade the source type to Wiki since we have real per-game content.
         var hdrUrl = LookupHdrUrl(card.GameName, addon, hdrDatabase);

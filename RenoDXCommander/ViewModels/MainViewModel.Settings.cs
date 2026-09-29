@@ -206,7 +206,7 @@ public partial class MainViewModel
 
     // ── OptiScaler Variant Override ───────────────────────────────────────────
 
-    /// <summary>Returns the OptiScaler variant for a game. "Stable" or "Nightly". Defaults to "Stable".</summary>
+    /// <summary>Returns the OptiScaler variant for a game. "Stable", "Nightly", or "DlssNr". Defaults to "Stable".</summary>
     public string GetOsVariant(string gameName, string store = "")
     {
         var key = GameKey.From(gameName, store).ToKey();
@@ -227,7 +227,129 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
+    // ── NR Runtime ────────────────────────────────────────────────────────────
+
+    /// <summary>Returns the NR runtime version for a game. Empty string = use newest from manifest.</summary>
+    public string GetOsNrRuntime(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.OsNrRuntime.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.OsNrRuntime.TryGetValue(gameName, out var vL) && !string.IsNullOrEmpty(vL)) return vL;
+        return ""; // absent = use newest from manifest
+    }
+
+    /// <summary>Sets the NR runtime version for a game. Null or empty clears the override (use newest).</summary>
+    public void SetOsNrRuntime(string gameName, string? version, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(version))
+        {
+            _gameNameService.OsNrRuntime.Remove(key);
+            _gameNameService.OsNrRuntime.Remove(gameName);
+        }
+        else
+            _gameNameService.OsNrRuntime[key] = version;
+        SaveNameMappings();
+    }
+
     // ── Deploy Streamline ─────────────────────────────────────────────────────
+
+    // ── Neural Rendering Method ───────────────────────────────────────────────    /// <summary>Returns the persisted NR method for a game. Null = not set (auto-detect from game state).</summary>
+    public string? GetNrMethodOverride(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.NrMethodOverrides.TryGetValue(key, out var v)) return v;
+        if (_gameNameService.NrMethodOverrides.TryGetValue(gameName, out var v2)) return v2;
+        return null;
+    }
+
+    /// <summary>Sets the persisted NR method for a game. Null clears the override.</summary>
+    public void SetNrMethodOverride(string gameName, string? value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(value))
+        {
+            _gameNameService.NrMethodOverrides.Remove(key);
+            _gameNameService.NrMethodOverrides.Remove(gameName);
+        }
+        else
+            _gameNameService.NrMethodOverrides[key] = value;
+        SaveNameMappings();
+    }
+
+    // ── NR Addon Version ──────────────────────────────────────────────────────
+
+    /// <summary>Returns the persisted NR addon version for a game. Empty string = use latest.</summary>
+    public string GetNrAddonVersion(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.NrAddonVersion.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.NrAddonVersion.TryGetValue(gameName, out var vL) && !string.IsNullOrEmpty(vL)) return vL;
+        return ""; // absent = use latest
+    }
+
+    /// <summary>Sets the persisted NR addon version for a game. Null or empty clears the override (use latest).</summary>
+    public void SetNrAddonVersion(string gameName, string? version, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(version))
+        {
+            _gameNameService.NrAddonVersion.Remove(key);
+            _gameNameService.NrAddonVersion.Remove(gameName);
+        }
+        else
+            _gameNameService.NrAddonVersion[key] = version;
+        SaveNameMappings();
+    }
+
+    /// <summary>Returns the persisted NR DLL version for a game. Empty string = use latest.</summary>
+    public string GetNrDllVersion(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.NrDllVersion.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.NrDllVersion.TryGetValue(gameName, out var vL) && !string.IsNullOrEmpty(vL)) return vL;
+        return "";
+    }
+
+    /// <summary>Sets the persisted NR DLL version for a game. Null or empty clears the override (use latest).</summary>
+    public void SetNrDllVersion(string gameName, string? version, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(version))
+        {
+            _gameNameService.NrDllVersion.Remove(key);
+            _gameNameService.NrDllVersion.Remove(gameName);
+        }
+        else
+            _gameNameService.NrDllVersion[key] = version;
+        SaveNameMappings();
+    }
+
+    /// <summary>Returns the persisted NR pack version (Feeder or Bridge) for a game. Empty string = use latest.</summary>
+    public string GetNrPackVersion(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.NrPackVersion.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.NrPackVersion.TryGetValue(gameName, out var vL) && !string.IsNullOrEmpty(vL)) return vL;
+        return "";
+    }
+
+    /// <summary>Sets the persisted NR pack version (Feeder or Bridge) for a game. Null or empty clears the override (use latest).</summary>
+    public void SetNrPackVersion(string gameName, string? version, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(version))
+        {
+            _gameNameService.NrPackVersion.Remove(key);
+            _gameNameService.NrPackVersion.Remove(gameName);
+        }
+        else
+            _gameNameService.NrPackVersion[key] = version;
+        CrashReporter.Log($"[MainViewModel.SetNrPackVersion] {gameName}|{store} = '{version ?? "(cleared)"}', dict count={_gameNameService.NrPackVersion.Count}");
+        SaveNameMappings();
+    }
+
+    // ── Deploy Streamline (original) ──────────────────────────────────────────
 
     /// <summary>Returns whether Deploy Streamline is enabled for a game.</summary>
     public bool GetOsDeployStreamline(string gameName, string store = "")
@@ -458,7 +580,356 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
-    // ── DLL Naming Override ───────────────────────────────────────────────────────
+    // ── Ultimate ASI Loader ───────────────────────────────────────────────────
+
+    public string? GetUalInstalledAs(string gameName, string store)
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.UalInstalledAs.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.UalInstalledAs.TryGetValue(gameName, out var vLegacy) && !string.IsNullOrEmpty(vLegacy)) return vLegacy;
+        return null;
+    }
+
+    public void SetUalInstalledAs(string gameName, string? dllName, string store)
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(dllName))
+        {
+            _gameNameService.UalInstalledAs.Remove(key);
+            _gameNameService.UalInstalledAs.Remove(gameName);
+        }
+        else
+            _gameNameService.UalInstalledAs[key] = dllName;
+        SaveNameMappings();
+    }
+
+    // ── Standalone DLSS Enabler ───────────────────────────────────────────────
+
+    public string? GetDeInstalledAs(string gameName, string store)
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.DeInstalledAs.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.DeInstalledAs.TryGetValue(gameName, out var vLegacy) && !string.IsNullOrEmpty(vLegacy)) return vLegacy;
+        return null;
+    }
+
+    public void SetDeInstalledAs(string gameName, string? dllName, string store)
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(dllName))
+        {
+            _gameNameService.DeInstalledAs.Remove(key);
+            _gameNameService.DeInstalledAs.Remove(gameName);
+        }
+        else
+            _gameNameService.DeInstalledAs[key] = dllName;
+        SaveNameMappings();
+    }
+
+    // ── ShortFuse Auto-Config ─────────────────────────────────────────────────
+
+    /// <summary>Returns true when ShortFuse auto-config is enabled for this game (default: disabled when absent).</summary>
+    public bool GetSfAutoConfigEnabled(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        // Absent = disabled by default. Use SfAutoConfigEnabled (opt-in set) instead.
+        return _gameNameService.SfAutoConfigEnabled.Contains(key)
+            || _gameNameService.SfAutoConfigEnabled.Contains(gameName);
+    }
+
+    public void SetSfAutoConfigEnabled(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value) // enabled → add to opt-in set
+            _gameNameService.SfAutoConfigEnabled.Add(key);
+        else // disabled → remove from opt-in set
+        {
+            _gameNameService.SfAutoConfigEnabled.Remove(key);
+            _gameNameService.SfAutoConfigEnabled.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    public bool GetNrCostScalerEnabled(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.DlssNrCostScalerEnabled.Contains(key)
+            || _gameNameService.DlssNrCostScalerEnabled.Contains(gameName);
+    }
+
+    public void SetNrCostScalerEnabled(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value) _gameNameService.DlssNrCostScalerEnabled.Add(key);
+        else
+        {
+            _gameNameService.DlssNrCostScalerEnabled.Remove(key);
+            _gameNameService.DlssNrCostScalerEnabled.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    // ── ShortFuse ZZZ Mode (load order rename) ────────────────────────────────
+
+    /// <summary>Returns true when the ShortFuse addon should be deployed as zzz_renodx-dlss.addon64.</summary>
+    public bool GetSfZzzMode(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.SfZzzMode.Contains(key)
+            || _gameNameService.SfZzzMode.Contains(gameName);
+    }
+
+    /// <summary>Sets whether the ShortFuse addon should be deployed as zzz_renodx-dlss.addon64.</summary>
+    public void SetSfZzzMode(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value) _gameNameService.SfZzzMode.Add(key);
+        else
+        {
+            _gameNameService.SfZzzMode.Remove(key);
+            _gameNameService.SfZzzMode.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    // ── RTX 40 MFG Unlock ─────────────────────────────────────────────────────
+
+    public bool GetRtx40MfgInstalled(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.Rtx40MfgInstalledAs.ContainsKey(key)
+            || _gameNameService.Rtx40MfgInstalledAs.ContainsKey(gameName);
+    }
+
+    public string? GetRtx40MfgInstalledAs(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.Rtx40MfgInstalledAs.TryGetValue(key, out var v)) return v;
+        if (_gameNameService.Rtx40MfgInstalledAs.TryGetValue(gameName, out var v2)) return v2;
+        return null;
+    }
+
+    public void SetRtx40MfgInstalledAs(string gameName, string? dllName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (!string.IsNullOrEmpty(dllName))
+            _gameNameService.Rtx40MfgInstalledAs[key] = dllName;
+        else
+        {
+            _gameNameService.Rtx40MfgInstalledAs.Remove(key);
+            _gameNameService.Rtx40MfgInstalledAs.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    // ── 20/30 FG Unlock ───────────────────────────────────────────────────────
+
+    public bool GetDlssg2030Installed(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.Dlssg2030InstalledAs.ContainsKey(key)
+            || _gameNameService.Dlssg2030InstalledAs.ContainsKey(gameName);
+    }
+
+    public string? GetDlssg2030InstalledAs(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.Dlssg2030InstalledAs.TryGetValue(key, out var v)) return v;
+        if (_gameNameService.Dlssg2030InstalledAs.TryGetValue(gameName, out var v2)) return v2;
+        return null;
+    }
+
+    public void SetDlssg2030InstalledAs(string gameName, string? dllName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (!string.IsNullOrEmpty(dllName))
+            _gameNameService.Dlssg2030InstalledAs[key] = dllName;
+        else
+        {
+            _gameNameService.Dlssg2030InstalledAs.Remove(key);
+            _gameNameService.Dlssg2030InstalledAs.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    public string GetDlssg2030GpuGen(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.Dlssg2030GpuGen.TryGetValue(key, out var v)) return v;
+        if (_gameNameService.Dlssg2030GpuGen.TryGetValue(gameName, out var v2)) return v2;
+        return Dlssg20_30Service.GpuGenRtx30; // default to RTX 30
+    }
+
+    public void SetDlssg2030GpuGen(string gameName, string gpuGen, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        _gameNameService.Dlssg2030GpuGen[key] = gpuGen;
+        SaveNameMappings();
+    }
+
+    /// <summary>
+    /// Post-ShortFuse-install auto-config: renames ReShade → Reshade64.asi,
+    /// installs UAL (winmm → version → dinput8 priority), writes [INSTALL] keys to reshade.ini.
+    /// Respects GetSfAutoConfigEnabled and GetKeepRsIniUpdated per-game settings.
+    /// </summary>
+    public async Task ApplySfAutoConfigAsync(GameCardViewModel card)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath)) return;
+        var installPath = card.InstallPath;
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+
+        // ── Step 1: Rename ReShade DLL to Reshade64.asi ───────────────────────
+        const string asiName = "Reshade64.asi";
+        var rsRecord = card.RsRecord;
+        if (rsRecord != null && !string.IsNullOrEmpty(rsRecord.InstalledAs)
+            && !rsRecord.InstalledAs.Equals(asiName, StringComparison.OrdinalIgnoreCase))
+        {
+            var currentPath = System.IO.Path.Combine(installPath, rsRecord.InstalledAs);
+            var asiPath     = System.IO.Path.Combine(installPath, asiName);
+            try
+            {
+                if (System.IO.File.Exists(currentPath))
+                {
+                    if (System.IO.File.Exists(asiPath)) System.IO.File.Delete(asiPath);
+                    System.IO.File.Move(currentPath, asiPath);
+                    rsRecord.InstalledAs      = asiName;
+                    card.RsRecord.InstalledAs = asiName;
+                    _auxInstaller.SaveAuxRecord(rsRecord);
+                    _crashReporter.Log($"[SfAutoConfig] Renamed ReShade to '{asiName}' for '{gameName}'");
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig] ReShade rename failed — {ex.Message}"); }
+        }
+
+        // ── Step 2: Auto-install ASI Loader (winmm → version → dinput8) ───────
+        var ualSvc = App.Services.GetRequiredService<UltimateAsiLoaderService>();
+        bool ualAlreadyInstalled = !string.IsNullOrEmpty(GetUalInstalledAs(gameName, store));
+
+        if (!ualAlreadyInstalled)
+        {
+            string[] preferenceOrder = { "winmm.dll", "version.dll", "dinput8.dll" };
+            string? chosenName = null;
+            foreach (var candidate in preferenceOrder)
+            {
+                var candidatePath = System.IO.Path.Combine(installPath, candidate);
+                bool takenByOther = System.IO.File.Exists(candidatePath)
+                    && !string.Equals(rsRecord?.InstalledAs, candidate, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(card.OsInstalledFile, candidate, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(card.DcInstalledFile, candidate, StringComparison.OrdinalIgnoreCase);
+                if (!takenByOther) { chosenName = candidate; break; }
+            }
+
+            if (chosenName != null)
+            {
+                try
+                {
+                    var (success, hookedOriginal) = await ualSvc.InstallAsync(card, chosenName).ConfigureAwait(false);
+                    if (success)
+                    {
+                        SetUalInstalledAs(gameName, chosenName, store);
+                        _crashReporter.Log($"[SfAutoConfig] Installed UAL as '{chosenName}' for '{gameName}'" +
+                            (hookedOriginal != null ? $" (chained '{hookedOriginal}')" : ""));
+                    }
+                }
+                catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig] UAL install failed — {ex.Message}"); }
+            }
+            else
+                _crashReporter.Log($"[SfAutoConfig] No suitable UAL name available for '{gameName}'");
+        }
+        else
+            _crashReporter.Log($"[SfAutoConfig] UAL already installed for '{gameName}' — skipping");
+
+        // ── Step 3: Write [INSTALL] HookStreamline=1 + HookDirectX=1 ─────────
+        if (GetKeepRsIniUpdated(gameName, store))
+        {
+            var iniPath = System.IO.Path.Combine(installPath, "reshade.ini");
+            if (System.IO.File.Exists(iniPath))
+            {
+                try
+                {
+                    var ini = AuxInstallService.ParseIni(System.IO.File.ReadAllLines(iniPath));
+                    if (!ini.ContainsKey("INSTALL"))
+                        ini["INSTALL"] = new AuxInstallService.OrderedDict();
+                    ini["INSTALL"]["HookStreamline"] = "1";
+                    ini["INSTALL"]["HookDirectX"]    = "1";
+                    AuxInstallService.WriteIni(iniPath, ini);
+                    _crashReporter.Log($"[SfAutoConfig] Wrote [INSTALL] keys to reshade.ini for '{gameName}'");
+                }
+                catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig] reshade.ini write failed — {ex.Message}"); }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reverts the ShortFuse auto-config applied during install:
+    /// renames Reshade64.asi back to the API-correct default DLL name, and
+    /// uninstalls ASI Loader if RHI auto-installed it.
+    /// Called from the Neural Rendering Remove button for the ShortFuse method.
+    /// </summary>
+    public void RevertSfAutoConfig(GameCardViewModel card)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath)) return;
+        var installPath = card.InstallPath;
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+
+        // ── Revert ReShade rename ─────────────────────────────────────────────
+        const string asiName = "Reshade64.asi";
+        var rsRecord = card.RsRecord;
+        if (rsRecord != null
+            && rsRecord.InstalledAs.Equals(asiName, StringComparison.OrdinalIgnoreCase))
+        {
+            var defaultName = ResolveAutoReShadeFilename(card.DetectedApis)
+                           ?? AuxInstallService.RsNormalName;
+            var asiPath     = System.IO.Path.Combine(installPath, asiName);
+            var defaultPath = System.IO.Path.Combine(installPath, defaultName);
+            try
+            {
+                if (System.IO.File.Exists(asiPath))
+                {
+                    if (System.IO.File.Exists(defaultPath)) System.IO.File.Delete(defaultPath);
+                    System.IO.File.Move(asiPath, defaultPath);
+                    rsRecord.InstalledAs      = defaultName;
+                    card.RsRecord.InstalledAs = defaultName;
+                    _auxInstaller.SaveAuxRecord(rsRecord);
+                    _crashReporter.Log($"[SfAutoConfig.Revert] Renamed '{asiName}' → '{defaultName}' for '{gameName}'");
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig.Revert] ReShade rename failed — {ex.Message}"); }
+        }
+
+        // ── Remove UAL if RHI installed it ────────────────────────────────────
+        var ualInstalled = GetUalInstalledAs(gameName, store);
+        if (!string.IsNullOrEmpty(ualInstalled))
+        {
+            var ualSvc = App.Services.GetRequiredService<UltimateAsiLoaderService>();
+            ualSvc.Uninstall(card);
+            SetUalInstalledAs(gameName, null, store);
+            _crashReporter.Log($"[SfAutoConfig.Revert] Removed UAL ('{ualInstalled}') for '{gameName}'");
+        }
+
+        // ── Remove [INSTALL] keys from reshade.ini ────────────────────────────
+        var iniPath = System.IO.Path.Combine(installPath, "reshade.ini");
+        if (System.IO.File.Exists(iniPath))
+        {
+            try
+            {
+                var ini = AuxInstallService.ParseIni(System.IO.File.ReadAllLines(iniPath));
+                if (ini.TryGetValue("INSTALL", out var installSection))
+                {
+                    installSection.Remove("HookStreamline");
+                    installSection.Remove("HookDirectX");
+                    // Remove the section entirely if now empty
+                    if (installSection.Count == 0)
+                        ini.Remove("INSTALL");
+                    AuxInstallService.WriteIni(iniPath, ini);
+                    _crashReporter.Log($"[SfAutoConfig.Revert] Removed [INSTALL] keys from reshade.ini for '{gameName}'");
+                }
+            }
+            catch (Exception ex) { _crashReporter.Log($"[SfAutoConfig.Revert] reshade.ini cleanup failed — {ex.Message}"); }
+        }
+    }
 
     /// <summary>Per-game DLL naming overrides — delegated to DllOverrideService.</summary>
     private Dictionary<string, DllOverrideConfig> _dllOverrides => _dllOverrideService.GetAllOverrides();
@@ -568,6 +1039,10 @@ public partial class MainViewModel
     public void EnableDllOverride(GameCardViewModel card, string reshadeFileName, string dcFileName)
         => _dllOverrideService.EnableDllOverride(card, reshadeFileName, dcFileName);
 
+    /// <summary>Updates the persisted RS and DC filenames without doing any file renames.</summary>
+    public void SetDllOverrideNames(string gameName, string rsFileName, string dcFileName)
+        => _dllOverrideService.SetDllOverride(gameName, rsFileName, dcFileName);
+
     /// <summary>
     /// Called when DLL override is already ON and the filenames are updated —
     /// renames existing files on disk to the new custom names.
@@ -630,9 +1105,9 @@ public partial class MainViewModel
         {
             _gameNameService.PerGameAddonMode.Remove(key);
             _gameNameService.PerGameAddonMode.Remove(gameName); // clear legacy name-only entry too
-            // Discard per-game addon selection when reverting to global (Req 6.6)
-            _gameNameService.PerGameAddonSelection.Remove(key);
-            _gameNameService.PerGameAddonSelection.Remove(gameName); // clear legacy name-only entry too
+            // Do NOT wipe PerGameAddonSelection here — preserve it so switching back to Select
+            // restores the previous selection. Selection is only cleared explicitly by the user
+            // through the addon picker.
         }
         else
             _gameNameService.PerGameAddonMode[key] = mode;
@@ -752,6 +1227,13 @@ public partial class MainViewModel
                             var detection = _dlssStreamlineService.Detect(card.InstallPath);
                             await rdx5Svc.InstallSfAsync(card.InstallPath, detection).ConfigureAwait(false);
 
+                            // Apply SF auto-config (rename ReShade, install UAL, write [INSTALL] keys)
+                            if (GetSfAutoConfigEnabled(card.GameName, card.Source ?? ""))
+                            {
+                                try { await ApplySfAutoConfigAsync(card).ConfigureAwait(false); }
+                                catch (Exception acEx) { _crashReporter.Log($"[MainViewModel.DeployAddonsForCard] SfAutoConfig failed — {acEx.Message}"); }
+                            }
+
                             // Refresh card DLSS state
                             var freshDetection = _dlssStreamlineService.Detect(card.InstallPath);
                             if (freshDetection.HasAny)
@@ -776,6 +1258,14 @@ public partial class MainViewModel
                 else if (sfInstalled)
                 {
                     // SF was installed but is no longer selected — restore .original files and clean up
+                    // EXCEPT: when the NR section owns this ShortFuse install, leave it alone
+                    var nrMethod = GetNrMethodOverride(gameName, card.Source ?? "");
+                    bool nrOwnsShortFuse = string.Equals(nrMethod, "ShortFuse", StringComparison.OrdinalIgnoreCase);
+                    if (nrOwnsShortFuse)
+                    {
+                        // NR section manages this — do not uninstall
+                    }
+                    else
                     _ = Task.Run(() =>
                     {
                         try
@@ -837,11 +1327,17 @@ public partial class MainViewModel
         {
             var ini = AuxInstallService.ParseIni(File.ReadAllLines(iniPath));
 
-            // Resolve DLSS detection — use card's cached result, or fall back to trusted path cache
+            // Resolve DLSS detection — use card's cached result, fall back to trusted path cache,
+            // then fall back to a full scan (covers cases where Streamline was added after BuildCards ran).
             var detection = card.DlssDetection;
             if (detection == null && !string.IsNullOrEmpty(card.InstallPath))
             {
                 try { detection = _dlssStreamlineService.TryFastDetect(card.GameName, card.InstallPath); }
+                catch { /* non-critical fallback */ }
+            }
+            if ((detection == null || !detection.HasAny) && !string.IsNullOrEmpty(card.InstallPath))
+            {
+                try { detection = _dlssStreamlineService.Detect(card.InstallPath); }
                 catch { /* non-critical fallback */ }
             }
 
@@ -860,11 +1356,27 @@ public partial class MainViewModel
 
                 if (!string.IsNullOrEmpty(detection.DlssPath))
                     ini["RENODX-DLSSFIX"]["DLSSPath"] = detection.DlssPath;
-                if (!string.IsNullOrEmpty(detection.StreamlineInterposerPath))
-                    ini["RENODX-DLSSFIX"]["StreamlinePath"] = detection.StreamlineInterposerPath;
+
+                // StreamlinePath must point to sl.interposer.dll specifically — that is the DLL the
+                // DLSS Fix addon needs to hook into. detection.StreamlineInterposerPath actually holds
+                // sl.common.dll (the version-source DLL) despite the misleading field name, so we
+                // resolve the real interposer path from StreamlineFolder directly.
+                // Fall back to StreamlineInterposerPath if sl.interposer.dll is absent (EA builds etc.)
+                string? slInterposerPath = null;
+                if (!string.IsNullOrEmpty(detection.StreamlineFolder))
+                {
+                    var slExplicitPath = Path.Combine(detection.StreamlineFolder, "sl.interposer.dll");
+                    slInterposerPath = File.Exists(slExplicitPath) ? slExplicitPath : detection.StreamlineInterposerPath;
+                }
+                else
+                {
+                    slInterposerPath = detection.StreamlineInterposerPath;
+                }
+                if (!string.IsNullOrEmpty(slInterposerPath))
+                    ini["RENODX-DLSSFIX"]["StreamlinePath"] = slInterposerPath;
 
                 AuxInstallService.WriteIni(iniPath, ini);
-                _crashReporter.Log($"[ApplyOrRemoveDlssFixIni] Applied DLSS Fix INI settings for '{card.GameName}'");
+                _crashReporter.Log($"[ApplyOrRemoveDlssFixIni] Applied DLSS Fix INI settings for '{card.GameName}' — StreamlinePath={slInterposerPath ?? "(none)"}");
             }
             else
             {
@@ -1353,6 +1865,9 @@ public partial class MainViewModel
 
     /// <summary>Public entry point to persist all settings to disk.</summary>
     public void SaveSettingsPublic() => SaveNameMappings();
+
+    /// <summary>Flush any pending debounced saves. Call on app shutdown.</summary>
+    public void FlushPendingSaves() => _gameNameService.FlushPendingSave();
 
     private void SaveNameMappings()
     {

@@ -171,6 +171,18 @@ public interface IDlssStreamlineService
     Task<string?> EnsureNewestDlssnrCachedAsync();
 
     /// <summary>
+    /// Returns the cached path for a specific DLSS NR DLL version (e.g. "310.8.2"), downloading if needed.
+    /// Returns null if the version is not in the manifest or download fails.
+    /// </summary>
+    Task<string?> EnsureSpecificDlssnrCachedAsync(string version);
+
+    /// <summary>
+    /// Returns the path to the newest cached DLSS NR DLL if already on disk, without downloading.
+    /// Returns null if not yet cached.
+    /// </summary>
+    string? GetCachedNrDllPath();
+
+    /// <summary>
     /// Returns the cached directory path for the newest Streamline version, downloading if needed.
     /// </summary>
     Task<string?> EnsureNewestStreamlineCachedAsync();
@@ -193,7 +205,7 @@ public class DlssDetectionResult
     /// <summary>Full path to nvngx_dlssnr.dll, or null if not found.</summary>
     public string? DlssnrPath { get; set; }
 
-    /// <summary>Full path to sl.interposer.dll, or null if not found.</summary>
+    /// <summary>Full path to sl.common.dll (primary version source), or null if not found.</summary>
     public string? StreamlineInterposerPath { get; set; }
 
     /// <summary>The folder containing Streamline DLLs (derived from sl.interposer.dll location).</summary>

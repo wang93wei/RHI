@@ -97,6 +97,7 @@ public class REFrameworkService : IREFrameworkService
 
             // ── Copy cached DLL to game directory ─────────────────────────────
             progress?.Report(("Installing dinput8.dll...", 80));
+            AuxInstallService.SentinelBackup(destPath);
             File.Copy(cachedDll, destPath, overwrite: true);
 
             // ── Fetch version tag ─────────────────────────────────────────────
@@ -241,11 +242,7 @@ public class REFrameworkService : IREFrameworkService
     public void Uninstall(string gameName, string installPath)
     {
         var dllPath = Path.Combine(installPath, DllFileName);
-        if (File.Exists(dllPath))
-        {
-            File.Delete(dllPath);
-            CrashReporter.Log($"[REFrameworkService.Uninstall] Deleted {DllFileName} from {installPath}");
-        }
+        AuxInstallService.SentinelRestore(dllPath);
 
         RemoveRecord(gameName, installPath);
     }
@@ -407,6 +404,38 @@ public class REFrameworkService : IREFrameworkService
     // ── Persistence ───────────────────────────────────────────────────────────────
 
     public List<REFrameworkInstalledRecord> GetRecords() => LoadRecords();
+
+    /// <summary>
+    /// Updates the InstalledVersion on all non-PD-Upscaler records to the given version
+    /// and persists to disk. Called after a version check confirms a newer tag is live
+    /// so that subsequent Refreshes show the correct build number.
+    /// </summary>
+    public void SyncInstalledVersion(string version)
+    {
+        try
+        {
+            var records = LoadRecords();
+            bool changed = false;
+            foreach (var r in records)
+            {
+                if (!string.Equals(r.InstalledVersion, "PD-Upscaler", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(r.InstalledVersion, version, StringComparison.OrdinalIgnoreCase))
+                {
+                    r.InstalledVersion = version;
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                SaveRecords(records);
+                CrashReporter.Log($"[REFrameworkService.SyncInstalledVersion] Updated all records to {version}");
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[REFrameworkService.SyncInstalledVersion] Failed — {ex.Message}");
+        }
+    }
 
     private List<REFrameworkInstalledRecord> LoadRecords()
     {

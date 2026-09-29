@@ -109,17 +109,24 @@ public class MassDlssDeployDialog
 
         // ── Right side: Version dropdowns (pre-populated with saved defaults) ──
         var settings = _viewModel.Settings;
-        var dlssCombo = BuildVersionCombo(_dlssService.DlssVersions, settings.DefaultDlssVersion);
-        var dlssdCombo = BuildVersionCombo(_dlssService.DlssdVersions, settings.DefaultDlssdVersion);
-        var dlssgCombo = BuildVersionCombo(_dlssService.DlssgVersions, settings.DefaultDlssgVersion);
-        var slCombo = BuildVersionCombo(_dlssService.StreamlineVersions, settings.DefaultStreamlineVersion);
+        var dlssCombo  = BuildVersionCombo(_dlssService.DlssVersions,       settings.DefaultDlssVersion,  includeDriverOverride: true, currentDriverOverride: settings.DefaultSrDriverOverride);
+        var dlssdCombo = BuildVersionCombo(_dlssService.DlssdVersions,      settings.DefaultDlssdVersion, includeDriverOverride: true, currentDriverOverride: settings.DefaultRrDriverOverride);
+        var dlssgCombo = BuildVersionCombo(_dlssService.DlssgVersions,      settings.DefaultDlssgVersion, includeDriverOverride: true, currentDriverOverride: settings.DefaultFgDriverOverride);
+        var slCombo    = BuildVersionCombo(_dlssService.StreamlineVersions,  settings.DefaultStreamlineVersion);
+
+        // Force visual refresh when switching away from "NVIDIA Override" — WinUI doesn't clear the old text otherwise
+        static void ForceComboRefresh(ComboBox cb) =>
+            cb.SelectionChanged += (s, e) => VisualStateManager.GoToState(cb, "Normal", false);
+        ForceComboRefresh(dlssCombo);
+        ForceComboRefresh(dlssdCombo);
+        ForceComboRefresh(dlssgCombo);
 
         // ── Preset dropdowns (pre-populated with saved defaults) ──
         var srPresetCombo = BuildPresetCombo(DlssPresetService.SrPresets, settings.DefaultSrPreset);
         var rrPresetCombo = BuildPresetCombo(DlssPresetService.RrPresets, settings.DefaultRrPreset);
         var fgPresetCombo = BuildPresetCombo(DlssPresetService.FgPresets, settings.DefaultFgPreset);
 
-        var rightPanel = new StackPanel { Spacing = 8, Width = 280 };
+        var rightPanel = new StackPanel { Spacing = 8, Width = 320 };
         rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelDlssSr"), dlssCombo));
         rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelDlssRr"), dlssdCombo));
         rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelDlssFg"), dlssgCombo));
@@ -136,7 +143,14 @@ public class MassDlssDeployDialog
         rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelRrPreset"), rrPresetCombo));
         rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelFgPreset"), fgPresetCombo));
 
-        // Auto-create profiles checkbox
+        var rightScroll = new ScrollViewer
+        {
+            Content = rightPanel,
+            MaxHeight = 420,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+
+        // Auto-create profiles checkbox — lives outside the scroll so it's always visible
         var autoCreateCheck = new CheckBox
         {
             Content = Loc.GetString("Dialog.AutoCreateNvidiaProfiles"),
@@ -191,7 +205,7 @@ public class MassDlssDeployDialog
             XamlRoot = _xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
-        dialog.Resources["ContentDialogMaxWidth"] = 750.0;
+        dialog.Resources["ContentDialogMaxWidth"] = 800.0;
 
         var result = await DialogService.ShowSafeAsync(dialog);
 
@@ -212,25 +226,30 @@ public class MassDlssDeployDialog
         ComboBox srPresetCombo, ComboBox rrPresetCombo, ComboBox fgPresetCombo,
         bool autoCreateProfiles)
     {
-        var dlssVersion = dlssCombo.SelectedItem as string;
+        var dlssVersion  = dlssCombo.SelectedItem  as string;
         var dlssdVersion = dlssdCombo.SelectedItem as string;
         var dlssgVersion = dlssgCombo.SelectedItem as string;
-        var slVersion = slCombo.SelectedItem as string;
+        var slVersion    = slCombo.SelectedItem    as string;
 
         var srPresetSelection = srPresetCombo.SelectedItem as string;
         var rrPresetSelection = rrPresetCombo.SelectedItem as string;
         var fgPresetSelection = fgPresetCombo.SelectedItem as string;
 
+        // "NVIDIA Override" in the version combo means: write the driver DLL override, skip file swap
+        bool srDriverEnable = dlssVersion  == NvidiaOverrideOption;
+        bool rrDriverEnable = dlssdVersion == NvidiaOverrideOption;
+        bool fgDriverEnable = dlssgVersion == NvidiaOverrideOption;
+
         // Nothing selected at all
-        bool anyDllSelected = dlssVersion != NoneOption || dlssdVersion != NoneOption || dlssgVersion != NoneOption || slVersion != NoneOption;
+        bool anyDllSelected    = dlssVersion  != NoneOption || dlssdVersion != NoneOption || dlssgVersion != NoneOption || slVersion != NoneOption;
         bool anyPresetSelected = srPresetSelection != NoneOption || rrPresetSelection != NoneOption || fgPresetSelection != NoneOption;
         if (!anyDllSelected && !anyPresetSelected)
             return;
 
         int dlssCount = 0, dlssdCount = 0, dlssgCount = 0, slCount = 0;
         int srPresetCount = 0, rrPresetCount = 0, fgPresetCount = 0, presetMissedCount = 0;
+        int srDriverCount = 0, rrDriverCount = 0, fgDriverCount = 0;
         int skippedNoComponent = 0, skippedAlreadyAtVersion = 0;
-
         // Set auto-create flag on preset service
         var presetService = App.Services.GetRequiredService<DlssPresetService>();
         var previousAutoCreate = presetService.AutoCreateProfiles;
@@ -275,7 +294,13 @@ public class MassDlssDeployDialog
             RequestedTheme = ElementTheme.Dark,
         };
 
-        _ = DialogService.ShowSafeAsync(progressDialog);
+        // Use explicit gate pattern to avoid a race condition where fire-and-forget ShowSafeAsync
+        // hasn't acquired the gate yet when progressDialog.Hide() is called, causing two concurrent
+        // ShowSafeAsync calls to race on the gate and trigger WinUI's invisible modal overlay freeze.
+        bool deployGateReleased = false;
+        progressDialog.Closed += (_, _) => { if (!deployGateReleased) { deployGateReleased = true; DialogService.ReleaseDialogGate(); } };
+        if (await DialogService.WaitDialogGateAsync(10))
+            _ = progressDialog.ShowAsync();
         await Task.Delay(100); // Let dialog render
 
         // Count selected games for progress
@@ -293,6 +318,15 @@ public class MassDlssDeployDialog
             var detection = card.DlssDetection;
             if (detection == null) { skippedNoComponent++; continue; }
 
+            // Skip games whose install folder no longer exists — avoids hangs on
+            // deleted/moved/disconnected paths
+            if (string.IsNullOrEmpty(card.InstallPath) || !Directory.Exists(card.InstallPath))
+            {
+                CrashReporter.Log($"[MassDlssDeployDialog] Skipping '{card.GameName}' — install path not found: '{card.InstallPath}'");
+                skippedNoComponent++;
+                continue;
+            }
+
             processed++;
             progressText.Text = Loc.GetString("Dialog.DlssDeploy.Progress", processed, totalSelected, card.GameName);
             await Task.Delay(1); // Yield to UI thread so text updates visually
@@ -301,7 +335,12 @@ public class MassDlssDeployDialog
             if (dlssVersion != NoneOption && detection.DlssPath != null
                 && !(card.DlssInstalledVersion?.StartsWith("1.") == true))
             {
-                if (dlssVersion == DefaultOption)
+                if (srDriverEnable)
+                {
+                    if (presetService.IsSupported && card.HasDlss)
+                    { presetService.SetSrDriverOverride(card.GameName, card.InstallPath, true); srDriverCount++; }
+                }
+                else if (dlssVersion == DefaultOption)
                 {
                     if (_dlssService.HasBackup(detection.DlssPath))
                     { _dlssService.Restore(detection.DlssPath); dlssCount++; }
@@ -322,7 +361,12 @@ public class MassDlssDeployDialog
             // DLSS RR
             if (dlssdVersion != NoneOption && detection.DlssdPath != null)
             {
-                if (dlssdVersion == DefaultOption)
+                if (rrDriverEnable)
+                {
+                    if (presetService.IsSupported && card.HasDlssd)
+                    { presetService.SetRrDriverOverride(card.GameName, card.InstallPath, true); rrDriverCount++; }
+                }
+                else if (dlssdVersion == DefaultOption)
                 {
                     if (_dlssService.HasBackup(detection.DlssdPath))
                     { _dlssService.Restore(detection.DlssdPath); dlssdCount++; }
@@ -343,7 +387,12 @@ public class MassDlssDeployDialog
             // DLSS FG
             if (dlssgVersion != NoneOption && detection.DlssgPath != null)
             {
-                if (dlssgVersion == DefaultOption)
+                if (fgDriverEnable)
+                {
+                    if (presetService.IsSupported && card.HasDlssg)
+                    { presetService.SetFgDriverOverride(card.GameName, card.InstallPath, true); fgDriverCount++; }
+                }
+                else if (dlssgVersion == DefaultOption)
                 {
                     if (_dlssService.HasBackup(detection.DlssgPath))
                     { _dlssService.Restore(detection.DlssgPath); dlssgCount++; }
@@ -416,7 +465,8 @@ public class MassDlssDeployDialog
             card.NotifyAll();
         }
 
-        // Close progress dialog by dismissing it
+        // Close progress dialog — release gate explicitly before Hide
+        if (!deployGateReleased) { deployGateReleased = true; DialogService.ReleaseDialogGate(); }
         progressDialog.Hide();
 
         // Restore auto-create flag
@@ -431,6 +481,9 @@ public class MassDlssDeployDialog
         if (srPresetCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportSrPreset", srPresetCount));
         if (rrPresetCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportRrPreset", rrPresetCount));
         if (fgPresetCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportFgPreset", fgPresetCount));
+        if (srDriverCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportSrDriver", srDriverCount));
+        if (rrDriverCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportRrDriver", rrDriverCount));
+        if (fgDriverCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ReportFgDriver", fgDriverCount));
         if (autoCreateProfiles && presetService.ProfilesCreatedCount > 0)
             report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ProfilesCreated", presetService.ProfilesCreatedCount));
         if (skippedAlreadyAtVersion > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.SkippedAlreadyAtVersion", skippedAlreadyAtVersion));
@@ -487,7 +540,11 @@ public class MassDlssDeployDialog
             RequestedTheme = ElementTheme.Dark,
         };
 
-        _ = DialogService.ShowSafeAsync(progressDialog);
+        // Use explicit gate pattern to avoid the fire-and-forget ShowSafeAsync race
+        bool restoreGateReleased = false;
+        progressDialog.Closed += (_, _) => { if (!restoreGateReleased) { restoreGateReleased = true; DialogService.ReleaseDialogGate(); } };
+        if (await DialogService.WaitDialogGateAsync(10))
+            _ = progressDialog.ShowAsync();
         await Task.Delay(100);
 
         for (int i = 0; i < eligibleCards.Count; i++)
@@ -511,14 +568,18 @@ public class MassDlssDeployDialog
                 restoredCount++;
             }
 
-            // Reset presets to Default (0x0)
+            // Reset presets to Default (0x0) and clear driver overrides
             bool presetReset = false;
             if (presetService.SetSrPreset(card.GameName, card.InstallPath, 0)) presetReset = true;
             if (presetService.SetRrPreset(card.GameName, card.InstallPath, 0)) presetReset = true;
             if (presetService.SetFgPreset(card.GameName, card.InstallPath, 0)) presetReset = true;
+            if (presetService.IsSupported)
+                presetService.ClearAllDriverOverrides(card.GameName, card.InstallPath ?? "");
             if (presetReset) presetsResetCount++;
         }
 
+        // Close progress dialog — release gate explicitly before Hide
+        if (!restoreGateReleased) { restoreGateReleased = true; DialogService.ReleaseDialogGate(); }
         progressDialog.Hide();
 
         var reportText = new System.Text.StringBuilder();
@@ -552,14 +613,22 @@ public class MassDlssDeployDialog
         return false;
     }
 
-    private ComboBox BuildVersionCombo(IReadOnlyList<string> versions, string savedDefault = "")
+    private const string NvidiaOverrideOption = "NVIDIA Override";
+
+    private ComboBox BuildVersionCombo(IReadOnlyList<string> versions, string savedDefault = "", bool includeDriverOverride = false, bool currentDriverOverride = false)
     {
         var items = new List<string> { NoneOption, DefaultOption };
         items.AddRange(versions);
         items.Add(CustomOption);
+        if (includeDriverOverride)
+            items.Add(NvidiaOverrideOption);
 
         int selectedIdx = 0; // Default to "None"
-        if (!string.IsNullOrEmpty(savedDefault))
+        if (includeDriverOverride && currentDriverOverride)
+        {
+            selectedIdx = items.Count - 1; // "NVIDIA Override" is last
+        }
+        else if (!string.IsNullOrEmpty(savedDefault))
         {
             var idx = items.IndexOf(savedDefault);
             if (idx >= 0) selectedIdx = idx;
@@ -620,5 +689,20 @@ public class MassDlssDeployDialog
                 return value;
         }
         return 0; // Default
+    }
+
+    /// <summary>Builds the NVIDIA Override combo: None / Enable / Disable.</summary>
+    private static ComboBox BuildDriverOverrideCombo(bool savedDefault)
+    {
+        var items = new List<string> { NoneOption, "Enable", "Disable" };
+        int selectedIdx = savedDefault ? 1 : 0; // pre-select Enable when default is true
+        return new ComboBox
+        {
+            ItemsSource = items,
+            SelectedIndex = selectedIdx,
+            FontSize = 12,
+            CornerRadius = new CornerRadius(6),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
     }
 }

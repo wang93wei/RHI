@@ -56,7 +56,8 @@ public partial class DlssPresetService
 
     // ── ReBAR (Resizable BAR) ─────────────────────────────────────────────────
 
-    private const uint REBAR_FEATURE_ID = 0x000F00BA;
+    private const uint REBAR_ENABLE_ID    = 0x000BFA21;  // 0=Off, 1=Auto (default), 2=On
+    private const uint REBAR_FEATURE_ID   = 0x000F00BA;
     private const uint REBAR_EXPR_MODES_ID = 0x00C09D09;
     private const uint REBAR_SIZE_LIMIT_ID = 0x000F00FF;
 
@@ -84,6 +85,155 @@ public partial class DlssPresetService
     /// <summary>Returns the ReBAR Expr Mode value (0 = Standard, 2 = Optimized).</summary>
     public uint GetReBarMode(string gameName, string installPath)
         => GetPreset(gameName, installPath, REBAR_EXPR_MODES_ID);
+
+    /// <summary>
+    /// Returns the ReBAR Enable mode for a game profile (0x000BFA21).
+    /// 0 = Off, 1 = Auto (driver default), 2 = On. Returns 1 (Auto) if not set in profile.
+    /// </summary>
+    public uint GetReBarEnableMode(string gameName, string installPath)
+    {
+        if (!_isSupported || _session == null) return 1;
+        try
+        {
+            var profile = FindProfile(gameName, installPath);
+            if (profile == null) return 1;
+            var sessionHandle = GetHandlePtr(_session.Handle);
+            var profileHandle = GetHandlePtr(profile.Handle);
+            if (sessionHandle != IntPtr.Zero && profileHandle != IntPtr.Zero)
+            {
+                var raw = GetSettingRawNvApi(sessionHandle, profileHandle, REBAR_ENABLE_ID);
+                // null = not in profile = Auto; 0 = Off, 1 = Auto explicit, 2 = On
+                if (raw.HasValue) return raw.Value;
+            }
+        }
+        catch { }
+        return 1; // Not set = Auto
+    }
+
+    /// <summary>
+    /// Sets the ReBAR Enable mode for a game profile (0x000BFA21).
+    /// 0 = Off, 1 = Auto (driver default), 2 = On.
+    /// Also syncs REBAR_FEATURE_ID for backwards compatibility.
+    /// </summary>
+    public bool SetReBarEnableMode(string gameName, string installPath, uint mode)
+    {
+        CrashReporter.Log($"[DlssPresetService.SetReBarEnableMode] gameName='{gameName}', mode={mode}");
+        // Write the new Enable ID via raw NVAPI — non-deletable, always write explicit value.
+        // Off=0, Auto=1, On=2
+        var ok = SetRtxHdrRaw(gameName, installPath, REBAR_ENABLE_ID, mode);
+        // Sync legacy REBAR_FEATURE_ID: On=1, Off=0, Auto=delete (let driver decide)
+        try
+        {
+            if (mode == 1) // Auto — remove legacy override entirely
+            {
+                var profile = FindProfile(gameName, installPath);
+                if (profile != null) { try { profile.DeleteSetting(REBAR_FEATURE_ID); profile.DeleteSetting(REBAR_EXPR_MODES_ID); profile.DeleteSetting(REBAR_SIZE_LIMIT_ID); _session?.Save(); } catch { } }
+            }
+            else if (mode == 0) // Off — delete legacy settings and size limit (no Disabled entry)
+            {
+                var profile = FindProfile(gameName, installPath);
+                if (profile != null) { try { profile.DeleteSetting(REBAR_FEATURE_ID); profile.DeleteSetting(REBAR_EXPR_MODES_ID); profile.DeleteSetting(REBAR_SIZE_LIMIT_ID); _session?.Save(); } catch { } }
+            }
+            else // On
+                SetReBarEnabled(gameName, installPath, true, 2u);
+        }
+        catch { }
+        return ok;
+    }
+
+    /// <summary>
+    /// Returns the global (base profile) ReBAR Enable mode (0x000BFA21).
+    /// 0 = Off, 1 = Auto, 2 = On. Returns 1 if not set.
+    /// </summary>
+    public uint GetGlobalReBarEnableMode()
+    {
+        if (!_isSupported || _session == null) return 1;
+        try
+        {
+            var sessionHandle = GetHandlePtr(_session.Handle);
+            var profileHandle = GetHandlePtr(_session.BaseProfile.Handle);
+            if (sessionHandle != IntPtr.Zero && profileHandle != IntPtr.Zero)
+            {
+                var raw = GetSettingRawNvApi(sessionHandle, profileHandle, REBAR_ENABLE_ID);
+                CrashReporter.Log($"[DlssPresetService.GetGlobalReBarEnableMode] raw={raw?.ToString() ?? "null (not in profile → Auto)"}");
+                if (raw.HasValue) return raw.Value;
+            }
+        }
+        catch { }
+        return 1; // Not set = Auto
+    }
+
+    /// <summary>
+    /// Sets the global (base profile) ReBAR Enable mode (0x000BFA21) via raw NVAPI.
+    /// Also syncs REBAR_FEATURE_ID on the base profile via PS helper (requires elevation).
+    /// </summary>
+    public bool SetGlobalReBarEnableMode(uint mode)
+    {
+        if (!_isSupported || _session == null) return false;
+        try
+        {
+            // Write 0x000BFA21 directly via raw NVAPI on the base profile.
+            // This ID is non-deletable (returns -160) — always write explicit value.
+            // Off=0, Auto=1 (driver default), On=2
+            var sessionHandle = GetHandlePtr(_session.Handle);
+            var baseHandle   = GetHandlePtr(_session.BaseProfile.Handle);
+            if (sessionHandle != IntPtr.Zero && baseHandle != IntPtr.Zero)
+                SetSettingRawNvApi(sessionHandle, baseHandle, REBAR_ENABLE_ID, mode);
+
+            // Sync legacy REBAR_FEATURE_ID + REBAR_EXPR_MODES_ID + REBAR_SIZE_LIMIT_ID via PS helper
+            // (base profile writes for these require elevation on most systems)
+            var nvApiPath  = Path.Combine(AppContext.BaseDirectory, "NvAPIWrapper.dll");
+            var scriptPath = Path.Combine(Path.GetTempPath(), "rhi_global_rebar_enable_mode.ps1");
+
+            string featureBlock = mode == 2
+                ? "$base.SetSetting([uint32]0x000F00BA, [uint32]1)"
+                : "try { $base.DeleteSetting([uint32]0x000F00BA) } catch {}";
+            string exprBlock = mode == 2
+                ? "$base.SetSetting([uint32]0x00C09D09, [uint32]0)"
+                : "try { $base.DeleteSetting([uint32]0x00C09D09) } catch {}";
+            string sizeLimitBlock = "# size limit written by C# after session reload";
+
+            string scriptBody = $@"
+Add-Type -Path '{nvApiPath.Replace("'", "''")}'
+[NvAPIWrapper.NVIDIA]::Initialize()
+$session = [NvAPIWrapper.DRS.DriverSettingsSession]::CreateAndLoad()
+$base = $session.BaseProfile
+{featureBlock}
+{exprBlock}
+{sizeLimitBlock}
+$session.Save()
+";
+            File.WriteAllText(scriptPath, scriptBody);
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName  = "powershell.exe",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\"",
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+            };
+            System.Diagnostics.Process.Start(psi);
+            // Pause to let the elevated PS complete — base profile writes are fast
+            System.Threading.Thread.Sleep(3000);
+            try { File.Delete(scriptPath); } catch { }
+            // Reload session
+            try
+            {
+                _session = DriverSettingsSession.CreateAndLoad();
+                _cachedProfiles = new(StringComparer.OrdinalIgnoreCase);
+                foreach (var p in _session.Profiles) _cachedProfiles.TryAdd(p.Name, p);
+                InvalidateProfileLookupCache();
+            }
+            catch { }
+            CrashReporter.Log($"[DlssPresetService.SetGlobalReBarEnableMode] Set mode={mode}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DlssPresetService.SetGlobalReBarEnableMode] Error — {ex.Message}");
+            return false;
+        }
+    }
 
     /// <summary>Returns the ReBAR Size Limit in bytes (0 = not set / use driver default).</summary>
     public ulong GetReBarSizeLimit(string gameName, string installPath)
@@ -124,15 +274,19 @@ public partial class DlssPresetService
                             {
                                 // Check setting type: offset 4104 (0=DWORD, 1=BINARY)
                                 var settingType = Marshal.ReadInt32(ptr, 4104);
-                                if (settingType == 1) // BINARY
+                                if (settingType == 1) // BINARY — length at 8216, data at 8220
                                 {
-                                    // Binary data at offset 8220, length at offset 8216
                                     var binLen = Marshal.ReadInt32(ptr, 8216);
                                     if (binLen >= 8)
                                     {
                                         var val = (ulong)Marshal.ReadInt64(ptr, 8220);
                                         return val;
                                     }
+                                }
+                                else if (settingType == 4) // QWORD — 64-bit integer directly at 8220
+                                {
+                                    var val = (ulong)Marshal.ReadInt64(ptr, 8220);
+                                    return val;
                                 }
                                 else // DWORD
                                 {
@@ -212,14 +366,24 @@ foreach ($p in $session.Profiles) {{
 if ($null -eq $profile) {{ exit 1 }}";
             }
 
+            var doneFile = scriptPath + ".done";
+            if (File.Exists(doneFile)) try { File.Delete(doneFile); } catch { }
+
             var script = $@"
 Add-Type -Path '{nvApiPath.Replace("'", "''")}'
 [NvAPIWrapper.NVIDIA]::Initialize()
 $session = [NvAPIWrapper.DRS.DriverSettingsSession]::CreateAndLoad()
 {profileBlock}
 [byte[]]$bytes = @(0x{hexBytes})
-$profile.SetSetting([uint32]0x000F00FF, $bytes)
-$session.Save()
+try {{
+    $profile.SetSetting([uint32]0x000F00FF, $bytes)
+    $session.Save()
+    [System.IO.File]::WriteAllText('{doneFile.Replace("\\", "\\\\")}', '0')
+    exit 0
+}} catch {{
+    [System.IO.File]::WriteAllText('{doneFile.Replace("\\", "\\\\")}', '2')
+    exit 2
+}}
 ";
             File.WriteAllText(scriptPath, script);
 
@@ -227,12 +391,25 @@ $session.Save()
             {
                 FileName = "powershell.exe",
                 Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
             };
-            var process = System.Diagnostics.Process.Start(psi);
-            if (process == null) return false;
-            process.WaitForExit(10000);
+            System.Diagnostics.Process.Start(psi);
+
+            // Poll for sentinel file — runas returns a ShellExecute wrapper handle, not the PS process
+            // so WaitForExit() returns immediately. The sentinel written by the script tells us when done.
+            var deadline = DateTime.UtcNow.AddSeconds(12);
+            while (!File.Exists(doneFile) && DateTime.UtcNow < deadline)
+                System.Threading.Thread.Sleep(100);
+
+            int exitCode = 2;
+            if (File.Exists(doneFile))
+            {
+                var content = File.ReadAllText(doneFile).Trim();
+                exitCode = content == "0" ? 0 : 2;
+                try { File.Delete(doneFile); } catch { }
+            }
             try { File.Delete(scriptPath); } catch { }
 
             // Reload session
@@ -249,8 +426,8 @@ $session.Save()
             if (profileName != null)
                 _rebarSizeLimitCache[profileName] = sizeBytes;
 
-            CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimitViaPs] Set 0x{sizeBytes:X16} via PS helper (profile='{profileName ?? "BaseProfile"}', exitCode={process.ExitCode})");
-            return process.ExitCode == 0;
+            CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimitViaPs] Set 0x{sizeBytes:X16} via PS helper (profile='{profileName ?? "BaseProfile"}', exitCode={exitCode})");
+            return exitCode == 0;
         }
         catch (Exception ex)
         {
@@ -291,11 +468,10 @@ $session.Save()
                 var existingSize = GetReBarSizeLimit(gameName, installPath);
                 if (existingSize == 0)
                 {
-                    // Use raw binary write (NvAPIWrapper's SetSetting(uint, byte[]) is broken for BINARY)
-                    var sessionH = GetHandlePtr(_session.Handle);
-                    var profileH = GetHandlePtr(profile.Handle);
-                    if (sessionH != IntPtr.Zero && profileH != IntPtr.Zero)
-                        SetBinarySettingRawNvApi(sessionH, profileH, REBAR_SIZE_LIMIT_ID, BitConverter.GetBytes(0x0000000040000000UL));
+                    var sH2 = GetHandlePtr(_session.Handle);
+                    var pH2 = GetHandlePtr(profile.Handle);
+                    if (sH2 != IntPtr.Zero && pH2 != IntPtr.Zero)
+                        SetQwordSettingRawNvApi(sH2, pH2, REBAR_SIZE_LIMIT_ID, 0x0000000040000000UL);
                 }
             }
             else
@@ -397,10 +573,10 @@ if ($null -ne $profile) {{
                     var freshProfile = FindProfile(gameName, installPath);
                     if (freshProfile != null)
                     {
-                        var sH = GetHandlePtr(_session.Handle);
-                        var pH = GetHandlePtr(freshProfile.Handle);
-                        if (sH != IntPtr.Zero && pH != IntPtr.Zero)
-                            SetBinarySettingRawNvApi(sH, pH, REBAR_SIZE_LIMIT_ID, BitConverter.GetBytes(0x0000000040000000UL));
+                        var sH3 = GetHandlePtr(_session.Handle);
+                        var pH3 = GetHandlePtr(freshProfile.Handle);
+                        if (sH3 != IntPtr.Zero && pH3 != IntPtr.Zero)
+                            SetQwordSettingRawNvApi(sH3, pH3, REBAR_SIZE_LIMIT_ID, 0x0000000040000000UL);
                     }
                 }
             }
@@ -442,32 +618,19 @@ if ($null -ne $profile) {{
             if (profile == null) return false;
         }
 
-        // Use raw NVAPI binary write (same approach as NVPI) — works on all systems
+        // ReBAR Size Limit is stored as QWORD (type 4 / DRS_DWORD64) by the driver.
+        // NvAPIWrapper encodes it as Binary (type 1) which writes garbage — use raw NVAPI QWORD write.
+        CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimit] Writing 0x{sizeBytes:X16} for '{gameName}' via QWORD raw NVAPI");
         var sessionH = GetHandlePtr(_session.Handle);
         var profileH = GetHandlePtr(profile.Handle);
         if (sessionH == IntPtr.Zero || profileH == IntPtr.Zero)
         {
-            CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimit] Failed to get native handles for '{gameName}'");
+            CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimit] Failed to get handles for '{gameName}'");
             return false;
         }
-
-        var data = BitConverter.GetBytes(sizeBytes); // 8 bytes, little-endian
-        var success = SetBinarySettingRawNvApi(sessionH, profileH, REBAR_SIZE_LIMIT_ID, data);
-        if (success)
-        {
-            _rebarSizeLimitCache[gameName] = sizeBytes;
-            CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimit] Set 0x{sizeBytes:X16} for '{gameName}' via raw binary NVAPI");
-        }
-        else
-        {
-            // Fallback to PS helper (legacy path for edge cases)
-            CrashReporter.Log($"[DlssPresetService.SetReBarSizeLimit] Raw binary write failed for '{gameName}', trying PS helper...");
-            success = SetReBarSizeLimitViaPs(profile.Name, sizeBytes, useBaseProfile: false);
-            if (success) _rebarSizeLimitCache[gameName] = sizeBytes;
-        }
+        var success = SetQwordSettingRawNvApi(sessionH, profileH, REBAR_SIZE_LIMIT_ID, sizeBytes);
+        if (success) _rebarSizeLimitCache[gameName] = sizeBytes;
         return success;
     }
-
-    // (SetReBarSizeLimitElevated removed — all writes go through SetReBarSizeLimitViaPs directly)
 
 }

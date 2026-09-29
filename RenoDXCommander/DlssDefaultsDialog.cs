@@ -33,7 +33,7 @@ public static class DlssDefaultsDialog
         srCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Dlss"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
         srCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
-        var srVersionCombo = BuildCombo(dlssService.DlssVersions, settings.DefaultDlssVersion);
+        var srVersionCombo = BuildCombo(dlssService.DlssVersions, settings.DefaultDlssVersion, includeDriverOverride: true, currentDriverOverride: settings.DefaultSrDriverOverride);
         srCol.Children.Add(srVersionCombo);
 
         srCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
@@ -55,7 +55,7 @@ public static class DlssDefaultsDialog
         rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.RayReconstruction"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
         rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
-        var rrVersionCombo = BuildCombo(dlssService.DlssdVersions, settings.DefaultDlssdVersion);
+        var rrVersionCombo = BuildCombo(dlssService.DlssdVersions, settings.DefaultDlssdVersion, includeDriverOverride: true, currentDriverOverride: settings.DefaultRrDriverOverride);
         rrCol.Children.Add(rrVersionCombo);
 
         rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
@@ -77,7 +77,7 @@ public static class DlssDefaultsDialog
         fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.FrameGeneration"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) });
 
         fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
-        var fgVersionCombo = BuildCombo(dlssService.DlssgVersions, settings.DefaultDlssgVersion);
+        var fgVersionCombo = BuildCombo(dlssService.DlssgVersions, settings.DefaultDlssgVersion, includeDriverOverride: true, currentDriverOverride: settings.DefaultFgDriverOverride);
         fgCol.Children.Add(fgVersionCombo);
 
         fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Microsoft.UI.Xaml.Thickness(0, 2, 0, 0) });
@@ -144,10 +144,19 @@ public static class DlssDefaultsDialog
         var result = await DialogService.ShowSafeAsync(dialog);
         if (result != ContentDialogResult.Primary) return;
 
-        // Save selections
-        settings.DefaultDlssVersion = GetSelectedVersion(srVersionCombo);
-        settings.DefaultDlssdVersion = GetSelectedVersion(rrVersionCombo);
-        settings.DefaultDlssgVersion = GetSelectedVersion(fgVersionCombo);
+        // Save selections — "NVIDIA Override" stores the bool, not the version string
+        var srVersionSelected = GetSelectedVersion(srVersionCombo);
+        settings.DefaultSrDriverOverride = srVersionSelected == "NVIDIA Override";
+        settings.DefaultDlssVersion = settings.DefaultSrDriverOverride ? "" : srVersionSelected;
+
+        var rrVersionSelected = GetSelectedVersion(rrVersionCombo);
+        settings.DefaultRrDriverOverride = rrVersionSelected == "NVIDIA Override";
+        settings.DefaultDlssdVersion = settings.DefaultRrDriverOverride ? "" : rrVersionSelected;
+
+        var fgVersionSelected = GetSelectedVersion(fgVersionCombo);
+        settings.DefaultFgDriverOverride = fgVersionSelected == "NVIDIA Override";
+        settings.DefaultDlssgVersion = settings.DefaultFgDriverOverride ? "" : fgVersionSelected;
+
         settings.DefaultStreamlineVersion = GetSelectedVersion(slVersionCombo);
         settings.DefaultSrPreset = GetSelectedPreset(srPresetCombo, DlssPresetService.SrPresets);
         settings.DefaultRrPreset = GetSelectedPreset(rrPresetCombo, DlssPresetService.RrPresets);
@@ -176,14 +185,20 @@ public static class DlssDefaultsDialog
         return divider;
     }
 
-    private static ComboBox BuildCombo(IReadOnlyList<string> versions, string currentDefault)
+    private static ComboBox BuildCombo(IReadOnlyList<string> versions, string currentDefault, bool includeDriverOverride = false, bool currentDriverOverride = false)
     {
         var items = new List<string> { LocOpt.T("Default") };
         items.AddRange(versions);
         items.Add(LocOpt.T("Custom"));
+        if (includeDriverOverride)
+            items.Add(LocOpt.T("NVIDIA Override"));
 
         int selectedIdx = 0;
-        if (!string.IsNullOrEmpty(currentDefault))
+        if (includeDriverOverride && currentDriverOverride)
+        {
+            selectedIdx = items.Count - 1; // "NVIDIA Override" is last
+        }
+        else if (!string.IsNullOrEmpty(currentDefault))
         {
             if (string.Equals(currentDefault, "Custom", StringComparison.OrdinalIgnoreCase))
             {
@@ -232,19 +247,20 @@ public static class DlssDefaultsDialog
         };
     }
 
-    private static ComboBox BuildRenderScaleComboBox(uint currentDefault)
+    private static StackPanel BuildRenderScaleComboBox(uint currentDefault)
     {
         var options = DlssPresetService.RenderScaleOptions;
         var items = options.Select(o => LocOpt.T(o.Name)).ToList();
 
         int selectedIdx = 0;
-        if (currentDefault != 0)
+        if (currentDefault > 0)
         {
             var idx = Array.FindIndex(options, o => o.Value == currentDefault);
             if (idx >= 0) selectedIdx = idx;
+            else selectedIdx = items.Count - 1; // Custom
         }
 
-        return new ComboBox
+        var combo = new ComboBox
         {
             ItemsSource = items,
             SelectedIndex = selectedIdx,
@@ -252,6 +268,53 @@ public static class DlssDefaultsDialog
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
         };
+
+        // Inline TextBox shown when "Custom" is selected
+        var customBox = new TextBox
+        {
+            PlaceholderText = "33–100",
+            FontSize = 11,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MaxLength = 3,
+            Visibility = (selectedIdx == items.Count - 1 && currentDefault > 0)
+                ? Microsoft.UI.Xaml.Visibility.Visible
+                : Microsoft.UI.Xaml.Visibility.Collapsed,
+        };
+        if (currentDefault > 0 && selectedIdx == items.Count - 1)
+            customBox.Text = currentDefault.ToString();
+
+        combo.SelectionChanged += (s, e) =>
+        {
+            customBox.Visibility = combo.SelectedItem as string == "Custom"
+                ? Microsoft.UI.Xaml.Visibility.Visible
+                : Microsoft.UI.Xaml.Visibility.Collapsed;
+        };
+
+        var panel = new StackPanel { Spacing = 4, Tag = "RenderScalePanel" };
+        panel.Children.Add(combo);
+        panel.Children.Add(customBox);
+        return panel;
+    }
+
+    private static uint GetSelectedRenderScale(StackPanel panel)
+    {
+        var combo   = panel.Children.OfType<ComboBox>().FirstOrDefault();
+        var textBox = panel.Children.OfType<TextBox>().FirstOrDefault();
+        if (combo == null) return 0;
+
+        var options = DlssPresetService.RenderScaleOptions;
+        var selected = combo.SelectedItem as string;
+
+        if (selected == "Custom")
+        {
+            if (textBox != null && uint.TryParse(textBox.Text, out var val) && val >= 33 && val <= 100)
+                return val;
+            return 0;
+        }
+
+        var idx = combo.SelectedIndex;
+        if (idx >= 0 && idx < options.Length) return options[idx].Value;
+        return 0;
     }
 
     private static string GetSelectedVersion(ComboBox combo)
@@ -265,14 +328,6 @@ public static class DlssDefaultsDialog
     {
         var idx = combo.SelectedIndex;
         if (idx >= 0 && idx < presets.Length) return presets[idx].Value;
-        return 0;
-    }
-
-    private static uint GetSelectedRenderScale(ComboBox combo)
-    {
-        var options = DlssPresetService.RenderScaleOptions;
-        var idx = combo.SelectedIndex;
-        if (idx >= 0 && idx < options.Length) return options[idx].Value;
         return 0;
     }
 }

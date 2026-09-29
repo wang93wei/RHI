@@ -1,9 +1,8 @@
-﻿// DetailPanelBuilder.Overrides.Dxvk.cs — DXVK section + Management section.
+// DetailPanelBuilder.Overrides.Dxvk.cs — Management section.
+// DXVK controls have moved to DetailPanelBuilder.Extras.cs under the API Upgrades sub-header.
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using RenoDXCommander.Models;
-using RenoDXCommander.Services;
 using RenoDXCommander.ViewModels;
 
 namespace RenoDXCommander;
@@ -17,242 +16,59 @@ public partial class DetailPanelBuilder
         "vulkan-1.dll", "winmm.dll",
     ];
 
-    private ToggleSwitch? BuildDxvkAndManagementSection(GameCardViewModel card, string capturedName, string gameName, OverridesPanelCtx ctx)
+    private void BuildManagementSection(GameCardViewModel card, string capturedName, OverridesPanelCtx ctx)
     {
-        ToggleSwitch? dxvkToggleResult = null;
-        // ══════════════════════════════════════════════════════════════════════
-        // DXVK section — separator + DXVK ComboBox (left), right reserved
-        // ══════════════════════════════════════════════════════════════════════
-        if (card.IsDxvkToggleVisible)
-        {
-            _window.OverridesPanel.Children.Add(UIFactory.MakeSeparator());
-
-            var dxvkRowGrid = new Grid { ColumnSpacing = 0 };
-            dxvkRowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            dxvkRowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            dxvkRowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            // Left column — DXVK ComboBox (Off / Development / Stable / Lilium HDR)
-            // Raw values drive logic (overrides, switch below); display strings are localized.
-            var dxvkRawItems = new[] { "Off", "Development", "Stable", "Lilium HDR" };
-            var dxvkModeItems = dxvkRawItems.Select(LocOpt.T).ToArray();
-            string defaultDxvkSelection;
-            if (!card.DxvkEnabled)
-            {
-                // Show persisted variant override even when not installed, so user's selection persists
-                var pendingOverride = _window.ViewModel.GetDxvkVariantOverride(gameName, card.Source);
-                defaultDxvkSelection = pendingOverride switch
-                {
-                    "Development" => "Development",
-                    "Stable" => "Stable",
-                    "LiliumHdr" => "Lilium HDR",
-                    _ => "Off",
-                };
-            }
-            else
-            {
-                var currentDxvkOverride = _window.ViewModel.GetDxvkVariantOverride(gameName, card.Source);
-                if (currentDxvkOverride != null)
-                {
-                    defaultDxvkSelection = currentDxvkOverride switch
-                    {
-                        "Development" => "Development",
-                        "Stable" => "Stable",
-                        "LiliumHdr" => "Lilium HDR",
-                        _ => "Development",
-                    };
-                }
-                else
-                {
-                    // No per-game override — show the effective global variant
-                    defaultDxvkSelection = _dxvkService.SelectedVariant switch
-                    {
-                        DxvkVariant.Stable => "Stable",
-                        DxvkVariant.LiliumHdr => "Lilium HDR",
-                        _ => "Development",
-                    };
-                }
-            }
-
-            var dxvkModeCombo = new ComboBox
-            {
-                ItemsSource = dxvkModeItems,
-                SelectedIndex = Array.IndexOf(dxvkRawItems, defaultDxvkSelection),
-                FontSize = 12,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                IsEnabled = card.IsDxvkToggleEnabled && card.DxvkInstallEnabled,
-            };
-            if (card.DxvkToggleTooltip != null)
-                ToolTipService.SetToolTip(dxvkModeCombo, card.DxvkToggleTooltip);
-            else
-                ToolTipService.SetToolTip(dxvkModeCombo, Loc.GetString("Overrides.DxvkMode.Tooltip"));
-
-            var dxvkToggle = new ToggleSwitch { IsOn = card.DxvkEnabled, Visibility = Visibility.Collapsed };
-            dxvkToggleResult = dxvkToggle;
-
-            var dxvkComboInitializing = true;
-            dxvkModeCombo.SelectionChanged += async (s, ev) =>
-            {
-                if (dxvkComboInitializing) return;
-                int selIdx = dxvkModeCombo.SelectedIndex;
-                if (selIdx < 0 || selIdx >= dxvkRawItems.Length) return;
-                var selected = dxvkRawItems[selIdx];
-                // Use card directly — re-finding by name can return a stale/wrong card
-                var targetCard = card;
-
-                if (selected == "Off")
-                {
-                    if (targetCard.DxvkEnabled
-                        || targetCard.DxvkStatus == GameStatus.Installed
-                        || targetCard.DxvkStatus == GameStatus.UpdateAvailable)
-                    {
-                        await _window.ViewModel.HandleDxvkToggleAsync(targetCard, false, _window.Content.XamlRoot);
-                        _window.ViewModel.SetDxvkVariantOverride(capturedName, null, targetCard.Source);
-                        _window.PopulateDetailPanel(targetCard);
-                        BuildOverridesPanel(targetCard);
-                    }
-                    else
-                    {
-                        targetCard.DxvkVariantPending = false;
-                        _window.ViewModel.SetDxvkVariantOverride(capturedName, null, targetCard.Source);
-                        _window.PopulateDetailPanel(targetCard);
-                        BuildOverridesPanel(targetCard);
-                    }
-                }
-                else
-                {
-                    string? variantValue = selected switch
-                    {
-                        "Development" => "Development",
-                        "Stable" => "Stable",
-                        "Lilium HDR" => "LiliumHdr",
-                        _ => null,
-                    };
-                    _window.ViewModel.SetDxvkVariantOverride(capturedName, variantValue, targetCard.Source);
-
-                    if (targetCard.DxvkEnabled || targetCard.DxvkStatus == GameStatus.Installed || targetCard.DxvkStatus == GameStatus.UpdateAvailable)
-                    {
-                        // DXVK already installed — uninstall it so user can install the new variant
-                        await _window.ViewModel.HandleDxvkToggleAsync(targetCard, false, _window.Content.XamlRoot);
-                        targetCard.DxvkVariantPending = true;
-                        targetCard.NotifyAll();
-                        _window.PopulateDetailPanel(targetCard);
-                        BuildOverridesPanel(targetCard);
-                    }
-                    else
-                    {
-                        // Not installed — mark pending so Install button appears
-                        targetCard.DxvkVariantPending = true;
-                        _window.PopulateDetailPanel(targetCard);
-                        BuildOverridesPanel(targetCard);
-                    }
-                    // User must press Install DXVK to actually install
-                }
-            };
-
-            var dxvkColumn = new StackPanel { Spacing = 6 };
-            dxvkColumn.Children.Add(new TextBlock
-            {
-                Text = Loc.GetString("Xaml.Dxvk"),
-                FontSize = 12,
-                Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
-                Margin = new Thickness(0, 0, 0, 4),
-            });
-            dxvkColumn.Children.Add(dxvkModeCombo);
-            dxvkComboInitializing = false;
-
-            // If combo shows "Off" but DXVK is still physically installed (stale state from
-            // a previous Off selection that failed to uninstall), trigger uninstall now.
-            // Only fires when there's no per-game variant override — meaning the user already
-            // chose Off but the uninstall didn't complete. Don't fire when the global variant
-            // is active (override is null because user is using the global setting).
-            if (defaultDxvkSelection == "Off"
-                && !card.DxvkEnabled
-                && (card.DxvkStatus == GameStatus.Installed || card.DxvkStatus == GameStatus.UpdateAvailable))
-            {
-                _ = _window.ViewModel.HandleDxvkToggleAsync(card, false, _window.Content.XamlRoot);
-            }
-            Grid.SetColumn(dxvkColumn, 0);
-            dxvkRowGrid.Children.Add(dxvkColumn);
-
-            var dxvkDivider = new Border
-            {
-                Width = 1,
-                Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
-                VerticalAlignment = VerticalAlignment.Stretch,
-                Margin = new Thickness(12, 0, 12, 0),
-            };
-            Grid.SetColumn(dxvkDivider, 1);
-            dxvkRowGrid.Children.Add(dxvkDivider);
-
-            // Right column — Lilium HDR Preset (visible when Lilium HDR is selected or active)
-            var liliumVariantSelected = _window.ViewModel.GetDxvkVariantOverride(gameName, card.Source) == "LiliumHdr"
-                                     || defaultDxvkSelection == "Lilium HDR";
-            var isLiliumActive = (card.DxvkEnabled || card.DxvkStatus == GameStatus.Installed || card.DxvkStatus == GameStatus.UpdateAvailable)
-                                 && card.DxvkRecord?.IsLiliumHdrMode == true;
-            if (isLiliumActive || liliumVariantSelected)
-            {
-                var liliumPresetCol = new StackPanel { Spacing = 6 };
-                liliumPresetCol.Children.Add(new TextBlock
-                {
-                    Text = Loc.GetString("Dialog.LiliumHdrPreset"),
-                    FontSize = 12,
-                    Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
-                    Margin = new Thickness(0, 0, 0, 4),
-                });
-
-                var dxvkRec = card.DxvkRecord;
-                var isDx9Api = dxvkRec?.InstalledDlls?.Any(d => d.Equals("d3d9.dll", StringComparison.OrdinalIgnoreCase)) == true
-                               || card.GraphicsApi is GraphicsApiType.DirectX8 or GraphicsApiType.DirectX9;
-                var presetArray = isDx9Api ? DxvkService.LiliumD3d9Presets : DxvkService.LiliumD3d11Presets;
-                var presetNames = presetArray.Select(p => LocOpt.T(p.Name)).ToList();
-                int currentPreset = _window.ViewModel.GetLiliumPreset(gameName, card.Source);
-                var liliumPresetCombo = new ComboBox
-                {
-                    ItemsSource = presetNames,
-                    SelectedIndex = currentPreset >= 0 && currentPreset < presetNames.Count ? currentPreset : 0,
-                    FontSize = 12,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                };
-                ToolTipService.SetToolTip(liliumPresetCombo, Loc.GetString("Overrides.LiliumPreset.Tooltip"));
-
-                var liliumComboInit = true;
-                liliumPresetCombo.SelectionChanged += async (s, ev) =>
-                {
-                    if (liliumComboInit) return;
-                    int idx = liliumPresetCombo.SelectedIndex;
-                    if (idx < 0) return;
-                    var targetCard = _window.ViewModel.AllCards.FirstOrDefault(c =>
-                        c.GameName.Equals(capturedName, StringComparison.OrdinalIgnoreCase)
-                        && (c.Source ?? "").Equals(card.Source ?? "", StringComparison.OrdinalIgnoreCase));
-                    _window.ViewModel.SetLiliumPreset(capturedName, idx, targetCard?.Source ?? "");
-
-                    // Re-deploy dxvk.conf with the new preset
-                    if (targetCard != null && !string.IsNullOrEmpty(targetCard.InstallPath))
-                    {
-                        var confPath = Path.Combine(targetCard.InstallPath, "dxvk.conf");
-                        // Determine original API from the DXVK record — d3d9.dll means DX9, otherwise DX10/DX11
-                        var dxvkRec = targetCard.DxvkRecord;
-                        var isDx9 = dxvkRec?.InstalledDlls?.Any(d => d.Equals("d3d9.dll", StringComparison.OrdinalIgnoreCase)) == true
-                                    || targetCard.GraphicsApi is GraphicsApiType.DirectX8 or GraphicsApiType.DirectX9;
-                        var confContent = isDx9
-                            ? DxvkService.GetLiliumD3d9ConfContent(idx)
-                            : DxvkService.GetLiliumD3d11ConfContent(idx);
-                        try { File.WriteAllText(confPath, confContent); }
-                        catch (Exception ex) { CrashReporter.Log($"[DetailPanel.LiliumPreset] Failed to write dxvk.conf — {ex.Message}"); }
-                    }
-                };
-                liliumPresetCol.Children.Add(liliumPresetCombo);
-                liliumComboInit = false;
-
-                Grid.SetColumn(liliumPresetCol, 2);
-                dxvkRowGrid.Children.Add(liliumPresetCol);
-            }
-
-            _window.OverridesPanel.Children.Add(dxvkRowGrid);
-        }
+        _window.ViewModel.SetLastUiAction($"BuildManagementSection({card.GameName})");
         // ── Management section (single row: 4 buttons side by side with separators) ──
         _window.ManagementPanel.Children.Clear();
+
+        // Collapsible header
+        const string mgmtSectionKey = "Management";
+        var mgmtSettings   = _window.ViewModel.Settings;
+        bool mgmtCollapsed = mgmtSettings.CollapsedDetailSections.Contains(mgmtSectionKey);
+
+        var mgmtArrow = new TextBlock
+        {
+            Text      = mgmtCollapsed ? "▶" : "▼",
+            FontSize  = 10,
+            Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin    = new Thickness(0, 0, 6, 0),
+        };
+        var mgmtTitle = new TextBlock
+        {
+            Text       = "Management",
+            FontSize   = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var mgmtHeaderRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
+        mgmtHeaderRow.Children.Add(MakeDragHandle(_window.ManagementContainer));
+        mgmtHeaderRow.Children.Add(mgmtArrow);
+        mgmtHeaderRow.Children.Add(mgmtTitle);
+        _window.ManagementPanel.Children.Add(mgmtHeaderRow);
+
+        // Body wrapper
+        var mgmtBody = new StackPanel { Spacing = 6, Visibility = mgmtCollapsed ? Visibility.Collapsed : Visibility.Visible };
+        _window.ManagementPanel.Children.Add(mgmtBody);
+
+        mgmtHeaderRow.PointerEntered += (s, e) => mgmtTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
+        mgmtHeaderRow.PointerExited  += (s, e) => mgmtTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
+        var mgmtHandCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
+        var mgmtArrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var mgmtCursorProp  = DetailPanelBuilder.CursorProp;
+        mgmtHeaderRow.PointerEntered += (s, e) => mgmtCursorProp?.SetValue(mgmtHeaderRow, mgmtHandCursor);
+        mgmtHeaderRow.PointerExited  += (s, e) => mgmtCursorProp?.SetValue(mgmtHeaderRow, mgmtArrowCursor);
+        mgmtHeaderRow.PointerPressed += (s, e) =>
+        {
+            bool nowCollapsed = mgmtBody.Visibility == Visibility.Visible;
+            mgmtBody.Visibility = nowCollapsed ? Visibility.Collapsed : Visibility.Visible;
+            mgmtArrow.Text = nowCollapsed ? "▶" : "▼";
+            if (nowCollapsed) mgmtSettings.CollapsedDetailSections.Add(mgmtSectionKey);
+            else              mgmtSettings.CollapsedDetailSections.Remove(mgmtSectionKey);
+            _window.ViewModel.SaveSettingsPublic();
+        };
 
         var mgmtRow = new Grid { ColumnSpacing = 0 };
         mgmtRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -355,7 +171,6 @@ public partial class DetailPanelBuilder
         ToolTipService.SetToolTip(reportBtn, Loc.GetString("Overrides.CopyReport.Tooltip"));
         mgmtRow.Children.Add(reportBtn);
 
-        _window.ManagementPanel.Children.Add(mgmtRow);
-        return dxvkToggleResult;
+        mgmtBody.Children.Add(mgmtRow);
     }
 }

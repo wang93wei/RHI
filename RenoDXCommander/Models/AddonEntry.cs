@@ -9,4 +9,6 @@ public record AddonEntry(
     string? DownloadUrl64,
     string? RepositoryUrl,
     string? EffectInstallPath,
-    string? DeployFileName = null);
+    string? DeployFileName = null,
+    string? ReleaseApiUrl = null,
+    bool HideFromPicker = false);
