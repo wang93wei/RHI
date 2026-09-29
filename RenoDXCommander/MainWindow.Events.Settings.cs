@@ -1,4 +1,4 @@
-﻿// MainWindow.Events.Settings.cs — Settings page button click and ComboBox change handlers.
+// MainWindow.Events.Settings.cs — Settings page button click and ComboBox change handlers.
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
@@ -1416,23 +1416,27 @@ public sealed partial class MainWindow
     {
         if (ColorDisplayCombo.SelectedItem is not NvColorService.NvDisplay display) return;
 
-        var depthLabel = (ColorDepthCombo.SelectedItem as ComboBoxItem)?.Content as string
-                      ?? ColorDepthCombo.SelectedItem as string ?? "10 bpc";
-        var rangeLabel = (ColorRangeCombo.SelectedItem as ComboBoxItem)?.Content as string
-                      ?? ColorRangeCombo.SelectedItem as string ?? "Full";
+        // Tag carries the canonical (English) value used by the driver API; Content is localized.
+        var depthItem = ColorDepthCombo.SelectedItem as ComboBoxItem;
+        var rangeItem = ColorRangeCombo.SelectedItem as ComboBoxItem;
+        var depthValue = depthItem?.Tag as string ?? depthItem?.Content as string ?? ColorDepthCombo.SelectedItem as string ?? "10 bpc";
+        var rangeValue = rangeItem?.Tag as string ?? rangeItem?.Content as string ?? ColorRangeCombo.SelectedItem as string ?? "Full";
+        var depthLabel = depthItem?.Content as string ?? depthValue;
+        var rangeLabel = rangeItem?.Content as string ?? rangeValue;
 
-        byte bpc = NvColorService.LabelToBpc(depthLabel);
-        byte dr  = NvColorService.LabelToDynamicRange(rangeLabel);
+        byte bpc = NvColorService.LabelToBpc(depthValue);
+        byte dr  = NvColorService.LabelToDynamicRange(rangeValue);
 
         bool ok = await Task.Run(() => NvColorService.SetColorData(display.DisplayId, bpc, dr));
 
+        var loc = App.Services.GetRequiredService<ILocalizationService>();
         var dialog = new ContentDialog
         {
-            Title   = "Output Colour Settings",
+            Title   = loc.GetString("Xaml.OutputColourSettings"),
             Content = ok
-                ? $"Applied to {display.Name}: {depthLabel}, {rangeLabel}."
-                : $"Failed to apply colour settings to {display.Name}. Check that RHI is running as administrator.",
-            CloseButtonText = "OK",
+                ? loc.GetString("Dialog.ColorSettings.Applied", display.Name, depthLabel, rangeLabel)
+                : loc.GetString("Dialog.ColorSettings.Failed", display.Name),
+            CloseButtonText = loc.GetString("Dialog.Ok"),
             XamlRoot        = Content.XamlRoot,
             RequestedTheme  = ElementTheme.Dark,
         };
