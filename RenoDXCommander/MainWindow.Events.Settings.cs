@@ -28,9 +28,9 @@ public sealed partial class MainWindow
             {
                 var dlg = new ContentDialog
                 {
-                    Title = "RHI is up to date",
+                    Title = Loc.GetString("Dialog.UpToDate"),
                     Content = $"You're running v{Services.CrashReporter.AppVersion} — no updates available.",
-                    CloseButtonText = "OK",
+                    CloseButtonText = Loc.GetString("Dialog.Ok"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
@@ -218,7 +218,7 @@ public sealed partial class MainWindow
         {
             DlssDefaultsSummaryPanel.Children.Add(new TextBlock
             {
-                Text = "No defaults configured yet.",
+                Text = Loc.GetString("Dialog.NoDefaultsConfiguredYet"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
             });
@@ -236,7 +236,7 @@ public sealed partial class MainWindow
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var srCol = new StackPanel { Spacing = 2 };
-        srCol.Children.Add(new TextBlock { Text = "DLSS", FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
+        srCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Dlss"), FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
         if (s.DefaultSrDriverOverride) srCol.Children.Add(MakeSummaryText("NVIDIA Override"));
         else if (!string.IsNullOrEmpty(s.DefaultDlssVersion)) srCol.Children.Add(MakeSummaryText(s.DefaultDlssVersion));
         if (s.DefaultSrPreset != 0) srCol.Children.Add(MakeSummaryText($"Preset {DlssPresetService.SrPresets.FirstOrDefault(p => p.Value == s.DefaultSrPreset).Name ?? "?"}"));
@@ -247,7 +247,7 @@ public sealed partial class MainWindow
         grid.Children.Add(MakeSummaryDivider(1));
 
         var rrCol = new StackPanel { Spacing = 2 };
-        rrCol.Children.Add(new TextBlock { Text = "RR", FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
+        rrCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Rr"), FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
         if (s.DefaultRrDriverOverride) rrCol.Children.Add(MakeSummaryText("NVIDIA Override"));
         else if (!string.IsNullOrEmpty(s.DefaultDlssdVersion)) rrCol.Children.Add(MakeSummaryText(s.DefaultDlssdVersion));
         if (s.DefaultRrPreset != 0) rrCol.Children.Add(MakeSummaryText($"Preset {DlssPresetService.RrPresets.FirstOrDefault(p => p.Value == s.DefaultRrPreset).Name ?? "?"}"));
@@ -258,7 +258,7 @@ public sealed partial class MainWindow
         grid.Children.Add(MakeSummaryDivider(3));
 
         var fgCol = new StackPanel { Spacing = 2 };
-        fgCol.Children.Add(new TextBlock { Text = "FG", FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
+        fgCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Fg"), FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
         if (s.DefaultFgDriverOverride) fgCol.Children.Add(MakeSummaryText("NVIDIA Override"));
         else if (!string.IsNullOrEmpty(s.DefaultDlssgVersion)) fgCol.Children.Add(MakeSummaryText(s.DefaultDlssgVersion));
         if (s.DefaultFgPreset != 0) fgCol.Children.Add(MakeSummaryText($"Preset {DlssPresetService.FgPresets.FirstOrDefault(p => p.Value == s.DefaultFgPreset).Name ?? "?"}"));
@@ -268,7 +268,7 @@ public sealed partial class MainWindow
         grid.Children.Add(MakeSummaryDivider(5));
 
         var slCol = new StackPanel { Spacing = 2 };
-        slCol.Children.Add(new TextBlock { Text = "SL", FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
+        slCol.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.Sl"), FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
         if (!string.IsNullOrEmpty(s.DefaultStreamlineVersion)) slCol.Children.Add(MakeSummaryText(s.DefaultStreamlineVersion));
         Grid.SetColumn(slCol, 6);
         grid.Children.Add(slCol);
@@ -393,7 +393,7 @@ public sealed partial class MainWindow
     private async void FpsLimitCombo_Custom(ComboBox combo)
     {
         // Show a simple input dialog for custom FPS value
-        var textBox = new TextBox { PlaceholderText = "20-1000", FontSize = 13 };
+        var textBox = new TextBox { PlaceholderText = Loc.GetString("Dialog.201000"), FontSize = 13 };
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.CustomFpsLimit"),
@@ -485,7 +485,7 @@ public sealed partial class MainWindow
 
     private async void DmfgTargetFpsCombo_Custom(ComboBox combo)
     {
-        var textBox = new TextBox { PlaceholderText = "20-1000", FontSize = 13 };
+        var textBox = new TextBox { PlaceholderText = Loc.GetString("Dialog.201000"), FontSize = 13 };
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Dialog.CustomDmfgTargetFps"),
@@ -1366,7 +1366,7 @@ public sealed partial class MainWindow
 
         // Update button visual
         bool hdrActive = string.Equals(newValue, "On", StringComparison.OrdinalIgnoreCase);
-        DetailHdrToggleText.Text = "HDR";
+        DetailHdrToggleText.Text = Loc.GetString("Xaml.Hdr");
         DetailHdrToggleBtn.Background = hdrActive
             ? UIFactory.Brush(ResourceKeys.AccentPurpleBgBrush)
             : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
@@ -1520,7 +1520,7 @@ public sealed partial class MainWindow
         ViewModel.SaveSettingsPublic();
 
         bool resActive = string.Equals(newValue, "On", StringComparison.OrdinalIgnoreCase);
-        DetailResToggleText.Text = "RES";
+        DetailResToggleText.Text = Loc.GetString("Xaml.Res");
         DetailResToggleBtn.Background = resActive
             ? UIFactory.Brush(ResourceKeys.AccentPurpleBgBrush)
             : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
@@ -1889,7 +1889,7 @@ public sealed partial class MainWindow
         // ── Search box ────────────────────────────────────────────────────────
         var searchBox = new TextBox
         {
-            PlaceholderText = "Search games…",
+            PlaceholderText = Loc.GetString("Xaml.SearchGamesPlaceholder"),
             FontSize        = 13,
             Margin          = new Thickness(0, 0, 0, 10),
         };
@@ -1984,7 +1984,7 @@ public sealed partial class MainWindow
             {
                 var linkBtn = new HyperlinkButton
                 {
-                    Content             = "Link",
+                    Content             = Loc.GetString("Dialog.Link"),
                     NavigateUri         = parsedUri,
                     FontSize            = 11,
                     Padding             = new Thickness(0),
@@ -2061,9 +2061,9 @@ public sealed partial class MainWindow
 
         var dlg = new ContentDialog
         {
-            Title           = "Available HDR Mods",
+            Title           = Loc.GetString("Xaml.AvailableHdrMods"),
             Content         = content,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot        = Content.XamlRoot,
             DefaultButton   = ContentDialogButton.Close,
         };

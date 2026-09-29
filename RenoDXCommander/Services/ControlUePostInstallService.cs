@@ -15,6 +15,8 @@ namespace RenoDXCommander.Services;
 
 public static class ControlUePostInstallService
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     /// <summary>
     /// The exact addon filename that triggers this special install flow.
     /// </summary>
@@ -55,7 +57,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = "⚠ This is NOT an HDR mod.",
+                Text = Loc.GetString("Dialog.ControlUe.NotHdrTitle"),
                 FontSize = 14,
                 FontWeight = new Windows.UI.Text.FontWeight(700),
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
@@ -63,10 +65,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = "It fixes RT noise using Ray Reconstruction. Two strategies (pick one, they are mutually exclusive):\n"
-                     + "  •  Turn off the in-game RT denoiser and use DLSS Super Resolution preset M or L\n"
-                     + "  •  Use Ray Reconstruction with extra inputs derived from the game's shaders "
-                     + "(game denoiser is turned off here too — RR needs that)",
+                Text = Loc.GetString("Dialog.ControlUe.Strategy"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -74,7 +73,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = "Clicking Install will also:",
+                Text = Loc.GetString("Dialog.ControlUe.AlsoHeading"),
                 FontSize = 13,
                 FontWeight = new Windows.UI.Text.FontWeight(600),
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
@@ -83,10 +82,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = "  •  Upgrade nvngx_dlss.dll to the newest available version\n"
-                     + "  •  Deploy nvngx_dlssd.dll (DLSS Ray Reconstruction runtime)\n"
-                     + "  •  Set renderer.ini HDR preset to the correct value\n"
-                     + "  •  Clear the DLSS SR preset set in the NVIDIA driver profile for this game",
+                Text = Loc.GetString("Dialog.ControlUe.AlsoList"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -94,7 +90,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = "These extra changes are not reverted when uninstalling the mod.",
+                Text = Loc.GetString("Dialog.ControlUe.NotReverted"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
@@ -103,10 +99,10 @@ public static class ControlUePostInstallService
 
             var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
-                Title = "Control Ultimate Edition — RenoDX Mod",
+                Title = Loc.GetString("Dialog.ControlUe.Title"),
                 Content = content,
-                PrimaryButtonText = "Install",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Dialog.Install"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
                 XamlRoot = xamlRoot,
                 RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,

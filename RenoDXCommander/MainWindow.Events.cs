@@ -552,7 +552,7 @@ public sealed partial class MainWindow
         // Also refresh the detail panel icon if this is the selected game
         if (card == ViewModel.SelectedGame)
         {
-            DetailFavIcon.Text = "Favourite";
+            DetailFavIcon.Text = Loc.GetString("Xaml.Favourite");
             var favColor = card.IsFavourite
                 ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
                 : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
@@ -1014,7 +1014,7 @@ public sealed partial class MainWindow
         ViewModel.ToggleFavouriteCommand.Execute(card);
 
         // Refresh the detail panel icon to reflect the new state
-        DetailFavIcon.Text = "Favourite";
+        DetailFavIcon.Text = Loc.GetString("Xaml.Favourite");
         var favColor = card.IsFavourite
             ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
             : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;

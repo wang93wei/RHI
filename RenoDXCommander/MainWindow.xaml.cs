@@ -268,7 +268,7 @@ public sealed partial class MainWindow : Window
             _addonFileWatcher.SetWatchPath(savedFolder);
         else
             _addonFileWatcher.Start();
-        // Live language switch: rebuild detail/compact panel when language changes
+        // Live language switch: rebuild the detail panel when language changes
         try
         {
             var loc = App.Services.GetService(typeof(ILocalizationService)) as ILocalizationService;
@@ -280,15 +280,8 @@ public sealed partial class MainWindow : Window
                         ViewModel.RefreshLocalizedChrome();
                         if (ViewModel.SelectedGame != null)
                         {
-                            if (ViewModel.CurrentViewLayout == ViewLayout.Detail)
-                            {
-                                PopulateDetailPanel(ViewModel.SelectedGame);
-                                BuildOverridesPanel(ViewModel.SelectedGame);
-                            }
-                            else if (ViewModel.CurrentViewLayout == ViewLayout.Compact)
-                            {
-                                _compactViewBuilder?.RebuildCurrentPage(ViewModel.SelectedGame, ViewModel.CompactPageIndex);
-                            }
+                            PopulateDetailPanel(ViewModel.SelectedGame);
+                            BuildOverridesPanel(ViewModel.SelectedGame);
                         }
                     });
                 };

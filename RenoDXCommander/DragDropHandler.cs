@@ -215,7 +215,7 @@ public partial class DragDropHandler
                                 };
                                 var pickerDialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                                 {
-                                    Title = "🌙 Install Luma Addon",
+                                    Title = Loc.GetString("Dialog.InstallLumaMod"),
                                     Content = new Microsoft.UI.Xaml.Controls.StackPanel
                                     {
                                         Spacing = 8,
@@ -225,8 +225,8 @@ public partial class DragDropHandler
                                             combo,
                                         }
                                     },
-                                    PrimaryButtonText = "Install",
-                                    CloseButtonText = "Cancel",
+                                    PrimaryButtonText = Loc.GetString("Dialog.Install"),
+                                    CloseButtonText = Loc.GetString("Dialog.Cancel"),
                                     XamlRoot = _window.Content.XamlRoot,
                                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                                 };

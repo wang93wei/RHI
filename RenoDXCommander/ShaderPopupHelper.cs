@@ -208,7 +208,7 @@ public static class ShaderPopupHelper
             // ── "Custom Shaders" plain section header (no checkbox, no expand) ──
             panel.Children.Add(new TextBlock
             {
-                Text       = "Custom Shaders",
+                Text       = Loc.GetString("ShaderPicker.CustomShaders"),
                 FontSize   = 14,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Foreground = Brush(ResourceKeys.TextPrimaryBrush),
@@ -1015,13 +1015,13 @@ public static class ShaderPopupHelper
                 }
                 else
                 {
-                    // Create new "Profile N"
+                    // Create new "Profile N" (localized display name, used for the uniqueness check too)
                     int n = profiles.Count + 1;
-                    while (profiles.Any(p => p.Name.Equals($"Profile {n}", StringComparison.OrdinalIgnoreCase)))
+                    while (profiles.Any(p => p.Name.Equals(Loc.GetString("ShaderPicker.DefaultProfileName", n), StringComparison.OrdinalIgnoreCase)))
                         n++;
                     var newProf = new ShaderProfile
                     {
-                        Name           = $"Profile {n}",
+                        Name           = Loc.GetString("ShaderPicker.DefaultProfileName", n),
                         SelectedPacks  = packIds,
                         FileExclusions = excls,
                     };
@@ -1047,9 +1047,9 @@ public static class ShaderPopupHelper
             {
                 // Show the inline rename box pre-filled
                 int n = profiles.Count + 1;
-                while (profiles.Any(p => p.Name.Equals($"Profile {n}", StringComparison.OrdinalIgnoreCase)))
+                while (profiles.Any(p => p.Name.Equals(Loc.GetString("ShaderPicker.DefaultProfileName", n), StringComparison.OrdinalIgnoreCase)))
                     n++;
-                newProfileBox.Text       = $"Profile {n}";
+                newProfileBox.Text       = Loc.GetString("ShaderPicker.DefaultProfileName", n);
                 newProfileBox.Visibility = Visibility.Visible;
                 newProfileBox.Focus(FocusState.Programmatic);
                 newProfileBox.SelectAll();
@@ -1198,7 +1198,7 @@ public static class ShaderPopupHelper
                         ofn.filter     = "ZIP Archives (*.zip)\0*.zip\0All Files (*.*)\0*.*\0";
                         ofn.file       = new string(new char[260]);
                         ofn.maxFile    = ofn.file.Length;
-                        ofn.title      = "Import Shader Profile";
+                        ofn.title      = Loc.GetString("ShaderPicker.ImportProfileTitle");
                         ofn.flags      = 0x00080000 | 0x00001000; // OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST
                         return NativeInterop.GetOpenFileName(ref ofn) ? ofn.file.TrimEnd('\0') : null;
                     });
@@ -1267,7 +1267,7 @@ public static class ShaderPopupHelper
             profilePanel.Children.Add(new Border { Height = 1, Background = Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 10) });
             var openCustomBtn = new Button
             {
-                Content             = "Open Custom Folder",
+                Content             = Loc.GetString("ShaderPicker.OpenCustomFolder"),
                 FontSize            = 12,
                 Padding             = new Thickness(8, 4, 8, 4),
                 HorizontalAlignment = HorizontalAlignment.Stretch,

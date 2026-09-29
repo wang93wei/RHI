@@ -219,7 +219,7 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         ToolTipService.SetToolTip(hotkeyBox, "Click here then press your desired key. Written to all reshade*.ini files for this game.");
-        hotkeyBox.GotFocus  += (s, ev) => hotkeyBox.Text = "Press a key...";
+        hotkeyBox.GotFocus  += (s, ev) => hotkeyBox.Text = Loc.GetString("Xaml.PressAKey");
         hotkeyBox.KeyDown   += (s, ev) =>
         {
             var vk = (int)ev.Key;
@@ -233,7 +233,7 @@ public sealed partial class MainWindow
         };
         hotkeyBox.LostFocus += (s, ev) => { if (hotkeyBox.Text == "Press a key...") hotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(hotkeyString); };
 
-        var applyKeyBtn = new Button { Content = "Apply", FontSize = 12, Padding = new Thickness(16, 7, 16, 7), HorizontalAlignment = HorizontalAlignment.Right };
+        var applyKeyBtn = new Button { Content = Loc.GetString("Dialog.Apply"), FontSize = 12, Padding = new Thickness(16, 7, 16, 7), HorizontalAlignment = HorizontalAlignment.Right };
         applyKeyBtn.Click += async (s, ev) =>
         {
             if (string.IsNullOrEmpty(card.InstallPath)) return;
@@ -256,7 +256,7 @@ public sealed partial class MainWindow
                     catch (Exception ex) { return (0, ex.Message); }
                 });
                 if (error != null) { card.RsActionMessage = $"❌ {error}"; return; }
-                applyKeyBtn.Content = "Applied!";
+                applyKeyBtn.Content = Loc.GetString("Dialog.Applied");
                 _crashReporter.Log($"[RsCogButton_Click] Applied overlay key '{hotkeyString}' to {count} ini file(s) for '{card.GameName}'");
             }
             catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
@@ -271,7 +271,7 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         ToolTipService.SetToolTip(screenshotHotkeyBox, "Press a key to assign it, or Backspace to clear it. Written to all reshade*.ini files for this game.");
-        screenshotHotkeyBox.GotFocus  += (s, ev) => screenshotHotkeyBox.Text = "Press a key...";
+        screenshotHotkeyBox.GotFocus  += (s, ev) => screenshotHotkeyBox.Text = Loc.GetString("Xaml.PressAKey");
         screenshotHotkeyBox.KeyDown   += (s, ev) =>
         {
             var vk2 = (int)ev.Key;
@@ -285,7 +285,7 @@ public sealed partial class MainWindow
         };
         screenshotHotkeyBox.LostFocus += (s, ev) => { if (screenshotHotkeyBox.Text == "Press a key...") screenshotHotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(screenshotHotkeyString); };
 
-        var applyScreenshotKeyBtn = new Button { Content = "Apply", FontSize = 12, Padding = new Thickness(16, 7, 16, 7), HorizontalAlignment = HorizontalAlignment.Right };
+        var applyScreenshotKeyBtn = new Button { Content = Loc.GetString("Dialog.Apply"), FontSize = 12, Padding = new Thickness(16, 7, 16, 7), HorizontalAlignment = HorizontalAlignment.Right };
         applyScreenshotKeyBtn.Click += async (s, ev) =>
         {
             if (string.IsNullOrEmpty(card.InstallPath)) return;
@@ -308,7 +308,7 @@ public sealed partial class MainWindow
                     catch (Exception ex) { return (0, ex.Message); }
                 });
                 if (error != null) { card.RsActionMessage = $"❌ {error}"; return; }
-                applyScreenshotKeyBtn.Content = "Applied!";
+                applyScreenshotKeyBtn.Content = Loc.GetString("Dialog.Applied");
                 _crashReporter.Log($"[RsCogButton_Click] Applied screenshot key '{screenshotHotkeyString}' to {count} ini file(s) for '{card.GameName}'");
             }
             catch (Exception ex) { card.RsActionMessage = $"❌ {ex.Message}"; }
@@ -320,7 +320,7 @@ public sealed partial class MainWindow
         hotkeysGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var overlayCol = new StackPanel { Spacing = 4 };
-        overlayCol.Children.Add(new TextBlock { Text = "Overlay Key", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
+        overlayCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.OverlayKey2"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
         var overlayRow = new Grid { ColumnSpacing = 8 };
         overlayRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         overlayRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -329,7 +329,7 @@ public sealed partial class MainWindow
         overlayCol.Children.Add(overlayRow);
 
         var screenshotCol = new StackPanel { Spacing = 4 };
-        screenshotCol.Children.Add(new TextBlock { Text = "Screenshot Key", FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
+        screenshotCol.Children.Add(new TextBlock { Text = Loc.GetString("Dialog.ScreenshotKey2"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush) });
         var screenshotRow = new Grid { ColumnSpacing = 8 };
         screenshotRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         screenshotRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -499,7 +499,7 @@ public sealed partial class MainWindow
             {
                 Text = currentNits,
                 FontSize = 11,
-                PlaceholderText = "nits",
+                PlaceholderText = Loc.GetString("Xaml.Nits"),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Center,
             };
@@ -627,7 +627,7 @@ public sealed partial class MainWindow
 
             var upLabel = new TextBlock
             {
-                Text = "Upgrade Path",
+                Text = Loc.GetString("Dialog.Renodx.UpgradePath"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -669,7 +669,7 @@ public sealed partial class MainWindow
 
             var hdrLabel = new TextBlock
             {
-                Text = "HDR Settings",
+                Text = Loc.GetString("Xaml.HdrSettings"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -815,7 +815,7 @@ public sealed partial class MainWindow
                 content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
                 content.Children.Add(new TextBlock
                 {
-                    Text = "Compatibility Settings",
+                    Text = Loc.GetString("Dialog.CompatibilitySettings"),
                     FontSize = 13,
                     Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
                     Margin = new Thickness(0, 4, 0, 0),
@@ -991,7 +991,7 @@ public sealed partial class MainWindow
         {
             content.Children.Add(new TextBlock
             {
-                Text = "Run the game once with RenoDX installed to generate settings.",
+                Text = Loc.GetString("Dialog.RunTheGameOnceWith"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 FontStyle = Windows.UI.Text.FontStyle.Italic,
@@ -1002,7 +1002,7 @@ public sealed partial class MainWindow
         {
             content.Children.Add(new TextBlock
             {
-                Text = "No reshade.ini found in game folder.",
+                Text = Loc.GetString("Dialog.Renodx.NoReshadeIni"),
                 FontSize = 11,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 FontStyle = Windows.UI.Text.FontStyle.Italic,
@@ -1814,7 +1814,7 @@ public sealed partial class MainWindow
 
         // Inline custom FPS input (shown when "Custom..." is selected)
         var customFpsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Visibility = Visibility.Collapsed };
-        var customFpsBox = new TextBox { PlaceholderText = "20-1000", FontSize = 12, MinWidth = 100 };
+        var customFpsBox = new TextBox { PlaceholderText = Loc.GetString("Dialog.201000"), FontSize = 12, MinWidth = 100 };
         var customFpsBtn = new Button { Content = Loc.GetString("Dialog.Set"), FontSize = 12 };
         customFpsPanel.Children.Add(customFpsBox);
         customFpsPanel.Children.Add(customFpsBtn);
@@ -2661,7 +2661,7 @@ public sealed partial class MainWindow
             if (isDlssNr)
             {
                 content.Children.Add(MakeSeparator());
-                content.Children.Add(new TextBlock { Text = "Neural Rendering Settings", FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
+                content.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.NeuralRenderingSettings"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
                 var nrGrid = MakeSettingsGrid();
 
                 // Helper: read a key from the [DlssNr] section of OptiScaler.ini
@@ -3205,7 +3205,7 @@ public sealed partial class MainWindow
 
         var variantLabel = new TextBlock
         {
-            Text = "Variant",
+            Text = Loc.GetString("Xaml.Variant"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
@@ -3234,7 +3234,7 @@ public sealed partial class MainWindow
 
         var liliumPresetLabel = new TextBlock
         {
-            Text = "Lilium Preset",
+            Text = Loc.GetString("Dialog.LiliumHdrPreset"),
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
