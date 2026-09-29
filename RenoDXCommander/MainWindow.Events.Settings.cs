@@ -2041,7 +2041,7 @@ public sealed partial class MainWindow
         // ── Assemble dialog content ───────────────────────────────────────────
         var countLabel = new TextBlock
         {
-            Text       = $"{allEntries.Count} games with HDR mods",
+            Text       = Loc.GetString("Dialog.HdrModsCount", allEntries.Count),
             FontSize   = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
             Margin     = new Thickness(0, 0, 0, 10),

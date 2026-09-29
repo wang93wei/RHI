@@ -264,7 +264,7 @@ public partial class MainViewModel
             bool hasCachedLibrary = savedLib != null && !forceRescan;
             if (hasCachedLibrary)
             {
-                StatusText    = $"Library loaded ({savedLib!.Games.Count} games, scanned {FormatAge(savedLib.LastScanned)})";
+                StatusText    = Loc.GetString("Status.LibraryLoaded", savedLib!.Games.Count, FormatAge(savedLib.LastScanned));
                 SubStatusText = Loc.GetString("Dialog.CheckingForNewGamesAnd");
                 addonCache    = savedLib.AddonScanCache;
             }

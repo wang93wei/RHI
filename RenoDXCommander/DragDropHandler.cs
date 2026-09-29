@@ -221,7 +221,7 @@ public partial class DragDropHandler
                                         Spacing = 8,
                                         Children =
                                         {
-                                            new Microsoft.UI.Xaml.Controls.TextBlock { Text = $"Install {addonName} to:", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, FontSize = 12 },
+                                            new Microsoft.UI.Xaml.Controls.TextBlock { Text = Loc.GetString("Dialog.InstallTo", addonName), TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, FontSize = 12 },
                                             combo,
                                         }
                                     },

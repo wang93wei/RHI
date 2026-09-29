@@ -81,10 +81,10 @@ public sealed partial class MainWindow
                         + (string.IsNullOrEmpty(ViewModel.SubStatusText) ? "" : $"  —  {ViewModel.SubStatusText}");
                     break;
                 case nameof(ViewModel.InstalledCount):
-                    InstalledCountText.Text = $"{ViewModel.InstalledCount} ReShade";
+                    InstalledCountText.Text = Loc.GetString("Stats.ReShade", ViewModel.InstalledCount);
                     break;
                 case nameof(ViewModel.TotalGames):
-                    GameCountText.Text = $"{ViewModel.TotalGames} shown";
+                    GameCountText.Text = Loc.GetString("Stats.Shown", ViewModel.TotalGames);
                     break;
                 case nameof(ViewModel.HiddenCount):
                     HiddenCountText.Text = ViewModel.HiddenCount > 0

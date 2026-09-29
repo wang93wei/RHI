@@ -309,7 +309,7 @@ public partial class DetailPanelBuilder
                     _window.DispatcherQueue?.TryEnqueue(() =>
                     {
                         if (_window.ViewModel.SelectedGame == card)
-                            exeHeaderText.Text = $"Launch executable  —  {scannedExe}";
+                            exeHeaderText.Text = Loc.GetString("Overrides.LaunchExe.Named", scannedExe);
                     });
             });
         }

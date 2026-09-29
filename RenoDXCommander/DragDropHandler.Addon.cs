@@ -190,7 +190,7 @@ public partial class DragDropHandler
                             Spacing = 8,
                             Children =
                             {
-                                new TextBlock { Text = $"Install {archiveName} to:", TextWrapping = TextWrapping.Wrap, FontSize = 12 },
+                                new TextBlock { Text = Loc.GetString("Dialog.InstallTo", archiveName), TextWrapping = TextWrapping.Wrap, FontSize = 12 },
                                 lumaCombo,
                             }
                         },
