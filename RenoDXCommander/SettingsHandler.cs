@@ -690,7 +690,7 @@ public class SettingsHandler
             {
                 Title = Loc.GetString("Xaml.AdminMode"),
                 Content = Loc.GetString("Dialog.AdminMode.UacDisabled"),
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             });
@@ -887,7 +887,7 @@ public class SettingsHandler
                 {
                     Title = Loc.GetString("Dialog.GameDataCopied.Title"),
                     Content = Loc.GetString("Dialog.GameDataCopied.Content", ViewModel.AllCards.Count),
-                    CloseButtonText = "OK",
+                    CloseButtonText = Loc.GetString("Dialog.Ok"),
                     XamlRoot = fe.XamlRoot,
                     RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                 });
