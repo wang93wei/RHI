@@ -1622,19 +1622,16 @@ public partial class DetailPanelBuilder
         // Note shown when ShortFuse method is selected — cost scaler is now built into 310.8.2
         if (effectiveMethod == NrMethodShortFuse)
         {
-            // ── ZZZ Mode toggle (ShortFuse only) ─────────────────────────────
+            // ── ZZZ Mode toggle — appended to the same row as Cost Scaler ────
             bool sfZzzPref = _window.ViewModel.GetSfZzzMode(gameName, store);
-            var zzzRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 2, 0, 0) };
-            var zzzLabel = new TextBlock
+            costScalerRow.Children.Add(new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(4, 0, 4, 0) });
+            costScalerRow.Children.Add(new TextBlock
             {
                 Text = "ZZZ Load Order",
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 VerticalAlignment = VerticalAlignment.Center,
-            };
-            ToolTipService.SetToolTip(zzzLabel,
-                "When On, the ShortFuse addon is deployed as zzz_renodx-dlss.addon64 so it loads last in the ReShade addon order. " +
-                "Required for some games where other addons must initialise before the DLSS Tool.");
+            });
             var zzzToggle = new ToggleSwitch
             {
                 IsOn = sfZzzPref,
@@ -1642,6 +1639,9 @@ public partial class DetailPanelBuilder
                 VerticalAlignment = VerticalAlignment.Center,
                 MinWidth = 0,
             };
+            ToolTipService.SetToolTip(zzzToggle,
+                "When On, the ShortFuse addon is deployed as zzz_renodx-dlss.addon64 so it loads last in the ReShade addon order. " +
+                "Required for some games where other addons must initialise before the DLSS Tool.");
             zzzToggle.Toggled += (s, ev) =>
             {
                 bool newVal = zzzToggle.IsOn;
@@ -1666,9 +1666,7 @@ public partial class DetailPanelBuilder
                 }
                 catch (Exception ex) { CrashReporter.Log($"[NeuralRendering.ZzzToggle] Rename failed — {ex.Message}"); }
             };
-            zzzRow.Children.Add(zzzLabel);
-            zzzRow.Children.Add(zzzToggle);
-            nrBody.Children.Add(zzzRow);
+            costScalerRow.Children.Add(zzzToggle);
 
             nrBody.Children.Add(new TextBlock
             {
