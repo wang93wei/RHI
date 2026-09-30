@@ -214,7 +214,10 @@ public partial class DetailPanelBuilder
                     var vsyncName = LocOpt.T(DlssPresetService.VSyncModeOptions
                         .FirstOrDefault(o => o.Value == data.VSyncMode).Name ?? "Default");
                     var smoothName = data.SmoothMotionEnable != 0 ? LocOpt.T("On") : null;
-                    var rebarName  = LocOpt.T(data.ReBarEnableMode == 1 ? "On" : "Auto");
+                    // ReBarEnableMode: 0=Off, 1=Auto (default), 2=On
+                    var rebarName = data.ReBarEnableMode == 2 ? LocOpt.T("On")
+                                  : data.ReBarEnableMode == 0 ? LocOpt.T("Off")
+                                  : null; // Auto = default, omit from summary
 
                     var summaryEntries = new System.Collections.Generic.List<(string, string?)>
                     {
@@ -222,7 +225,8 @@ public partial class DetailPanelBuilder
                     };
                     if (smoothName != null)
                         summaryEntries.Add((Loc.GetString("Overrides.Summary.Smooth"), smoothName));
-                    summaryEntries.Add((Loc.GetString("Overrides.Summary.ReBar"), rebarName));
+                    if (rebarName != null)
+                        summaryEntries.Add((Loc.GetString("Overrides.Summary.ReBar"), rebarName));
                     var summaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(summaryEntries);
                     if (summaryTb != null)
                     {
