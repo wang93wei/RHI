@@ -138,3 +138,40 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 
 - 上游后续若新增界面文案，继续抽取 Loc 键并五语言同步
 - 如需汉化补丁说明正文或 ExternalLabel，需先解耦（多语言 md 资源 / 显示文本与逻辑值分离）
+
+
+## Session 5: 同步上游 ReBAR 摘要修复并保持汉化
+<!-- trellis-session: v=2 fp=80a010a948d4f66b -->
+
+**Date**: 2026-09-30
+**Task**: 同步上游 ReBAR 摘要修复并保持汉化
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream 2dea5a3（Driver Settings 折叠摘要的 ReBAR 状态修正：0=Off、1=Auto 省略、2=On）。冲突位于已本地化的摘要代码，解决为同时保留 LocOpt 本地化与上游新逻辑；复用既有 Option.On/Option.Off 与 Overrides.Summary.* 键，五语言字典维持 1904 键不变。
+
+### Main Changes
+
+- merge: 合并上游 2dea5a3（ReBAR 摘要状态修正）
+- fix(merge): 冲突解决保留 LocOpt.T 本地化，并采纳上游 0=Off / 1=Auto(省略) / 2=On 与 rebarName != null 判断
+- i18n: 复用既有键，无需新增/改动字典项
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5475a29` | Merge remote-tracking branch 'upstream/main' into feat/i18n |
+
+### Testing
+
+- [OK] CI Build & Test run 36729863452 @ 5475a29：i18n catalogs 1904/1904、Build succeeded、62/62 测试通过
+- [OK] python tools/check-i18n-coverage.py --strict → exit 0；改动文件分隔符配平 OK；HEAD..upstream/main = 0
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 上游继续更新时按同法合并：冲突多集中在已本地化文案行，保持 Loc/LocOpt 优先并采纳上游新逻辑
