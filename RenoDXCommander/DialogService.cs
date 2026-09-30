@@ -112,6 +112,12 @@ public partial class DialogService
     }
 
     /// <summary>
+    /// Returns true if a dialog is currently open (gate is held).
+    /// Use this as a lightweight check to skip expensive UI work while a dialog is showing.
+    /// </summary>
+    public static bool IsDialogOpen => _dialogGate.CurrentCount == 0;
+
+    /// <summary>
     /// Waits up to <paramref name="timeoutSeconds"/> for the dialog gate to become
     /// available. Use this instead of <see cref="TryAcquireDialogGate"/> when the
     /// action is critical (e.g. app update download) and should not be silently

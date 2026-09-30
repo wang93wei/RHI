@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -84,6 +85,14 @@ public class DgVoodooService
             if (File.Exists(zipPath)) File.Delete(zipPath);
             File.Move(tempPath, zipPath);
             CrashReporter.Log($"[DgVoodooService.EnsureStagedAsync] Downloaded dgVoodoo2 v{version} ({new FileInfo(zipPath).Length} bytes)");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = "dgVoodoo2",
+                ComponentName = "dgVoodoo2",
+                NewVersion    = version,
+                SizeBytes     = new FileInfo(zipPath).Length,
+            });
         }
         catch (Exception ex)
         {

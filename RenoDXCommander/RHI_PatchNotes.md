@@ -1,6 +1,25 @@
+## v2.8.0 Beta
+
+### New
+- **NVIDIA panel split** — the "Nvidia Profile Overrides" section is now two independent panels: **DLSS / Streamline** (SR, RR, FG, SL versions and presets) and **Driver Settings** (VSync, Low Latency, Smooth Motion, Power/G-Sync, ReBAR). Each has its own collapse/expand, drag handle for reordering, and collapsed summary line. Each remembers its own collapsed state. Users who had the old section's position saved will see both new sections in that location automatically.
+- **Component update history now includes RenoDX mod updates** — installs and updates applied via Update All are now captured in the Updates log alongside shader packs, ReShade, and other components.
+
+### Changes
+- Minimum window width set to 1220px.
+
+### Bug Fixes
+
+**UI**
+- Fixed the UI freezing for 30–60 seconds after clicking Check for Updates when a game with a large NVIDIA driver profile (e.g. Mass Effect Andromeda) was selected. The NVIDIA profile panel now skips its rebuild while the Settings panel is open, since it isn't visible and the expensive layout work is pointless.
+- Fixed the UI freezing during the app update download when a game with DLSS SR+FG+Streamline (e.g. God of War Ragnarök) was selected. The NVIDIA profile and Neural Rendering panels now skip their rebuild while any dialog is open — the user is looking at the dialog, not the game panel.
+- Fixed a permanent UI freeze (requiring task manager to kill) when clicking on games with a full DLSS install (SR+RR+FG+Streamline, e.g. Control, Resident Evil 4, God of War Ragnarök). Root cause: WinUI 3 enters an infinite layout loop when a `Grid` with star columns is nested inside a `StackPanel` inside a `ScrollViewer` — a known engine bug. Fixed by replacing all star column definitions in the NVIDIA Profile and DLSS grids with calculated fixed-pixel widths.
+
+---
+
 ## v2.7.9
 
 ### New
+- **Component update history** — a new "Updates" button in the bottom bar opens a dated log of everything RHI has downloaded: ReShade, RenoDX addons, shader packs, OptiScaler, ReLimiter, Display Commander, and more. Entries are grouped by date (Today / Yesterday / full date) and each shows the old and new version. History persists across sessions and can be cleared at any time.
 - **Unity game-specific settings** — RHI now writes the correct per-game INI settings when you install a RenoDX mod for a Unity engine game. Render target upgrades, swapchain format, and other compatibility keys are applied automatically based on the RHI database, with no manual configuration needed.
 - **DLSS Tool ZZZ Load Order** — a new toggle in the Neural Rendering section (DLSS Tool method only) lets you deploy the DLSS Tool addon as `zzz_renodx-dlss.addon64` so it loads last in the ReShade addon order. Toggling On or Off renames the file on disk immediately. RHI recognises both filenames as the same addon — tracking, auto-update, and version swapping all work seamlessly with either name.
 - **Control Ultimate Edition** — installing the Control RR mod now handles everything automatically. RHI upgrades DLSS, deploys the Ray Reconstruction runtime, corrects the HDR preset in renderer.ini, and clears the DLSS SR preset set in the NVIDIA driver profile for the game. A description of what will happen (and a note that this is not an HDR mod) is shown before you confirm.

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -238,6 +239,13 @@ public class ReShadeUpdateService : IReShadeUpdateService
 
         progress?.Report(($"ReShade {version} ready!", 100));
         CrashReporter.Log($"[ReShadeUpdateService.EnsureLatestAsync] Staged v{version} successfully");
+        App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+        {
+            Timestamp     = DateTime.UtcNow,
+            Category      = "ReShade",
+            ComponentName = "ReShade (Addon)",
+            NewVersion    = version,
+        });
         return true;
     }
 }

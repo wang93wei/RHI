@@ -1226,7 +1226,9 @@ public partial class DetailPanelBuilder
         BuildNeuralRenderingSection(card);
         CrashReporter.Log($"[BuildOverridesPanel] NeuralRendering done: '{card.GameName}'");
         BuildNvidiaProfileSection(card, capturedName);
-        CrashReporter.Log($"[BuildOverridesPanel] NvidiaProfile done: '{card.GameName}'");
+        CrashReporter.Log($"[BuildOverridesPanel] NvidiaProfileDlss done: '{card.GameName}'");
+        BuildDriverProfileSection(card, capturedName);
+        CrashReporter.Log($"[BuildOverridesPanel] NvidiaProfileDriver done: '{card.GameName}'");
 
         BuildManagementSection(card, capturedName, ctx);
         CrashReporter.Log($"[BuildOverridesPanel] Dxvk+Management done: '{card.GameName}'");

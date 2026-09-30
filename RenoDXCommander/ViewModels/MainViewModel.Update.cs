@@ -536,6 +536,14 @@ public partial class MainViewModel
             _latestUlDownloadUrl = downloadUrl64;
             _latestUlDownloadUrl32 = downloadUrl32;
             _crashReporter.Log($"[CheckUlUpdateAsync] Update available: {installedVersion ?? "(none)"} → {remoteVersion}");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = "Component",
+                ComponentName = "ReLimiter",
+                OldVersion    = installedVersion,
+                NewVersion    = remoteVersion,
+            });
 
             await PreCacheRemoteUlAsync(needs64, needs32);
             return true;
@@ -671,6 +679,14 @@ public partial class MainViewModel
             _latestDcDownloadUrl = downloadUrl64;
             _latestDcDownloadUrl32 = downloadUrl32;
             _crashReporter.Log($"[CheckDcUpdateAsync] Update available: {installedVersion ?? "(none)"} → {remoteVersion}");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = "Component",
+                ComponentName = "Display Commander",
+                OldVersion    = installedVersion,
+                NewVersion    = remoteVersion,
+            });
 
             await PreCacheRemoteDcAsync(needs64, needs32);
             return true;

@@ -511,13 +511,14 @@ public partial class DetailPanelBuilder
     /// <summary>Maps section key → its container Border in DetailPanel.</summary>
     private Border GetSectionContainer(string key) => key switch
     {
-        "Components"      => _window.DetailComponentSection,
-        "GameOverrides"   => _window.OverridesContainer,
-        "NeuralRendering" => _window.NeuralRenderingContainer,
-        "NvidiaProfile"   => _window.NvidiaProfileContainer,
-        "Management"      => _window.ManagementContainer,
-        "Extras"          => _window.ExtrasContainer,
-        _                 => throw new ArgumentException($"Unknown section key: {key}"),
+        "Components"         => _window.DetailComponentSection,
+        "GameOverrides"      => _window.OverridesContainer,
+        "NeuralRendering"    => _window.NeuralRenderingContainer,
+        "NvidiaProfileDlss"  => _window.NvidiaProfileDlssContainer,
+        "NvidiaProfileDriver"=> _window.NvidiaProfileDriverContainer,
+        "Management"         => _window.ManagementContainer,
+        "Extras"             => _window.ExtrasContainer,
+        _                    => throw new ArgumentException($"Unknown section key: {key}"),
     };
 
     /// <summary>
@@ -713,7 +714,8 @@ public partial class DetailPanelBuilder
             if      (border == _window.DetailComponentSection)     keyOrder.Add("Components");
             else if (border == _window.OverridesContainer)          keyOrder.Add("GameOverrides");
             else if (border == _window.NeuralRenderingContainer)    keyOrder.Add("NeuralRendering");
-            else if (border == _window.NvidiaProfileContainer)      keyOrder.Add("NvidiaProfile");
+            else if (border == _window.NvidiaProfileDlssContainer)   keyOrder.Add("NvidiaProfileDlss");
+            else if (border == _window.NvidiaProfileDriverContainer) keyOrder.Add("NvidiaProfileDriver");
             else if (border == _window.ManagementContainer)         keyOrder.Add("Management");
             else if (border == _window.ExtrasContainer)             keyOrder.Add("Extras");
         }

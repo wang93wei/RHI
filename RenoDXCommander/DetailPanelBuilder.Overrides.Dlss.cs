@@ -131,6 +131,7 @@ public partial class DetailPanelBuilder
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsEnabled = isPresent || (onDriverOverrideToggled != null),
             Opacity = 1.0,
+            MaxDropDownHeight = 300,
         };
 
         if (driverOverrideActive)
@@ -192,6 +193,7 @@ public partial class DetailPanelBuilder
                 FontSize = 11,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 IsEnabled = isPresent,
+                MaxDropDownHeight = 300,
             };
 
             // Add tooltip explaining presets
@@ -247,6 +249,7 @@ public partial class DetailPanelBuilder
                 FontSize = 11,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 IsEnabled = isPresent,
+                MaxDropDownHeight = 300,
             };
             ToolTipService.SetToolTip(rsCombo, Loc.GetString("Overrides.Dlss.RenderScale.Tooltip"));
 

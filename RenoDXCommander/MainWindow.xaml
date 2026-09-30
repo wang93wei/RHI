@@ -1055,13 +1055,25 @@
                             <StackPanel x:Name="NeuralRenderingPanel" x:FieldModifier="internal" Spacing="6"/>
                         </Border>
 
-                        <!-- ── Nvidia Profile Overrides section ── -->
-                        <Border x:Name="NvidiaProfileContainer" x:FieldModifier="internal"
+                        <!-- ── DLSS / Streamline section ── -->
+                        <Border x:Name="NvidiaProfileDlssContainer" x:FieldModifier="internal"
                                 Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
                                 BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
                                 Padding="14,12" Visibility="Collapsed">
-                            <StackPanel x:Name="NvidiaProfilePanel" x:FieldModifier="internal" Spacing="6"/>
+                            <StackPanel x:Name="NvidiaProfileDlssPanel" x:FieldModifier="internal" Spacing="6"/>
                         </Border>
+
+                        <!-- ── Driver Settings section ── -->
+                        <Border x:Name="NvidiaProfileDriverContainer" x:FieldModifier="internal"
+                                Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
+                                BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
+                                Padding="14,12" Visibility="Collapsed">
+                            <StackPanel x:Name="NvidiaProfileDriverPanel" x:FieldModifier="internal" Spacing="6"/>
+                        </Border>
+
+                        <!-- ── Legacy container — kept for migration, never shown ── -->
+                        <Border x:Name="NvidiaProfileContainer" x:FieldModifier="internal"
+                                Visibility="Collapsed"/>
 
                         <!-- ── Management section (folder, reset, report) ── -->
                         <Border x:Name="ManagementContainer" x:FieldModifier="internal"
@@ -3079,7 +3091,14 @@
                             Background="Transparent" BorderThickness="0"
                             Foreground="{StaticResource TextDisabledBrush}" FontSize="11"
                             Padding="8,2" VerticalAlignment="Center"
-                            ToolTipService.ToolTip="{Binding [Xaml.ShowMessageOfTheDay], Source={StaticResource Loc}}"/>
+ToolTipService.ToolTip="{Binding [Xaml.ShowMessageOfTheDay], Source={StaticResource Loc}}"/>
+                    <Button x:Name="UpdateLogBtn" x:FieldModifier="internal"
+                            Content="{Binding [Xaml.Updates], Source={StaticResource Loc}}"
+                            Click="UpdateLogButton_Click"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{StaticResource TextDisabledBrush}" FontSize="11"
+                            Padding="8,2" VerticalAlignment="Center"
+                            ToolTipService.ToolTip="{Binding [Xaml.ViewComponentUpdateHistory], Source={StaticResource Loc}}"/>
                 </StackPanel>
             </Grid>
         </Border>

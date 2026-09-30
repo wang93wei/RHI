@@ -126,6 +126,7 @@ public partial class App : Application
         services.AddSingleton<SeenWikiModsService>();
         services.AddSingleton<SeenUltraPlusModsService>();
         services.AddSingleton<SeenLumaModsService>();
+        services.AddSingleton<IUpdateLogService, UpdateLogService>();
         services.AddSingleton<IRenoDXDbService, RenoDXDbService>();
         services.AddSingleton<NexusDownloadService>();
         services.AddSingleton<NexusSsoService>();

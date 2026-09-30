@@ -1,8 +1,9 @@
 {
   "version": 1,
-  "game_count": 55322,
-  "generated": "2026-09-28T22:39:54Z",
+  "game_count": 55335,
+  "generated": "2026-09-29T22:14:13Z",
   "name_overrides": {
+    "ACE COMBAT 8: WINGS OF THEVE": "Ace Combat 8: Wings of Theve",
     "AFOP": "Avatar: Frontiers of Pandora",
     "Alan Wake 2": "Alan Wake 2",
     "Assassin’s Creed® III": "Assassin's Creed III",
@@ -3424,7 +3425,7 @@
       "engine": "Unreal Engine 5"
     },
     "Ace Combat Zero: The Belkan War": {
-      "steam_appid": 2288340
+      "steam_appid": 3635880
     },
     "Ace Combat: Assault Horizon - Enhanced Edition": {
       "steam_appid": 228400,
@@ -17949,6 +17950,10 @@
       "config_path": "HKEY_CURRENT_USER\\Software\\Joey Drew Studios\\Bendy and the Ink Machine\\",
       "engine": "Unity"
     },
+    "Bendy: The Cage": {
+      "steam_appid": 2663960,
+      "engine": "Unity"
+    },
     "Beneath": {
       "steam_appid": 1593230,
       "dx11": true,
@@ -31624,6 +31629,7 @@
       "config_path": "%APPDATA%\\Codemasters\\Clive Barker's Jericho\\",
       "engine": "Mercury Engine"
     },
+    "Clive Barker's Nightbreed: The Action Game": {},
     "Clive Barker's Nightbreed: The Interactive Movie": {},
     "Clive Barker's Undying": {
       "config_path": "<path-to-game>\\System\\*.ini",
@@ -36743,6 +36749,7 @@
       "config_path": "%USERPROFILE%\\Documents\\Paradox Interactive\\Crusader Kings III\\pdx_settings.txt",
       "engine": "Clausewitz"
     },
+    "Crusader: Adventure Out of Time": {},
     "Crusader: No Regret": {
       "engine": "Pagan engine"
     },
@@ -42471,6 +42478,8 @@
     },
     "DEFCON": {
       "steam_appid": 1520,
+      "dx11": true,
+      "vulkan": true,
       "opengl": true,
       "config_path": "<path-to-game>\\"
     },
@@ -50778,6 +50787,10 @@
     "DvDrum, Ultimate Drum Simulator!": {
       "steam_appid": 385130
     },
+    "Dverghold": {
+      "steam_appid": 4216280,
+      "engine": "Unity"
+    },
     "Dwarf Block": {
       "steam_appid": 1027780
     },
@@ -52934,6 +52947,7 @@
     },
     "Elroy and the Aliens": {
       "steam_appid": 1082190,
+      "dx11": true,
       "engine": "Unity"
     },
     "Elroy Goes Bugzerk": {
@@ -67008,6 +67022,9 @@
     "Genesis创世争霸": {
       "steam_appid": 755080
     },
+    "Genesys": {
+      "engine": "Director"
+    },
     "Genetic Disaster": {
       "steam_appid": 672460
     },
@@ -70321,6 +70338,7 @@
     },
     "Graveyard Keeper 2": {
       "steam_appid": 4358690,
+      "dx11": true,
       "config_path": "HKEY_CURRENT_USER\\Software\\Lazy Bear Games\\Graveyard Keeper 2\\",
       "engine": "Unity"
     },
@@ -81908,6 +81926,7 @@
     "Impresja": {
       "steam_appid": 657530
     },
+    "Impressionists": {},
     "Impressions": {
       "steam_appid": 1220330
     },
@@ -85061,7 +85080,9 @@
     "Jack the Nipper": {
       "steam_appid": 2072680
     },
-    "Jack the Ripper: New-York 1901": {},
+    "Jack the Ripper: New-York 1901": {
+      "engine": "Virtools"
+    },
     "Jack troubles": {
       "steam_appid": 1205020
     },
@@ -100294,6 +100315,7 @@
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Casual Brothers\\Matchbox\\Matchbox",
       "engine": "Unity"
     },
+    "Matchbox: Deep Sea Explorer": {},
     "Matchpoint: Tennis Championships": {
       "steam_appid": 1345760,
       "engine": "Unity"
@@ -116470,6 +116492,7 @@
     "Operation Lovecraft: Fallen Doll": {
       "steam_appid": 1685960
     },
+    "Operation Mania": {},
     "Operation Night Strikers": {
       "steam_appid": 3099790
     },
@@ -116795,6 +116818,10 @@
     },
     "Orc Hunter VR": {
       "steam_appid": 494530
+    },
+    "Orc Incremental": {
+      "steam_appid": 4047270,
+      "dx12": true
     },
     "Orc Island": {
       "steam_appid": 863270
@@ -123452,6 +123479,15 @@
     },
     "Please": {
       "steam_appid": 595030
+    },
+    "Please Be Happy": {
+      "steam_appid": 844670,
+      "dx11": true,
+      "dx12": true,
+      "vulkan": true,
+      "opengl": true,
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Studio Élan\\Please Be Happy\\NaninovelData\\Saves\\Settings.json",
+      "engine": "Unity"
     },
     "Please Close the Doors": {
       "steam_appid": 778850
@@ -136972,6 +137008,7 @@
     "RoVR": {
       "steam_appid": 679420
     },
+    "Rowan's Battle of Britain": {},
     "RowRow": {
       "steam_appid": 1001200
     },
@@ -148583,6 +148620,7 @@
     "Songbird Symphony": {
       "steam_appid": 909820,
       "dx11": true,
+      "config_path": "HKEY_CURRENT_USER\\Software\\Joysteak\\Songbird Symphony",
       "engine": "Unity"
     },
     "Songbringer": {
@@ -175955,7 +175993,9 @@
       "engine": "Unity"
     },
     "TOEM 2": {
-      "steam_appid": 2900640
+      "steam_appid": 2900640,
+      "config_path": "<path-to-game>/Save/Settings.json",
+      "engine": "Unity"
     },
     "Tofu Pudding Simulator": {
       "steam_appid": 1020840
@@ -184151,6 +184191,12 @@
       "steam_appid": 1182420,
       "engine": "Unity"
     },
+    "Ved: Recure": {
+      "steam_appid": 3255500,
+      "dx11": true,
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\SummerClip\\VED\\",
+      "engine": "Unity"
+    },
     "Vee Rethak - Deep Under The Mountain": {
       "steam_appid": 584070
     },
@@ -184479,6 +184525,10 @@
     "Vermis Orbita": {
       "steam_appid": 2064320,
       "engine": "Unity"
+    },
+    "Vernal Edge": {
+      "steam_appid": 1546710,
+      "config_path": "%LOCALAPPDATA%\\VernalEdge\\default\\save\\settings.json"
     },
     "Verne: The Shape of Fantasy": {
       "steam_appid": 1424600,
