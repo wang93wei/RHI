@@ -55,3 +55,46 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: 合并上游 v2.8.0 并继续汉化（组件更新窗口 / 驱动设置面板）
+<!-- trellis-session: v=2 fp=b4438e59b377c4b8 -->
+
+**Date**: 2026-09-30
+**Task**: 合并上游 v2.8.0 并继续汉化（组件更新窗口 / 驱动设置面板）
+**Branch**: `feat/i18n`
+
+### Summary
+
+将 upstream RankFTW/RHI main（2847d0c，v2.8.0 Beta）合并进 feat/i18n，解决 3 处冲突（MainWindow.xaml Updates 按钮、NVIDIA 面板拆分后的 DLSS/Streamline 标题、驱动设置管理员提示），随后继续汉化：新增的组件更新窗口全文案接入 Loc，驱动设置折叠摘要本地化，清理残留硬编码；五语言各 +31 键（1904 键，100% 覆盖）。
+
+### Main Changes
+
+- merge: 合并 22 个上游提交（NVIDIA 面板拆分为 DLSS/Streamline 与 Driver Settings、组件更新历史窗口）
+- feat(i18n): UpdateLogWindow 全量 Loc 化（标题、计数单复数、空状态、今天/昨天/日期格式随语言、已更新标记、分类标签）
+- feat(i18n): 驱动设置与 DLSS/Streamline 拆分标题、折叠摘要（VSync/Smooth/ReBAR/NV Override）接入 Loc/LocOpt
+- fix(i18n): 清零残留硬编码（HDR 状态提示、隐藏计数、Luma 开关、Show/Hide、关于页标语、无更新弹窗、自定义着色器提示、Loading 初始状态）
+- docs: 五语言字典各 +31 键，更新 Languages README、RHI_PatchNotes、i18n 规格键数
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f273ae2` | Merge remote-tracking branch 'upstream/main' into feat/i18n |
+| `7527a98` | feat(i18n): 本地化上游 v2.8.0 新增界面并补齐残留硬编码 |
+
+### Testing
+
+- [OK] python tools/check-i18n-coverage.py --strict → 五语言 1904/1904、无大小写重复键、XAML 硬编码 0
+- [OK] 静态校验脚本：1583 个代码/XAML 引用键在五语言字典中零缺失、零大小写重复（脚本为本次临时脚手架，未入库）
+- [OK] CI Build & Test run 36715629274（workflow_dispatch @ feat/i18n）：Check i18n catalogs / Build Release x64 / Run tests 全部 success
+- [OK] 本机无 .NET SDK（仅 runtime），无法本地 dotnet build/test
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- CI 结果若暴露 XAML 绑定或编译问题，按日志修正
+- R3.4 有意保留英文项（OptiScaler nightly cog 耦合下拉等）需先解耦显示与 INI 映射再汉化
