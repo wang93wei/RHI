@@ -641,6 +641,13 @@ public class Renodx5AddonService
             File.WriteAllText(versionFile, version);
             onComplete(version);
             _crashReporter.Log($"[Renodx5AddonService.DownloadAndStageAsync] Staged {displayName} v{version} ({new FileInfo(destPath).Length} bytes)");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = displayName.Contains("ShortFuse") ? "DLSS Tool" : "RenoDX DLSS5",
+                ComponentName = displayName,
+                NewVersion    = version,
+            });
         }
         catch (Exception ex)
         {
@@ -1174,6 +1181,13 @@ public class Renodx5AddonService
             }
 
             _crashReporter.Log($"[Renodx5AddonService.EnsureVersionStagedAsync] Staged v{version} ({addonType}) → '{destPath}' ({new FileInfo(destPath).Length} bytes)");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = addonType == "dlsstool" ? "DLSS Tool" : "RenoDX DLSS5",
+                ComponentName = addonType == "dlsstool" ? "DLSS Tool (ShortFuse)" : "RenoDX DLSS5",
+                NewVersion    = version,
+            });
             return true;
         }
         catch (Exception ex)

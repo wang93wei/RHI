@@ -717,6 +717,14 @@ public class AddonPackService : IAddonPackService
                 try { await DownloadAddonAsync(entry, versionOverride: remoteVersion); }
                 finally { _downloadLock.Release(); }
                 CrashReporter.Log($"[AddonPackService.CheckAndUpdateAllAsync] '{entry.PackageName}' updated to {remoteVersion}.");
+                App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+                {
+                    Timestamp     = DateTime.UtcNow,
+                    Category      = "Addon",
+                    ComponentName = entry.PackageName,
+                    OldVersion    = storedVersion,
+                    NewVersion    = remoteVersion,
+                });
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -554,6 +555,14 @@ public partial class OptiScalerService
 
             progress?.Report(("OptiPatcher staging ready", 100));
             CrashReporter.Log("[OptiScalerService.EnsureOptiPatcherStagingAsync] Staging complete");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = "OptiPatcher",
+                ComponentName = "OptiPatcher",
+                OldVersion    = cachedVersion,
+                NewVersion    = version,
+            });
         }
         catch (Exception ex)
         {
@@ -1040,6 +1049,14 @@ public partial class OptiScalerService
             HasUpdateNightly = false;
             progress?.Report(("OptiScaler Nightly staging ready", 100));
             CrashReporter.Log("[OptiScalerService.EnsureNightlyStagingAsync] Staging complete");
+            App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+            {
+                Timestamp     = DateTime.UtcNow,
+                Category      = "OptiScaler Nightly",
+                ComponentName = "OptiScaler (Nightly)",
+                OldVersion    = cachedVersion,
+                NewVersion    = tagName ?? "unknown",
+            });
         }
         catch (Exception ex)
         {

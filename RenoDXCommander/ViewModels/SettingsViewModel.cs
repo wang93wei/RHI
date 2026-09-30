@@ -104,11 +104,11 @@ public partial class SettingsViewModel : ObservableObject
     // ── Detail panel section order ────────────────────────────────────────────
     /// <summary>
     /// Ordered list of section keys for the detail panel.
-    /// Default order: Components, GameOverrides, NeuralRendering, NvidiaProfile, Management.
+    /// Default order: Components, GameOverrides, NeuralRendering, NvidiaProfileDlss, NvidiaProfileDriver, Management.
     /// Absent or incomplete = use default order.
     /// </summary>
     public static readonly IReadOnlyList<string> DefaultSectionOrder = new[]
-        { "Components", "GameOverrides", "NeuralRendering", "NvidiaProfile", "Management", "Extras" };
+        { "Components", "GameOverrides", "NeuralRendering", "NvidiaProfileDlss", "NvidiaProfileDriver", "Management", "Extras" };
 
     public List<string> DetailSectionOrder { get; set; } = new(DefaultSectionOrder);
 
@@ -397,6 +397,13 @@ public partial class SettingsViewModel : ObservableObject
             {
                 var list = System.Text.Json.JsonSerializer.Deserialize<List<string>>(cdsVal);
                 CollapsedDetailSections = new HashSet<string>(list ?? new(), StringComparer.OrdinalIgnoreCase);
+                // Migrate legacy "NvidiaProfile" collapse state to both new sections
+                if (CollapsedDetailSections.Contains("NvidiaProfile"))
+                {
+                    CollapsedDetailSections.Remove("NvidiaProfile");
+                    CollapsedDetailSections.Add("NvidiaProfileDlss");
+                    CollapsedDetailSections.Add("NvidiaProfileDriver");
+                }
             }
             catch { CollapsedDetailSections = new(StringComparer.OrdinalIgnoreCase); }
         }
@@ -407,6 +414,17 @@ public partial class SettingsViewModel : ObservableObject
             try
             {
                 var loaded = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dsoVal);
+                // Migrate: expand legacy "NvidiaProfile" key into the two new keys
+                if (loaded != null)
+                {
+                    var migrIdx = loaded.IndexOf("NvidiaProfile");
+                    if (migrIdx >= 0)
+                    {
+                        loaded.RemoveAt(migrIdx);
+                        loaded.Insert(migrIdx, "NvidiaProfileDriver");
+                        loaded.Insert(migrIdx, "NvidiaProfileDlss");
+                    }
+                }
                 // Merge: keep loaded order for known keys, append any missing ones at end
                 if (loaded != null)
                 {

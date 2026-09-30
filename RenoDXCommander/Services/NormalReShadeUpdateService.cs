@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -251,6 +252,13 @@ public class NormalReShadeUpdateService : INormalReShadeUpdateService
 
         progress?.Report(($"Normal ReShade {version} ready!", 100));
         CrashReporter.Log($"[NormalReShadeUpdateService.EnsureLatestAsync] Staged v{version} successfully");
+        App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+        {
+            Timestamp     = DateTime.UtcNow,
+            Category      = "ReShade",
+            ComponentName = "ReShade (Standard)",
+            NewVersion    = version,
+        });
         return true;
     }
 }

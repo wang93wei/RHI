@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using SharpCompress.Archives;
 
 namespace RenoDXCommander.Services;
@@ -307,6 +308,13 @@ public partial class ShaderPackService
         ClearIncludeCache();
         progress?.Report($"{pack.DisplayName} updated.");
         CrashReporter.Log($"[ShaderPackService.EnsurePackAsync] [{pack.Id}] Done. Version = {versionToken}");
+        App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+        {
+            Timestamp     = DateTime.UtcNow,
+            Category      = "Shader Pack",
+            ComponentName = pack.DisplayName,
+            NewVersion    = versionToken,
+        });
         }
         finally { packLock.Release(); }
     }

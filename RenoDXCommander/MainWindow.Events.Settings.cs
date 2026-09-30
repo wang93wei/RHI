@@ -71,6 +71,29 @@ public sealed partial class MainWindow
         }
     }
 
+    private void UpdateLogButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_updateLogWindow == null)
+            {
+                var svc = App.Services.GetRequiredService<IUpdateLogService>();
+                _updateLogWindow = new UpdateLogWindow(svc);
+                _updateLogWindow.Closed += (_, _) => _updateLogWindow = null;
+                _updateLogWindow.Activate();
+            }
+            else
+            {
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_updateLogWindow);
+                NativeInterop.ForceToForeground(hwnd);
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[MainWindow.UpdateLogButton_Click] {ex.Message}");
+        }
+    }
+
     private void OpenLogsFolder_Click(object sender, RoutedEventArgs e)
         => _settingsHandler.OpenLogsFolder_Click(sender, e);
 
