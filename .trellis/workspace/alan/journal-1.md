@@ -98,3 +98,43 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 
 - CI 结果若暴露 XAML 绑定或编译问题，按日志修正
 - R3.4 有意保留英文项（OptiScaler nightly cog 耦合下拉等）需先解耦显示与 INI 映射再汉化
+
+
+## Session 4: 继续同步上游 12 个提交（DXVK / OptiScaler 修复）并复核汉化
+<!-- trellis-session: v=2 fp=48af52c1bbd14692 -->
+
+**Date**: 2026-09-30
+**Task**: 继续同步上游 12 个提交（DXVK / OptiScaler 修复）并复核汉化
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream/main 2847d0c..1199800（12 个提交：DXVK DX11 安装/卸载状态修复、OptiScaler plugins 目录保护、更新日志版本捕获、补丁说明），1 处冲突（MainViewModel.Dxvk.cs）解决为保留 Loc 文案并采纳上游 DxvkEnabled=true。本批上游未新增用户可见文案，五语言字典无需变更；另做了一轮残留英文审计。
+
+### Main Changes
+
+- merge: 合并 12 个上游提交（DXVK/OptiScaler/更新日志修复 + 补丁说明）
+- fix(merge): 冲突处保留 Status.DxvkInstalled 的 Loc 调用，同时采纳上游 card.DxvkEnabled=true（DX11 RequiresVulkanInstall 正确性）
+- audit(i18n): 上游新增行零用户可见文案；39 个『未翻译但被引用』键复核后全部属 R3.4（品牌/技术名/格式串，API Key 与既有 zh-CN 行文风格一致）
+- audit(i18n): 确认 ExternalLabel（Download from Nexus Mods / Discord）为清单数据且兼作 Redownload 逻辑，维持 R3.4 不汉化
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `42301ae` | Merge remote-tracking branch 'upstream/main' into feat/i18n |
+
+### Testing
+
+- [OK] CI Build & Test run 36728982377 @ 42301ae：i18n catalogs 1904/1904 五语言、Build succeeded、62/62 测试通过
+- [OK] python tools/check-i18n-coverage.py --strict → exit 0
+- [OK] 10 个合并文件的括号/分隔符配平检查 OK；git rev-list HEAD..upstream/main = 0
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 上游后续若新增界面文案，继续抽取 Loc 键并五语言同步
+- 如需汉化补丁说明正文或 ExternalLabel，需先解耦（多语言 md 资源 / 显示文本与逻辑值分离）
