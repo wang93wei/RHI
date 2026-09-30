@@ -1272,7 +1272,7 @@ public static class ShaderPopupHelper
                 Padding             = new Thickness(8, 4, 8, 4),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
-            ToolTipService.SetToolTip(openCustomBtn, "Open your Custom shader folder — place .fx files in Shaders\\ and textures in Textures\\ to add them to the picker above.");
+            ToolTipService.SetToolTip(openCustomBtn, Loc.GetString("ShaderPicker.OpenCustomFolder.Tooltip"));
             openCustomBtn.Click += async (s, ev) =>
             {
                 try

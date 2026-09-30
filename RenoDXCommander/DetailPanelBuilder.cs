@@ -263,14 +263,14 @@ public partial class DetailPanelBuilder
             _window.DetailModStatusIcon.Text = "✓";
             _window.DetailModStatusIcon.Foreground = UIFactory.Brush(ResourceKeys.AccentGreenBrush);
             _window.DetailModStatusIcon.Visibility = Visibility.Visible;
-            ToolTipService.SetToolTip(_window.DetailModStatusIcon, "HDR mod complete");
+            ToolTipService.SetToolTip(_window.DetailModStatusIcon, Loc.GetString("Detail.ModStatus.Complete"));
         }
         else if (string.Equals(modStatusText, "WIP", StringComparison.OrdinalIgnoreCase))
         {
             _window.DetailModStatusIcon.Text = "🔨";
             _window.DetailModStatusIcon.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
             _window.DetailModStatusIcon.Visibility = Visibility.Visible;
-            ToolTipService.SetToolTip(_window.DetailModStatusIcon, "HDR mod in progress");
+            ToolTipService.SetToolTip(_window.DetailModStatusIcon, Loc.GetString("Detail.ModStatus.InProgress"));
         }
         else
         {
@@ -289,7 +289,9 @@ public partial class DetailPanelBuilder
             : UIFactory.Brush(ResourceKeys.BorderSubtleBrush);
 
         _window.DetailHideBtn.Tag = card;
-        _window.DetailHideIcon.Text = card.IsHidden ? "Show" : "Hide";
+        _window.DetailHideIcon.Text = card.IsHidden
+            ? Loc.GetString("Detail.HideToggle.Show")
+            : Loc.GetString("Detail.HideToggle.Hide");
         _window.DetailHideBtn.Foreground = UIFactory.Brush(ResourceKeys.ChipTextBrush);
 
         // Folder management buttons

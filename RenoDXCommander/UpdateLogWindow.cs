@@ -3,6 +3,8 @@
 // occurred since RHI was installed.  Opens from the "Updates" button in the bottom bar.
 // UI is built entirely in code-behind (same pattern as SetupWindow).
 
+using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -21,11 +23,13 @@ public sealed class UpdateLogWindow : Window
 {
     private readonly IUpdateLogService _updateLogService;
 
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     public UpdateLogWindow(IUpdateLogService updateLogService)
     {
         _updateLogService = updateLogService;
 
-        Title = "Component Updates";
+        Title = Loc.GetString("UpdateLog.Title");
 
         // Size — 720 × 500 logical px, DPI-scaled
         var hwnd = WindowNative.GetWindowHandle(this);
@@ -108,15 +112,13 @@ public sealed class UpdateLogWindow : Window
             Foreground = UIFactory.Brush(ResourceKeys.TextDisabledBrush),
         };
         var entries = _updateLogService.GetAll();
-        countText.Text = entries.Count == 0
-            ? "No updates recorded yet."
-            : $"{entries.Count} update{(entries.Count == 1 ? "" : "s")} recorded";
+        countText.Text = BuildCountText(entries.Count);
         Grid.SetColumn(countText, 0);
         footerRow.Children.Add(countText);
 
         var clearBtn = new Button
         {
-            Content     = "Clear History",
+            Content     = Loc.GetString("UpdateLog.ClearHistory"),
             FontSize    = 11,
             Padding     = new Thickness(10, 4, 10, 4),
             Margin      = new Thickness(0, 0, 8, 0),
@@ -131,7 +133,7 @@ public sealed class UpdateLogWindow : Window
             {
                 listPanel.Children.Clear();
                 BuildEntryList(listPanel);
-                countText.Text = "No updates recorded yet.";
+                countText.Text = BuildCountText(0);
             });
         };
         Grid.SetColumn(clearBtn, 1);
@@ -139,7 +141,7 @@ public sealed class UpdateLogWindow : Window
 
         var closeBtn = new Button
         {
-            Content     = "Close",
+            Content     = Loc.GetString("Dialog.Close"),
             FontSize    = 11,
             Padding     = new Thickness(10, 4, 10, 4),
             Background  = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
@@ -165,7 +167,7 @@ public sealed class UpdateLogWindow : Window
         {
             listPanel.Children.Add(new TextBlock
             {
-                Text       = "No component updates have been recorded yet.\n\nUpdates are captured whenever RHI downloads a new version of ReShade, RenoDX addons, shader packs, OptiScaler, Display Commander, or other components.",
+                Text       = Loc.GetString("UpdateLog.Empty.Body"),
                 FontSize   = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
                 TextWrapping = TextWrapping.Wrap,
@@ -181,9 +183,9 @@ public sealed class UpdateLogWindow : Window
         string GroupLabel(DateTime dt)
         {
             var d = dt.ToLocalTime().Date;
-            if (d == today)     return "Today";
-            if (d == yesterday) return "Yesterday";
-            return d.ToString("d MMMM yyyy");
+            if (d == today)     return Loc.GetString("UpdateLog.Today");
+            if (d == yesterday) return Loc.GetString("UpdateLog.Yesterday");
+            return d.ToString(Loc.GetString("UpdateLog.DateFormat"), FormatCulture);
         }
 
         var groups = entries
@@ -269,7 +271,7 @@ public sealed class UpdateLogWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             Child             = new TextBlock
             {
-                Text      = entry.Category,
+                Text      = CategoryLabel(entry.Category),
                 FontSize  = 10,
                 Foreground = UIFactory.Brush(fgKey),
             },
@@ -284,25 +286,53 @@ public sealed class UpdateLogWindow : Window
     {
         // Shader pack version tokens are either filenames (source_v4.2.zip) or content hashes.
         // Show the filename if it looks like one, otherwise just "Updated".
-        string FormatVersion(string? v)
+        // Returns null when there is no human-readable version (missing value or raw hash).
+        static string? FormatVersion(string? v)
         {
-            if (string.IsNullOrEmpty(v)) return "";
+            if (string.IsNullOrEmpty(v)) return null;
             // Hash: 40+ hex chars — not user-friendly
             if (v.Length >= 32 && v.All(c => "0123456789abcdefABCDEF\"".Contains(c)))
-                return "Updated";
+                return null;
             // Strip surrounding quotes if present
             return v.Trim('"');
         }
 
         var newVer = FormatVersion(entry.NewVersion);
         var oldVer = FormatVersion(entry.OldVersion);
+        var updated = Loc.GetString("UpdateLog.Updated");
 
-        if (!string.IsNullOrEmpty(oldVer) && oldVer != "Updated")
-            return $"{oldVer}  →  {newVer}";
-        return string.IsNullOrEmpty(newVer) || newVer == "Updated"
-            ? "Updated"
-            : newVer;
+        if (!string.IsNullOrEmpty(oldVer))
+            return $"{oldVer}  →  {newVer ?? updated}";
+        return string.IsNullOrEmpty(newVer) ? updated : newVer;
     }
+
+    /// <summary>"N updates recorded" / "No updates recorded yet." (localized).</summary>
+    private static string BuildCountText(int count) => count switch
+    {
+        0 => Loc.GetString("UpdateLog.Empty.Count"),
+        1 => Loc.GetString("UpdateLog.Count.One", count),
+        _ => Loc.GetString("UpdateLog.Count.Many", count),
+    };
+
+    /// <summary>Culture used for date formatting — follows the active UI language.</summary>
+    private static CultureInfo FormatCulture
+    {
+        get
+        {
+            try { return CultureInfo.GetCultureInfo(Loc.CurrentLanguage); }
+            catch { return CultureInfo.CurrentCulture; }
+        }
+    }
+
+    /// <summary>Display label for a log category. Brand names stay in English; generic
+    /// categories (Addon / Shader Pack / Component) are localized.</summary>
+    private static string CategoryLabel(string category) => category switch
+    {
+        "Addon"       => Loc.GetString("UpdateLog.Category.Addon"),
+        "Shader Pack" => Loc.GetString("UpdateLog.Category.ShaderPack"),
+        "Component"   => Loc.GetString("UpdateLog.Category.Component"),
+        _             => category,
+    };
 
     // Category → (bg resource key, fg resource key, border resource key)
     private static (string bg, string fg, string border) CategoryColors(string category) => category switch

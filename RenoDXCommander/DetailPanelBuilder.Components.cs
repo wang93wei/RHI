@@ -154,7 +154,7 @@ public partial class DetailPanelBuilder
                 {
                     // Use cached Vulkan layer version from card instead of reading from disk
                     var vulkanVersion = card.VulkanLayerInstalledVersion;
-                    _window.DetailRsStatus.Text = (vulkanVersion ?? "Installed") + "\n(Vulkan)";
+                    _window.DetailRsStatus.Text = (vulkanVersion ?? Loc.GetString("Status.Installed")) + Loc.GetString("Detail.VulkanSuffix");
                     _window.DetailRsStatus.Foreground = UIFactory.GetBrush("#5ECB7D");
                     _window.DetailRsStatus.TextDecorations = Windows.UI.Text.TextDecorations.Underline;
                 }
@@ -377,7 +377,7 @@ public partial class DetailPanelBuilder
                 _window.DetailRdxLabel.TextDecorations = extStrike;
                 _window.DetailRdxLabel.Opacity = rdxGreyed ? 0.35 : 1.0;
 
-                _window.DetailRdxStatus.Text = card.IsRdxInstalled ? (card.RdxInstalledVersion ?? "Installed") : "";
+                _window.DetailRdxStatus.Text = card.IsRdxInstalled ? (card.RdxInstalledVersion ?? Loc.GetString("Status.Installed")) : "";
                 _window.DetailRdxStatus.Foreground = UIFactory.GetBrush("#5ECB7D");
                 _window.DetailRdxStatus.TextDecorations = card.UseNormalReShade
                     ? Windows.UI.Text.TextDecorations.Strikethrough

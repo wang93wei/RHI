@@ -48,8 +48,8 @@ public partial class DetailPanelBuilder
 
         var driverVer = _dlssPresetService.DriverVersionString;
         var driverHeaderText = string.IsNullOrEmpty(driverVer)
-            ? "Driver Settings"
-            : $"Driver Settings — Driver {driverVer}";
+            ? Loc.GetString("Overrides.Section.DriverSettings")
+            : Loc.GetString("Overrides.Section.DriverSettingsVersion", driverVer);
 
         var driverArrow = new TextBlock
         {
@@ -211,18 +211,18 @@ public partial class DetailPanelBuilder
                     while (_driverHeaderRow.Children.Count > 3)
                         _driverHeaderRow.Children.RemoveAt(3);
 
-                    var vsyncName = DlssPresetService.VSyncModeOptions
-                        .FirstOrDefault(o => o.Value == data.VSyncMode).Name ?? "Default";
-                    var smoothName = data.SmoothMotionEnable != 0 ? "On" : null;
-                    var rebarName  = data.ReBarEnableMode == 1 ? "On" : "Auto";
+                    var vsyncName = LocOpt.T(DlssPresetService.VSyncModeOptions
+                        .FirstOrDefault(o => o.Value == data.VSyncMode).Name ?? "Default");
+                    var smoothName = data.SmoothMotionEnable != 0 ? LocOpt.T("On") : null;
+                    var rebarName  = LocOpt.T(data.ReBarEnableMode == 1 ? "On" : "Auto");
 
                     var summaryEntries = new System.Collections.Generic.List<(string, string?)>
                     {
-                        ("VSync", vsyncName),
+                        (Loc.GetString("Overrides.Summary.VSync"), vsyncName),
                     };
                     if (smoothName != null)
-                        summaryEntries.Add(("Smooth", smoothName));
-                    summaryEntries.Add(("ReBAR", rebarName));
+                        summaryEntries.Add((Loc.GetString("Overrides.Summary.Smooth"), smoothName));
+                    summaryEntries.Add((Loc.GetString("Overrides.Summary.ReBar"), rebarName));
                     var summaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(summaryEntries);
                     if (summaryTb != null)
                     {

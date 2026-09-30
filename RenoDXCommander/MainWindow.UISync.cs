@@ -88,7 +88,7 @@ public sealed partial class MainWindow
                     break;
                 case nameof(ViewModel.HiddenCount):
                     HiddenCountText.Text = ViewModel.HiddenCount > 0
-                        ? $"· {ViewModel.HiddenCount} hidden" : "";
+                        ? $"· {Loc.GetString("Stats.Hidden", ViewModel.HiddenCount)}" : "";
                     break;
                 case nameof(ViewModel.FilterMode):
                     RefreshFilterButtonStyles();
@@ -212,7 +212,9 @@ public sealed partial class MainWindow
 
     internal void UpdateLumaToggleStyle(bool isLumaMode)
     {
-        DetailLumaToggleText.Text = isLumaMode ? "Luma ON" : "Luma OFF";
+        DetailLumaToggleText.Text = isLumaMode
+            ? Loc.GetString("Detail.LumaToggle.On")
+            : Loc.GetString("Detail.LumaToggle.Off");
         if (isLumaMode)
         {
             DetailLumaToggle.Background = Brush(ResourceKeys.AccentGreenBgBrush);

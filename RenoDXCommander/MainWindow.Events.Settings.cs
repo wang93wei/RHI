@@ -29,7 +29,7 @@ public sealed partial class MainWindow
                 var dlg = new ContentDialog
                 {
                     Title = Loc.GetString("Dialog.UpToDate"),
-                    Content = $"You're running v{Services.CrashReporter.AppVersion} — no updates available.",
+                    Content = Loc.GetString("Dialog.UpToDate.Content", Services.CrashReporter.AppVersion),
                     CloseButtonText = Loc.GetString("Dialog.Ok"),
                     XamlRoot = Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
@@ -1723,7 +1723,7 @@ public sealed partial class MainWindow
 
     private void AboutButton_Click(object sender, RoutedEventArgs e)
     {
-        AboutVersionText.Text = $"v{CrashReporter.AppVersion}  ·  Simplified PC Gaming by RankFTW";
+        AboutVersionText.Text = $"v{CrashReporter.AppVersion}  ·  {Loc.GetString("App.Subtitle")} {Loc.GetString("Xaml.ByRankftw")}";
         ViewModel.NavigateToAboutCommand.Execute(null);
     }
 

@@ -851,14 +851,15 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                 _nvHeaderRow.Children.RemoveAt(3);
 
             var nvSummaryEntries = new List<(string, string?)>();
+            var nvOverride = Loc.GetString("Overrides.Summary.NvOverride");
             if (card.HasDlss)
-                nvSummaryEntries.Add(("SR", card.CachedSrDriverOverride ? "NV Override" : card.DlssInstalledVersion));
+                nvSummaryEntries.Add(("SR", card.CachedSrDriverOverride ? nvOverride : card.DlssInstalledVersion));
             if (card.HasDlssd)
-                nvSummaryEntries.Add(("RR", card.CachedRrDriverOverride ? "NV Override" : card.DlssdInstalledVersion));
+                nvSummaryEntries.Add(("RR", card.CachedRrDriverOverride ? nvOverride : card.DlssdInstalledVersion));
             if (card.HasDlssg)
-                nvSummaryEntries.Add(("FG", card.CachedFgDriverOverride ? "NV Override" : card.DlssgInstalledVersion));
+                nvSummaryEntries.Add(("FG", card.CachedFgDriverOverride ? nvOverride : card.DlssgInstalledVersion));
             if (FeatureFlags.DlssNr && card.HasDlssnr)
-                nvSummaryEntries.Add(("NR", card.CachedNrDriverOverride ? "NV Override" : card.DlssnrInstalledVersion));
+                nvSummaryEntries.Add(("NR", card.CachedNrDriverOverride ? nvOverride : card.DlssnrInstalledVersion));
             if (card.HasStreamline)
                 nvSummaryEntries.Add(("SL", card.StreamlineInstalledVersion));
 
