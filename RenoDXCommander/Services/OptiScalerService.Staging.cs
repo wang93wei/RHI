@@ -822,6 +822,10 @@ public partial class OptiScalerService
     {
         try
         {
+            // Capture the current version BEFORE any staging clear that may happen
+            // in the caller (UpdateAsync/InstallAsync) — so OldVersion is available for the update log.
+            var previousStagedVersion = StagedVersionNightly;
+
             if (IsStagingReadyNightly && !HasUpdateNightly)
             {
                 CrashReporter.Log("[OptiScalerService.EnsureNightlyStagingAsync] Staging already valid — skipping");
@@ -1054,7 +1058,7 @@ public partial class OptiScalerService
                 Timestamp     = DateTime.UtcNow,
                 Category      = "OptiScaler Nightly",
                 ComponentName = "OptiScaler (Nightly)",
-                OldVersion    = cachedVersion,
+                OldVersion    = previousStagedVersion,
                 NewVersion    = tagName ?? "unknown",
             });
         }

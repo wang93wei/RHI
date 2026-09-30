@@ -1226,25 +1226,41 @@ public partial class MainViewModel
                     // DX9 from the tracking record — d3d9.dll proves it's a DX9 game.
                     // IsDualApiGame is forced false — DXVK controls Vulkan, the user didn't
                     // toggle it; we don't want the rendering-path toggle to appear.
-                    if (dxvkRec.IsLiliumHdrMode || dxvkRec.InstalledDlls.Contains("d3d9.dll"))
+                    //
+                    // DX10/DX11 installs (dxgi.dll / d3d11.dll) also run Vulkan via DXVK —
+                    // detect them via the persisted VulkanRenderingPath="Vulkan" (set by
+                    // SetVulkanRenderingPath during install and loaded from _vulkanRenderingPaths
+                    // into newCard.VulkanRenderingPath at card construction above).
+                    bool isDxvkVulkan = dxvkRec.IsLiliumHdrMode
+                        || dxvkRec.InstalledDlls.Contains("d3d9.dll")
+                        || newCard.VulkanRenderingPath == "Vulkan";
+
+                    if (isDxvkVulkan)
                     {
-                        // Seed original API before overwriting GraphicsApi
-                        var originalApi = newCard.GraphicsApi;
-                        if (originalApi is GraphicsApiType.DirectX8
-                                        or GraphicsApiType.DirectX9
-                                        or GraphicsApiType.DirectX10)
-                            newCard.DetectedApis.Add(originalApi);
-                        else if (newCard.DetectedApis.Count == 0 || !newCard.DetectedApis.Any(
-                            a => a is GraphicsApiType.DirectX8 or GraphicsApiType.DirectX9 or GraphicsApiType.DirectX10))
-                            newCard.DetectedApis.Add(GraphicsApiType.DirectX9); // d3d9.dll install implies DX9
+                        // Only flip GraphicsApi to Vulkan for DX9 direct mode (d3d9.dll / Lilium HDR).
+                        // DX10/DX11+DXVK is a translation layer — keep GraphicsApi=DirectX11 so
+                        // SwitchReShadeForDxvk, uninstall, and IsDxvkToggleVisible work correctly.
+                        bool isDx9Dxvk = dxvkRec.IsLiliumHdrMode || dxvkRec.InstalledDlls.Contains("d3d9.dll");
+                        if (isDx9Dxvk)
+                        {
+                            var originalApi = newCard.GraphicsApi;
+                            if (originalApi is GraphicsApiType.DirectX8
+                                            or GraphicsApiType.DirectX9
+                                            or GraphicsApiType.DirectX10)
+                                newCard.DetectedApis.Add(originalApi);
+                            else if (newCard.DetectedApis.Count == 0 || !newCard.DetectedApis.Any(
+                                a => a is GraphicsApiType.DirectX8 or GraphicsApiType.DirectX9 or GraphicsApiType.DirectX10))
+                                newCard.DetectedApis.Add(GraphicsApiType.DirectX9);
+
+                            newCard.DetectedApis.Add(GraphicsApiType.Vulkan);
+                            newCard.GraphicsApi = GraphicsApiType.Vulkan;
+                            newCard.IsDualApiGame = false;
+                        }
 
                         newCard.VulkanRenderingPath = "Vulkan";
-                        newCard.GraphicsApi = GraphicsApiType.Vulkan;
-                        newCard.DetectedApis.Add(GraphicsApiType.Vulkan);
-                        newCard.IsDualApiGame = false; // not a native dual-API game
 
-                        // The old DX aux record (e.g. d3d9.dll) is now stale — DXVK owns that
-                        // file. Clear it so the Vulkan RS re-check (reshade.ini) fires below.
+                        // The old DX aux record (e.g. d3d9.dll / dxgi.dll) is now stale —
+                        // DXVK owns that file. Clear it so the Vulkan RS re-check fires below.
                         if (newCard.RsRecord != null
                             && dxvkRec.InstalledDlls.Any(d => d.Equals(newCard.RsRecord.InstalledAs, StringComparison.OrdinalIgnoreCase)))
                         {

@@ -323,6 +323,36 @@ public partial class DxvkService
             card.DxvkRecord = record;
             HasUpdate = false;
 
+            // DX10/DX11 DXVK installs Vulkan via the global layer (same as DX9).
+            // Set VulkanRenderingPath so ReShade uses the Vulkan layer and the
+            // RS record is re-checked for the Vulkan layer version.
+            // Do NOT flip GraphicsApi to Vulkan for DX11 — unlike DX9 where the game
+            // genuinely runs as Vulkan, DX11+DXVK is a translation layer and the card
+            // must keep GraphicsApi=DirectX11 so SwitchReShadeForDxvk, uninstall, and
+            // all existing guards continue to work correctly.
+            if (card.GraphicsApi is not GraphicsApiType.DirectX8
+                                 and not GraphicsApiType.DirectX9)
+            {
+                card.VulkanRenderingPath = "Vulkan";
+
+                // Clear any stale DX-proxy RS record so the Vulkan RS re-check fires
+                if (card.RsRecord != null
+                    && record.InstalledDlls.Any(d => d.Equals(card.RsRecord.InstalledAs, StringComparison.OrdinalIgnoreCase)))
+                {
+                    card.RsRecord = null;
+                    card.RsStatus = GameStatus.NotInstalled;
+                    card.RsInstalledFile = null;
+                }
+
+                // Update RS status to reflect the Vulkan layer now in use
+                var vulkanVersion = AuxInstallService.ReadInstalledVersion(
+                    VulkanLayerService.LayerDirectory, VulkanLayerService.LayerDllName);
+                card.RsInstalledVersion = vulkanVersion;
+                card.RsStatus = GameStatus.Installed;
+                card.RefreshBackupState();
+            }
+            card.NotifyAll();
+
             progress?.Report(("DXVK installed!", 100));
             CrashReporter.Log($"[DxvkService.InstallAsync] Install complete for {card.GameName}");
         }

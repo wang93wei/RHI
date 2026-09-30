@@ -22,7 +22,7 @@ public partial class DragDropHandler
     /// Handles a dropped archive file (.zip, .7z, .rar, etc.) — extracts it using 7-Zip,
     /// looks for .addon64/.addon32 files inside, and passes them to ProcessDroppedAddon.
     /// </summary>
-    public async Task ProcessDroppedArchive(string archivePath)
+    public async Task<bool> ProcessDroppedArchive(string archivePath)
     {
         var archiveName = Path.GetFileName(archivePath);
         _crashReporter.Log($"[DragDropHandler.ProcessDroppedArchive] Received '{archiveName}'");
@@ -39,7 +39,7 @@ public partial class DragDropHandler
                 RequestedTheme = ElementTheme.Dark,
             };
             await DialogService.ShowSafeAsync(errDialog);
-            return;
+            return false;
         }
 
         // Extract entire archive to a temp directory
@@ -64,7 +64,7 @@ public partial class DragDropHandler
             if (proc == null)
             {
                 _crashReporter.Log("[DragDropHandler.ProcessDroppedArchive] Failed to start 7z process");
-                return;
+                return false;
             }
 
             // Read output asynchronously to prevent deadlock
@@ -99,7 +99,7 @@ public partial class DragDropHandler
                     RequestedTheme = ElementTheme.Dark,
                 };
                 await DialogService.ShowSafeAsync(failDialog);
-                return;
+                return false;
             }
 
             // Search for renodx- prefixed .addon64, .addon32, and .addon files in the extracted contents
@@ -123,7 +123,7 @@ public partial class DragDropHandler
                     RequestedTheme = ElementTheme.Dark,
                 };
                 await DialogService.ShowSafeAsync(noAddonDialog);
-                return;
+                return false;
             }
 
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedArchive] Found {addonFiles.Count} addon file(s): [{string.Join(", ", addonFiles.Select(Path.GetFileName))}]");
@@ -155,7 +155,7 @@ public partial class DragDropHandler
                     XamlRoot = _window.Content.XamlRoot,
                     RequestedTheme = ElementTheme.Dark,
                 };
-                if (await DialogService.ShowSafeAsync(pickDialog) != ContentDialogResult.Primary) return;
+                if (await DialogService.ShowSafeAsync(pickDialog) != ContentDialogResult.Primary) return false;
                 addonToInstall = (combo.SelectedItem as ComboBoxItem)?.Tag as string ?? addonFiles[0];
             }
 
@@ -223,6 +223,7 @@ public partial class DragDropHandler
             // Clean up temp directory
             try { Directory.Delete(tempDir, recursive: true); } catch (Exception ex) { _crashReporter.Log($"[DragDropHandler.ProcessDroppedArchive] Failed to clean up temp dir '{tempDir}' — {ex.Message}"); }
         }
+        return true;
     }
 
     /// <summary>

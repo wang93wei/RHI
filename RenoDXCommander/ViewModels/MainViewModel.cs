@@ -843,18 +843,21 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                // Derive a friendly version from the addon filename:
-                // "renodx-onimusha-wots.addon64" → strip prefix/suffix, leave mod identifier
+                // Read the version from the installed file — it's on disk at this point
+                var version = AuxInstallService.ReadInstalledVersion(record.InstallPath, record.AddonFileName);
+
+                // Derive a friendly mod name from the addon filename:
+                // "renodx-onimusha-wots.addon64" → "onimusha-wots"
                 var modId = System.IO.Path.GetFileNameWithoutExtension(record.AddonFileName ?? "");
                 if (modId.StartsWith("renodx-", StringComparison.OrdinalIgnoreCase))
-                    modId = modId.Substring(7); // strip "renodx-"
+                    modId = modId.Substring(7);
 
                 App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
                 {
                     Timestamp     = DateTime.UtcNow,
                     Category      = "RenoDX",
                     ComponentName = record.GameName,
-                    NewVersion    = string.IsNullOrEmpty(modId) ? record.AddonFileName ?? "" : modId,
+                    NewVersion    = version ?? (string.IsNullOrEmpty(modId) ? record.AddonFileName ?? "" : modId),
                 });
             }
             catch { /* never let update log errors surface */ }
