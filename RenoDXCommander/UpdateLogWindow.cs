@@ -282,9 +282,26 @@ public sealed class UpdateLogWindow : Window
 
     private static string BuildVersionString(UpdateLogEntry entry)
     {
-        if (!string.IsNullOrEmpty(entry.OldVersion))
-            return $"{entry.OldVersion}  →  {entry.NewVersion}";
-        return $"{entry.NewVersion}  (new)";
+        // Shader pack version tokens are either filenames (source_v4.2.zip) or content hashes.
+        // Show the filename if it looks like one, otherwise just "Updated".
+        string FormatVersion(string? v)
+        {
+            if (string.IsNullOrEmpty(v)) return "";
+            // Hash: 40+ hex chars — not user-friendly
+            if (v.Length >= 32 && v.All(c => "0123456789abcdefABCDEF\"".Contains(c)))
+                return "Updated";
+            // Strip surrounding quotes if present
+            return v.Trim('"');
+        }
+
+        var newVer = FormatVersion(entry.NewVersion);
+        var oldVer = FormatVersion(entry.OldVersion);
+
+        if (!string.IsNullOrEmpty(oldVer) && oldVer != "Updated")
+            return $"{oldVer}  →  {newVer}";
+        return string.IsNullOrEmpty(newVer) || newVer == "Updated"
+            ? "Updated"
+            : newVer;
     }
 
     // Category → (bg resource key, fg resource key, border resource key)

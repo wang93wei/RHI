@@ -213,15 +213,16 @@ public partial class DetailPanelBuilder
 
                     var vsyncName = DlssPresetService.VSyncModeOptions
                         .FirstOrDefault(o => o.Value == data.VSyncMode).Name ?? "Default";
-                    var smoothName = data.SmoothMotionEnable != 0 ? "On" : "Off";
+                    var smoothName = data.SmoothMotionEnable != 0 ? "On" : null;
                     var rebarName  = data.ReBarEnableMode == 1 ? "On" : "Auto";
 
                     var summaryEntries = new System.Collections.Generic.List<(string, string?)>
                     {
                         ("VSync", vsyncName),
-                        ("Smooth", smoothName),
-                        ("ReBAR", rebarName),
                     };
+                    if (smoothName != null)
+                        summaryEntries.Add(("Smooth", smoothName));
+                    summaryEntries.Add(("ReBAR", rebarName));
                     var summaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(summaryEntries);
                     if (summaryTb != null)
                     {

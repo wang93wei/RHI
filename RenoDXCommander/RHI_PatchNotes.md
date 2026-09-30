@@ -2,8 +2,21 @@
 
 ### New
 - **NVIDIA panel split** — the "Nvidia Profile Overrides" section is now two independent panels: **DLSS / Streamline** (SR, RR, FG, SL versions and presets) and **Driver Settings** (VSync, Low Latency, Smooth Motion, Power/G-Sync, ReBAR). Each has its own collapse/expand, drag handle for reordering, and collapsed summary line. Each remembers its own collapsed state. Users who had the old section's position saved will see both new sections in that location automatically.
+- **Component update history now includes RenoDX mod updates** — installs and updates applied via Update All are now captured in the Updates log alongside shader packs, ReShade, and other components.
+
+### Changes
+- Minimum window width set to 1220px.
 
 ### Bug Fixes
+
+**OptiScaler**
+- Fixed OptiScaler uninstall deleting the game's `plugins\` folder — wiping Cyber Engine Tweaks, RED4ext, and other game mods on Cyberpunk 2077. The uninstall now skips the root `plugins\` folder entirely; `OptiPatcher.asi` is still removed correctly via a dedicated step that only deletes that specific file and only removes the folder if it is empty after.
+
+**File Watcher**
+- Fixed RenoDX and Luma archives being deleted from the Downloads folder when clicking Cancel on the game selection dialog. Archives are no longer auto-deleted — only direct `.addon` files are removed after a successful install.
+
+**DXVK**
+- Fixed DXVK not registering DX10/DX11 games as using Vulkan ReShade after install. The game card now correctly switches to Vulkan mode, the badge updates, shaders are deployed, and the state persists across restarts — matching the existing DX9 behaviour. Uninstall now correctly restores ReShade as a DX proxy and deploys shaders back.
 
 **UI**
 - Fixed the UI freezing for 30–60 seconds after clicking Check for Updates when a game with a large NVIDIA driver profile (e.g. Mass Effect Andromeda) was selected. The NVIDIA profile panel now skips its rebuild while the Settings panel is open, since it isn't visible and the expensive layout work is pointless.

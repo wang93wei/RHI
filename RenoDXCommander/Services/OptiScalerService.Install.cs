@@ -783,6 +783,11 @@ public partial class OptiScalerService
                     continue;
                 if (dirName.Equals("docs", StringComparison.OrdinalIgnoreCase))
                     continue;
+                // Skip the root plugins\ folder — it's a well-known game-owned directory
+                // (e.g. Cyberpunk 2077 uses plugins\ for CET, RED4ext, etc.).
+                // OptiPatcher.asi in plugins\ is handled safely by step 4b instead.
+                if (dirName.Equals("plugins", StringComparison.OrdinalIgnoreCase))
+                    continue;
 
                 var gameSubDir = Path.Combine(gameDir, dirName);
                 if (!Directory.Exists(gameSubDir)) continue;

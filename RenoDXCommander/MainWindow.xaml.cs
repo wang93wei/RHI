@@ -557,8 +557,8 @@ public sealed partial class MainWindow : Window
 
             await _dragDropHandler.ProcessDroppedArchive(filePath);
 
-            // Delete source archive from watch folder after successful processing
-            DeleteFromWatchFolder(filePath);
+            // Archives are not auto-deleted — the user may want to keep them
+            // (they are large files, and cancelling the dialog should never delete them).
         }
         catch (Exception ex)
         {

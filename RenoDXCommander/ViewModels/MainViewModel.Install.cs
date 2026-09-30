@@ -858,7 +858,6 @@ public partial class MainViewModel
         card.IsInstalling = true;
         card.ActionMessage = "Starting download...";
         _crashReporter.Log($"[MainViewModel.InstallModAsync] Install started: {card.GameName} → {card.InstallPath}");
-        var prevRdxVersion = card.RdxInstalledVersion; // capture before overwrite
         try
         {
             var progress = new Progress<(string msg, double pct)>(p =>
@@ -1028,14 +1027,6 @@ public partial class MainViewModel
                 card.Status                 = GameStatus.Installed;
                 card.FadeMessage(m => card.ActionMessage = m, "✅ Installed! Press Home in-game to open ReShade.");
                 _crashReporter.Log($"[MainViewModel.InstallModAsync] Install complete: {card.GameName} — {record.AddonFileName}");
-                App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
-                {
-                    Timestamp     = DateTime.UtcNow,
-                    Category      = "RenoDX",
-                    ComponentName = card.GameName,
-                    OldVersion    = prevRdxVersion,
-                    NewVersion    = card.RdxInstalledVersion ?? record.AddonFileName,
-                });
                 // Reset Nexus baseline so update indicator clears after install
                 _nexusUpdateService.ResetBaseline(card.GameName);
                 // Update the addon file cache so the next Refresh finds the installed file

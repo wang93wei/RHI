@@ -830,6 +830,32 @@ public partial class MainViewModel : ObservableObject
         LoadNameMappings();
         LoadThemeAndDensity();
         _nexusUpdateService.LoadBaselines();
+
+        // Wire InstallCompleted → UpdateLogService so batch updates (AutoUpdateService)
+        // are captured in the update log, not just user-initiated installs.
+        _installer.InstallCompleted += record =>
+        {
+            try
+            {
+                // Read the version from the installed file — it's on disk at this point
+                var version = AuxInstallService.ReadInstalledVersion(record.InstallPath, record.AddonFileName);
+
+                // Derive a friendly mod name from the addon filename:
+                // "renodx-onimusha-wots.addon64" → "onimusha-wots"
+                var modId = System.IO.Path.GetFileNameWithoutExtension(record.AddonFileName ?? "");
+                if (modId.StartsWith("renodx-", StringComparison.OrdinalIgnoreCase))
+                    modId = modId.Substring(7);
+
+                App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+                {
+                    Timestamp     = DateTime.UtcNow,
+                    Category      = "RenoDX",
+                    ComponentName = record.GameName,
+                    NewVersion    = version ?? (string.IsNullOrEmpty(modId) ? record.AddonFileName ?? "" : modId),
+                });
+            }
+            catch { /* never let update log errors surface */ }
+        };
     }
 
     // --- persisted settings: delegated to GameNameService ---
