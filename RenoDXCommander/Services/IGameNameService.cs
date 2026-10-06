@@ -142,6 +142,12 @@ public interface IGameNameService
     /// <summary>Games where Streamline should be deployed to the OptiScaler subfolder. Composite-keyed "GameName|Store".</summary>
     HashSet<string> OsDeployStreamline { get; }
 
+    /// <summary>Games where dgVoodoo2 has been standalone-installed via the Extras panel. Composite-keyed "GameName|Store".</summary>
+    HashSet<string> DgVoodooStandaloneGames { get; }
+
+    /// <summary>Per-game dgVoodoo2 version override. Key = "GameName|Store", Value = version string. Absent = use latest.</summary>
+    Dictionary<string, string> DgVoodooVersionOverride { get; }
+
     /// <summary>Games where DLSS Enabler should be deployed to the OptiScaler subfolder. Composite-keyed "GameName|Store".</summary>
     HashSet<string> OsDeployDlssEnabler { get; }
 

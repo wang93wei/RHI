@@ -68,14 +68,17 @@ public partial class DetailPanelBuilder
         var gn = card.GameName;
         var gs = card.Source ?? "";
         var installPath = card.InstallPath ?? "";
+        var dgSvc = App.Services.GetRequiredService<DgVoodooService>();
+        bool dgvInstalled = !string.IsNullOrEmpty(installPath) && dgSvc.IsDeployed(installPath);
         var exSummaryEntries = new List<(string, string?)>();
-        if (!string.IsNullOrEmpty(vm.GetUalInstalledAs(gn, gs)))                           exSummaryEntries.Add((Loc.GetString("Extras.AsiLoader"), vm.GetUalInstalledAs(gn, gs)));
+if (!string.IsNullOrEmpty(vm.GetUalInstalledAs(gn, gs)))                           exSummaryEntries.Add((Loc.GetString("Extras.AsiLoader"), vm.GetUalInstalledAs(gn, gs)));
         if (vm.GetRtx40MfgInstalled(gn, gs))                                               exSummaryEntries.Add((Loc.GetString("Extras.Rtx40Mfg"), LocOpt.T("On")));
         if (card.MfgAdaInstalled)                                                          exSummaryEntries.Add((Loc.GetString("Extras.MfgAda"), LocOpt.T("On")));
         if (vm.GetDlssg2030Installed(gn, gs))                                              exSummaryEntries.Add((Loc.GetString("Extras.Dlssg2030Short"), LocOpt.T("On")));
         if (card.IsOsInstalled)                                                             exSummaryEntries.Add((Loc.GetString("Detail.OptiScaler"), card.OsInstalledVersion));
         if (!string.IsNullOrEmpty(vm.GetDeInstalledAs(gn, gs)))                            exSummaryEntries.Add((Loc.GetString("Extras.DlssEnabler"), LocOpt.T("On")));
         if (card.IsDxvkInstalled)                                                           exSummaryEntries.Add((Loc.GetString("Detail.DXVK"), card.DxvkInstalledVersion ?? LocOpt.T("On")));
+        if (dgvInstalled)                                                                   exSummaryEntries.Add((Loc.GetString("Extras.DgVoodoo2"), vm.GetDgVoodooVersion(gn, gs) ?? _window.ViewModel.Manifest?.DgVoodooVersions?.Keys.FirstOrDefault()));
         var exSummary = DetailPanelBuilder.MakeSectionSummaryInlines(exSummaryEntries);
         if (exSummary != null)
         {
@@ -140,6 +143,19 @@ public partial class DetailPanelBuilder
             CrashReporter.Log($"[BuildExtrasSection] DxvkRow: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
         }
 
+        // ── dgVoodoo2 standalone row — DX9 games or already installed ─────────
+        bool isDx9ForDgv = card.DetectedApis.Contains(GraphicsApiType.DirectX9)
+                        || (card.DetectedApis.Count == 0 && card.GraphicsApi == GraphicsApiType.DirectX9);
+        // dgvInstalled already computed above for the summary
+        if (isDx9ForDgv || dgvInstalled)
+        {
+            if (!card.IsDxvkToggleVisible) // Show separator only if DXVK row wasn't shown
+                exBody.Children.Add(MakeExtrasSeparator(Loc.GetString("Extras.ApiUpgrades")));
+            __t0 = __exSw.ElapsedMilliseconds;
+            BuildDgVoodooRow(card, exBody);
+            CrashReporter.Log($"[BuildExtrasSection] DgVoodooRow: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
+        }
+
         UpdateOsFeedback(card);
         __exSw.Stop();
         CrashReporter.Log($"[BuildExtrasSection] Total: {__exSw.ElapsedMilliseconds}ms '{card.GameName}'");
@@ -189,7 +205,7 @@ public partial class DetailPanelBuilder
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(350) }); // fixed — separator text is centred, exact width doesn't matter
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -251,7 +267,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -451,7 +467,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -709,7 +725,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -1035,7 +1051,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -1183,6 +1199,7 @@ public partial class DetailPanelBuilder
                 ItemsSource = new[] { Dlssg20_30Service.GpuGenRtx30, Dlssg20_30Service.GpuGenRtx20 },
                 SelectedItem = currentGen,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
+                MaxDropDownHeight = 300,
             };
             var dlg = new ContentDialog
             {
@@ -1370,7 +1387,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -1584,15 +1601,18 @@ public partial class DetailPanelBuilder
         var installPath = card.InstallPath ?? "";
 
         var currentDllName = _window.ViewModel.GetDeInstalledAs(gameName, store);
+        _window.ViewModel.SetLastUiAction($"BuildDlssEnablerRow:IsInstalled({card.GameName})");
         bool isInstalled   = deSvc.IsStandaloneInstalledIn(installPath, currentDllName);
 
         // Mutual exclusivity with OptiScaler
         bool osConflict = card.IsOsInstalled;
 
+        _window.ViewModel.SetLastUiAction($"BuildDlssEnablerRow:StagedVersion({card.GameName})");
         // Status text
         string statusText  = isInstalled ? (deSvc.StagedVersion ?? Loc.GetString("Status.Installed")) : Loc.GetString("Status.Ready");
         string statusColor = isInstalled ? "#5ECB7D" : "#A0AABB";
 
+        _window.ViewModel.SetLastUiAction($"BuildDlssEnablerRow:BuildGrid({card.GameName})");
         // ── Row grid matching Components section exactly ───────────────────────
         // Col 0: label (120)  Col 1: status (80)  Col 2: Info (36)
         // Col 3: install (*)  Col 4: cog (36)     Col 5: delete (36)
@@ -1600,7 +1620,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -1786,6 +1806,7 @@ public partial class DetailPanelBuilder
         row.Children.Add(removeBtn);
 
         body.Children.Add(row);
+        _window.ViewModel.SetLastUiAction($"BuildDlssEnablerRow:Done({card.GameName})");
     }
 
     private async Task<string?> ShowMfgDllPickerAsync(GameCardViewModel card, string? currentDllName)
@@ -2020,7 +2041,7 @@ public partial class DetailPanelBuilder
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -2148,6 +2169,362 @@ public partial class DetailPanelBuilder
         deleteBtn.Click += (s, e) => _window.UninstallDxvkButton_Click(s, e);
         Grid.SetColumn(deleteBtn, 5);
         row.Children.Add(deleteBtn);
+
+        body.Children.Add(row);
+    }
+
+    private void BuildDgVoodooRow(GameCardViewModel card, StackPanel body)
+    {
+        _window.ViewModel.SetLastUiAction($"BuildDgVoodooRow({card.GameName})");
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+        var installPath = card.InstallPath ?? "";
+
+        var dgSvc   = App.Services.GetRequiredService<DgVoodooService>();
+        var manifest = _window.ViewModel.Manifest;
+
+        bool isInstalled = dgSvc.IsDeployed(installPath);
+
+        // Status: show deployed version — prefer stored per-game override, else latest from manifest
+        string? latestVersion = manifest?.DgVoodooVersions?.Keys.FirstOrDefault();
+        var activeVersion = _window.ViewModel.GetDgVoodooVersion(gameName, store) ?? latestVersion;
+        string statusText  = isInstalled ? (activeVersion != null ? $"v{activeVersion}" : Loc.GetString("Status.Installed")) : Loc.GetString("Status.Ready");
+        string statusColor = isInstalled ? "#5ECB7D" : "#A0AABB";
+
+        // ── Row grid ──────────────────────────────────────────────────────────
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+
+        // Col 0 — label
+        var label = new TextBlock
+        {
+            Text = Loc.GetString("Extras.DgVoodoo2"),
+            FontSize = 12,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        ToolTipService.SetToolTip(label,
+            Loc.GetString("Extras.DgVoodoo2.Tooltip"));
+        Grid.SetColumn(label, 0);
+        row.Children.Add(label);
+
+        // Col 1 — status
+        var statusBlock = new TextBlock
+        {
+            Text = statusText,
+            FontSize = 12,
+            Foreground = UIFactory.GetBrush(statusColor),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
+            TextDecorations = isInstalled ? Windows.UI.Text.TextDecorations.Underline : Windows.UI.Text.TextDecorations.None,
+        };
+        if (isInstalled)
+        {
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.DgVoodoo2.Status.Tooltip"));
+            statusBlock.PointerPressed += (s, e) =>
+                _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/dege-diosg/dgVoodoo2/releases"));
+            statusBlock.PointerEntered += (s, e) => _window.LinkText_PointerEntered(s, e);
+            statusBlock.PointerExited  += (s, e) => _window.LinkText_PointerExited(s, e);
+        }
+        Grid.SetColumn(statusBlock, 1);
+        row.Children.Add(statusBlock);
+
+        // Col 2 — Info button
+        var infoBtn = new Button
+        {
+            Content = Loc.GetString("Dialog.Info"),
+            FontSize = 11,
+            Padding = new Thickness(6, 2, 6, 2),
+            Width = 36,
+            Height = 32,
+            Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
+            Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
+            BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+        };
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.DgVoodoo2.Info.Tooltip"));
+        infoBtn.Click += (s, e) =>
+            _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/dege-diosg/dgVoodoo2/releases"));
+        Grid.SetColumn(infoBtn, 2);
+        row.Children.Add(infoBtn);
+
+        // Col 3 — Install button
+        var installBtn = new Button
+        {
+            Content = isInstalled ? Loc.GetString("Extras.DgVoodoo2.Reinstall.Button") : Loc.GetString("Extras.DgVoodoo2.Install.Button"),
+            FontSize = 12,
+            Height = 32,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            CornerRadius = new CornerRadius(8),
+            Background = isInstalled
+                ? UIFactory.GetBrush("#182840")
+                : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
+            Foreground = isInstalled
+                ? UIFactory.GetBrush("#7AACDD")
+                : UIFactory.Brush(ResourceKeys.AccentBlueBrush),
+            BorderBrush = isInstalled
+                ? UIFactory.GetBrush("#2A4468")
+                : UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
+            BorderThickness = new Thickness(1),
+            IsEnabled = manifest?.DgVoodooVersions?.Count > 0,
+        };
+        ToolTipService.SetToolTip(installBtn,
+            isInstalled ? Loc.GetString("Extras.DgVoodoo2.Reinstall.Tooltip")
+                        : Loc.GetString("Extras.DgVoodoo2.Install.Tooltip"));
+
+        installBtn.Click += async (s, ev) =>
+        {
+            if (string.IsNullOrEmpty(installPath) || manifest?.DgVoodooVersions == null) return;
+            installBtn.IsEnabled = false;
+            installBtn.Content   = Loc.GetString("Status.Installing");
+            try
+            {
+                // Pick version: prefer stored per-game override, then latest from manifest
+                KeyValuePair<string, string> versionEntry;
+                var storedVersion = _window.ViewModel.GetDgVoodooVersion(gameName, store);
+                if (!string.IsNullOrEmpty(storedVersion)
+                    && manifest.DgVoodooVersions.TryGetValue(storedVersion, out var storedUrl))
+                    versionEntry = new KeyValuePair<string, string>(storedVersion, storedUrl);
+                else
+                    versionEntry = manifest.DgVoodooVersions.First();
+
+                await dgSvc.EnsureStagedAsync(versionEntry.Key, versionEntry.Value).ConfigureAwait(false);
+                var deployed = await Task.Run(() =>
+                    dgSvc.DeployToGame(installPath, versionEntry.Key, is64Bit: !card.Is32Bit));
+
+                if (deployed.Count > 0)
+                {
+                    _window.ViewModel.SetDgVoodooStandalone(gameName, true, store);
+                    CrashReporter.Log($"[BuildDgVoodooRow] dgVoodoo2 v{versionEntry.Key} deployed standalone for '{gameName}'");
+
+                    // If ReShade was at d3d9.dll, dgVoodoo2's SentinelBackup has already saved it
+                    // as d3d9.dll.original. Copy it to dxgi.dll so ReShade hooks dgVoodoo2's DX11 output.
+                    // Do NOT move d3d9.dll (that's now dgVoodoo2).
+                    if (card.IsRsInstalled
+                        && card.RsInstalledFile?.Equals("d3d9.dll", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        CrashReporter.Log($"[BuildDgVoodooRow] Copying ReShade from D3D9.dll.original → dxgi.dll for dgVoodoo2 coexistence on '{gameName}'");
+                        try
+                        {
+                            // D3D9.dll.original is the ReShade DLL backed up by SentinelBackup during deploy.
+                            // Copy it to dxgi.dll so ReShade hooks dgVoodoo2's DX11 output.
+                            // No sentinel needed on dxgi.dll — this is our file, not a foreign DLL.
+                            var sentinelPath = Path.Combine(installPath, "d3d9.dll.original");
+                            var dxgiPath     = Path.Combine(installPath, "dxgi.dll");
+                            if (File.Exists(sentinelPath) && new FileInfo(sentinelPath).Length > 0)
+                            {
+                                File.Copy(sentinelPath, dxgiPath, overwrite: true);
+                                // Update ReShade tracking record
+                                if (card.RsRecord != null)
+                                {
+                                    card.RsRecord.InstalledAs = "dxgi.dll";
+                                    _auxInstallService.SaveAuxRecord(card.RsRecord);
+                                }
+                                card.RsInstalledFile = "dxgi.dll";
+                                CrashReporter.Log($"[BuildDgVoodooRow] ReShade copied to dxgi.dll for '{gameName}'");
+                            }
+                            else
+                            {
+                                CrashReporter.Log($"[BuildDgVoodooRow] D3D9.dll.original not found or is empty sentinel — skipping coexistence copy for '{gameName}'");
+                            }
+                        }
+                        catch (Exception rsEx)
+                        {
+                            CrashReporter.Log($"[BuildDgVoodooRow] Failed to copy ReShade to dxgi.dll for '{gameName}' — {rsEx.Message}");
+                        }
+                    }
+
+                    // Rebuild after everything (including ReShade reinstall) is complete
+                    RequestExtrasRebuild(card);
+                }
+                else
+                {
+                    installBtn.Content = Loc.GetString("Extras.DgVoodoo2.DeployFailed");
+                    installBtn.IsEnabled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[BuildDgVoodooRow] Install failed for '{gameName}' — {ex.Message}");
+                installBtn.Content   = Loc.GetString("Extras.DgVoodoo2.Failed");
+                installBtn.IsEnabled = true;
+            }
+        };
+        Grid.SetColumn(installBtn, 3);
+        row.Children.Add(installBtn);
+
+        // Col 4 — Cog
+        var cogBtn = new Button
+        {
+            Width = 36,
+            Height = 32,
+            Padding = new Thickness(0),
+            Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush),
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Content = new TextBlock { Text = "⚙", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center },
+        };
+        ToolTipService.SetToolTip(cogBtn, Loc.GetString("Extras.DgVoodoo2.Settings.Tooltip"));
+        cogBtn.Click += async (s, ev) =>
+        {
+            // Build version list from manifest
+            var versions = manifest?.DgVoodooVersions?.Keys.ToList() ?? new List<string>();
+            if (versions.Count == 0)
+            {
+                var noVerDlg = new ContentDialog
+                {
+                    Title = Loc.GetString("Extras.DgVoodoo2.Settings.Title"),
+                    Content = new TextBlock { Text = Loc.GetString("Extras.DgVoodoo2.NoVersions"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) },
+                    CloseButtonText = Loc.GetString("Dialog.Close"),
+                    XamlRoot = _window.Content.XamlRoot,
+                    RequestedTheme = ElementTheme.Dark,
+                };
+                await DialogService.ShowSafeAsync(noVerDlg);
+                return;
+            }
+
+            var currentVersion = _window.ViewModel.GetDgVoodooVersion(gameName, store) ?? versions[0];
+
+            var versionStack = new StackPanel { Spacing = 6 };
+            versionStack.Children.Add(new TextBlock
+            {
+                Text = Loc.GetString("Dialog.Version"),
+                FontSize = 12,
+                Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            });
+            var versionCombo = new ComboBox
+            {
+                ItemsSource = versions,
+                SelectedItem = versions.Contains(currentVersion) ? currentVersion : versions[0],
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                MaxDropDownHeight = 300,
+            };
+            ToolTipService.SetToolTip(versionCombo,
+                Loc.GetString("Extras.DgVoodoo2.Version.Tooltip"));
+            versionStack.Children.Add(versionCombo);
+
+            versionStack.Children.Add(new TextBlock
+            {
+                Text = Loc.GetString("Extras.DgVoodoo2.ChangeVersionNote"),
+                FontSize = 11,
+                Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0),
+            });
+
+            var cogDlg = new ContentDialog
+            {
+                Title = Loc.GetString("Extras.DgVoodoo2.Settings.Title"),
+                Content = versionStack,
+                PrimaryButtonText = Loc.GetString("Dialog.Apply"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = _window.Content.XamlRoot,
+                RequestedTheme = ElementTheme.Dark,
+            };
+
+            var result = await DialogService.ShowSafeAsync(cogDlg);
+            if (result != ContentDialogResult.Primary) return;
+
+            var selectedVersion = versionCombo.SelectedItem as string;
+            if (string.IsNullOrEmpty(selectedVersion)) return;
+
+            _window.ViewModel.SetDgVoodooVersion(gameName, selectedVersion, store);
+
+            // Redeploy if already installed
+            if (isInstalled && manifest?.DgVoodooVersions?.TryGetValue(selectedVersion, out var versionUrl) == true)
+            {
+                try
+                {
+                    await dgSvc.EnsureStagedAsync(selectedVersion, versionUrl).ConfigureAwait(false);
+                    var redeployed = await Task.Run(() => dgSvc.DeployToGame(installPath, selectedVersion, is64Bit: !card.Is32Bit));
+                    if (redeployed.Count > 0)
+                        CrashReporter.Log($"[BuildDgVoodooRow] Redeployed dgVoodoo2 v{selectedVersion} for '{gameName}'");
+                }
+                catch (Exception ex)
+                {
+                    CrashReporter.Log($"[BuildDgVoodooRow] Redeploy failed — {ex.Message}");
+                }
+                RequestExtrasRebuild(card);
+            }
+        };
+        Grid.SetColumn(cogBtn, 4);
+        row.Children.Add(cogBtn);
+
+        // Col 5 — Remove button (visible only when installed)
+        var removeBtn = new Button
+        {
+            Width = 36,
+            Height = 32,
+            Padding = new Thickness(0),
+            Background = UIFactory.Brush(ResourceKeys.AccentRedBgBrush),
+            Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush),
+            BorderBrush = UIFactory.Brush(ResourceKeys.AccentPurpleBorderBrush),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Content = new TextBlock { Text = "✕", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush) },
+            Opacity = isInstalled ? 1.0 : 0.0,
+            IsHitTestVisible = isInstalled,
+        };
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.DgVoodoo2.Remove.Tooltip"));
+        removeBtn.Click += async (s, ev) =>
+        {
+            if (string.IsNullOrEmpty(installPath)) return;
+            // Coexistence guard: don't remove if Luma or Feeder also needs dgVoodoo2
+            bool lumaNeeds    = card.LumaStatus == GameStatus.Installed;
+            bool feederNeeds  = File.Exists(Path.Combine(installPath, "dlss5-feed.addon32"))
+                             || File.Exists(Path.Combine(installPath, "dlss5-feed.addon64"));
+            if (lumaNeeds || feederNeeds)
+            {
+                CrashReporter.Log($"[BuildDgVoodooRow] {(lumaNeeds ? "Luma" : "Feeder")} still installed — only clearing standalone flag for '{gameName}'");
+                _window.ViewModel.SetDgVoodooStandalone(gameName, false, store);
+                RequestExtrasRebuild(card);
+                return;
+            }
+            dgSvc.RemoveFromGame(installPath);
+            _window.ViewModel.SetDgVoodooStandalone(gameName, false, store);
+            CrashReporter.Log($"[BuildDgVoodooRow] dgVoodoo2 removed for '{gameName}'");
+
+            // If ReShade was coexisting as dxgi.dll, dgVoodoo2's SentinelRestore already put
+            // ReShade back at D3D9.dll (from D3D9.dll.original). Just delete the dxgi.dll copy
+            // and update the tracking record — no full reinstall needed.
+            if (card.IsRsInstalled
+                && card.RsInstalledFile?.Equals("dxgi.dll", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                try
+                {
+                    var dxgiPath = Path.Combine(installPath, "dxgi.dll");
+                    if (File.Exists(dxgiPath)) File.Delete(dxgiPath);
+                    // Also clean up any stale dxgi.dll.original left from a previous failed attempt
+                    var dxgiOrigPath = Path.Combine(installPath, "dxgi.dll.original");
+                    if (File.Exists(dxgiOrigPath)) File.Delete(dxgiOrigPath);
+                    if (card.RsRecord != null)
+                    {
+                        card.RsRecord.InstalledAs = "d3d9.dll";
+                        _auxInstallService.SaveAuxRecord(card.RsRecord);
+                    }
+                    card.RsInstalledFile = "d3d9.dll";
+                    CrashReporter.Log($"[BuildDgVoodooRow] Cleaned up coexistence dxgi.dll, updated ReShade record to d3d9.dll for '{gameName}'");
+                }
+                catch (Exception rsEx)
+                {
+                    CrashReporter.Log($"[BuildDgVoodooRow] Failed to clean up dxgi.dll for '{gameName}' — {rsEx.Message}");
+                }
+            }
+
+            RequestExtrasRebuild(card);
+        };
+        Grid.SetColumn(removeBtn, 5);
+        row.Children.Add(removeBtn);
 
         body.Children.Add(row);
     }

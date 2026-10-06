@@ -241,7 +241,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     if (version.StartsWith("Default", StringComparison.OrdinalIgnoreCase)) dlssService.Restore(tc.DlssDetection.DlssPath);
                     else if (version == "Custom") await dlssService.SwapDlssCustomAsync(tc.DlssDetection.DlssPath);
                     else await dlssService.SwapDlssAsync(tc.DlssDetection.DlssPath, version);
-                    tc.RefreshDlssVersions(dlssService);
+                    await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
                 (preset) => { _ = Task.Run(() => presetService.SetSrPreset(capturedGameName, capturedInstallPath, preset)); },
@@ -268,7 +268,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     if (version.StartsWith("Default", StringComparison.OrdinalIgnoreCase)) dlssService.Restore(tc.DlssDetection.DlssdPath);
                     else if (version == "Custom") await dlssService.SwapDlssCustomAsync(tc.DlssDetection.DlssdPath);
                     else await dlssService.SwapDlssdAsync(tc.DlssDetection.DlssdPath, version);
-                    tc.RefreshDlssVersions(dlssService);
+                    await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
                 (preset) => { _ = Task.Run(() => presetService.SetRrPreset(capturedGameName, capturedInstallPath, preset)); },
@@ -296,7 +296,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     if (version.StartsWith("Default", StringComparison.OrdinalIgnoreCase)) dlssService.Restore(tc.DlssDetection.DlssgPath);
                     else if (version == "Custom") await dlssService.SwapDlssCustomAsync(tc.DlssDetection.DlssgPath);
                     else await dlssService.SwapDlssgAsync(tc.DlssDetection.DlssgPath, version);
-                    tc.RefreshDlssVersions(dlssService);
+                    await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
                 (preset) => { _ = Task.Run(() => presetService.SetFgPreset(capturedGameName, capturedInstallPath, preset)); },
@@ -405,14 +405,14 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                 // When NR is not installed the placeholder is invisible but still takes space.
                 if (!hasDlssnr)
                 {
-                    var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0), Opacity = 0 };
-                    var presetPlaceholderCombo = new ComboBox { ItemsSource = new[] { LocOpt.T("Default") }, SelectedIndex = 0, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false, Opacity = 0 };
+var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0), Opacity = 0 };
+                    var presetPlaceholderCombo = new ComboBox { ItemsSource = new[] { LocOpt.T("Default") }, SelectedIndex = 0, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false, Opacity = 0, MaxDropDownHeight = 300 };
                     nrCol.Children.Add(presetPlaceholderLabel);
                     nrCol.Children.Add(presetPlaceholderCombo);
                 }
                 nrCol.Children.Add(new TextBlock { Text = " ", FontSize = 10, Margin = new Thickness(0, 2, 0, 0) });
                 var deployRow = new Grid { ColumnSpacing = 6 };
-                deployRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                deployRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 deployRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
                 var deployNrBtn = new Button
@@ -634,7 +634,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     if (version.StartsWith("Default", StringComparison.OrdinalIgnoreCase)) dlssService.RestoreStreamline(tc.DlssDetection.StreamlineFolder);
                     else if (version == "Custom") await dlssService.SwapStreamlineCustomAsync(tc.DlssDetection.StreamlineFolder);
                     else await dlssService.SwapStreamlineAsync(tc.DlssDetection.StreamlineFolder, version);
-                    tc.RefreshDlssVersions(dlssService);
+                    await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
                 null,
@@ -753,10 +753,19 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                 if (pSvc.IsSupported && settings.DefaultFgDriverOverride && targetCard.HasDlssg)
                     pSvc.SetFgDriverOverride(targetCard.GameName, targetCard.InstallPath ?? "", true);
 
-                // Re-read override state after applying defaults (may have just been enabled above)
-                srOverride = pSvc.IsSupported && (srOverride || settings.DefaultSrDriverOverride);
-                rrOverride = pSvc.IsSupported && (rrOverride || settings.DefaultRrDriverOverride);
-                fgOverride = pSvc.IsSupported && (fgOverride || settings.DefaultFgDriverOverride);
+                // If the default is a specific version (NOT NVIDIA Override) but the game currently
+                // has driver override active, clear it first so the DLL swap can take effect.
+                if (pSvc.IsSupported && !settings.DefaultSrDriverOverride && srOverride && !string.IsNullOrEmpty(settings.DefaultDlssVersion))
+                    pSvc.SetSrDriverOverride(targetCard.GameName, targetCard.InstallPath ?? "", false);
+                if (pSvc.IsSupported && !settings.DefaultRrDriverOverride && rrOverride && !string.IsNullOrEmpty(settings.DefaultDlssdVersion))
+                    pSvc.SetRrDriverOverride(targetCard.GameName, targetCard.InstallPath ?? "", false);
+                if (pSvc.IsSupported && !settings.DefaultFgDriverOverride && fgOverride && !string.IsNullOrEmpty(settings.DefaultDlssgVersion))
+                    pSvc.SetFgDriverOverride(targetCard.GameName, targetCard.InstallPath ?? "", false);
+
+                // Re-read override state after applying defaults (may have just been enabled or disabled above)
+                srOverride = pSvc.IsSupported && settings.DefaultSrDriverOverride;
+                rrOverride = pSvc.IsSupported && settings.DefaultRrDriverOverride;
+                fgOverride = pSvc.IsSupported && settings.DefaultFgDriverOverride;
 
                 if (!string.IsNullOrEmpty(settings.DefaultDlssVersion) && targetCard.HasDlss && targetCard.DlssDetection.DlssPath != null
                     && !(targetCard.DlssInstalledVersion?.StartsWith("1.") == true) && !srOverride)
@@ -851,15 +860,51 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                 _nvHeaderRow.Children.RemoveAt(3);
 
             var nvSummaryEntries = new List<(string, string?)>();
-            var nvOverride = Loc.GetString("Overrides.Summary.NvOverride");
+var nvOverride = Loc.GetString("Overrides.Summary.NvOverride");
+
+            // Helper: format version + preset + render scale into one string
+            static string FormatDlssEntry(string? version, uint preset, (string Name, uint Value)[] presets, uint renderScale)
+            {
+                var parts = new List<string>();
+                if (!string.IsNullOrEmpty(version)) parts.Add(version!);
+                if (preset != 0)
+                {
+                    var name = presets.FirstOrDefault(p => p.Value == preset).Name;
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        // Show only the letter part — strip " - suffix" (e.g. "M - TF2" → "M")
+                        var letter = name.Contains(" - ") ? name.Substring(0, name.IndexOf(" - ")).Trim() : name;
+                        parts.Add(letter);
+                    }
+                }
+                if (renderScale != 0) parts.Add($"{renderScale}%");
+                return string.Join(" · ", parts);
+            }
+
             if (card.HasDlss)
-                nvSummaryEntries.Add(("SR", card.CachedSrDriverOverride ? nvOverride : card.DlssInstalledVersion));
+            {
+                var val = card.CachedSrDriverOverride ? nvOverride
+                    : FormatDlssEntry(card.DlssInstalledVersion, dlssData?.SrPreset ?? 0u, DlssPresetService.SrPresets, dlssData?.SrRenderScale ?? 0u);
+                nvSummaryEntries.Add(("SR", val));
+            }
             if (card.HasDlssd)
-                nvSummaryEntries.Add(("RR", card.CachedRrDriverOverride ? nvOverride : card.DlssdInstalledVersion));
+            {
+                var val = card.CachedRrDriverOverride ? nvOverride
+                    : FormatDlssEntry(card.DlssdInstalledVersion, dlssData?.RrPreset ?? 0u, DlssPresetService.RrPresets, dlssData?.RrRenderScale ?? 0u);
+                nvSummaryEntries.Add(("RR", val));
+            }
             if (card.HasDlssg)
-                nvSummaryEntries.Add(("FG", card.CachedFgDriverOverride ? nvOverride : card.DlssgInstalledVersion));
+            {
+                var val = card.CachedFgDriverOverride ? nvOverride
+                    : FormatDlssEntry(card.DlssgInstalledVersion, dlssData?.FgPreset ?? 0u, DlssPresetService.FgPresets, 0u);
+                nvSummaryEntries.Add(("FG", val));
+            }
             if (FeatureFlags.DlssNr && card.HasDlssnr)
-                nvSummaryEntries.Add(("NR", card.CachedNrDriverOverride ? nvOverride : card.DlssnrInstalledVersion));
+            {
+                var val = card.CachedNrDriverOverride ? nvOverride
+                    : FormatDlssEntry(card.DlssnrInstalledVersion, dlssData?.NrPreset ?? 0u, DlssPresetService.NrPresets, 0u);
+                nvSummaryEntries.Add(("NR", val));
+            }
             if (card.HasStreamline)
                 nvSummaryEntries.Add(("SL", card.StreamlineInstalledVersion));
 

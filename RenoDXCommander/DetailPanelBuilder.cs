@@ -158,7 +158,6 @@ public partial class DetailPanelBuilder
 
         // Wiki status badge — hidden from main UI, shown inside Info button dialog instead
         _window.DetailWikiBadge.Visibility = Visibility.Collapsed;
-        _window.DetailSepPlatformStatus.Visibility = Visibility.Collapsed;
 
         // Author badges
         _window.DetailAuthorBadgePanel.Children.Clear();
@@ -210,9 +209,32 @@ public partial class DetailPanelBuilder
 
         // Install path + installed file
         _window.DetailInstallPath.Text = card.InstallPath;
-        if (!string.IsNullOrEmpty(card.InstalledAddonFileName))
+
+        // Determine label: RenoDX addon filename + Luma mod name when both are present
+        string? fileLabel = null;
+        bool lumaInstalled = card.LumaStatus is GameStatus.Installed or GameStatus.UpdateAvailable;
+        string? lumaLabel = null;
+        if (lumaInstalled && card.LumaMod != null)
         {
-            _window.DetailInstalledFile.Text = $"{card.InstalledAddonFileName}";
+            // Prefer the actual installed addon filename (e.g. "Luma-Prey.addon") like RenoDX does
+            var addonFile = card.LumaRecord?.InstalledFiles
+                .Select(f => Path.GetFileName(f))
+                .FirstOrDefault(f => f.EndsWith(".addon", StringComparison.OrdinalIgnoreCase)
+                                  || f.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase)
+                                  || f.EndsWith(".addon32", StringComparison.OrdinalIgnoreCase));
+            lumaLabel = addonFile ?? (card.LumaMod.IsGenericLuma ? "Luma" : card.LumaMod.Name);
+        }
+
+        if (!string.IsNullOrEmpty(card.InstalledAddonFileName) && lumaLabel != null)
+            fileLabel = $"{card.InstalledAddonFileName}  ·  {lumaLabel}";
+        else if (!string.IsNullOrEmpty(card.InstalledAddonFileName))
+            fileLabel = card.InstalledAddonFileName;
+        else if (lumaLabel != null)
+            fileLabel = lumaLabel;
+
+        if (!string.IsNullOrEmpty(fileLabel))
+        {
+            _window.DetailInstalledFile.Text = fileLabel;
             _window.DetailInstalledFileBadge.Visibility = Visibility.Visible;
             _window.DetailSepModPlatform.Visibility = Visibility.Visible;
         }
@@ -576,6 +598,24 @@ public partial class DetailPanelBuilder
     /// Index is computed from cumulative Y delta (no TransformToVisual queries mid-drag).
     /// Single Remove+Insert per threshold crossing keeps layout stable.
     /// Order is persisted on PointerReleased.
+    /// <summary>
+    /// Calculates a fixed column width for use in star-column grids inside the detail panel.
+    /// Star columns inside StackPanel/ScrollViewer with HorizontalScrollBarVisibility=Disabled
+    /// cause WinUI to enter an infinite layout loop. Use this instead of GridLength.Star.
+    /// </summary>
+    /// <param name="numCols">Number of equal columns.</param>
+    /// <param name="spacing">ColumnSpacing value on the grid.</param>
+    /// <param name="overhead">Any additional fixed-width columns (sum of their widths + spacings).</param>
+    internal double PanelColW(int numCols, double spacing = 8, double overhead = 0, double containerWidth = 0)
+    {
+        double w = containerWidth > 0 ? containerWidth : _window.DetailPanel.ActualWidth;
+        if (w <= 0) w = 750;
+        const double SectionPadding = 28;
+        var available = w - SectionPadding - overhead - (numCols - 1) * spacing;
+        return Math.Max(80, available / numCols);
+    }
+
+    /// <summary>
     /// </summary>
     internal TextBlock MakeDragHandle(Border container)
     {
@@ -789,6 +829,7 @@ public partial class DetailPanelBuilder
     // Tasks waiting on _panelScanSemaphore check the token and bail immediately,
     // freeing their thread pool thread instead of sitting blocked.
     private CancellationTokenSource _panelScanCts = new();
+    internal void StopBackgroundWork() => _panelScanCts.Cancel();
 
     // Limits concurrent background scans to prevent thread pool saturation
     // when rapidly clicking through games. Capacity of 1 ensures at most one
@@ -935,16 +976,35 @@ public partial class DetailPanelBuilder
 
         var channel = _window.ViewModel.GetReShadeChannelOverride(card.GameName, card.Source ?? "");
         if (!string.IsNullOrEmpty(channel))
-            entries.Add(("RS:", channel));
+            entries.Add((Loc.GetString("Overrides.Summary.RsChannel"), channel));
 
         var apis = _window.ViewModel.GetApiOverride(card.GameName, card.Source ?? "");
         if (apis is { Count: > 0 })
-            entries.Add(("API:", string.Join("+", apis)));
+            entries.Add((Loc.GetString("Overrides.Summary.Api"), string.Join("+", apis)));
+
+        // Shaders / Addons — show when set to non-default
+        var shaderMode = _window.ViewModel.GetPerGameShaderMode(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(shaderMode) && shaderMode != "Global")
+            entries.Add((Loc.GetString("Overrides.Summary.Shaders"), shaderMode));
+
+        var addonMode = _window.ViewModel.GetPerGameAddonMode(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(addonMode) && addonMode != "Global")
+            entries.Add((Loc.GetString("Overrides.Summary.Addons"), addonMode));
+
+        // Update inclusion — show only when any component is excluded
+        var excluded = new List<string>();
+        if (_window.ViewModel.IsUpdateAllExcludedReShade(card.GameName, card.Source ?? "")) excluded.Add("RS");
+        if (_window.ViewModel.IsUpdateAllExcludedRenoDx(card.GameName, card.Source ?? "")) excluded.Add("RDX");
+        if (_window.ViewModel.IsUpdateAllExcludedUl(card.GameName, card.Source ?? ""))     excluded.Add("RL");
+        if (_window.ViewModel.IsUpdateAllExcludedDc(card.GameName, card.Source ?? ""))     excluded.Add("DC");
+        if (_window.ViewModel.IsUpdateAllExcludedOs(card.GameName, card.Source ?? ""))     excluded.Add("OS");
+        if (excluded.Count > 0)
+            entries.Add((Loc.GetString("Overrides.Summary.Excluded"), string.Join(" ", excluded)));
 
         var launchArgs = _gameNameService.LaunchArgsOverrides.TryGetValue(card.GameName, out var la)
             ? la : null;
         if (!string.IsNullOrWhiteSpace(launchArgs))
-            entries.Add(("Args:", launchArgs));
+            entries.Add((Loc.GetString("Overrides.Summary.Args"), launchArgs));
 
         // DLL naming overrides — show each custom filename that's set
         if (_window.ViewModel.HasDllOverride(card.GameName))
@@ -953,11 +1013,11 @@ public partial class DetailPanelBuilder
             if (cfg != null)
             {
                 if (!string.IsNullOrEmpty(cfg.ReShadeFileName) && cfg.ReShadeFileName != "--------")
-                    entries.Add(("RS DLL:", cfg.ReShadeFileName));
+                    entries.Add((Loc.GetString("Overrides.Summary.RsDll"), cfg.ReShadeFileName));
                 if (!string.IsNullOrEmpty(cfg.DcFileName) && cfg.DcFileName != "--------")
-                    entries.Add(("DC DLL:", cfg.DcFileName));
+                    entries.Add((Loc.GetString("Overrides.Summary.DcDll"), cfg.DcFileName));
                 if (!string.IsNullOrEmpty(cfg.OsFileName) && cfg.OsFileName != "--------")
-                    entries.Add(("OS DLL:", cfg.OsFileName));
+                    entries.Add((Loc.GetString("Overrides.Summary.OsDll"), cfg.OsFileName));
             }
         }
 

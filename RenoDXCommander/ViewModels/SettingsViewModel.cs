@@ -63,6 +63,10 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>When true, silently installs component updates in the background after an update check.</summary>
     [ObservableProperty] private bool _autoUpdateComponents;
 
+    // ── Background Update Checks ──────────────────────────────────────────────
+    /// <summary>"On" = full background checks including Nexus (default). "Minimal" = manifest fetches only; Nexus calls only on explicit user action.</summary>
+    [ObservableProperty] private string _backgroundUpdateChecks = "On";
+
     // ── DLSS/Streamline Auto-Update ───────────────────────────────────────────
     [ObservableProperty] private bool _autoUpdateDlss;
     [ObservableProperty] private bool _autoUpdateStreamline;
@@ -110,6 +114,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _nexusApiKey = "";
     [ObservableProperty] private bool _nexusIsPremium;
     [ObservableProperty] private string _nexusUsername = "";
+
+    // ── GitHub OAuth (device flow) ─────────────────────────────────────────────
+    /// <summary>OAuth token obtained via GitHub Device Flow. Never logged.</summary>
+    [ObservableProperty] private string _gitHubOAuthToken = "";
+    /// <summary>GitHub login name of the authenticated user.</summary>
+    [ObservableProperty] private string _gitHubUsername = "";
 
     // ── Digital Vibrance ──────────────────────────────────────────────────────
     /// <summary>Per-display DVC values. Key = display index (string), Value = 0-100.</summary>
@@ -345,6 +355,7 @@ public partial class SettingsViewModel : ObservableObject
             catch { PeakNitsPresets = new() { 1, 2, 3 }; }
         }
         if (s.TryGetValue("AutoUpdateComponents", out var aucVal)) AutoUpdateComponents = aucVal == "true";
+        if (s.TryGetValue("BackgroundUpdateChecks", out var bucVal) && !string.IsNullOrEmpty(bucVal)) BackgroundUpdateChecks = bucVal;
         if (s.TryGetValue("AutoUpdateDlss", out var audVal)) AutoUpdateDlss = audVal == "true";
         if (s.TryGetValue("AutoUpdateStreamline", out var ausVal)) AutoUpdateStreamline = ausVal == "true";
         if (s.TryGetValue("LastKnownNewestDlss", out var lkndVal)) LastKnownNewestDlss = lkndVal ?? "";
@@ -394,6 +405,10 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("NexusApiKey",    out var nakVal)) NexusApiKey    = nakVal ?? "";
         if (s.TryGetValue("NexusIsPremium", out var nipVal)) NexusIsPremium = nipVal == "true";
         if (s.TryGetValue("NexusUsername",  out var nunVal)) NexusUsername  = nunVal ?? "";
+
+        // GitHub OAuth token — never logged, applied to HttpClient after load
+        if (s.TryGetValue("GitHubOAuthToken", out var ghotVal) && !string.IsNullOrEmpty(ghotVal)) GitHubOAuthToken = ghotVal;
+        if (s.TryGetValue("GitHubUsername",   out var ghuVal)  && !string.IsNullOrEmpty(ghuVal))  GitHubUsername  = ghuVal;
 
         // DLSS/Streamline defaults
         if (s.TryGetValue("DefaultDlssVersion", out var ddv)) DefaultDlssVersion = ddv ?? "";
@@ -521,6 +536,7 @@ public partial class SettingsViewModel : ObservableObject
         else
             s.Remove("PeakNitsPresets"); // All 3 checked = default — remove stale non-default value
         if (AutoUpdateComponents) s["AutoUpdateComponents"] = "true"; else s.Remove("AutoUpdateComponents");
+        if (BackgroundUpdateChecks != "On") s["BackgroundUpdateChecks"] = BackgroundUpdateChecks; else s.Remove("BackgroundUpdateChecks"); // "On" is default — omit to keep file clean
         if (AutoUpdateDlss) s["AutoUpdateDlss"] = "true"; else s.Remove("AutoUpdateDlss");
         if (AutoUpdateStreamline) s["AutoUpdateStreamline"] = "true"; else s.Remove("AutoUpdateStreamline");
         if (!string.IsNullOrEmpty(LastKnownNewestDlss)) s["LastKnownNewestDlss"] = LastKnownNewestDlss;
@@ -548,6 +564,10 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrEmpty(NexusApiKey))    s["NexusApiKey"]    = NexusApiKey;
         if (NexusIsPremium)                        s["NexusIsPremium"] = "true";
         if (!string.IsNullOrEmpty(NexusUsername))  s["NexusUsername"]  = NexusUsername;
+
+        // GitHub OAuth token — never logged
+        if (!string.IsNullOrEmpty(GitHubOAuthToken)) s["GitHubOAuthToken"] = GitHubOAuthToken; else s.Remove("GitHubOAuthToken");
+        if (!string.IsNullOrEmpty(GitHubUsername))   s["GitHubUsername"]   = GitHubUsername;   else s.Remove("GitHubUsername");
 
         // DLSS/Streamline defaults
         if (!string.IsNullOrEmpty(DefaultDlssVersion)) s["DefaultDlssVersion"] = DefaultDlssVersion;

@@ -13,6 +13,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
+/// <summary>
+/// Result of the Control UE install dialog — carries user selections.
+/// </summary>
+public record ControlUeInstallOptions(
+    bool Proceed,
+    bool InstallOptiScalerFg,
+    bool UseHdr);
+
 public static class ControlUePostInstallService
 {
     private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
@@ -36,11 +44,11 @@ public static class ControlUePostInstallService
 
     /// <summary>
     /// Shows the bespoke pre-install dialog for Control Ultimate Edition.
-    /// Returns true if the user clicks Install (proceed), false if they cancel.
+    /// Returns install options including whether the user confirmed and which extra features to install.
     /// </summary>
-    /// <param name="installPath">Game install path — shown in the dialog.</param>
-    public static async Task<bool> ShowInstallDialogAsync(string installPath)
+    public static async Task<ControlUeInstallOptions> ShowInstallDialogAsync(string installPath)
     {
+        var noOp = new ControlUeInstallOptions(false, false, false);
         try
         {
             Microsoft.UI.Xaml.XamlRoot? xamlRoot = null;
@@ -51,7 +59,7 @@ public static class ControlUePostInstallService
                 if (field?.GetValue(app) is MainWindow mw)
                     xamlRoot = mw.Content?.XamlRoot;
             }
-            if (xamlRoot == null) return true; // Can't show dialog — proceed anyway
+            if (xamlRoot == null) return new ControlUeInstallOptions(true, false, false);
 
             var content = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 10 };
 
@@ -65,7 +73,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = Loc.GetString("Dialog.ControlUe.Strategy"),
+Text = Loc.GetString("Dialog.ControlUe.Strategy"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -82,7 +90,7 @@ public static class ControlUePostInstallService
 
             content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
-                Text = Loc.GetString("Dialog.ControlUe.AlsoList"),
+Text = Loc.GetString("Dialog.ControlUe.AlsoList"),
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontSize = 13,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -97,6 +105,75 @@ public static class ControlUePostInstallService
                 Margin = new Microsoft.UI.Xaml.Thickness(0, 4, 0, 0),
             });
 
+            // ── OptiScaler FG + HDR combos ────────────────────────────────────
+            content.Children.Add(new Microsoft.UI.Xaml.Controls.Border
+            {
+                Height = 1,
+                Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
+                Margin = new Microsoft.UI.Xaml.Thickness(0, 6, 0, 2),
+            });
+
+            var comboRow = new Microsoft.UI.Xaml.Controls.Grid { ColumnSpacing = 16 };
+            comboRow.ColumnDefinitions.Add(new Microsoft.UI.Xaml.Controls.ColumnDefinition { Width = new Microsoft.UI.Xaml.GridLength(1, Microsoft.UI.Xaml.GridUnitType.Star) });
+            comboRow.ColumnDefinitions.Add(new Microsoft.UI.Xaml.Controls.ColumnDefinition { Width = new Microsoft.UI.Xaml.GridLength(1, Microsoft.UI.Xaml.GridUnitType.Star) });
+
+            // Left: OptiScaler FG
+            var optiStack = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 4 };
+            optiStack.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = Loc.GetString("Dialog.ControlUe.OptiScalerFg"),
+                FontSize = 12,
+                FontWeight = new Windows.UI.Text.FontWeight(600),
+                Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            });
+            var optiCombo = new Microsoft.UI.Xaml.Controls.ComboBox
+            {
+                ItemsSource = new[] { LocOpt.T("No"), LocOpt.T("Yes") },
+                SelectedIndex = 0,
+                HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch,
+                MaxDropDownHeight = 300,
+            };
+            Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(optiCombo,
+                Loc.GetString("Dialog.ControlUe.OptiScalerFg.Tooltip"));
+            optiStack.Children.Add(optiCombo);
+            Microsoft.UI.Xaml.Controls.Grid.SetColumn(optiStack, 0);
+            comboRow.Children.Add(optiStack);
+
+            // Right: Using HDR? (greyed unless OptiScaler = Yes)
+            var hdrStack = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 4 };
+            hdrStack.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = Loc.GetString("Dialog.ControlUe.UsingHdr"),
+                FontSize = 12,
+                FontWeight = new Windows.UI.Text.FontWeight(600),
+                Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            });
+            var hdrCombo = new Microsoft.UI.Xaml.Controls.ComboBox
+            {
+                ItemsSource = new[] { LocOpt.T("No"), LocOpt.T("Yes") },
+                SelectedIndex = 0,
+                HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch,
+                MaxDropDownHeight = 300,
+                IsEnabled = false,
+                Opacity = 0.45,
+            };
+            Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(hdrCombo,
+                Loc.GetString("Dialog.ControlUe.UsingHdr.Tooltip"));
+            hdrStack.Children.Add(hdrCombo);
+            Microsoft.UI.Xaml.Controls.Grid.SetColumn(hdrStack, 1);
+            comboRow.Children.Add(hdrStack);
+
+            content.Children.Add(comboRow);
+
+            // Wire OptiScaler combo → enable/disable HDR combo
+            optiCombo.SelectionChanged += (s, e) =>
+            {
+                bool optiOn = optiCombo.SelectedIndex == 1;
+                hdrCombo.IsEnabled = optiOn;
+                hdrCombo.Opacity   = optiOn ? 1.0 : 0.45;
+                if (!optiOn) hdrCombo.SelectedIndex = 0;
+            };
+
             var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
                 Title = Loc.GetString("Dialog.ControlUe.Title"),
@@ -109,23 +186,31 @@ public static class ControlUePostInstallService
             };
 
             var result = await DialogService.ShowSafeAsync(dialog);
-            return result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
+            if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                return noOp;
+
+            return new ControlUeInstallOptions(
+                Proceed: true,
+                InstallOptiScalerFg: optiCombo.SelectedIndex == 1,
+                UseHdr: hdrCombo.SelectedIndex == 1);
         }
         catch (Exception ex)
         {
             CrashReporter.Log($"[ControlUePostInstall] ShowInstallDialogAsync failed — {ex.Message}");
-            return true; // Proceed on error
+            return new ControlUeInstallOptions(true, false, false);
         }
     }
 
     /// <summary>
-    /// Runs all five post-install steps for Control Ultimate Edition.
+    /// Runs all post-install steps for Control Ultimate Edition.
     /// Safe to call on any thread — all file operations are synchronous after awaiting DLSS cache.
     /// Each step is independent: failures are logged and do not abort subsequent steps.
     /// </summary>
     /// <param name="gameName">Card game name (used for NVIDIA profile lookup).</param>
     /// <param name="installPath">Game install directory (root, where the addon was deployed).</param>
-    public static async Task RunAsync(string gameName, string installPath)
+    /// <param name="options">User selections from the install dialog.</param>
+    public static async Task RunAsync(string gameName, string installPath,
+        ControlUeInstallOptions? options = null)
     {
         CrashReporter.Log($"[ControlUePostInstall] Running post-install steps for '{gameName}' at '{installPath}'");
 
@@ -140,6 +225,14 @@ public static class ControlUePostInstallService
 
         // ── Step 4 & 5: Clear SR DLSS preset and render scale from driver ──────
         ClearNvidiaProfileSettings(gameName, installPath);
+
+        // ── Step 6: Install OptiScaler Nightly FG (optional) ──────────────────
+        if (options?.InstallOptiScalerFg == true)
+            await InstallOptiScalerFgAsync(gameName, installPath);
+
+        // ── Step 7: Write FgSlHdr10 to reshade.ini preset section ─────────────
+        if (options?.InstallOptiScalerFg == true)
+            WriteHdrPresetKey(installPath, options.UseHdr);
 
         CrashReporter.Log($"[ControlUePostInstall] All steps complete for '{gameName}'");
     }
@@ -257,6 +350,171 @@ public static class ControlUePostInstallService
         catch (Exception ex)
         {
             CrashReporter.Log($"[ControlUePostInstall] Steps 4 & 5 failed — {ex.Message}");
+        }
+    }
+
+    // ── Step 6: Install OptiScaler Nightly FG ─────────────────────────────────
+
+    private static async Task InstallOptiScalerFgAsync(string gameName, string installPath)
+    {
+        try
+        {
+            CrashReporter.Log($"[ControlUePostInstall] Step 6 — installing OptiScaler Nightly FG for '{gameName}'");
+
+            var optiSvc  = App.Services.GetRequiredService<IOptiScalerService>();
+            var dllSvc   = App.Services.GetRequiredService<IDllOverrideService>();
+            var vm       = App.Services.GetRequiredService<ViewModels.MainViewModel>();
+
+            // Find the card for this game
+            var card = vm.AllCards.FirstOrDefault(c =>
+                c.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase));
+            if (card == null)
+            {
+                CrashReporter.Log($"[ControlUePostInstall] Step 6 skipped — card not found for '{gameName}'");
+                return;
+            }
+
+            var store = card.Source ?? "";
+
+            // ── Pre-configure settings before install ──────────────────────────
+            // Set variant to Nightly so InstallAsync uses the nightly staging dir
+            vm.SetOsVariant(gameName, "Nightly", store);
+
+            // Set DLL naming overrides: OptiScaler → winmm.dll, ReShade → dxgi.dll
+            // These are read by GetEffectiveOsName/GetEffectiveRsName during InstallAsync
+            dllSvc.SetOsDllOverride(gameName, "winmm.dll");
+            vm.SetDllOverride(gameName, "dxgi.dll", "");
+            vm.SaveSettingsPublic();
+
+            // Pre-configure FG settings so they're persisted and applied post-install
+            vm.SetOsDeployStreamline(gameName, true, store);
+            vm.SetOsDeployDlssEnabler(gameName, true, store);
+            vm.SetOsFgInput(gameName, "upscaler", store);
+            vm.SetOsFgOutput(gameName, "dlssg", store);
+            vm.SetOsFgNvngxReplacement(gameName, "None", store);
+
+            // ── Run the install ────────────────────────────────────────────────
+            var gpuType    = vm.Settings.OsGpuType;
+            var dlssInputs = vm.Settings.OsDlssInputs;
+            var hotkey     = vm.Settings.OsHotkey;
+
+            var record = await optiSvc.InstallAsync(
+                card,
+                progress: null,
+                gpuType: gpuType,
+                dlssInputs: dlssInputs,
+                hotkey: hotkey,
+                variant: "Nightly").ConfigureAwait(false);
+
+            if (record == null)
+            {
+                CrashReporter.Log("[ControlUePostInstall] Step 6 — OptiScaler install returned null (staging not ready?)");
+                return;
+            }
+
+            // Clear DLSS skip cache so next scan detects the deployed DLLs
+            var dlssSvc = App.Services.GetRequiredService<IDlssStreamlineService>();
+            dlssSvc.RecordDlssFound(gameName);
+
+            // Deploy Streamline to OptiScaler folder (also deploys nvngx_dlssg.dll)
+            optiSvc.DeployStreamlineToGame(installPath);
+
+            // Deploy DLSS Enabler
+            var dlssEnablerSvc = App.Services.GetRequiredService<DlssEnablerService>();
+            var optiScalerDir  = Path.Combine(installPath, "OptiScaler");
+            _ = dlssEnablerSvc.InstallAsync(optiScalerDir);
+
+            // ── Apply OptiScaler INI settings ──────────────────────────────────
+            // [Upscalers]
+            OptiScalerService.SetOptiScalerIniValue(installPath, "Upscalers", "Dx12Upscaler", "dlss");
+
+            // [FrameGen]
+            OptiScalerService.SetOptiScalerIniValue(installPath, "FrameGen", "Enabled",   "true");
+            OptiScalerService.SetOptiScalerIniValue(installPath, "FrameGen", "FGInput",   "upscaler");
+            OptiScalerService.SetOptiScalerIniValue(installPath, "FrameGen", "FGOutput",  "dlssg");
+
+            // [fakenvapi]
+            OptiScalerService.SetOptiScalerIniValue(installPath, "fakenvapi", "ForceReflex", "2");
+
+            // [DLSSG]
+            OptiScalerService.SetOptiScalerIniValue(installPath, "DLSSG", "UseGamesReflexMarkers", "false");
+
+            // ── Persist DLL override on the card so it shows in Game Overrides ──
+            card.DllOverrideEnabled = true;
+            card.ExcludeFromUpdateAllReShade = true;
+            card.NotifyAll();
+
+            // Rebuild the detail panel so Extras and Game Overrides reflect the new state
+            var mwField = typeof(App).GetField("_window",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (mwField?.GetValue(Microsoft.UI.Xaml.Application.Current) is MainWindow mw)
+            {
+                mw.DispatcherQueue?.TryEnqueue(() =>
+                {
+                    mw.PopulateDetailPanel(card);
+                    mw.BuildOverridesPanel(card);
+                });
+            }
+
+            CrashReporter.Log("[ControlUePostInstall] Step 6 — OptiScaler Nightly FG installed successfully");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[ControlUePostInstall] Step 6 failed — {ex.Message}");
+        }
+    }
+
+    // ── Step 7: Write FgSlHdr10 to reshade.ini ────────────────────────────────
+
+    private static void WriteHdrPresetKey(string installPath, bool hdrEnabled)
+    {
+        try
+        {
+            var iniPath = Path.Combine(installPath, "reshade.ini");
+            if (!File.Exists(iniPath))
+            {
+                CrashReporter.Log($"[ControlUePostInstall] Step 7 skipped — reshade.ini not found at '{iniPath}'");
+                return;
+            }
+
+            var value = hdrEnabled ? "1" : "0";
+            var lines = File.ReadAllLines(iniPath).ToList();
+            bool inPreset1 = false;
+            int keyIdx = -1;
+            int headerIdx = -1;
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var t = lines[i].Trim();
+                if (t.StartsWith("["))
+                {
+                    inPreset1 = t.Equals("[renodx-preset1]", StringComparison.OrdinalIgnoreCase);
+                    if (inPreset1) headerIdx = i;
+                }
+                else if (inPreset1 && t.StartsWith("FgSlHdr10=", StringComparison.OrdinalIgnoreCase))
+                {
+                    keyIdx = i;
+                    break;
+                }
+            }
+
+            if (keyIdx >= 0)
+                lines[keyIdx] = $"FgSlHdr10={value}";
+            else if (headerIdx >= 0)
+                lines.Insert(headerIdx + 1, $"FgSlHdr10={value}");
+            else
+            {
+                if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1])) lines.Add("");
+                lines.Add("[renodx-preset1]");
+                lines.Add($"FgSlHdr10={value}");
+            }
+
+            File.WriteAllLines(iniPath, lines);
+            CrashReporter.Log($"[ControlUePostInstall] Step 7 — wrote FgSlHdr10={value} to reshade.ini");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[ControlUePostInstall] Step 7 failed — {ex.Message}");
         }
     }
 }

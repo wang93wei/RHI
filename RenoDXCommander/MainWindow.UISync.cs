@@ -26,6 +26,10 @@ public sealed partial class MainWindow
                     var loading = ViewModel.IsLoading;
                     // After initial boot, keep the game view visible during refreshes
                     bool silent = ViewModel.HasInitialized;
+                    // A refresh replaces all card objects. Clear _lastBuiltCard so the
+                    // post-refresh debounce always triggers a fresh panel build regardless
+                    // of which game was selected before the refresh started.
+                    if (loading) _lastBuiltCard = null;
                     if (!loading && !silent && ViewModel.CurrentPage == AppPage.GameView)
                     {
                         RemoveSkeletons();
@@ -66,7 +70,13 @@ public sealed partial class MainWindow
                                         GameList.SelectedItem = refreshed;
                                         ViewModel.SelectedGame = refreshed;
                                         PopulateDetailPanel(refreshed);
+                                        DetailPanel.Visibility = Visibility.Visible;
                                         BuildOverridesPanel(refreshed);
+                                        if (OverridesContainer.Visibility != Visibility.Visible)           OverridesContainer.Visibility = Visibility.Visible;
+                                        if (NeuralRenderingContainer.Visibility != Visibility.Visible)     NeuralRenderingContainer.Visibility = Visibility.Visible;
+                                        if (NvidiaProfileDlssContainer.Visibility != Visibility.Visible)   NvidiaProfileDlssContainer.Visibility = Visibility.Visible;
+                                        if (NvidiaProfileDriverContainer.Visibility != Visibility.Visible) NvidiaProfileDriverContainer.Visibility = Visibility.Visible;
+                                        if (ManagementContainer.Visibility != Visibility.Visible)          ManagementContainer.Visibility = Visibility.Visible;
                                         _detailPanelBuilder?.ApplySectionOrder();
                                     }
                                 });
@@ -100,6 +110,12 @@ public sealed partial class MainWindow
                     // Force WinUI to re-evaluate the Normal visual state so it picks up
                     // the new brushes immediately instead of waiting for pointer interaction.
                     Microsoft.UI.Xaml.VisualStateManager.GoToState(UpdateBtn, "Normal", false);
+                    break;
+                case nameof(ViewModel.IsBackgroundScanning):
+                    HdrModsListBtn.IsEnabled = !ViewModel.IsBackgroundScanning;
+                    ToolTipService.SetToolTip(HdrModsListBtn, ViewModel.IsBackgroundScanning
+                        ? Loc.GetString("Xaml.LoadingModDataPleaseWait")
+                        : Loc.GetString("Xaml.AvailableHdrMods.Tooltip"));
                     break;
                 case nameof(ViewModel.CurrentPage):
                     UpdatePageVisibility();
@@ -207,6 +223,7 @@ public sealed partial class MainWindow
     internal void BuildOverridesPanel(GameCardViewModel card)
     {
         ViewModel.SetLastUiAction($"BuildOverridesPanel({card.GameName})");
+        _lastBuiltCard = card;
         _detailPanelBuilder.BuildOverridesPanel(card);
     }
 

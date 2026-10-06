@@ -1175,11 +1175,18 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         rtxHdrCombo.Items.Add(LocOpt.T("On"));
 
         var gameNameService = App.Services.GetRequiredService<IGameNameService>();
-        // Read live driver state — reflects changes made outside RHI (e.g. NVIDIA App, driver update)
+        // Read live driver state off the UI thread — GetRtxHdrEnable calls _sessionLock.Wait(5000)
         var dlssPresetServiceCog = App.Services.GetRequiredService<DlssPresetService>();
-        bool isRtxHdrEnabled = dlssPresetServiceCog.IsSupported && !string.IsNullOrEmpty(card.InstallPath)
-            ? (dlssPresetServiceCog.GetRtxHdrEnable(card.GameName, card.InstallPath) == 0x01)
-            : gameNameService.RtxHdrGames.Contains(card.GameName);
+        bool isRtxHdrEnabled;
+        if (dlssPresetServiceCog.IsSupported && !string.IsNullOrEmpty(card.InstallPath))
+        {
+            var capturedName = card.GameName; var capturedPath = card.InstallPath;
+            isRtxHdrEnabled = await Task.Run(() => dlssPresetServiceCog.GetRtxHdrEnable(capturedName, capturedPath) == 0x01);
+        }
+        else
+        {
+            isRtxHdrEnabled = gameNameService.RtxHdrGames.Contains(card.GameName);
+        }
         // Sync persisted state to match driver
         if (isRtxHdrEnabled) gameNameService.RtxHdrGames.Add(card.GameName);
         else gameNameService.RtxHdrGames.Remove(card.GameName);
@@ -1297,12 +1304,16 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         var dlssPresetService = App.Services.GetRequiredService<DlssPresetService>();
         var content = new StackPanel { Spacing = 6 };
 
-        // Read current values
-        var currentContrast = (int)dlssPresetService.GetRtxHdrContrast(card.GameName, card.InstallPath);
-        var currentSaturation = (int)dlssPresetService.GetRtxHdrSaturation(card.GameName, card.InstallPath);
-        var currentPeakBrightness = (int)dlssPresetService.GetRtxHdrPeakBrightness(card.GameName, card.InstallPath);
-        var currentMiddleGrey = (int)dlssPresetService.GetRtxHdrMiddleGrey(card.GameName, card.InstallPath);
-        var currentDebanding = (int)dlssPresetService.GetRtxHdrDebanding(card.GameName, card.InstallPath);
+        // Read current values off the UI thread — these call _sessionLock.Wait(5000) and
+        // will block the UI thread for up to 25s total if NVAPI is hung (e.g. after GPU sleep/wake).
+        var (currentContrast, currentSaturation, currentPeakBrightness, currentMiddleGrey, currentDebanding) =
+            await Task.Run(() => (
+                (int)dlssPresetService.GetRtxHdrContrast(card.GameName, card.InstallPath),
+                (int)dlssPresetService.GetRtxHdrSaturation(card.GameName, card.InstallPath),
+                (int)dlssPresetService.GetRtxHdrPeakBrightness(card.GameName, card.InstallPath),
+                (int)dlssPresetService.GetRtxHdrMiddleGrey(card.GameName, card.InstallPath),
+                (int)dlssPresetService.GetRtxHdrDebanding(card.GameName, card.InstallPath)
+            ));
 
         // Convert stored values to display values
         int contrastDisplay = currentContrast > 0 ? currentContrast - 100 : 0;
@@ -2336,6 +2347,10 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         ComboBox? nrWorkingScaleCombo = null;
         ComboBox? nrFinishedPicCombo  = null;
         (string Item1, string Item2)[]? nrScaleMap = null;
+        // Nightly-only combos also hoisted to method scope for preset capture
+        ComboBox? fgEnabledCombo      = null;
+        ComboBox? forceReflexCombo    = null;
+        ComboBox? reflexMarkersCombo  = null;
 
         if (isNightly || isDlssNr)
         {
@@ -2359,6 +2374,18 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             Grid.SetRow(fgHeading, 3); Grid.SetColumn(fgHeading, 0); Grid.SetColumnSpan(fgHeading, 4);
             unifiedGrid.Children.Add(fgHeading);
 
+            // Row 4: FG Enabled — master on/off, first option in the FG section
+            // Display text is localized; selection is read by index so the INI value stays logical.
+            var currentFgEnabled = ReadOsIniValue("FrameGen", "Enabled");
+            fgEnabledCombo = new ComboBox
+            {
+                ItemsSource = new[] { LocOpt.T("Auto (false)"), LocOpt.T("True") },
+                SelectedIndex = currentFgEnabled.Equals("true", StringComparison.OrdinalIgnoreCase) ? 1 : 0,
+            };
+            ToolTipService.SetToolTip(fgEnabledCombo,
+                Loc.GetString("Dialog.OptiScaler.FgEnabledTooltip"));
+            AddRow(unifiedGrid, 4, Loc.GetString("Dialog.OptiScaler.FgEnabled"), fgEnabledCombo, null, null);
+
             // All nightly rows go into the same unifiedGrid so columns align with the version row above
             // Row 2: Streamline/DLSS Enabler (combined) | Streamline Version
             var dlssStreamlineSvc = App.Services.GetRequiredService<IDlssStreamlineService>();
@@ -2376,7 +2403,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             combinedCombo = new ComboBox { ItemsSource = new[] { "No", "Yes" }, SelectedItem = combinedOn ? "Yes" : "No" };
             ToolTipService.SetToolTip(combinedCombo, Loc.GetString("Dialog.OptiScaler.CombinedTooltip"));
             var slVersionCombo = new ComboBox { ItemsSource = slVersions.Count > 0 ? (IEnumerable<string>)slVersions : new[] { slVersionDefault }, SelectedItem = slVersionDefault, IsEnabled = combinedOn };
-            AddRow(unifiedGrid, 4, Loc.GetString("Dialog.OptiScaler.StreamlineDlssEnabler"), combinedCombo, Loc.GetString("Dialog.OptiScaler.StreamlineVersion"), slVersionCombo);
+AddRow(unifiedGrid, 5, Loc.GetString("Dialog.OptiScaler.StreamlineDlssEnabler"), combinedCombo, Loc.GetString("Dialog.OptiScaler.StreamlineVersion"), slVersionCombo);
 
             // Row 4: FG Input (left) | HUD Fix (right)
             fgInputCombo = new ComboBox { ItemsSource = new[] { "Auto (Default)", "OptiFG (Upscaler)", "DLSSG via Streamline", "DLSSG via Nvngx", "FSR 3.1 FG", "FSR 3.0 FG", "XeFG" }, SelectedItem = IniToFgInput(ViewModel.GetOsFgInput(card.GameName, card.Source ?? "")) };
@@ -2404,7 +2431,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             hudFixCombo = new ComboBox { ItemsSource = new[] { "Default", "On", "Off" }, SelectedItem = hudFixSelected };
             ToolTipService.SetToolTip(hudFixCombo!, Loc.GetString("Dialog.OptiScaler.HudFixTooltip"));
 
-            AddRow(unifiedGrid, 5, Loc.GetString("Dialog.OptiScaler.FgInput"), fgInputCombo!, Loc.GetString("Dialog.OptiScaler.HudFix"), hudFixCombo!);
+AddRow(unifiedGrid, 6, Loc.GetString("Dialog.OptiScaler.FgInput"), fgInputCombo!, Loc.GetString("Dialog.OptiScaler.HudFix"), hudFixCombo!);
 
             // Row 5: FG Output (left) | FG Nvngx Override (right)
             fgOutputCombo = new ComboBox { ItemsSource = new[] { "Auto (Default)", "FSR FG", "DLSSG", "XeFG" }, SelectedItem = IniToFgOutput(ViewModel.GetOsFgOutput(card.GameName, card.Source ?? "")) };
@@ -2413,13 +2440,57 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             var currentNvngxDisplay = IniToFgNvngx(ViewModel.GetOsFgNvngxReplacement(card.GameName, card.Source ?? ""));
             object? nvngxSelected = nvngxItems.FirstOrDefault(i => i is ComboBoxItem cb ? (cb.Content as string) == currentNvngxDisplay : (i as string) == currentNvngxDisplay) ?? nvngxItems[0];
             fgNvngxCombo = new ComboBox { ItemsSource = nvngxItems, SelectedItem = nvngxSelected };
-            ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxTooltip"));
-            AddRow(unifiedGrid, 6, Loc.GetString("Dialog.OptiScaler.FgOutput"), fgOutputCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"), fgNvngxCombo!);
+ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxTooltip"));
+            AddRow(unifiedGrid, 7, Loc.GetString("Dialog.OptiScaler.FgOutput"), fgOutputCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"), fgNvngxCombo!);
 
             bool fgOutputIsDlssg = fgOutputCombo!.SelectedItem as string == "DLSSG";
             fgNvngxCombo!.Opacity = fgOutputIsDlssg ? 1.0 : 0.35;
             fgNvngxCombo!.IsHitTestVisible = fgOutputIsDlssg;
             fgNvngxCombo!.IsEnabled = fgOutputIsDlssg;
+
+            // Row 8: ForceReflex (left) | UseGamesReflexMarkers (right)
+            // Read current values directly from OptiScaler.ini
+            // ForceReflex lives in [fakenvapi], UseGamesReflexMarkers in [DLSSG]
+            string ReadOsIniValue(string sectionName, string key)
+            {
+                if (string.IsNullOrEmpty(card.InstallPath)) return "";
+                var p = Path.Combine(card.InstallPath, OptiScalerService.IniFileName);
+                if (!File.Exists(p)) return "";
+                bool inSec = false;
+                foreach (var line in File.ReadAllLines(p))
+                {
+                    var t = line.Trim();
+                    if (t.StartsWith("[")) inSec = t.Equals($"[{sectionName}]", StringComparison.OrdinalIgnoreCase);
+                    else if (inSec && !t.StartsWith(";"))
+                    {
+                        var pfx1 = key + "="; var pfx2 = key + " =";
+                        if (t.StartsWith(pfx1, StringComparison.OrdinalIgnoreCase)) return t.Substring(pfx1.Length).Trim();
+                        if (t.StartsWith(pfx2, StringComparison.OrdinalIgnoreCase)) return t.Substring(pfx2.Length).Trim();
+                    }
+                }
+                return "";
+            }
+            var currentForceReflex = ReadOsIniValue("fakenvapi", "ForceReflex");
+            // Index 0/1/2 maps directly to INI value 0/1/2 — display text is localized.
+            forceReflexCombo = new ComboBox
+            {
+                ItemsSource = new[] { LocOpt.T("Auto (0)"), LocOpt.T("Force Disable (1)"), LocOpt.T("Force Enable (2)") },
+                SelectedIndex = currentForceReflex switch { "1" => 1, "2" => 2, _ => 0 },
+            };
+            ToolTipService.SetToolTip(forceReflexCombo,
+                Loc.GetString("Dialog.OptiScaler.ForceReflexTooltip"));
+
+            var currentReflexMarkers = ReadOsIniValue("DLSSG", "UseGamesReflexMarkers");
+            // Index 0 = true, 1 = false — display text is localized.
+            reflexMarkersCombo = new ComboBox
+            {
+                ItemsSource = new[] { LocOpt.T("True"), LocOpt.T("False") },
+                SelectedIndex = currentReflexMarkers.Equals("false", StringComparison.OrdinalIgnoreCase) ? 1 : 0,
+            };
+            ToolTipService.SetToolTip(reflexMarkersCombo,
+                Loc.GetString("Dialog.OptiScaler.UseGamesReflexMarkersTooltip"));
+
+            AddRow(unifiedGrid, 8, Loc.GetString("Dialog.OptiScaler.ForceReflex"), forceReflexCombo, Loc.GetString("Dialog.OptiScaler.UseGamesReflexMarkers"), reflexMarkersCombo);
 
             // ── Wire handlers ──────────────────────────────────────────────
             combinedCombo!.SelectionChanged += (s, ev) =>
@@ -2495,6 +2566,24 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
                 var v = FgNvngxToIni!(display); ViewModel.SetOsFgNvngxReplacement(card.GameName, v, card.Source ?? "");
                 if (!string.IsNullOrEmpty(card.InstallPath) && string.Equals(ViewModel.GetOsFgOutput(card.GameName, card.Source ?? ""), "dlssg", StringComparison.OrdinalIgnoreCase))
                     OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "FrameGen", "FGNvngxReplacement", v);
+            };
+            fgEnabledCombo.SelectionChanged += (s, ev) =>
+            {
+                if (string.IsNullOrEmpty(card.InstallPath)) return;
+                var v = fgEnabledCombo.SelectedIndex == 1 ? "true" : "false";
+                OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "FrameGen", "Enabled", v);
+            };
+            forceReflexCombo.SelectionChanged += (s, ev) =>
+            {
+                if (string.IsNullOrEmpty(card.InstallPath)) return;
+                var v = forceReflexCombo.SelectedIndex switch { 1 => "1", 2 => "2", _ => "0" };
+                OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "fakenvapi", "ForceReflex", v);
+            };
+            reflexMarkersCombo.SelectionChanged += (s, ev) =>
+            {
+                if (string.IsNullOrEmpty(card.InstallPath)) return;
+                var v = reflexMarkersCombo.SelectedIndex == 1 ? "false" : "true";
+                OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "DLSSG", "UseGamesReflexMarkers", v);
             };
 
             // ── Additional Settings ────────────────────────────────────────
@@ -2894,6 +2983,18 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
                     string? capturedRenderScale = rsCombo?.SelectedItem as string;
                     bool?   capturedFlip        = flipCombo?.SelectedItem as string == "On";
                     string? capturedHudFix      = hudFixCombo?.SelectedItem is string hf ? (hf == "On" ? "true" : hf == "Off" ? "false" : "auto") : null;
+
+                    // Capture the 6 previously missing settings
+                    string? capturedVariant     = variantCombo.SelectedItem as string; // "Stable", "Nightly", "DLSS NR"
+                    string? capturedUpscalerApi = apiCombo.SelectedItem as string;     // "DX11", "DX12", "Vulkan"
+                    string? capturedUpscaler    = apiCombo.SelectedItem is string upApi && apiUpscalerCombo.SelectedItem is string upSel
+                                                  ? UpscalerOptionToIni(upApi, upSel) : null;
+                    string? capturedFgEnabled   = fgEnabledCombo.SelectedIndex == 1 ? "true"
+                                                  : fgEnabledCombo.SelectedIndex == 0 ? "auto" : null;
+                    string? capturedForceReflex = forceReflexCombo.SelectedIndex switch
+                                                  { 1 => "1", 2 => "2", 0 => "0", _ => null };
+                    string? capturedReflexMarkers = reflexMarkersCombo.SelectedIndex == 1 ? "false"
+                                                    : reflexMarkersCombo.SelectedIndex == 0 ? "true" : null;
                     float?  capturedFps         = null;
                     if (fpsLimitCombo.SelectedItem is string fpsSel)
                     {
@@ -2929,6 +3030,13 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
                     p.NrPasses            = capturedNrPasses;
                     p.NrWorkingScale      = capturedNrWorkingScale;
                     p.NrFinishedPicture   = capturedNrFinishedPic;
+                    // Previously missing fields
+                    p.OsVariant           = capturedVariant;
+                    p.UpscalerApi         = capturedUpscalerApi;
+                    p.Upscaler            = capturedUpscaler;
+                    p.FgEnabled           = capturedFgEnabled;
+                    p.ForceReflex         = capturedForceReflex;
+                    p.UseGamesReflexMarkers = capturedReflexMarkers;
 
                     OsPresetService.Save(presets);
                     applyBtn.IsEnabled = true;
@@ -3039,6 +3147,26 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
                         if (p.NrPasses         != null) OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "DlssNr", "Passes",          p.NrPasses);
                         if (p.NrWorkingScale   != null) OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "DlssNr", "WorkingScale",    p.NrWorkingScale);
                         if (p.NrFinishedPicture != null) OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "DlssNr", "FinishedPicture", p.NrFinishedPicture);
+
+                        // Previously missing: FG Enabled, Upscaler, Force Reflex, Reflex Markers
+                        if (p.FgEnabled != null && p.FgEnabled != "auto")
+                            OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "FrameGen", "Enabled", p.FgEnabled);
+                        if (p.UpscalerApi != null && p.Upscaler != null)
+                        {
+                            var iniKey = p.UpscalerApi switch { "DX12" => "Dx12Upscaler", "Vulkan" => "VulkanUpscaler", _ => "Dx11Upscaler" };
+                            OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "Upscalers", iniKey, p.Upscaler);
+                        }
+                        if (p.ForceReflex != null)
+                            OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "fakenvapi", "ForceReflex", p.ForceReflex);
+                        if (p.UseGamesReflexMarkers != null)
+                            OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "DLSSG", "UseGamesReflexMarkers", p.UseGamesReflexMarkers);
+                    }
+
+                    // OsVariant — change if preset has one and it differs from current
+                    if (p.OsVariant != null)
+                    {
+                        var internalVariant = p.OsVariant switch { "DLSS NR" => "DlssNr", "Stable" => null, _ => p.OsVariant };
+                        ViewModel.SetOsVariant(card.GameName, internalVariant, card.Source ?? "");
                     }
 
                     // NR runtime swap (outside InstallPath guard — needs async)
@@ -3332,6 +3460,14 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
 
         // ── Vulkan/OpenGL Present Method ──────────────────────────────────
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 4, 0, 0) });
+
+        // Pre-fetch both values off the UI thread — each calls _sessionLock.Wait(5000)
+        // and will block the UI thread if NVAPI is hung after GPU sleep/wake.
+        var (currentPresentMethod, currentPresentFlags) = await Task.Run(() => (
+            _dlssPresetService.GetVulkanPresentMethod(card.GameName, card.InstallPath ?? ""),
+            _dlssPresetService.GetVulkanPresentMethodFlags(card.GameName, card.InstallPath ?? "")
+        ));
+
         var presentGrid = new Grid { ColumnSpacing = 12, RowSpacing = 8 };
         presentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         presentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140, GridUnitType.Pixel) });
@@ -3351,9 +3487,9 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         presentGrid.Children.Add(presentLabel);
 
         var presentCombo = new ComboBox { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Stretch };
-        presentCombo.Items.Add(LocOpt.T("No"));   // 0x00000002 — Auto
+presentCombo.Items.Add(LocOpt.T("No"));   // 0x00000002 — Auto
         presentCombo.Items.Add(LocOpt.T("Yes"));  // 0x00000001 — Preferred layered on DXGI Swapchain
-        var currentPresentMethod = _dlssPresetService.GetVulkanPresentMethod(card.GameName, card.InstallPath ?? "");
+        // currentPresentMethod was pre-fetched above (off the UI thread)
         presentCombo.SelectedIndex = currentPresentMethod == 0x00000001 ? 1 : 0;
         presentCombo.SelectionChanged += (s, ev) =>
         {
@@ -3385,7 +3521,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         foreach (var (lbl, _) in flagOptions) flagsCombo.Items.Add(lbl);
         ToolTipService.SetToolTip(flagsCombo, Loc.GetString("Dialog.Dxvk.FlagsTooltip"));
 
-        var currentFlags = _dlssPresetService.GetVulkanPresentMethodFlags(card.GameName, card.InstallPath ?? "");
+        var currentFlags = currentPresentFlags; // already fetched above
         bool presentIsYes = currentPresentMethod == 0x00000001;
 
         if (presentIsYes)

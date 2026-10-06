@@ -130,6 +130,7 @@
     "DRAGON QUEST\u00AE XI S: Echoes of an Elusive Age\u2122 - Definitive Edition": "Dragon Quest XI (Original \u0026 DE)",
     "DRAGON QUEST\u00AE XI S: Echoes of an Elusive Age\u2122": "Dragon Quest XI (Original \u0026 DE)",
     "Dying Light": "Dying Light",
+    "HELLDIVERS™ 2": "Helldivers 2",
     "Mass Effect 1 (Legendary Edition)": "Mass Effect : Legendary Edition",
     "Mass Effect 2 (Legendary Edition)": "Mass Effect : Legendary Edition",
     "Mass Effect 3 (Legendary Edition)": "Mass Effect : Legendary Edition",
@@ -617,6 +618,7 @@
     "Far Cry 3",
     "Max Payne 3",
     "Ori and the Blind Forest: Definitive Edition",
+    "Saints Row 2",
     "Tomb Raider",
     "Tomb Raider (2013)"
   ],
@@ -624,8 +626,10 @@
     "AI The Somnium Files",
     "AI: THE SOMNIUM FILES",
     "Anno 117 - Pax Romana",
+    "Assassin's Creed Unity",
     "Ball x Pit",
     "Baldur\u0027s Gate 3",
+    "Bye Sweet Carole",
     "Five Hearts Under One Roof",
     "Outlast",
     "Zero Parades",
@@ -640,6 +644,7 @@
     "Returnal\u2122",
     "Stardew Valley",
     "Superhot",
+    "Tevi",
     "Tom Clancy\u0027s Rainbow Six Siege",
     "Trackmania",
     "Watch_Dogs 2",
@@ -793,11 +798,13 @@
   "dgVoodooVersions": {
     "2.87.5": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.5/dgVoodoo2_87_5.zip",
     "2.87.4": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.4/dgVoodoo2_87_4.zip",
-    "2.87.3": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.3/dgVoodoo2_87_3.zip",
-    "2.81.3": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.81.3/dgVoodoo2_81_3.zip"
+    "2.87.3": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.3/dgVoodoo2_87_3.zip"
   },
   "_comment_install_behaviour": "=== INSTALL BEHAVIOUR ===\nControls what happens when the user clicks Install for a component.\ninstallWarnings shows a blocking confirm dialog before proceeding (keys: reshade, renodx, relimiter, dc, optiscaler, luma, reframework, dxvk).\nforceExternalOnly redirects the install button to an external URL instead of downloading.\nsnapshotOverrides injects or overrides the addon download URL when wiki scraping fails.\ndllNameOverrides forces specific proxy DLL filenames (e.g. winmm.dll instead of dxgi.dll).\ngacSymlinkGames routes XNA Framework games through a GAC symlink install (requires admin).\nlaunchExeOverrides sets the relative exe path used when clicking Launch and for NVIDIA profile matching.\nrenodxIniOverrides injects keys into [renodx] reshade.ini section on install/update.\nlegacyReShadeVersions auto-assigns a locked ReShade version channel to specific games.",
   "installWarnings": {
+    "The Witcher 3: Wild Hunt — Remastered": {
+      "renodx": "⚠ The RenoDX mod available here is for the original version of The Witcher 3, not the Remastered Edition.\n\nFor the Remastered Edition mod and early access info, join the Discord:\nhttps://discord.com/channels/1408098019194310818/1410855640112566375/threads/1553784428222877736/1553784428222877736"
+    },
     "Grand Theft Auto V Enhanced": {
       "reshade": "⚠ ReShade in GTA V Enhanced may produce an \"Unable to save configuration\" error due to an incompatibility with DirectStorage.\n\nFix: install ASI Loader first, then drop DirectStorageFix.asi into the game folder.\n\nDownload DirectStorageFix: https://www.gta5-mods.com/scripts/directstoragefix\n\nAlternatively, use ReShade 5.9.2 or older."
     },
@@ -896,6 +903,10 @@
       "dc": ""
     },
     "Neverness To Everness": {
+      "reshade": "d3d12.dll",
+      "dc": ""
+    },
+    "NTE: Neverness To Everness": {
       "reshade": "d3d12.dll",
       "dc": ""
     },
@@ -1246,8 +1257,12 @@
   "donationUrls": {
     "Bit Viper": "https://ko-fi.com/bitviper",
     "DristoforColumb": "https://ko-fi.com/dristoforcolumb",
+    "Ersh": "https://ko-fi.com/ershin",
     "Forge": "https://ko-fi.com/forge87682",
+    "HDR Den": "https://ko-fi.com/hdrden",
+    "Izueh": "https://ko-fi.com/izueh",
     "Jon": "https://ko-fi.com/kickfister",
+    "Lego Liam Neeson": "https://ko-fi.com/legoliamneeson",
     "Lilium": "https://ko-fi.com/endlesslyflowering",
     "Musa": "https://ko-fi.com/musaqh",
     "Nukem": "https://ko-fi.com/nukem9",
@@ -1255,7 +1270,33 @@
     "RankFTW": "https://ko-fi.com/rankftw",
     "Ritsu": "https://ko-fi.com/ritsucecil",
     "ShortFuse": "https://ko-fi.com/shortfuse",
+    "speedlemur": "https://ko-fi.com/speedlemur87816",
+    "souperman9": "https://ko-fi.com/souperman9",
+    "spiwar": "https://ko-fi.com/spiwar",
+    "vietnick": "https://ko-fi.com/vietnick",
     "Voosh": "https://ko-fi.com/notvoosh"
+  },
+  "authorRoles": {
+    "Bit Viper": "RenoDX mods",
+    "DristoforColumb": "RenoDX mods, Luma mods",
+    "Ersh": "Luma Framework, Luma mods",
+    "Forge": "RenoDX mods",
+    "HDR Den": "The HDR Den",
+    "Izueh": "Luma mods",
+    "Jon": "RenoDX mods, Luma mods",
+    "Lego Liam Neeson": "RenoDX mods",
+    "Lilium": "Lilium HDR Shaders",
+    "Musa": "RenoDX mods, Luma mods",
+    "Nukem": "OptiScaler",
+    "Pumbo": "Luma Framework, Luma mods, PumboAutoHDR",
+    "RankFTW": "RHI, RenoDX mods",
+    "Ritsu": "RenoDX mods",
+    "ShortFuse": "RenoDX, RenoDX mods",
+    "speedlemur": "RenoDX mods",
+    "souperman9": "Switch emulator RenoDX mods",
+    "spiwar": "RenoDX mods",
+    "vietnick": "RenoDX mods",
+    "Voosh": "RenoDX mods"
   },
   "authorOverrides": {
     "Assassin\u0027s Creed": "Musa",

@@ -1,13 +1,177 @@
-## v2.8.0 Beta
+⚠ **Sign in with GitHub — strongly recommended** — almost everything RHI downloads comes from GitHub: ReShade, RenoDX, OptiScaler, DLSS versions, shader packs, Luma mods, manifests, update checks, and more. Without a GitHub account connected, all of this shares a single limit of **60 requests per hour**. That quota runs out fast, and when it does, downloads silently fail — installs abort, update checks are skipped, and staging shows as unavailable with no obvious reason why. Signing in raises the limit to **5,000 requests per hour**.
+
+To connect: open **Settings → GitHub API** and click **Sign in with GitHub**. Takes about 30 seconds.
+
+## v2.8.6 Beta 2
+
+### Bug Fixes
+
+**UI Freeze**
+- Fixed a recurring freeze that could happen after switching between games with DLSS and Neural Rendering installed. Navigating away and back to the same game quickly could queue two back-to-back panel rebuilds, causing the UI thread to hang.
+- Fixed a freeze that could occur when opening the Settings panel while a game was selected. Changing certain global driver settings (VSync, ReBAR) was triggering a detail panel rebuild in the background, which conflicted with the NVAPI reads that Settings needs to open.
+- Fixed several places where RHI was reading NVIDIA driver settings on the UI thread before opening a dialog. Opening Configure RTX HDR, Multi Frame Gen settings, or DXVK settings could block the UI for up to 25 seconds if NVAPI was slow or unresponsive (most common after waking from GPU sleep). Values are now fetched on a background thread before the dialog is built.
+- Fixed DLSS version information being refreshed on the UI thread after swapping a DLSS DLL. The version read involves synchronous disk I/O across several DLL paths, which could stall the UI on a slow disk or with antivirus active.
+
+**Process Doesn't Close**
+- Fixed RHI staying open and using CPU after you close the window. Background tasks (update checks, shader sync, addon sync) were running to completion regardless of whether the window had been closed. They now stop when RHI closes. A hard exit fallback also ensures the process always terminates within a few seconds.
+
+**Refresh**
+- Fixed the game detail panel going blank after pressing Refresh. The card was being rebuilt correctly, but the panels weren't being made visible again.
+
+**Engine.ini**
+- Fixed Engine.ini not being written on install for games that have never been launched, when the config path comes from the PCGW database. RHI now creates the full folder chain if it doesn't exist yet.
+
+**Drag-Drop Addons**
+- Fixed RHI offering to delete an existing RenoDX mod when a community addon with a different naming convention (e.g. `tw3-darkernights-remastered.addon64`) was dropped onto a game. These addons now install alongside the RenoDX mod rather than replacing it.
+
+**Appearance**
+- Fixed all dialogs rendering in light theme on systems with Windows set to light mode. RHI now forces dark theme on every dialog regardless of system setting.
+
+### Maintenance
+- Changing Smooth Motion or ReBAR Enable in the Driver Settings section now rebuilds only that section instead of the entire game overrides panel.
+
+## v2.8.5
+
+*Thanks to Lazorr for researching and contributing the fixes in this release.*
+
+### Bug Fixes
+
+**Available HDR Mods**
+- Fixed column headers and ✗ marks being too faint to read.
+
+**Crashes & Freezes on Close**
+- Fixed an incomplete shutdown sequence — timers and panel scans are now stopped, pending UI requests cancelled, the update log window closed, OLE drag-drop cleaned up, and settings flushed in the correct order.
+- Fixed progress dialogs sometimes getting permanently stuck. Dialogs now retain ownership of their modal slot until WinUI fully finishes closing them, including on error paths. Startup dialogs (patch notes, MOTD, update check) now run one at a time instead of racing each other.
+- Fixed the app not exiting cleanly when closed to tray during an installer handoff — it now exits explicitly rather than relying on "close to tray" behaviour.
+
+**Library & Refresh**
+- Fixed a race condition where starting a Refresh while the initial scan was still running could corrupt the game library. Initialisation and Refresh are now serialised, the previous library is retained while the new one is being built, and the UI merge waits for the background scan to finish before proceeding.
+
+**Single Instance & Admin Mode**
+- Hardened single-instance ownership and made the admin task query async with a timeout. The shutdown signal file is now cleaned up so a freshly launched instance doesn't accidentally consume it.
+
+**Installer**
+- Removed the use of `AttachThreadInput` for bringing RHI to the foreground after an update — this could tie RHI's responsiveness to the installer or any other foreground app. Replaced with a safe message-based handoff.
+
+**Downloads**
+- Added cancellation and a 10-minute timeout to installer downloads, plus partial file cleanup if the download fails or is cancelled.
+
+---
+
+## v2.8.4
+
+### Bug Fixes
+
+**GitHub Sign-In**
+- Fixed a startup race where all network requests fired before the stored GitHub token was applied, burning through the unauthenticated 60 req/hour limit instantly. The token is now applied before any requests go out. If the token turns out to be revoked, it's stripped mid-session and cleared from settings for the next launch.
+
+**Other**
+- Fixed the Available HDR Mods count being lower than expected on some launches. Luma release mods were being merged before the GitHub fetch completed, so however many had loaded by that point was what you got. The count is now always stable.
+
+---
+
+## v2.8.3
+
+### Bug Fixes
+
+**Freezes**
+- Fixed the most common cause of persistent UI freezes after selecting games with DLSS installed. An internal scan lock was not being released if a game folder was deleted or had a permission error, causing every subsequent DLSS and Driver Settings panel to hang indefinitely.
+
+**Shader Packs**
+- Fixed most shader packs not downloading when the shader cache was cleared. Two download tasks were racing at startup, causing packs to be skipped mid-download and never extracted.
+
+**GitHub Sign-In**
+- Fixed a revoked GitHub sign-in token causing 401 errors on every request. RHI now detects the revoked token on startup and clears it automatically, falling back to unauthenticated access.
+
+**Other**
+- Fixed ReShade not downloading when reshade.me returns a server error. Their server intermittently returns HTTP 500 even when the page loads correctly. RHI now reads the page regardless of the error code.
+- Fixed OptiScaler presets not saving 6 settings: OptiScaler Version, Upscaler API, Upscaler, FG Enabled, Force Reflex, and Use Games Reflex Markers.
+- Fixed a second older RenoDX addon reappearing in The Witcher 3: Wild Hunt — Remastered (and potentially other games) after every restart.
+- Fixed the Available HDR Mods button showing inconsistent counts depending on when it was clicked. The button is now disabled until the scan completes.
+
+### Maintenance
+- Added detailed diagnostic logging to help investigate remaining UI freeze reports.
+
+---
+
+## v2.8.2
+
+### New
+- **Donate button** — new button in the toolbar between Help and Settings. Opens a dialog listing all mod authors with what they make and a direct link to their Ko-fi page. Authors are sorted alphabetically and updated via the manifest, so new entries show up without an app update.
+
+### Bug Fixes
+
+**Freezes**
+- Fixed a UI freeze that occurred when selecting certain games (particularly those with a full DLSS profile — SR, RR, FG, and Streamline all installed). The freeze could last indefinitely and required killing the app. A 5-second safety timeout now prevents this from ever blocking permanently.
+- Fixed Quick Apply doing nothing on games where SR, RR, or FG version is set to NVIDIA Override. It now correctly disables the override and deploys the chosen version, the same as changing the combo manually.
+
+**Addons**
+- Fixed Unity addon (and any other dual-bitness addon) being silently swapped from 64-bit to 32-bit between sessions. RHI was removing the 64-bit file and replacing it with the 32-bit one whenever the background scan detected a different bitness. Both versions are now kept independently.
+- Fixed MFG Ada Unlock being removed from game folders after restarting the app or installing a mod. RHI was incorrectly treating it as an unmanaged addon and cleaning it up.
+- Fixed addon updates not being deployed to game folders. When a new version downloaded (e.g. MFG Ada Unlock), it would update in staging but the files in your game folders would remain at the old version until you manually reinstalled.
+
+**Other**
+- Fixed OptiScaler Nightly install leaving behind Streamline and DLSS Enabler files in the game folder when the install itself failed (e.g. due to GitHub rate limiting). These files are now cleaned up properly if the install can't complete.
+- Fixed ultrawide fix links from Lyall not loading when a GitHub API token was configured. The token was being sent to the wrong server, which rejected it.
+
+---
+
+## v2.8.1
+
+### New
+- **Control Ultimate Edition — OptiScaler FG** — the install dialog has two new options: "Install OptiScaler FG" sets up OptiScaler Nightly for Frame Generation in one click (Streamline, DLL renames, and INI settings all handled), and "Using HDR?" toggles the FgSlHdr10 flag in the RenoDX preset.
+- **dgVoodoo2** — standalone install now available in the Extras section for any DX9 game. Deploys the DX9→DX11 translation layer to the game folder, enabling ReShade compute shaders and DLSS5 Feeder on older titles. Coexists safely with Luma and Feeder. The ⚙ cog lets you pick which version to deploy.
+- **Luma mod info on game card** — when Luma is installed, the installed addon filename (e.g. `Luma-Prey.addon`) now appears in the badge row alongside any RenoDX addon. Both the RenoDX and Luma mod authors are shown as separate badges (e.g. RenoDX: Marat · Luma: Pumbo). The card updates immediately after install without needing a refresh.
+- **Card layout** — store and engine badges are now right-aligned on the same row as the Launch button. Graphics API and bitness badges are right-aligned on the same row as the installed mod names.
+- **GitHub API** — new section in Settings. Sign in with GitHub to raise the API rate limit from 60 to 5,000 requests per hour. Improves reliability of update checks, manifest fetches, and DLSS version lookups. Token is stored and applied automatically on launch.
+- **Background Update Checks** — new setting in the Updates section. "On" (default) keeps the current behaviour. "Minimal" stops all background component checks — only manifests, PCGW data, and DLSS versions fetch automatically. Useful if you prefer to check for updates manually.
+
+### Changes
+- **Game Overrides collapsed summary** now shows RS Channel, per-game Shaders/Addons mode, and any Update All exclusions at a glance.
+- **DLSS / Streamline collapsed summary** now shows the active preset letter and render scale when non-default.
+- **Shader pack update log** now shows real version numbers for packs that have GitHub releases (Lilium HDR Shaders, PumboAutoHDR, UltrawideSideGlass).
+- **Streamline deployment** now includes nvngx_dlssg.dll in the OptiScaler/Streamline subfolder for FG support.
+- **OptiScaler Nightly FG cog** — three new settings: FG Enabled, Force Reflex, and Use Games Reflex Markers.
+
+### Bug Fixes
+
+**Freezes**
+- Fixed a UI freeze that has affected games with a full NVIDIA driver profile (DLSS + Streamline + ReBAR) across multiple versions. The root cause was unsynchronised concurrent access to the NVIDIA driver session object from multiple background tasks — panel reads and user-triggered writes would race each other and corrupt the driver state, permanently stalling the UI. All NVAPI session access is now serialised through a single lock.
+- Fixed a second freeze path where the Settings panel was writing NVIDIA driver values back during initialisation before it had finished loading, colliding with the game panel reading those same values.
+- Fixed a freeze when selecting games with Neural Rendering installed (e.g. Control, The Witcher 3).
+- Fixed the Extras and Neural Rendering sections overflowing their containers and pushing buttons off-screen.
+
+**dgVoodoo2 + ReShade coexistence**
+- Fixed coexistence failing when installing dgVoodoo2 on a game that already had ReShade at d3d9.dll. ReShade is now correctly moved to dxgi.dll so it hooks dgVoodoo2's DX11 output. Uninstall cleans up without a full ReShade reinstall. Deployed file is now lowercase `d3d9.dll` matching the original.
+
+**Other**
+- Fixed the DXVK "Deploy dxvk.conf" button always deploying a generic config. For Lilium HDR it now deploys the correct preset-specific content.
+- Session logs now mask usernames, Steam user IDs, and Xbox package names before writing to disk.
+- Fixed UE4/5 config paths in PCGW data pointing to specific filenames instead of folders, which caused Engine.ini deployment to fail silently on several hundred games.
+
+### Manifest Updates
+- Fixed Saints Row 2, Bye Sweet Carole using wrong ReShade bitness.
+- Fixed Assassin's Creed Unity using 32-bit ReShade.
+- Fixed ReShade not loading on NTE: Neverness To Everness — added d3d12.dll name override.
+- Added install warning for The Witcher 3: Wild Hunt — Remastered (the available RenoDX mod targets the original version).
+
+---
+
+## v2.8.0
 
 ### New
 - **NVIDIA panel split** — the "Nvidia Profile Overrides" section is now two independent panels: **DLSS / Streamline** (SR, RR, FG, SL versions and presets) and **Driver Settings** (VSync, Low Latency, Smooth Motion, Power/G-Sync, ReBAR). Each has its own collapse/expand, drag handle for reordering, and collapsed summary line. Each remembers its own collapsed state. Users who had the old section's position saved will see both new sections in that location automatically.
-- **Component update history now includes RenoDX mod updates** — installs and updates applied via Update All are now captured in the Updates log alongside shader packs, ReShade, and other components.
+- **Component update history now includes RenoDX mod updates** — installs and updates applied via Update All, the downloads watcher, and drag-drop are now captured in the Updates log. Each entry shows the version that was replaced and the version that replaced it.
 
 ### Changes
 - Minimum window width set to 1220px.
+- Status badges (Working / May Work / WIP) removed from the RenoDX Info dialog — the same information is shown on the game card itself and the duplication was unnecessary.
+- Install warning dialogs now render URLs as clickable links that open in the browser.
 
 ### Bug Fixes
+
+**Update All**
+- Fixed Update All re-downloading and reinstalling every RenoDX mod on every run, even mods that were already at the latest version. It now only installs mods that have been flagged with an actual update.
 
 **OptiScaler**
 - Fixed OptiScaler uninstall deleting the game's `plugins\` folder — wiping Cyber Engine Tweaks, RED4ext, and other game mods on Cyberpunk 2077. The uninstall now skips the root `plugins\` folder entirely; `OptiPatcher.asi` is still removed correctly via a dedicated step that only deletes that specific file and only removes the folder if it is empty after.
@@ -22,6 +186,13 @@
 - Fixed the UI freezing for 30–60 seconds after clicking Check for Updates when a game with a large NVIDIA driver profile (e.g. Mass Effect Andromeda) was selected. The NVIDIA profile panel now skips its rebuild while the Settings panel is open, since it isn't visible and the expensive layout work is pointless.
 - Fixed the UI freezing during the app update download when a game with DLSS SR+FG+Streamline (e.g. God of War Ragnarök) was selected. The NVIDIA profile and Neural Rendering panels now skip their rebuild while any dialog is open — the user is looking at the dialog, not the game panel.
 - Fixed a permanent UI freeze (requiring task manager to kill) when clicking on games with a full DLSS install (SR+RR+FG+Streamline, e.g. Control, Resident Evil 4, God of War Ragnarök). Root cause: WinUI 3 enters an infinite layout loop when a `Grid` with star columns is nested inside a `StackPanel` inside a `ScrollViewer` — a known engine bug. Fixed by replacing all star column definitions in the NVIDIA Profile and DLSS grids with calculated fixed-pixel widths.
+
+### Manifest Updates
+- Added install warning for The Witcher 3: Wild Hunt — Remastered — the RenoDX mod available in RHI is for the original version; the warning links to the Discord thread for the Remastered-specific mod.
+- Fixed Bye Sweet Carole installing 32-bit ReShade — added to the 64-bit override list.
+- Fixed ReShade not installing correctly on NTE: Neverness To Everness — added DLL name override (`d3d12.dll`).
+- Fixed Saints Row 2 installing 64-bit ReShade — added to the 32-bit override list.
+- Fixed Assassin's Creed Unity installing 32-bit ReShade — added to the 64-bit override list.
 
 ---
 

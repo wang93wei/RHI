@@ -129,6 +129,26 @@ public static class CrashReporter
     private static readonly ConcurrentQueue<string> _breadcrumbs = new();
 
     /// <summary>
+    /// Returns the last <paramref name="count"/> breadcrumb entries that contain "[UIAction]",
+    /// as short action-name strings (timestamp and prefix stripped). Used by the heartbeat
+    /// freeze handler to include a recent-actions timeline in the freeze log entry.
+    /// </summary>
+    public static List<string> GetRecentUiActions(int count)
+    {
+        var all = _breadcrumbs.ToArray();
+        var result = new List<string>(count);
+        for (int i = all.Length - 1; i >= 0 && result.Count < count; i--)
+        {
+            var entry = all[i];
+            var idx = entry.IndexOf("[UIAction] ", StringComparison.Ordinal);
+            if (idx >= 0)
+                result.Add(entry.Substring(idx + "[UIAction] ".Length));
+        }
+        result.Reverse();
+        return result;
+    }
+
+    /// <summary>
     /// Log a short message describing what the app is currently doing.
     /// These entries are included in crash reports to show the sequence of events
     /// leading up to the crash. When verbose logging is enabled, the entry is also
@@ -136,7 +156,7 @@ public static class CrashReporter
     /// </summary>
     public static void Log(string message)
     {
-        var entry = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
+        var entry = $"[{DateTime.Now:HH:mm:ss.fff}] {SanitisePath(message)}";
         _breadcrumbs.Enqueue(entry);
 
         // Keep the buffer bounded
@@ -145,6 +165,57 @@ public static class CrashReporter
 
         // Always write to the session log file
         AppendSessionLog(entry);
+    }
+
+    /// <summary>
+    /// Writes a log entry synchronously, bypassing the async channel and flushing directly
+    /// to disk. Use for freeze diagnostics only — the process may be killed immediately after
+    /// and the async drain may not complete in time to flush queued entries.
+    /// </summary>
+    public static void LogSync(string message)
+    {
+        var entry = $"[{DateTime.Now:HH:mm:ss.fff}] {SanitisePath(message)}";
+        _breadcrumbs.Enqueue(entry);
+        while (_breadcrumbs.Count > MaxBreadcrumbs)
+            _breadcrumbs.TryDequeue(out _);
+        try
+        {
+            lock (_verboseLogLock)
+            {
+                File.AppendAllText(SessionLogPath, entry + Environment.NewLine, Encoding.UTF8);
+            }
+        }
+        catch { /* Never let logging crash the app */ }
+    }
+
+    /// <summary>
+    /// Removes personally identifiable information from log entries before writing to disk.
+    /// Replaces Windows usernames, Steam user IDs, and Xbox AUMIDs with safe placeholders.
+    /// </summary>
+    private static string SanitisePath(string message)
+    {
+        // Replace C:\Users\{username}\ with %USERPROFILE%\
+        message = System.Text.RegularExpressions.Regex.Replace(
+            message,
+            @"C:\\Users\\[^\\]+\\",
+            "%USERPROFILE%\\",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Replace Steam userdata\{numericId}\ with userdata\[userid]\
+        message = System.Text.RegularExpressions.Regex.Replace(
+            message,
+            @"(userdata\\)\d+(\\)",
+            "$1[userid]$2",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Truncate Xbox AUMIDs — keep only up to the last underscore segment (package family)
+        // e.g. Microsoft.ForteBaseGame_3.440.853.0_x64__8wekyb3d8bbwe → Microsoft.ForteBaseGame_[ver]
+        message = System.Text.RegularExpressions.Regex.Replace(
+            message,
+            @"(\\WindowsApps\\[^_]+)_[\d.]+_x64__\w+",
+            "$1_[ver]");
+
+        return message;
     }
 
     private static void AppendSessionLog(string entry)

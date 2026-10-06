@@ -698,6 +698,7 @@ public partial class MainViewModel
                 {
                     Name = card.GameName,
                     IsGenericLuma = true,
+                    Author = "Pumbo",
                     DownloadUrl = "https://github.com/Filoppi/Luma-Framework/releases/latest/download/Luma-Unreal_Engine.zip",
                     Status = "✅",
                 };
@@ -1013,6 +1014,8 @@ public partial class MainViewModel
                 card.LumaStatus = GameStatus.Installed;
                 card.LumaActionMessage = Loc.GetString("Luma.Status.LumaInstalled");
                 card.FadeMessage(m => card.LumaActionMessage = m, card.LumaActionMessage);
+                // Rebuild the detail panel so the addon label and author badge update immediately
+                RequestDetailPanelRebuild?.Invoke(card);
             });
 
             await ApplyLumaPostInstallAsync(card, record);
@@ -1191,18 +1194,20 @@ public partial class MainViewModel
             {
                 bool feederInstalled = File.Exists(Path.Combine(card.InstallPath ?? "", "dlss5-feed.addon32"))
                                     || File.Exists(Path.Combine(card.InstallPath ?? "", "dlss5-feed.addon64"));
-                if (feederInstalled)
+                bool standaloneInstalled = GetDgVoodooStandalone(card.GameName, card.Source ?? "");
+                if (feederInstalled || standaloneInstalled)
                 {
                     card.LumaRecord.InstalledFiles.RemoveAll(f => f.Equals("D3D9.dll", StringComparison.OrdinalIgnoreCase)
                                                                 || f.Equals("dgVoodoo.conf", StringComparison.OrdinalIgnoreCase));
-                    _crashReporter.Log($"[UninstallLuma] Feeder still installed — preserving dgVoodoo2 files for '{card.GameName}'");
+                    _crashReporter.Log($"[UninstallLuma] {(feederInstalled ? "Feeder" : "Standalone")} still installed — preserving dgVoodoo2 files for '{card.GameName}'");
                     wasDgVoodoo = false; // dgVoodoo stays — don't change ReShade filename
                 }
             }
             _lumaService.Uninstall(card.LumaRecord);
             card.LumaRecord = null;
             card.LumaStatus = GameStatus.NotInstalled;
-            card.LumaActionMessage = Loc.GetString("Luma.Status.LumaRemoved");
+card.LumaActionMessage = Loc.GetString("Luma.Status.LumaRemoved");
+            RequestDetailPanelRebuild?.Invoke(card);
 
             // Clean up nvngx_dlss.dll deployed by ApplyLumaPostInstallAsync.
             // It's not in InstalledFiles (deployed after record was saved), so handle it here.
@@ -1366,10 +1371,39 @@ public partial class MainViewModel
             }
             if (xamlRoot == null) return true;
 
+            // Build content: extract any trailing https:// URL into a HyperlinkButton
+            object dialogContent;
+            var urlMatch = System.Text.RegularExpressions.Regex.Match(message, @"https?://\S+$");
+            if (urlMatch.Success)
+            {
+                var textPart = message.Substring(0, urlMatch.Index).TrimEnd();
+                var url = urlMatch.Value;
+                var panel = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 10 };
+                panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                {
+                    Text = textPart,
+                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                    MaxWidth = 440,
+                });
+                var link = new Microsoft.UI.Xaml.Controls.HyperlinkButton
+                {
+                    Content = url.Length > 60 ? url.Substring(0, 57) + "…" : url,
+                    NavigateUri = new Uri(url),
+                    Padding = new Microsoft.UI.Xaml.Thickness(0),
+                    HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Left,
+                };
+                panel.Children.Add(link);
+                dialogContent = panel;
+            }
+            else
+            {
+                dialogContent = message;
+            }
+
             var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
-                Title = Loc.GetString("Dialog.InstallNote.Title", gameName),
-                Content = message,
+Title = Loc.GetString("Dialog.InstallNote.Title", gameName),
+                Content = dialogContent,
                 PrimaryButtonText = Loc.GetString("Dialog.Continue"),
                 CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,

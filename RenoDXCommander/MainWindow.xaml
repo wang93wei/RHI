@@ -59,10 +59,11 @@
                             ToolTipService.ToolTip="{Binding [Xaml.QuickStartGuide], Source={StaticResource Loc}}"/>
                     <Button x:Name="HdrModsListBtn" Content="{Binding [Xaml.AvailableHdrMods], Source={StaticResource Loc}}"
                             Click="HdrModsListBtn_Click"
+                            IsEnabled="False"
                             Background="{StaticResource SurfaceInputBrush}" Foreground="{StaticResource AccentTealBrush}"
                             BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
                             CornerRadius="8" Padding="12,7" FontSize="12"
-                            ToolTipService.ToolTip="{Binding [Xaml.AvailableHdrMods.Tooltip], Source={StaticResource Loc}}"/>
+ToolTipService.ToolTip="{Binding [Xaml.LoadingModDataPleaseWait], Source={StaticResource Loc}}"/>
 
                     <Border Width="1" Height="20" Background="{StaticResource BorderSubtleBrush}" Margin="4,0"/>
 
@@ -126,6 +127,13 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
+
+                    <Button x:Name="DonateBtn" Content="{Binding [Xaml.Donate], Source={StaticResource Loc}}"
+                            Click="DonateButton_Click"
+                            Background="{StaticResource SurfaceInputBrush}" Foreground="{StaticResource AccentTealBrush}"
+                            BorderBrush="{StaticResource AccentTealBorderBrush}" BorderThickness="1"
+                            CornerRadius="8" Padding="12,7" FontSize="12"
+                            ToolTipService.ToolTip="{Binding [Xaml.SupportTheModAuthors], Source={StaticResource Loc}}"/>
 
                     <Border Width="1" Height="20" Background="{StaticResource BorderSubtleBrush}" Margin="4,0"/>
 
@@ -370,9 +378,18 @@
                             <!-- Left box: Launch, links, badges -->
                             <Border Grid.Column="0" Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
                                     BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1" Padding="16,14">
-                            <StackPanel Spacing="10">
-                                <!-- Action buttons row -->
-                                <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Grid RowSpacing="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Row 0, Col 0: Action buttons -->
+                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="4">
                                         <Button x:Name="DetailLaunchBtn" x:FieldModifier="internal"
                                                 Background="#1A3A20"
                                                 Foreground="#6AE87A"
@@ -451,31 +468,9 @@
                                         </Button>
                                     </StackPanel>
 
-                                <!-- Addon file + info badges with Browse button -->
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <controls:WrapPanel Grid.Column="0" HorizontalSpacing="8" VerticalSpacing="6">
-                                    <!-- Group 1: Mod info (addon file + generic/extended badge) -->
-                                    <Border x:Name="DetailInstalledFileBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
-                                            Background="{StaticResource ChipDefaultBrush}" BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
-                                            VerticalAlignment="Center" Visibility="Collapsed">
-                                        <TextBlock x:Name="DetailInstalledFile" x:FieldModifier="internal" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
-                                    </Border>
-                                    <TextBlock x:Name="DetailModStatusIcon" x:FieldModifier="internal" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"/>
-                                    <Border x:Name="DetailGenericBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
-                                            Background="{StaticResource ChipDefaultBrush}" BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
-                                            VerticalAlignment="Center" Visibility="Collapsed">
-                                        <TextBlock x:Name="DetailGenericText" x:FieldModifier="internal" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
-                                    </Border>
-
-                                    <!-- Separator: mod → platform -->
-                                    <Border x:Name="DetailSepModPlatform" x:FieldModifier="internal" Width="1" Background="{StaticResource BorderSubtleBrush}"
-                                            VerticalAlignment="Stretch" Visibility="Collapsed"/>
-
-                                    <!-- Group 2: Platform info (source + engine + 32-bit) -->
+                                <!-- Row 0, Col 1: Store + Engine (right-aligned) -->
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <Border x:Name="DetailSourceBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
                                             Background="{StaticResource ChipDefaultBrush}" BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
                                             VerticalAlignment="Center">
@@ -495,6 +490,37 @@
                                             <TextBlock x:Name="DetailEngineText" x:FieldModifier="internal" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
                                         </StackPanel>
                                     </Border>
+                                </StackPanel>
+
+                                <!-- Row 1, Col 0: Addon file + mod badges -->
+                                <controls:WrapPanel Grid.Row="1" Grid.Column="0" HorizontalSpacing="8" VerticalSpacing="6">
+                                    <!-- Group 1: Mod info (addon file + generic/extended badge) -->
+                                    <Border x:Name="DetailInstalledFileBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
+                                            Background="{StaticResource ChipDefaultBrush}" BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
+                                            VerticalAlignment="Center" Visibility="Collapsed">
+                                        <TextBlock x:Name="DetailInstalledFile" x:FieldModifier="internal" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
+                                    </Border>
+                                    <TextBlock x:Name="DetailModStatusIcon" x:FieldModifier="internal" FontSize="12" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                    <Border x:Name="DetailGenericBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
+                                            Background="{StaticResource ChipDefaultBrush}" BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
+                                            VerticalAlignment="Center" Visibility="Collapsed">
+                                        <TextBlock x:Name="DetailGenericText" x:FieldModifier="internal" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
+                                    </Border>
+                                    <!-- Separator: mod → status -->
+                                    <Border x:Name="DetailSepModPlatform" x:FieldModifier="internal" Width="1" Background="{StaticResource BorderSubtleBrush}"
+                                            VerticalAlignment="Stretch" Visibility="Collapsed"/>
+                                    <!-- Wiki status -->
+                                    <Border x:Name="DetailWikiBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
+                                            VerticalAlignment="Center">
+                                        <TextBlock x:Name="DetailWikiText" x:FieldModifier="internal" FontSize="11"/>
+                                    </Border>
+                                    <!-- Kept for code-behind compatibility — always collapsed -->
+                                    <Border x:Name="DetailSepPlatformStatus" x:FieldModifier="internal" Width="0" Visibility="Collapsed"/>
+                                </controls:WrapPanel>
+
+                                <!-- Row 1, Col 1: API + Bitness (right-aligned) -->
+                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <StackPanel x:Name="DetailGraphicsApiBadgePanel" x:FieldModifier="internal"
                                                 Orientation="Horizontal" Spacing="4"
                                                 VerticalAlignment="Center" Visibility="Collapsed"/>
@@ -508,19 +534,8 @@
                                             VerticalAlignment="Center" Visibility="Collapsed">
                                         <TextBlock Text="{Binding [Card.Bitness64], Source={StaticResource Loc}}" FontSize="11" Foreground="{StaticResource ChipTextBrush}"/>
                                     </Border>
-
-                                    <!-- Separator: platform → status -->
-                                    <Border x:Name="DetailSepPlatformStatus" x:FieldModifier="internal" Width="1" Background="{StaticResource BorderSubtleBrush}"
-                                            VerticalAlignment="Stretch" Visibility="Collapsed"/>
-
-                                    <!-- Group 3: Status (wiki + luma) -->
-                                    <Border x:Name="DetailWikiBadge" x:FieldModifier="internal" CornerRadius="5" Padding="6,2"
-                                            VerticalAlignment="Center">
-                                        <TextBlock x:Name="DetailWikiText" x:FieldModifier="internal" FontSize="11"/>
-                                    </Border>
-                                </controls:WrapPanel>
-                                </Grid>
-                            </StackPanel>
+                                </StackPanel>
+                            </Grid>
                             </Border>
                             <!-- Right box: Hide, Favourite, Config, Browse -->
                             <Border Grid.Column="1" Background="{StaticResource SurfaceComponentTableBrush}"
@@ -1132,7 +1147,8 @@
 
                 <!-- Scrollable settings content -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Padding="32,24,32,40" Spacing="14" MaxWidth="800"
+                    <StackPanel x:Name="SettingsCardsPanel" x:FieldModifier="internal"
+                                Padding="32,24,32,40" Spacing="14" MaxWidth="800"
                                 HorizontalAlignment="Center">
 
                         <!-- ══════════════════════════════════════════════════════════
@@ -1188,6 +1204,8 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <StackPanel Grid.Row="0" Spacing="8">
                                         <TextBlock Text="{Binding [Settings.CheckForUpdates], Source={StaticResource Loc}}" FontSize="13" FontWeight="SemiBold"
@@ -1201,7 +1219,24 @@
                                             BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
                                             CornerRadius="8" Padding="12,7" FontSize="12"
                                             HorizontalAlignment="Stretch"
-                                            ToolTipService.ToolTip="{Binding [Xaml.CheckAllComponentsAndThe], Source={StaticResource Loc}}"/>
+ToolTipService.ToolTip="{Binding [Xaml.CheckAllComponentsAndThe], Source={StaticResource Loc}}"/>
+                                    <TextBlock Grid.Row="2" TextWrapping="Wrap" FontSize="11"
+                                               Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18" Margin="0,8,0,0"
+                                               Text="{Binding [Xaml.BackgroundChecks], Source={StaticResource Loc}}"/>
+                                    <ComboBox Grid.Row="3" x:Name="BackgroundUpdateChecksCombo" x:FieldModifier="internal"
+                                              FontSize="12" HorizontalAlignment="Stretch"
+                                              SelectionChanged="BackgroundUpdateChecksCombo_SelectionChanged">
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip>
+                                                <TextBlock TextWrapping="Wrap" MaxWidth="280">
+                                                    <Run Text="{Binding [Xaml.BackgroundChecks.On.Tooltip], Source={StaticResource Loc}}"/><LineBreak/>
+                                                    <Run Text="{Binding [Xaml.BackgroundChecks.Minimal.Tooltip], Source={StaticResource Loc}}"/>
+                                                </TextBlock>
+                                            </ToolTip>
+                                        </ToolTipService.ToolTip>
+                                        <ComboBoxItem Content="{Binding [Xaml.On], Source={StaticResource Loc}}"/>
+                                        <ComboBoxItem Content="{Binding [Xaml.Minimal], Source={StaticResource Loc}}"/>
+                                    </ComboBox>
                                 </Grid>
 
                                 <!-- Divider -->
@@ -1209,20 +1244,29 @@
                                         Background="{StaticResource BorderDefaultBrush}"
                                         VerticalAlignment="Stretch" Margin="12,0,12,0"/>
 
-                                <!-- Right: Automatic Updates -->
-                                <StackPanel Grid.Column="2" Spacing="8">
-                                    <TextBlock Text="{Binding [Settings.AutomaticUpdates], Source={StaticResource Loc}}" FontSize="13" FontWeight="SemiBold"
-                                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
-                                               Text="{Binding [Settings.AutomaticUpdates.Tooltip], Source={StaticResource Loc}}"/>
-                                    <ComboBox x:Name="AutoUpdateComponentsCombo" x:FieldModifier="internal"
+<!-- Right: Automatic Updates — uses same Grid structure as left so the combo aligns with Background Checks -->
+                                <Grid Grid.Column="2" RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Spacing="8">
+                                        <TextBlock Text="{Binding [Settings.AutomaticUpdates], Source={StaticResource Loc}}" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                                   Text="{Binding [Settings.AutomaticUpdates.Tooltip], Source={StaticResource Loc}}"/>
+                                    </StackPanel>
+                                    <!-- Rows 1–2 intentionally empty — spacers to match left column height -->
+                                    <ComboBox Grid.Row="3" x:Name="AutoUpdateComponentsCombo" x:FieldModifier="internal"
                                               FontSize="12" HorizontalAlignment="Stretch"
                                               ToolTipService.ToolTip="{Binding [Xaml.AutomaticallyInstallReshadeRenodxRelimit], Source={StaticResource Loc}}"
                                               SelectionChanged="AutoUpdateComponentsCombo_SelectionChanged">
                                         <ComboBoxItem Content="{Binding [Dialog.No], Source={StaticResource Loc}}"/>
                                         <ComboBoxItem Content="{Binding [Dialog.Yes], Source={StaticResource Loc}}"/>
                                     </ComboBox>
-                                </StackPanel>
+                                </Grid>
                             </Grid>
                             </StackPanel>
                         </Border>
@@ -1699,28 +1743,95 @@
                                 Visibility="Collapsed"
                                 Background="{StaticResource SurfaceRaisedBrush}" CornerRadius="10" Padding="20,16"
                                 BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="{Binding [Xaml.RenoDxDataSource], Source={StaticResource Loc}}" FontSize="15" FontWeight="Bold"
-                                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                                <TextBlock TextWrapping="Wrap" FontSize="11"
-                                           Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
-                                           Text="{Binding [Xaml.RenoDxDataSource.Description], Source={StaticResource Loc}}"/>
-                                <Grid ColumnSpacing="12">
+                            <Grid ColumnSpacing="0" RowSpacing="0">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding [Xaml.Source], Source={StaticResource Loc}}" FontSize="13"
-                                               Foreground="{StaticResource TextPrimaryBrush}"
-                                               VerticalAlignment="Center"/>
-                                    <ComboBox x:Name="RenoDxDbSourceCombo" x:FieldModifier="internal"
-                                              Grid.Column="1" FontSize="12"
-                                              HorizontalAlignment="Left" MinWidth="160">
-                                        <ComboBoxItem Content="{Binding [Xaml.RhiDatabase], Source={StaticResource Loc}}" Tag="DbOnly"/>
-                                        <ComboBoxItem Content="{Binding [Xaml.RenodxWiki], Source={StaticResource Loc}}" Tag="WikiOnly"/>
-                                    </ComboBox>
-                                </Grid>
-                            </StackPanel>
+
+                                    <!-- Left: Data Source combo -->
+                                    <StackPanel Grid.Column="0" Spacing="8">
+                                        <TextBlock Text="{Binding [Xaml.ModDataSource], Source={StaticResource Loc}}" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock TextWrapping="Wrap" FontSize="11"
+                                                   Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                                   Text="{Binding [Xaml.RenoDxDataSource.Description], Source={StaticResource Loc}}"/>
+                                        <Grid ColumnSpacing="8" Margin="0,4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding [Xaml.Source], Source={StaticResource Loc}}" FontSize="12"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="RenoDxDbSourceCombo" x:FieldModifier="internal"
+                                                      Grid.Column="1" FontSize="12"
+                                                      HorizontalAlignment="Left" MinWidth="160">
+                                                <ComboBoxItem Content="{Binding [Xaml.RhiDatabase], Source={StaticResource Loc}}" Tag="DbOnly"/>
+                                                <ComboBoxItem Content="{Binding [Xaml.RenodxWiki], Source={StaticResource Loc}}" Tag="WikiOnly"/>
+                                            </ComboBox>
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <!-- Divider -->
+                                    <Border Grid.Column="1" Width="1"
+                                            Background="{StaticResource BorderDefaultBrush}"
+                                            VerticalAlignment="Stretch" Margin="20,0,20,0"/>
+
+                                    <!-- Right: GitHub API Rate Limit -->
+                                    <StackPanel Grid.Column="2" Spacing="8">
+                                        <TextBlock Text="{Binding [Xaml.GitHubApi], Source={StaticResource Loc}}" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock TextWrapping="Wrap" FontSize="11"
+                                                   Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                                   Text="{Binding [Xaml.GitHubApi.Description], Source={StaticResource Loc}}"/>
+
+                                        <!-- Connect button -->
+                                        <Button x:Name="GitHubConnectBtn" x:FieldModifier="internal"
+                                                Content="{Binding [Xaml.ConnectGitHub], Source={StaticResource Loc}}"
+                                                Click="GitHubConnectBtn_Click"
+                                                Background="{StaticResource AccentBlueBgBrush}"
+                                                Foreground="{StaticResource AccentBlueBrush}"
+                                                BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
+                                                CornerRadius="6" Padding="12,6" MinWidth="0"
+                                                FontSize="12" HorizontalAlignment="Left"/>
+
+                                        <!-- Status text (connected / code display / error) -->
+                                        <TextBlock x:Name="GitHubStatusText" x:FieldModifier="internal"
+                                                   FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                                   Text="{Binding [Xaml.GitHubNotConnected], Source={StaticResource Loc}}"/>
+
+                                        <!-- Device code panel — shown during auth flow -->
+                                        <StackPanel x:Name="GitHubDeviceCodePanel" x:FieldModifier="internal"
+                                                    Spacing="6" Visibility="Collapsed">
+                                            <TextBlock FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{StaticResource InlineDescriptionBrush}"
+                                                       Text="{Binding [Xaml.GitHubDeviceCodePrompt], Source={StaticResource Loc}}"/>
+                                            <TextBlock x:Name="GitHubUserCodeText" x:FieldModifier="internal"
+                                                       FontSize="20" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       Text="{Binding [Xaml.GitHubUserCodePlaceholder], Source={StaticResource Loc}}"
+                                                       CharacterSpacing="200"/>
+                                            <HyperlinkButton x:Name="GitHubVerificationLink" x:FieldModifier="internal"
+                                                             Content="github.com/login/device"
+                                                             NavigateUri="https://github.com/login/device"
+                                                             FontSize="11" Padding="0"/>
+                                        </StackPanel>
+
+                                        <!-- Disconnect row — shown only when connected -->
+                                        <StackPanel x:Name="GitHubDisconnectRow" x:FieldModifier="internal"
+                                                    Spacing="4" Visibility="Collapsed">
+                                            <Button Content="{Binding [Xaml.Disconnect], Source={StaticResource Loc}}"
+                                                    Click="GitHubDisconnectBtn_Click"
+                                                    Background="Transparent"
+                                                    Foreground="{StaticResource AccentRedBrush}"
+                                                    BorderBrush="{StaticResource AccentRedBrush}" BorderThickness="1"
+                                                    CornerRadius="6" Padding="12,4" MinWidth="0"
+                                                    FontSize="11" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </StackPanel>                                </Grid>
                         </Border>
 
                         <!-- ══════════════════════════════════════════════════════════

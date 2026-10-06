@@ -11,9 +11,37 @@ public partial class MainViewModel
     private System.Threading.Timer? _updateCheckTimer;
     private System.Threading.Timer? _heartbeatTimer;
     private volatile string _lastUiAction = "none";
+    private readonly object _backgroundTimerLock = new();
+    private volatile bool _backgroundStopped;
+    private readonly CancellationTokenSource _backgroundLifetime = new();
+
+    /// <summary>Native thread ID of the UI thread — captured once at startup for CPU sampling.</summary>
+    internal uint UiThreadNativeId { get; set; }
+
+    /// <summary>Prevents more than one stack capture per freeze event.</summary>
+    private int _freezeStackCaptured; // 0 = not captured, 1 = captured; Interlocked
+
+    internal void StopBackgroundWork()
+    {
+        lock (_backgroundTimerLock)
+        {
+            _backgroundStopped = true;
+            _heartbeatTimer?.Dispose();
+            _heartbeatTimer = null;
+            _updateCheckTimer?.Dispose();
+            _updateCheckTimer = null;
+        }
+        _backgroundLifetime.Cancel();
+        PeriodicAppUpdateCheck = null;
+        _autoUpdateService.Stop();
+    }
 
     /// <summary>Tracks the last action dispatched to the UI thread for freeze diagnostics.</summary>
-    internal void SetLastUiAction(string action) => _lastUiAction = action;
+    internal void SetLastUiAction(string action)
+    {
+        _lastUiAction = action;
+        _crashReporter.Log($"[UIAction] {action}");
+    }
 
     /// <summary>
     /// Starts a 10-second heartbeat timer. On each tick it posts a quick probe to the UI thread.
@@ -22,21 +50,160 @@ public partial class MainViewModel
     /// </summary>
     internal void StartHeartbeatTimer()
     {
-        _heartbeatTimer = new System.Threading.Timer(_ =>
+        lock (_backgroundTimerLock)
         {
-            var probeReceived = false;
-            DispatcherQueue?.TryEnqueue(() => { probeReceived = true; });
+            if (_backgroundStopped || _heartbeatTimer != null) return;
+            _heartbeatTimer = new System.Threading.Timer(async _ =>
+            {
+                if (_backgroundStopped) return;
+                var probe = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                if (DispatcherQueue?.TryEnqueue(() => probe.TrySetResult(true)) != true) return;
+                try
+                {
+                    await probe.Task.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                    if (!_backgroundStopped)
+                    {
+                        System.Threading.Interlocked.Exchange(ref _freezeStackCaptured, 0); // reset for next freeze
+                        _crashReporter.Log($"[Heartbeat] UI responsive — last action: {_lastUiAction}");
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    if (_backgroundStopped) return;
 
-            // Wait up to 3 seconds for the UI thread to process the probe
-            var deadline = Environment.TickCount64 + 3000;
-            while (!probeReceived && Environment.TickCount64 < deadline)
-                System.Threading.Thread.Sleep(100);
+                    // ── 1. Last N UI actions from breadcrumb ring buffer ────────────────
+                    var recentActions = CrashReporter.GetRecentUiActions(20);
 
-            if (probeReceived)
-                _crashReporter.Log($"[Heartbeat] UI responsive — last action: {_lastUiAction}");
-            else
-                _crashReporter.Log($"[Heartbeat] *** UI FROZEN *** last action before freeze: {_lastUiAction}");
-        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+                    // ── 2. UI thread CPU delta (1-second sample) ────────────────────────
+                    // Point 1: use a FRESH Process instance for the second sample.
+                    // Process.Threads caches ProcessThread objects — reading TotalProcessorTime
+                    // from the same instance before and after the delay returns ~0 (false IDLE).
+                    // Point 4: await Task.Delay on the background timer thread, not the UI thread.
+                    string cpuInfo = "unknown";
+                    try
+                    {
+                        var uiNativeId = UiThreadNativeId;
+                        if (uiNativeId > 0)
+                        {
+                            using var proc0 = System.Diagnostics.Process.GetCurrentProcess();
+                            var thread0 = proc0.Threads.Cast<System.Diagnostics.ProcessThread>()
+                                              .FirstOrDefault(t => t.Id == (int)uiNativeId);
+                            var t0 = thread0?.TotalProcessorTime;
+
+                            await Task.Delay(1000).ConfigureAwait(false); // stays on background thread
+
+                            using var proc1 = System.Diagnostics.Process.GetCurrentProcess(); // fresh instance
+                            var thread1 = proc1.Threads.Cast<System.Diagnostics.ProcessThread>()
+                                              .FirstOrDefault(t => t.Id == (int)uiNativeId);
+                            if (t0.HasValue && thread1 != null)
+                            {
+                                var delta = thread1.TotalProcessorTime - t0.Value;
+                                cpuInfo = delta.TotalMilliseconds > 900
+                                    ? $"PEGGED ({delta.TotalMilliseconds:F0}ms/1s — layout or compute loop)"
+                                    : $"IDLE ({delta.TotalMilliseconds:F0}ms/1s — waiting on lock or native call)";
+                            }
+                            else
+                            {
+                                cpuInfo = "UI thread not found in process";
+                            }
+                        }
+                        else
+                        {
+                            cpuInfo = "UI thread ID not captured";
+                        }
+                    }
+                    catch (Exception ex) { cpuInfo = $"CPU sample failed: {ex.Message}"; }
+
+                    // ── 3. Write the freeze lines synchronously so a Task Manager kill
+                    //       doesn't lose them. CPU + actions first, stack second, so a
+                    //       quick kill still leaves the most useful lines.
+                    CrashReporter.LogSync($"[Heartbeat] *** UI FROZEN *** last action: {_lastUiAction} | UI thread CPU: {cpuInfo}");
+                    if (recentActions.Count > 0)
+                        CrashReporter.LogSync($"[Heartbeat] Recent UI actions: {string.Join(" → ", recentActions)}");
+
+                    // ── 4. ClrMD stack capture — once per stall ─────────────────────────
+                    // Point 4: DataTarget is disposed via using — no process clone leak.
+                    // Point 5: native frames resolve partially; managed caller above them is enough.
+                    // ClrMD is loaded dynamically (not a static package reference) to avoid
+                    // crashing the WinUI XAML compiler's type resolution during publish.
+                    if (System.Threading.Interlocked.CompareExchange(ref _freezeStackCaptured, 1, 0) == 0)
+                    {
+                        _ = Task.Run(() =>
+                        {
+                            try
+                            {
+                                // Resolve the ClrMD assembly from the app's base directory
+                                var clrMdPath = System.IO.Path.Combine(
+                                    System.IO.Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory,
+                                    "Microsoft.Diagnostics.Runtime.dll");
+                                if (!System.IO.File.Exists(clrMdPath))
+                                {
+                                    CrashReporter.LogSync($"[Heartbeat.Stack] ClrMD not found at '{clrMdPath}' — stack capture unavailable");
+                                    return;
+                                }
+                                var clrMdAsm = System.Reflection.Assembly.LoadFrom(clrMdPath);
+                                var dataTargetType = clrMdAsm.GetType("Microsoft.Diagnostics.Runtime.DataTarget");
+                                if (dataTargetType == null) { CrashReporter.LogSync("[Heartbeat.Stack] ClrMD: DataTarget type not found"); return; }
+
+                                // DataTarget.CreateSnapshotAndAttach(pid)
+                                var createSnapshot = dataTargetType.GetMethod("CreateSnapshotAndAttach",
+                                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+                                    null, new[] { typeof(int) }, null);
+                                if (createSnapshot == null) { CrashReporter.LogSync("[Heartbeat.Stack] ClrMD: CreateSnapshotAndAttach not found"); return; }
+
+                                using var target = (IDisposable)createSnapshot.Invoke(null, new object[] { Environment.ProcessId })!;
+                                var targetObj = target;
+
+                                // target.ClrVersions[0].CreateRuntime()
+                                var clrVersionsProp = targetObj.GetType().GetProperty("ClrVersions");
+                                var clrVersions = clrVersionsProp?.GetValue(targetObj) as System.Collections.IEnumerable;
+                                object? firstVersion = null;
+                                if (clrVersions != null)
+                                    foreach (var v in clrVersions) { firstVersion = v; break; }
+                                if (firstVersion == null) { CrashReporter.LogSync("[Heartbeat.Stack] ClrMD: no runtime found"); return; }
+
+                                var createRuntime = firstVersion.GetType().GetMethod("CreateRuntime", Type.EmptyTypes);
+                                var runtime = createRuntime?.Invoke(firstVersion, null);
+                                if (runtime == null) { CrashReporter.LogSync("[Heartbeat.Stack] ClrMD: CreateRuntime returned null"); return; }
+
+                                var threadsProp = runtime.GetType().GetProperty("Threads");
+                                var threads = threadsProp?.GetValue(runtime) as System.Collections.IEnumerable;
+
+                                var sb = new System.Text.StringBuilder();
+                                sb.AppendLine("[Heartbeat.Stack] Managed thread stacks at time of freeze:");
+                                if (threads != null)
+                                {
+                                    foreach (var thread in threads)
+                                    {
+                                        var osId = (uint)(thread.GetType().GetProperty("OSThreadId")?.GetValue(thread) ?? 0u);
+                                        var managedId = (int)(thread.GetType().GetProperty("ManagedThreadId")?.GetValue(thread) ?? 0);
+                                        bool isUiThread = UiThreadNativeId > 0 && osId == UiThreadNativeId;
+                                        sb.AppendLine($"  Thread OSId={osId}{(isUiThread ? " <-- UI THREAD" : "")} ManagedId={managedId}");
+
+                                        var enumStackTrace = thread.GetType().GetMethod("EnumerateStackTrace", Type.EmptyTypes);
+                                        var frames = enumStackTrace?.Invoke(thread, null) as System.Collections.IEnumerable;
+                                        int frameCount = 0;
+                                        if (frames != null)
+                                        {
+                                            foreach (var frame in frames)
+                                            {
+                                                sb.AppendLine($"    {frame}");
+                                                if (++frameCount >= 40) { sb.AppendLine("    ... (truncated)"); break; }
+                                            }
+                                        }
+                                    }
+                                }
+                                CrashReporter.LogSync(sb.ToString());
+                            }
+                            catch (Exception ex)
+                            {
+                                CrashReporter.LogSync($"[Heartbeat.Stack] ClrMD capture failed: {ex.Message}");
+                            }
+                        });
+                    }
+                }
+            }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        }
     }
 
     /// <summary>
@@ -45,9 +212,20 @@ public partial class MainViewModel
     /// </summary>
     internal void StartPeriodicUpdateCheckTimer()
     {
-        var interval = TimeSpan.FromHours(4);
-        _updateCheckTimer = new System.Threading.Timer(async _ =>
+        lock (_backgroundTimerLock)
         {
+            if (_backgroundStopped || _updateCheckTimer != null) return;
+            _updateCheckTimer = CreatePeriodicUpdateCheckTimer();
+            _crashReporter.Log("[MainViewModel] Periodic update check timer started (4h interval)");
+        }
+    }
+
+    private System.Threading.Timer CreatePeriodicUpdateCheckTimer()
+    {
+        var interval = TimeSpan.FromHours(4);
+        return new System.Threading.Timer(async _ =>
+        {
+            if (_backgroundStopped) return;
             try
             {
                 _crashReporter.Log("[MainViewModel] Periodic update check triggered (4h timer)");
@@ -181,7 +359,7 @@ public partial class MainViewModel
                 _forceUpdateCheck = true; // bypass cooldown since we ARE the cooldown
                 var records = _installer.LoadAll();
                 var auxRecords = _auxInstaller.LoadAll();
-                await CheckForUpdatesAsync(_allCards, records, auxRecords);
+                await CheckForUpdatesAsync(_allCards, records, auxRecords, userInitiated: false);
 
                 // Check for custom ReShade DLL changes and redeploy
                 try
@@ -207,7 +385,6 @@ public partial class MainViewModel
                 PeriodicAppUpdateCheck?.Invoke();
             });
         }, null, interval, interval);
-        _crashReporter.Log("[MainViewModel] Periodic update check timer started (4h interval)");
     }
 
     /// <summary>Callback set by MainWindow to trigger app update check from the periodic timer.</summary>
@@ -256,6 +433,7 @@ public partial class MainViewModel
             var sections = new List<string>();
             var currentSection = new List<string>();
             bool inSection = false;
+            var preamble = new List<string>();
 
             foreach (var line in lines)
             {
@@ -285,15 +463,25 @@ public partial class MainViewModel
                         currentSection.Add(line);
                     }
                 }
+                else
+                {
+                    preamble.Add(line);
+                }
             }
 
             // Capture final section if still in progress
             if (inSection && currentSection.Count > 0 && sections.Count < count)
                 sections.Add(string.Join("\n", currentSection));
 
-            return sections.Count > 0
+            var body = sections.Count > 0
                 ? string.Join("\n\n---\n\n", sections)
                 : "No patch notes available.";
+
+            // Prepend preamble (e.g. the GitHub API warning banner) if present
+            var preambleText = string.Join("\n", preamble).Trim();
+            return string.IsNullOrEmpty(preambleText)
+                ? body
+                : preambleText + "\n\n---\n\n" + body;
         }
         catch (Exception ex)
         {
@@ -1090,7 +1278,7 @@ public partial class MainViewModel
 
     // ── Update checking ───────────────────────────────────────────────────────────
 
-    private async Task CheckForUpdatesAsync(List<GameCardViewModel> cards, List<InstalledModRecord> records, List<AuxInstalledRecord> auxRecords)
+    private async Task CheckForUpdatesAsync(List<GameCardViewModel> cards, List<InstalledModRecord> records, List<AuxInstalledRecord> auxRecords, bool userInitiated = false)
     {
         // ── Cooldown: skip update checks if last check was recent ──────────────
         const int CooldownHours = 4;
@@ -1109,8 +1297,19 @@ public partial class MainViewModel
             }
         }
 
-        // Patch RS record channels to reflect the current per-game override before the update check.
-        // The update service uses card.RsRecord.Channel (not auxRecords) for the pinned-channel guard.
+        // Nexus GraphQL calls are gated by the "Background Update Checks" setting.
+        // "On" (default): full checks including Nexus. "Minimal": Nexus only on explicit user action.
+        // forceCheck = true when user clicks Refresh/Update All, so Nexus always runs on explicit action.
+        bool nexusEnabled = userInitiated || _settingsViewModel.BackgroundUpdateChecks == "On";
+
+        // "Minimal" background checks: skip all component update checks unless user explicitly triggered.
+        // Manifests, PCGW, DLSS manifest, and shader packs still run (they're in RunBackgroundScanAndMergeAsync).
+        if (!userInitiated && _settingsViewModel.BackgroundUpdateChecks == "Minimal")
+        {
+            _crashReporter.Log("[MainViewModel.CheckForUpdatesAsync] BackgroundUpdateChecks=Minimal — skipping all component update checks (user-initiated only)");
+            return;
+        }
+
         // If the user changed the channel to Custom after the last install, the record's Channel
         // is stale — patch it here so CheckReShadeUpdateLocal correctly skips custom/legacy channels.
         foreach (var card in cards)
@@ -1144,7 +1343,8 @@ public partial class MainViewModel
         {
             _crashReporter.Log("[MainViewModel.CheckForUpdatesAsync] GitHub API rate limited — skipping remaining GitHub-based update checks");
 
-            // Still run the Nexus check (uses Nexus GraphQL API, not GitHub)
+            // Still run the Nexus check (uses Nexus GraphQL API, not GitHub) — only if background checks are enabled
+            if (nexusEnabled)
             try
             {
                 var nexusModsToCheck = cards
@@ -1186,6 +1386,7 @@ public partial class MainViewModel
             }
 
             // ── Nexus update check for Luma mods (rate-limited path) ─────────────
+            if (nexusEnabled)
             try
             {
                 var lumaModsToCheck = cards
@@ -1446,6 +1647,7 @@ public partial class MainViewModel
         }
 
         // ── Nexus Mods update check (external-only games with Nexus URLs) ─────────
+        if (nexusEnabled)
         try
         {
             // For external-only games, the Nexus URL is in ExternalUrl (set by manifest forceExternalOnly).
@@ -1491,6 +1693,7 @@ public partial class MainViewModel
         }
 
         // ── Nexus Mods update check for Luma mods ─────────────────────────────
+        if (nexusEnabled)
         try
         {
             var lumaModsToCheck = cards

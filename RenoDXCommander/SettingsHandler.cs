@@ -19,6 +19,7 @@ public class SettingsHandler
     private readonly IDxvkService _dxvkService;
     private readonly IReShadeUpdateService _reShadeUpdateService;
     private readonly ReShadeNightlyService _reShadeNightlyService;
+    private bool _freezeDiagCardAdded;
 
     /// <summary>
     /// Stores the current hotkey string in KeyOverlay format ("vk,shift,ctrl,alt").
@@ -145,7 +146,12 @@ public class SettingsHandler
             catch { }
         });
         _window.DlssIndicatorCombo.SelectedIndex = dlssIndicatorEnabled ? 0 : 1; // 0=Enabled, 1=Disabled
-        _window._dlssIndicatorInitializing = false;
+        // Keep _dlssIndicatorInitializing = true until ALL NVAPI combos are populated below.
+        // Setting it false here was too early — GSyncIndicator and other combos further down
+        // would fire their SelectionChanged handlers, each calling SetGSyncIndicator / SetGSyncMode etc.
+        // which call _session.Save(). That runs concurrently with the NVAPI read Task.Run for the
+        // panel, causing an unsynchronized concurrent NVAPI access → UI deadlock. (#freeze bug)
+        // _dlssIndicatorInitializing is set false at the END of PopulateNvApiCombosFromSnapshot.
 
         // Initialize DLSS/Streamline auto-update combos
         _window.AutoUpdateDlssCombo.SelectedIndex = ViewModel.Settings.AutoUpdateDlss ? 1 : 0;
@@ -153,6 +159,9 @@ public class SettingsHandler
 
         // Initialize component auto-update combo
         _window.AutoUpdateComponentsCombo.SelectedIndex = ViewModel.Settings.AutoUpdateComponents ? 1 : 0;
+
+        // Initialize background update checks combo
+        _window.BackgroundUpdateChecksCombo.SelectedIndex = ViewModel.Settings.BackgroundUpdateChecks == "Minimal" ? 1 : 0;
 
         // Initialize HDR auto-toggle combo
         _window.HdrAutoToggleCombo.SelectedIndex = ViewModel.Settings.HdrAutoToggle ? 1 : 0;
@@ -236,6 +245,53 @@ public class SettingsHandler
         // RenoDX Data Source card — always visible now that RHI Database is the default
         _window.RenoDxDbSourceCard.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         InitRenoDxDbSourceCombo();
+
+        // ── Dev-only: freeze diagnostic test buttons ─────────────────────────
+        // Validates CPU sampling and ClrMD stack capture before waiting for a real freeze.
+        // Built entirely in code — no XAML elements — to avoid WinAppSDK publish issues.
+        if (DevUnlockService.IsUnlocked && !_freezeDiagCardAdded)
+        {
+            _freezeDiagCardAdded = true;
+            var card = new Microsoft.UI.Xaml.Controls.Border
+            {
+                Background   = UIFactory.Brush(ResourceKeys.SurfaceRaisedBrush),
+                CornerRadius = new Microsoft.UI.Xaml.CornerRadius(10),
+                Padding      = new Microsoft.UI.Xaml.Thickness(20, 16, 20, 16),
+                BorderBrush  = UIFactory.Brush(ResourceKeys.BorderSubtleBrush),
+                BorderThickness = new Microsoft.UI.Xaml.Thickness(1),
+            };
+            var inner = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 12 };
+            inner.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text       = Loc.GetString("Settings.FreezeDiag.Title"),
+                FontSize   = 14,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            });
+            inner.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text         = Loc.GetString("Settings.FreezeDiag.Description"),
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                FontSize     = 11,
+                Foreground   = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush),
+            });
+            var btnRow = new Microsoft.UI.Xaml.Controls.StackPanel
+            {
+                Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal,
+                Spacing     = 8,
+            };
+            var sleepBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestIdle"), FontSize = 11 };
+            sleepBtn.Click += (s, e) => System.Threading.Thread.Sleep(30000);
+            var spinBtn  = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestPegged"), FontSize = 11 };
+            spinBtn.Click  += (s, e) => { var end = DateTime.UtcNow.AddSeconds(10); while (DateTime.UtcNow < end) { } };
+            btnRow.Children.Add(sleepBtn);
+            btnRow.Children.Add(spinBtn);
+            inner.Children.Add(btnRow);
+            card.Child = inner;
+            _window.SettingsCardsPanel.Children.Add(card);
+        }
+
+        RefreshGitHubStatus();
     }
 
     /// <summary>
@@ -338,6 +394,9 @@ public class SettingsHandler
             ? Array.FindIndex(DlssPresetService.PowerManagementOptions, o => o.Value == snapshot.PowerMode.Value)
             : 0; // Default: Optimal Performance
         _window.GlobalPowerModeCombo.SelectedIndex = powerIdx >= 0 ? powerIdx : 0;
+
+        // All NVAPI combos are now populated — safe to let SelectionChanged handlers fire.
+        _window._dlssIndicatorInitializing = false;
     }
 
     /// <summary>
@@ -2349,6 +2408,132 @@ public class SettingsHandler
         }
 
         RefreshNexusStatus();
+    }
+
+    // ── GitHub OAuth ──────────────────────────────────────────────────────────
+
+    public void RefreshGitHubStatus()
+    {
+        var token    = ViewModel.Settings.GitHubOAuthToken;
+        var username = ViewModel.Settings.GitHubUsername;
+        bool connected = !string.IsNullOrEmpty(token);
+
+        if (connected)
+        {
+            var display = string.IsNullOrEmpty(username) ? "GitHub" : $"@{username}";
+            _window.GitHubStatusText.Text       = Loc.GetString("GitHub.Status.Connected", display);
+            _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentGreenBrush);
+            _window.GitHubConnectBtn.Content    = Loc.GetString("Dialog.ReConnect");
+            _window.GitHubDisconnectRow.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        }
+        else
+        {
+            _window.GitHubStatusText.Text       = Loc.GetString("Xaml.GitHubNotConnected");
+            _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
+            _window.GitHubConnectBtn.Content    = Loc.GetString("Xaml.ConnectGitHub");
+            _window.GitHubDisconnectRow.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        }
+
+        _window.GitHubDeviceCodePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        _window.GitHubConnectBtn.IsEnabled = true;
+    }
+
+    public async void GitHubConnectBtn_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        var authSvc = App.Services.GetRequiredService<GitHubAuthService>();
+        var http    = App.Services.GetRequiredService<HttpClient>();
+
+        _window.GitHubConnectBtn.IsEnabled = false;
+        _window.GitHubConnectBtn.Content   = Loc.GetString("GitHub.Status.Connecting");
+        _window.GitHubStatusText.Text      = Loc.GetString("GitHub.Status.RequestingDeviceCode");
+        _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
+        _window.GitHubDeviceCodePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(300));
+
+        // Step 1: get device code
+        var deviceCode = await authSvc.RequestDeviceCodeAsync(cts.Token).ConfigureAwait(false);
+
+        if (deviceCode == null)
+        {
+            _window.DispatcherQueue?.TryEnqueue(() =>
+            {
+                _window.GitHubStatusText.Text      = Loc.GetString("GitHub.Status.StartFailed");
+                _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush);
+                _window.GitHubConnectBtn.IsEnabled  = true;
+                _window.GitHubConnectBtn.Content    = Loc.GetString("Xaml.ConnectGitHub");
+            });
+            return;
+        }
+
+        // Step 2: show the code and open browser
+        _window.DispatcherQueue?.TryEnqueue(() =>
+        {
+            _window.GitHubUserCodeText.Text = deviceCode.UserCode;
+            _window.GitHubVerificationLink.NavigateUri = new Uri(deviceCode.VerificationUri);
+            _window.GitHubVerificationLink.Content     = deviceCode.VerificationUri;
+            _window.GitHubDeviceCodePanel.Visibility   = Microsoft.UI.Xaml.Visibility.Visible;
+            _window.GitHubStatusText.Text       = Loc.GetString("GitHub.Status.WaitingForAuthorisation");
+            _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
+        });
+
+        // Open the verification URL in the default browser
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(deviceCode.VerificationUri) { UseShellExecute = true }); }
+        catch (Exception ex) { CrashReporter.Log($"[SettingsHandler.GitHubConnectBtn_Click] Failed to open browser — {ex.Message}"); }
+
+        // Step 3: poll for the token
+        var progress = new Progress<string>(msg =>
+            _window.DispatcherQueue?.TryEnqueue(() => _window.GitHubStatusText.Text = msg));
+
+        var token = await authSvc.PollForTokenAsync(deviceCode, progress, cts.Token).ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(token))
+        {
+            _window.DispatcherQueue?.TryEnqueue(() =>
+            {
+                _window.GitHubStatusText.Text       = Loc.GetString("GitHub.Status.TimedOut");
+                _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush);
+                _window.GitHubDeviceCodePanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                _window.GitHubConnectBtn.IsEnabled  = true;
+                _window.GitHubConnectBtn.Content    = Loc.GetString("Xaml.ConnectGitHub");
+            });
+            return;
+        }
+
+        // Step 4: fetch username, apply token, persist
+        var username = await authSvc.GetUsernameAsync(token, cts.Token).ConfigureAwait(false);
+
+        _window.DispatcherQueue?.TryEnqueue(() =>
+        {
+            ViewModel.Settings.GitHubOAuthToken = token;
+            ViewModel.Settings.GitHubUsername   = username ?? "";
+            ViewModel.SaveSettingsPublic();
+
+            // Apply to DevUnlockService and the live HttpClient
+            DevUnlockService.UpdateToken(token);
+            GitHubAuthService.ApplyTokenToHttpClient(http, token);
+
+            CrashReporter.Log($"[SettingsHandler.GitHubConnectBtn_Click] Connected as {username ?? "(unknown)"}");
+            RefreshGitHubStatus();
+        });
+    }
+
+    public void GitHubDisconnectBtn_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        var http = App.Services.GetRequiredService<HttpClient>();
+
+        ViewModel.Settings.GitHubOAuthToken = "";
+        ViewModel.Settings.GitHubUsername   = "";
+        ViewModel.SaveSettingsPublic();
+
+        // Clear token from DevUnlockService and HttpClient
+        // Reset the DevUnlockService cache so it re-reads from disk (may find a file-based token)
+        DevUnlockService.ResetTokenCache();
+        var fileToken = DevUnlockService.GitHubApiToken; // re-reads github_api.txt / unlock.txt
+        GitHubAuthService.ApplyTokenToHttpClient(http, fileToken);
+
+        CrashReporter.Log("[SettingsHandler.GitHubDisconnectBtn_Click] GitHub OAuth token removed");
+        RefreshGitHubStatus();
     }
 
 

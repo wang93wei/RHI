@@ -294,14 +294,8 @@ public class MassDlssDeployDialog
             RequestedTheme = ElementTheme.Dark,
         };
 
-        // Use explicit gate pattern to avoid a race condition where fire-and-forget ShowSafeAsync
-        // hasn't acquired the gate yet when progressDialog.Hide() is called, causing two concurrent
-        // ShowSafeAsync calls to race on the gate and trigger WinUI's invisible modal overlay freeze.
-        bool deployGateReleased = false;
-        progressDialog.Closed += (_, _) => { if (!deployGateReleased) { deployGateReleased = true; DialogService.ReleaseDialogGate(); } };
-        if (await DialogService.WaitDialogGateAsync(10))
-            _ = progressDialog.ShowAsync();
-        await Task.Delay(100); // Let dialog render
+        await using var progressSession = await DialogService.ShowProgressAsync(progressDialog, 10);
+        if (progressSession == null) return;
 
         // Count selected games for progress
         int totalSelected = 0;
@@ -466,8 +460,7 @@ public class MassDlssDeployDialog
         }
 
         // Close progress dialog — release gate explicitly before Hide
-        if (!deployGateReleased) { deployGateReleased = true; DialogService.ReleaseDialogGate(); }
-        progressDialog.Hide();
+        await progressSession.DisposeAsync();
 
         // Restore auto-create flag
         presetService.AutoCreateProfiles = previousAutoCreate;
@@ -540,12 +533,8 @@ public class MassDlssDeployDialog
             RequestedTheme = ElementTheme.Dark,
         };
 
-        // Use explicit gate pattern to avoid the fire-and-forget ShowSafeAsync race
-        bool restoreGateReleased = false;
-        progressDialog.Closed += (_, _) => { if (!restoreGateReleased) { restoreGateReleased = true; DialogService.ReleaseDialogGate(); } };
-        if (await DialogService.WaitDialogGateAsync(10))
-            _ = progressDialog.ShowAsync();
-        await Task.Delay(100);
+        await using var progressSession = await DialogService.ShowProgressAsync(progressDialog, 10);
+        if (progressSession == null) return;
 
         for (int i = 0; i < eligibleCards.Count; i++)
         {
@@ -578,9 +567,7 @@ public class MassDlssDeployDialog
             if (presetReset) presetsResetCount++;
         }
 
-        // Close progress dialog — release gate explicitly before Hide
-        if (!restoreGateReleased) { restoreGateReleased = true; DialogService.ReleaseDialogGate(); }
-        progressDialog.Hide();
+        await progressSession.DisposeAsync();
 
         var reportText = new System.Text.StringBuilder();
         if (restoredCount > 0) reportText.AppendLine(Loc.GetString("Dialog.DlssDeploy.RestoredToDefault", restoredCount));

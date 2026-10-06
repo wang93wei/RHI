@@ -92,14 +92,22 @@ public partial class DetailPanelBuilder
 
             _window.DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
             {
+                // Guard: stale scan (game navigated away while scan was in flight)
+                if (scanToken.IsCancellationRequested) return;
                 // Guard: Settings panel open or dialog showing — don't touch the live tree while it's hidden
                 if (_window.SettingsPanel.Visibility == Microsoft.UI.Xaml.Visibility.Visible
                     || DialogService.IsDialogOpen) return;
+                // Guard: user navigated to a different game before this callback fired.
+                // Without this, rapid A→B→A navigation queues two callbacks for A; both pass
+                // a name check but the first one clears + rebuilds the NR panel just as the
+                // second is about to do the same, producing cascading WinUI layout hangs.
+                if (_window.ViewModel.SelectedGame != card) return;
 
                 _window.ViewModel.SetLastUiAction($"BuildNeuralRenderingSectionWithData({card.GameName})");
                 var __sw = System.Diagnostics.Stopwatch.StartNew();
+                var nrContainerWidth = _window.NeuralRenderingContainer.ActualWidth;
                 BuildNeuralRenderingSectionWithData(card, dlss5Installed, sfInstalled,
-                    nrDllPresent, nrDllOwnedByRhi, nrDllVersion, bridgePresent, feederPresent);
+                    nrDllPresent, nrDllOwnedByRhi, nrDllVersion, bridgePresent, feederPresent, nrContainerWidth);
                 __sw.Stop();
                 if (__sw.ElapsedMilliseconds > 30)
                     CrashReporter.Log($"[BuildNeuralRenderingSectionWithData] SLOW: '{card.GameName}' took {__sw.ElapsedMilliseconds}ms on UI thread");
@@ -113,13 +121,15 @@ public partial class DetailPanelBuilder
         GameCardViewModel card,
         bool dlss5Installed, bool sfInstalled,
         bool nrDllPresent, bool nrDllOwnedByRhi, string? nrDllVersion,
-        bool bridgePresent, bool feederPresent)
+        bool bridgePresent, bool feederPresent,
+        double containerWidth = 0)
     {
         // Guard: if the user navigated away before the background scan finished, bail out
         if (_window.ViewModel.SelectedGame != card) return;
 
         // Re-clear the panel in case another card was selected while we were scanning
         _window.NeuralRenderingPanel.Children.Clear();
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:Init({card.GameName})");
 
         var installPath = card.InstallPath!;
         var gameName    = card.GameName;
@@ -258,10 +268,17 @@ public partial class DetailPanelBuilder
         // 3 columns for DLSS5Tool/ShortFuse; 4 columns for Feeder/Bridge (adds pack version col)
         bool isFeederOrBridge = effectiveMethod == NrMethodFeeder || effectiveMethod == NrMethodDlss5ToolBridge;
         var row1 = new Grid { ColumnSpacing = 8 };
-        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Method
-        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Pack version (Feeder/Bridge only)
-        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // DLSS5 Tool / SF version
-        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // NR DLL version
+        // Fixed-pixel column widths — star columns inside StackPanel/ScrollViewer cause WinUI infinite layout loops
+        const int NrRow1Cols = 4;
+        const double NrRow1Spacing = 8.0;
+        const double NrSectionPadding = 28.0 + 2.0; // Border Padding="14,12" (28px) + BorderThickness="1" (2px)
+        double nrColW = containerWidth > NrSectionPadding
+            ? (containerWidth - NrSectionPadding - (NrRow1Cols - 1) * NrRow1Spacing) / NrRow1Cols
+            : 160.0;
+        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(nrColW) }); // Method
+        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(nrColW) }); // Pack version (Feeder/Bridge only)
+        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(nrColW) }); // DLSS5 Tool / SF version
+        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(nrColW) }); // NR DLL version
 
         // Method combo (col 0)
         var methodStack = new StackPanel { Spacing = 2 };
@@ -272,6 +289,7 @@ public partial class DetailPanelBuilder
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
+            MaxDropDownHeight = 300,
         };
         foreach (var item in methodItems)
         {
@@ -297,6 +315,7 @@ public partial class DetailPanelBuilder
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
+            MaxDropDownHeight = 300,
         };
         // Pack version combo — populate from staged version list, wire persistence
         bool addonSwapInProgress  = false;  // shared guard — prevents re-entrant swaps across both combo handlers
@@ -477,6 +496,7 @@ public partial class DetailPanelBuilder
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
+            MaxDropDownHeight = 300,
         };
 
         // Swap-in-progress guard — declared above near PackVersionCombo (shared across both handlers)
@@ -637,6 +657,7 @@ public partial class DetailPanelBuilder
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
+            MaxDropDownHeight = 300,
         };
         ToolTipService.SetToolTip(nrVersionCombo, Loc.GetString("NeuralRendering.NrDllVersion.Tooltip"));
         nrVersionStack.Children.Add(nrVersionCombo);
@@ -734,10 +755,12 @@ public partial class DetailPanelBuilder
         }
 
         nrBody.Children.Add(row1);
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:Row1({card.GameName})");
 
         // ── Status line ───────────────────────────────────────────────────────
         statusPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 4, 0, 0) };
         nrBody.Children.Add(statusPanel);
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:StatusPanel({card.GameName})");
 
         void RefreshStatus()
         {
@@ -748,28 +771,39 @@ public partial class DetailPanelBuilder
                 try { await _panelScanSemaphore.WaitAsync(scanToken).ConfigureAwait(false); }
                 catch (OperationCanceledException) { CrashReporter.Log($"[NeuralRendering.RefreshStatus] Semaphore cancelled: '{card.GameName}'"); return; }
                 CrashReporter.Log($"[NeuralRendering.RefreshStatus] Semaphore acquired, scanning: '{card.GameName}'");
+
+                // Declare all result variables before try so they're accessible after finally
+                bool d5i = false, sfi = false, nri = false, bri = false, fei = false;
+                bool dlssi = false, dlssdi = false, dlssgi = false, hostExeOk = true;
+                bool srOk = false, rrOk = false, fgOk = false, nrOk = false;
+                bool ualOk = false, feedFxPresent = false, lumeniteFxPresent = false;
+                bool isDx9Feeder = false, dgVoodooOk = false;
+                string? nrv = null, dlssv = null, dlssdv = null, dlssgv = null;
+                string? srv = null, rrv = null, fgv = null, nrv2 = null;
+                string? ualName = null;
+                bool scanSucceeded = false;
                 try
                 {
                 var host64Dir = Path.Combine(installPath, "host64");
                 // For 32-bit games: DLSS5 Tool lives in host64\, not game addon folder
-                bool d5i    = card.Is32Bit
+                d5i    = card.Is32Bit
                     ? File.Exists(Path.Combine(host64Dir, "renodx-dlss5.addon64"))
                     : rdx5Svc.IsInstalledIn(installPath);
                 // For 32-bit games: NR DLL also lives in host64\
-                bool nri    = File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll"))
-                           || (card.Is32Bit && File.Exists(Path.Combine(host64Dir, "nvngx_dlssnr.dll")));
-                bool sfi    = rdx5Svc.IsSfInstalledIn(installPath);
-                bool bri    = File.Exists(Path.Combine(installPath, BridgeDeployFile));
-                bool fei    = File.Exists(Path.Combine(installPath, card.Is32Bit ? FeederDeployFile32 : FeederDeployFile64));
-                bool dlssi  = File.Exists(Path.Combine(installPath, "nvngx_dlss.dll"));
-                bool dlssdi = File.Exists(Path.Combine(installPath, "nvngx_dlssd.dll"));
-                bool dlssgi = File.Exists(Path.Combine(installPath, "nvngx_dlssg.dll"));
+                nri    = File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll"))
+                       || (card.Is32Bit && File.Exists(Path.Combine(host64Dir, "nvngx_dlssnr.dll")));
+                sfi    = rdx5Svc.IsSfInstalledIn(installPath);
+                bri    = File.Exists(Path.Combine(installPath, BridgeDeployFile));
+                fei    = File.Exists(Path.Combine(installPath, card.Is32Bit ? FeederDeployFile32 : FeederDeployFile64));
+                dlssi  = File.Exists(Path.Combine(installPath, "nvngx_dlss.dll"));
+                dlssdi = File.Exists(Path.Combine(installPath, "nvngx_dlssd.dll"));
+                dlssgi = File.Exists(Path.Combine(installPath, "nvngx_dlssg.dll"));
                 // host64 exe presence (32-bit only)
-                bool hostExeOk = !card.Is32Bit || File.Exists(Path.Combine(host64Dir, "dlss5-feed-host64.exe"));
-                string? nrv    = nri    ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlssnr.dll"))) : null;
-                string? dlssv  = dlssi  ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlss.dll")))   : null;
-                string? dlssdv = dlssdi ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlssd.dll")))  : null;
-                string? dlssgv = dlssgi ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlssg.dll")))  : null;
+                hostExeOk = !card.Is32Bit || File.Exists(Path.Combine(host64Dir, "dlss5-feed-host64.exe"));
+                nrv    = nri    ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlssnr.dll"))) : null;
+                dlssv  = dlssi  ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlss.dll")))   : null;
+                dlssdv = dlssdi ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlssd.dll")))  : null;
+                dlssgv = dlssgi ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(Path.Combine(installPath, "nvngx_dlssg.dll")))  : null;
 
                 // Pre-compute all per-method file checks on the background thread so the
                 // UI thread (RefreshStatusWithData) does zero I/O.
@@ -779,34 +813,43 @@ public partial class DetailPanelBuilder
                 var rrPath = det?.DlssdPath ?? Path.Combine(installPath, "nvngx_dlssd.dll");
                 var fgPath = det?.DlssgPath ?? Path.Combine(installPath, "nvngx_dlssg.dll");
                 var nrPath = det?.DlssnrPath ?? Path.Combine(installPath, "nvngx_dlssnr.dll");
-                bool srOk = File.Exists(srPath);
-                bool rrOk = File.Exists(rrPath);
-                bool fgOk = File.Exists(fgPath);
-                bool nrOk = File.Exists(nrPath);
-                string? srv   = srOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(srPath))   : null;
-                string? rrv   = rrOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(rrPath))   : null;
-                string? fgv   = fgOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(fgPath))   : null;
-                string? nrv2  = nrOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(nrPath))   : null;
+                srOk = File.Exists(srPath);
+                rrOk = File.Exists(rrPath);
+                fgOk = File.Exists(fgPath);
+                nrOk = File.Exists(nrPath);
+                srv   = srOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(srPath))   : null;
+                rrv   = rrOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(rrPath))   : null;
+                fgv   = fgOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(fgPath))   : null;
+                nrv2  = nrOk ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(nrPath))   : null;
 
                 // ASI Loader (ShortFuse)
-                var ualName = _window.ViewModel.GetUalInstalledAs(gameName, store);
-                bool ualOk  = !string.IsNullOrEmpty(ualName)
-                           && File.Exists(Path.Combine(installPath, ualName));
+                ualName = _window.ViewModel.GetUalInstalledAs(gameName, store);
+                ualOk  = !string.IsNullOrEmpty(ualName)
+                       && File.Exists(Path.Combine(installPath, ualName));
 
                 // Feeder shader files
                 var shadersDir = Path.Combine(installPath, ShaderPackService.GameReShadeShaders, "Shaders");
-                bool feedFxPresent = Directory.Exists(shadersDir) &&
+                feedFxPresent = Directory.Exists(shadersDir) &&
                     Directory.GetFiles(shadersDir, "DLSS5_Feed.fx", SearchOption.AllDirectories).Length > 0;
-                bool lumeniteFxPresent = Directory.Exists(shadersDir) &&
+                lumeniteFxPresent = Directory.Exists(shadersDir) &&
                     Directory.GetFiles(shadersDir, "lumenite_Kernel.fx", SearchOption.AllDirectories).Length > 0;
 
                 // dgVoodoo2 (DX9 Feeder)
-                bool isDx9Feeder = card.DetectedApis.Contains(GraphicsApiType.DirectX9)
-                                || (card.DetectedApis.Count == 0 && card.GraphicsApi == GraphicsApiType.DirectX9);
-                bool dgVoodooOk = isDx9Feeder && App.Services.GetRequiredService<DgVoodooService>().IsDeployed(installPath);
+                isDx9Feeder = card.DetectedApis.Contains(GraphicsApiType.DirectX9)
+                           || (card.DetectedApis.Count == 0 && card.GraphicsApi == GraphicsApiType.DirectX9);
+                dgVoodooOk = isDx9Feeder && App.Services.GetRequiredService<DgVoodooService>().IsDeployed(installPath);
+                scanSucceeded = true;
+                }
+                finally
+                {
+                    // Always release — even if a File.Exists or Directory.GetFiles throws.
+                    // Without this, any exception leaks the semaphore and permanently blocks
+                    // all subsequent BuildNvidiaProfileSection / BuildDriverProfileSection calls.
+                    _panelScanSemaphore.Release();
+                    CrashReporter.Log($"[NeuralRendering.RefreshStatus] Semaphore released (success={scanSucceeded}): '{card.GameName}'");
+                }
 
-                _panelScanSemaphore.Release();
-
+                if (!scanSucceeded) return;
                 _window.DispatcherQueue?.TryEnqueue(() =>
                 {
                     if (_window.ViewModel.SelectedGame != card) return;
@@ -817,10 +860,8 @@ public partial class DetailPanelBuilder
                         srOk, rrOk, fgOk, nrOk, srv, rrv, fgv, nrv2,
                         ualName, ualOk, feedFxPresent, lumeniteFxPresent, isDx9Feeder, dgVoodooOk);
                 });
-                }
-                finally { /* semaphore already released above */ }
-            });
-        }
+            });  // end Task.Run
+        }  // end RefreshStatus
 
         void RefreshStatusWithData(
             bool d5i, bool sfi, bool nri, bool bri, bool fei, bool rsi,
@@ -834,6 +875,7 @@ public partial class DetailPanelBuilder
             bool isDx9Feeder, bool dgVoodooOk)
         {
             statusPanel.Children.Clear();
+            _window.ViewModel.SetLastUiAction($"NeuralRendering.RefreshStatusWithData:Building({card.GameName})");
 
             void Tag(string text, bool ok)
             {
@@ -934,6 +976,7 @@ public partial class DetailPanelBuilder
         descStack.Children.Add(descLink);
         descBorder.Child = descStack;
         nrBody.Children.Add(descBorder);
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:DescBorder({card.GameName})");
 
         void UpdateDescription(string methodKey)
         {
@@ -969,10 +1012,15 @@ public partial class DetailPanelBuilder
         UpdateDescription(effectiveMethod);
 
         // ── Row 2: Install / Remove buttons ──────────────────────────────────
+        // Layout: [Install button (stretch)] [⚙ cog] [✕ red X remove]
+        // Cog and X are each 36px + 8px gap. X only visible when installed.
         var btnRow = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 8, 0, 0) };
-        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // cog (ShortFuse only)
+        double btnInstallW = containerWidth > NrSectionPadding
+            ? Math.Max(120, containerWidth - NrSectionPadding - 2 - 36 - 36 - 8 - 8) // border(2) + cog(36) + X(36) + 2 gaps(8)
+            : 400.0;
+        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(btnInstallW) });
+        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // cog
+        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // ✕ remove
 
         installBtn = new Button
         {
@@ -985,20 +1033,21 @@ public partial class DetailPanelBuilder
 
         var removeBtn = new Button
         {
-            Content = Loc.GetString("Dialog.Remove"),
-            FontSize = 12,
+Width = 36,
             Height = 34,
+            Padding = new Thickness(0),
             CornerRadius = new CornerRadius(8),
             BorderThickness = new Thickness(1),
             Background = UIFactory.Brush(ResourceKeys.AccentRedBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.AccentRedBrush),
+            Content = new TextBlock { Text = "✕", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush) },
         };
 
-        // ShortFuse-only cog button
+        // Cog button — always shown, opens method-specific settings
         var sfCogBtn = new Button
         {
-            Width = 34, Height = 34,
+            Width = 36, Height = 34,
             Padding = new Thickness(0),
             CornerRadius = new CornerRadius(8),
             BorderThickness = new Thickness(1),
@@ -1240,11 +1289,13 @@ public partial class DetailPanelBuilder
                             // Remove host64\ and dgVoodoo2 on method switch too
                             var h64 = Path.Combine(installPath, "host64");
                             if (Directory.Exists(h64)) try { Directory.Delete(h64, recursive: true); } catch { }
-                            // Only remove dgVoodoo2 if Luma isn't also installed (Luma needs D3D9.dll too)
-                            if (card.LumaStatus != GameStatus.Installed)
+                            // Only remove dgVoodoo2 if neither Luma nor standalone is also present
+                            bool dgvPreserve = card.LumaStatus == GameStatus.Installed
+                                           || _window.ViewModel.GetDgVoodooStandalone(gameName, store);
+                            if (!dgvPreserve)
                                 App.Services.GetRequiredService<DgVoodooService>().RemoveFromGame(installPath);
                             else
-                                CrashReporter.Log($"[NeuralRendering] Luma still installed — preserving dgVoodoo2 for '{gameName}'");
+                                CrashReporter.Log($"[NeuralRendering] {(card.LumaStatus == GameStatus.Installed ? "Luma" : "Standalone")} still installed — preserving dgVoodoo2 for '{gameName}'");
                             Models.RhiInstallManifest.RemoveComponent(installPath, "Feeder");
                             break;
                         }
@@ -1561,12 +1612,13 @@ public partial class DetailPanelBuilder
         };
 
         Grid.SetColumn(installBtn, 0);
-        Grid.SetColumn(removeBtn,  1);
-        Grid.SetColumn(sfCogBtn,   2);
+        Grid.SetColumn(sfCogBtn,   1);
+        Grid.SetColumn(removeBtn,  2);
         btnRow.Children.Add(installBtn);
-        btnRow.Children.Add(removeBtn);
         btnRow.Children.Add(sfCogBtn);
+        btnRow.Children.Add(removeBtn);
         nrBody.Children.Add(btnRow);
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:BtnRow({card.GameName})");
 
         // ── NR Cost Scaler preference toggle ─────────────────────────────────
         var costScalerSvc = App.Services.GetRequiredService<DlssNrCostScalerService>();
@@ -1617,6 +1669,7 @@ public partial class DetailPanelBuilder
         costScalerRow.Children.Add(costScalerToggle);
         costScalerRow.Children.Add(costScalerStatus);
         nrBody.Children.Add(costScalerRow);
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:CostScalerRow({card.GameName})");
 
         // Note shown when ShortFuse method is selected — cost scaler is now built into 310.8.2
         if (effectiveMethod == NrMethodShortFuse)
@@ -1691,6 +1744,7 @@ public partial class DetailPanelBuilder
         linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.ShortFuse"),   "https://discord.com/channels/1408098019194310818/1543975158937821315"));
         linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Feeder"),      "https://github.com/jlrouzies-fr/DLSS5-Feeder"));
         nrBody.Children.Add(linksRow);
+        _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:Done({card.GameName})");
     }
 
     // ── Install helpers ───────────────────────────────────────────────────────
@@ -2889,14 +2943,8 @@ public partial class DetailPanelBuilder
         catch (Exception ex) { CrashReporter.Log($"[{logCtx}] Delete failed '{path}' — {ex.Message}"); }
     }
 
-    private static Task<T> DispatchAsync<T>(Microsoft.UI.Dispatching.DispatcherQueue dispatcher, Func<T> func)
+    private Task<T> DispatchAsync<T>(Microsoft.UI.Dispatching.DispatcherQueue dispatcher, Func<T> func)
     {
-        var tcs = new TaskCompletionSource<T>();
-        dispatcher.TryEnqueue(() =>
-        {
-            try   { tcs.SetResult(func()); }
-            catch (Exception ex) { tcs.SetException(ex); }
-        });
-        return tcs.Task;
+        return UiDispatch.InvokeAsync(action => dispatcher.TryEnqueue(() => action()), func, _window.LifetimeToken);
     }
 }

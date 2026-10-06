@@ -303,9 +303,12 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
+                // Snapshot _allCards before entering background work — _allCards can be
+                // replaced by a concurrent Refresh/merge, so enumerate a stable copy.
+                var cards = _allCards.ToArray();
                 // Collect all unique pack IDs needed across all games
                 var allNeededPacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var card in _allCards)
+                foreach (var card in cards)
                 {
                     if (string.IsNullOrEmpty(card.InstallPath)) continue;
                     bool rsInstalled = card.RequiresVulkanInstall
@@ -320,7 +323,7 @@ public partial class MainViewModel : ObservableObject
                 if (allNeededPacks.Count > 0)
                     await _shaderPackService.EnsurePacksAsync(allNeededPacks);
 
-                foreach (var card in _allCards)
+                foreach (var card in cards)
                 {
                     if (string.IsNullOrEmpty(card.InstallPath)) continue;
 
@@ -632,6 +635,9 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Game keys queued for ReShade auto-reinstall after BuildCards — WindowsApps games
     /// whose path changed and the DLL couldn't be copied (old folder deleted by Windows on update).</summary>
     private readonly HashSet<string> _pendingRsReinstall = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Transient — stores Control UE install options between dialog and post-install step.</summary>
+    private Services.ControlUeInstallOptions? _controlUeInstallOptions;
     private Dictionary<string, MachineType> _bitnessCache = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Game names that have DXVK enabled (loaded from saved library).</summary>
     private HashSet<string> _dxvkEnabledGames = new(StringComparer.OrdinalIgnoreCase);
@@ -857,6 +863,7 @@ public partial class MainViewModel : ObservableObject
                     Timestamp     = DateTime.UtcNow,
                     Category      = "RenoDX",
                     ComponentName = record.GameName,
+                    OldVersion    = record.PreviousVersion,
                     NewVersion    = version ?? (string.IsNullOrEmpty(modId) ? record.AddonFileName ?? "" : modId),
                 });
             }
