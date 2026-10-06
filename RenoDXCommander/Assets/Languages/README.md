@@ -4,7 +4,7 @@ JSON-based i18n resource packs. `en-US.json` is the authoritative full set. Othe
 
 ## Files
 
-- `en-US.json` — English (US), fallback, ~1900 keys
+- `en-US.json` — English (US), fallback, ~1977 keys
 - `zh-CN.json` — Simplified Chinese (简体中文)
 - `zh-TW.json` — Traditional Chinese (繁體中文)
 - `ja-JP.json` — Japanese (日本語)
@@ -62,4 +62,4 @@ The following stay in English by design and have no keys:
 - FAQ long-form body/tip paragraphs in `MainWindow.FaqBuilder.cs` — only the structural section titles and link labels are localized; the prose remains English.
 - Transient install progress messages assigned to `*ActionMessage` (set by install pipelines/services).
 - Filter/search logic tokens in `FilterViewModel` (`Detected`, `Installed`, `Unreal`, …) — these are matching keys, not display text; the visible chip labels come from `Filter.*` / `Detail.*` keys.
-- The OptiScaler nightly cog dialog's coupled dropdowns (upscaler/FG input/FG output/HUD fix/combined/DMV/flip, `MainWindow.Events.Components.cs`) — their display strings double as INI mapping keys and captured preset values (`FgInputToIni` etc.); localizing them requires decoupling display from persistence first.
+- The OptiScaler nightly cog dialog's remaining coupled dropdowns (upscaler/FG input/FG output/HUD fix/combined/DMV/flip, `MainWindow.Events.Components.cs`) — their display strings double as INI mapping keys and captured preset values (`FgInputToIni` etc.); localizing them requires decoupling display from persistence first. Already decoupled (localized): FG Enabled, Force Reflex, and Use Games Reflex Markers, which now select by index so the INI value stays logical.
