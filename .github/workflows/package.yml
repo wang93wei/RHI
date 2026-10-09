@@ -10,20 +10,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+      - parallel:
+          - name: Setup .NET 8 SDK
+            uses: actions/setup-dotnet@v4
+            with:
+              dotnet-version: 8.0.x
 
-      - name: Check i18n catalogs
-        run: python tools/check-i18n-coverage.py --strict
+          # Separate workload keys prevent a package-only cache from masking test packages.
+          # Keep the default path: the app copies ClrMD from this directory.
+          - name: Cache NuGet packages
+            uses: actions/cache@v4
+            with:
+              path: ~/.nuget/packages
+              key: ${{ runner.os }}-${{ runner.arch }}-nuget-v1-package-${{ hashFiles('**/*.csproj', '**/Directory.Build.*', '**/Directory.Packages.props', '**/NuGet.Config', '**/nuget.config', 'global.json') }}
+              restore-keys: |
+                ${{ runner.os }}-${{ runner.arch }}-nuget-v1-package-
+
+          - name: Check i18n catalogs
+            run: python tools/check-i18n-coverage.py --strict
+
+          - name: Ensure Inno Setup
+            shell: pwsh
+            run: |
+              $compilerPath = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+              if (-not (Test-Path $compilerPath)) {
+                choco install innosetup -y --no-progress
+                if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              }
+              if (-not (Test-Path $compilerPath)) {
+                throw "Inno Setup compiler not found: $compilerPath"
+              }
+              Split-Path $compilerPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       # Mirrors publish.bat: single-file main app + drop helper + content files.
-      - name: Publish app (Release win-x64)
-        run: dotnet publish RenoDXCommander/RenoDXCommander.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:Platform=x64 --self-contained false -o publish/RHI
+      - parallel:
+          - name: Publish app (Release win-x64)
+            run: dotnet publish RenoDXCommander/RenoDXCommander.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:Platform=x64 --self-contained false -o publish/RHI
 
-      - name: Build drop helper
-        run: dotnet build RHI.DropHelper/RHI.DropHelper.csproj -c Release -p:Platform=x64
+          - name: Build drop helper
+            run: dotnet build RHI.DropHelper/RHI.DropHelper.csproj -c Release -p:Platform=x64
 
       - name: Assemble publish folder
         shell: pwsh
@@ -51,31 +76,33 @@ jobs:
             Copy-Item "$SRC/Assets/Languages/*.json" "$OUT/Assets/Languages/" -Force
           }
 
-      - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+      # Both packagers only read the assembled folder and write separate outputs.
+      - parallel:
+          - name: Build installer
+            shell: pwsh
+            run: |
+              $match = Select-String -Path RenoDXCommander/RenoDXCommander.csproj -Pattern '<AssemblyVersion>([\d\.]+)</AssemblyVersion>'
+              $version = if ($match -and $match.Matches.Count -gt 0) { $match.Matches[0].Groups[1].Value } else { '0.0.0' }
+              Write-Host "Installer version: $version"
+              iscc "/DMyAppVersion=$version" "/DPublishDir=publish/RHI" "/DInstallerOutputDir=installer" "/DSetupIconPath=RenoDXCommander/icon.ico" "RHI Setup.iss"
 
-      - name: Build installer
-        shell: pwsh
-        run: |
-          $match = Select-String -Path RenoDXCommander/RenoDXCommander.csproj -Pattern '<AssemblyVersion>([\d\.]+)</AssemblyVersion>'
-          $version = if ($match -and $match.Matches.Count -gt 0) { $match.Matches[0].Groups[1].Value } else { '0.0.0' }
-          Write-Host "Installer version: $version"
-          iscc "/DMyAppVersion=$version" "/DPublishDir=publish/RHI" "/DInstallerOutputDir=installer" "/DSetupIconPath=RenoDXCommander/icon.ico" "RHI Setup.iss"
+          - name: Zip portable build
+            shell: pwsh
+            run: Compress-Archive -Path publish/RHI/* -DestinationPath RHI-portable.zip
 
-      - name: Zip portable build
-        shell: pwsh
-        run: Compress-Archive -Path publish/RHI/* -DestinationPath RHI-portable.zip
+      - parallel:
+          - name: Upload installer artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: RHI-Setup
+              path: installer/RHI-Setup.exe
+              compression-level: 0
+              if-no-files-found: error
 
-      - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: RHI-Setup
-          path: installer/RHI-Setup.exe
-          if-no-files-found: error
-
-      - name: Upload portable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: RHI-portable
-          path: RHI-portable.zip
-          if-no-files-found: error
+          - name: Upload portable artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: RHI-portable
+              path: RHI-portable.zip
+              compression-level: 0
+              if-no-files-found: error
