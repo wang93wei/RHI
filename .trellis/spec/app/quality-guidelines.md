@@ -49,6 +49,7 @@ dotnet test RenoDXCommander.Tests/RenoDXCommander.Tests.csproj
 
 ## Common Mistakes
 
+- When merging a Windows App SDK upgrade, update the direct `Microsoft.WindowsAppSDK` reference in `RenoDXCommander.Tests.csproj` to match the app. Keep `ExcludeAssets="buildTransitive"`; an older test reference causes restore to fail with `NU1605` before compilation.
 - 忘记在 `App.xaml.cs` 注册新 Service → 运行时 `GetRequiredService` 抛异常。
 - 新增 `RemoteManifest` 字段未加 `[JsonPropertyName]` → 反序列化静默丢失。
 - `SavedGameLibrary` 新增集合未加 `StringComparer.OrdinalIgnoreCase` → 大小写不一致导致重复。
