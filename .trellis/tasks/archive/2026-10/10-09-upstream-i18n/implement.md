@@ -9,3 +9,10 @@
 
 ## CI correction
 First manual run 37886997164 failed at restore: NU1605, app WindowsAppSDK 2.5.1 versus test 1.6.250108002. Synchronize direct test SDK reference, preserve ExcludeAssets=buildTransitive. Other solution projects have no competing WindowsAppSDK reference. Auxiliary ManifestEditor is independent and is outside solution scope.
+
+## Result
+- Upstream main 60559eb merged via 5d4ae41; 74 new localization keys, five catalogs have 2051 keys.
+- Static i18n, placeholder parity, references and XML validation passed.
+- CI 37886997164 failed due to test SDK downgrade; corrected by c72e5b2.
+- CI 37887260110 on c72e5b275c10287af96f5a6100bea33bfabc9437 succeeded: Release x64 build (146 warnings, 0 errors), 62 tests passed, 0 failed/skipped.
+- Only workflow_dispatch retained. No local .NET installation or execution. Windows GUI and packaging were not verified.

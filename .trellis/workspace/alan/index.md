@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
-- **Last Active**: 2026-09-30
+- **Total Sessions**: 7
+- **Last Active**: 2026-10-09
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~177 | Active |
+| `journal-1.md` | ~260 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 7 | 2026-10-09 | 合并上游并补齐五语翻译 | `5d4ae41`, `c72e5b2` | `feat/i18n` |
 | 5 | 2026-09-30 | 同步上游 ReBAR 摘要修复并保持汉化 | `5475a29` | `feat/i18n` |
 | 4 | 2026-09-30 | 继续同步上游 12 个提交（DXVK / OptiScaler 修复）并复核汉化 | `42301ae` | `feat/i18n` |
 | 3 | 2026-09-30 | 合并上游 v2.8.0 并继续汉化（组件更新窗口 / 驱动设置面板） | `f273ae2`, `7527a98` | `feat/i18n` |

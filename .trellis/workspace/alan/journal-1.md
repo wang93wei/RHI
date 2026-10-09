@@ -235,3 +235,26 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 - 上游继续更新时按同法合并：冲突多集中在已本地化文案行，保持 Loc/LocOpt 优先并采纳上游新逻辑
 - OptiScaler nightly cog 剩余耦合下拉（upscaler/FG input/FG output/HUD fix/combined/DMV/flip）仍需先解耦显示与 INI 映射再汉化（见 `Assets/Languages/README.md` R3.4）
 - FAQ 正文、补丁说明正文、`*ActionMessage` 进度文案仍为有意保留的英文
+
+
+## Session 7: 合并上游并补齐五语翻译
+<!-- trellis-session: v=2 fp=e01e6e99b99369e7 -->
+
+**Date**: 2026-10-09
+**Task**: 合并上游并补齐五语翻译
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream/main 60559eb，新增74个本地化键，五语2051键一致；修正测试SDK版本降级。GitHub手动CI 37887260110构建成功，62测试通过；146警告0错误。本机未安装或运行.NET；CI只保留手动触发。未验证Windows GUI和打包。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5d4ae41` | feat: 合并上游更新并补齐五语本地化 |
+| `c72e5b2` | fix(tests): 同步测试项目 Windows App SDK 版本 |
+
+### Status
+
+[OK] **Completed**
