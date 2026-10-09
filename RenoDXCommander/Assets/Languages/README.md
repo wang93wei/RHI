@@ -4,7 +4,7 @@ JSON-based i18n resource packs. `en-US.json` is the authoritative full set. Othe
 
 ## Files
 
-- `en-US.json` — English (US), fallback, ~1977 keys
+- `en-US.json` — English (US), fallback, 2051 keys
 - `zh-CN.json` — Simplified Chinese (简体中文)
 - `zh-TW.json` — Traditional Chinese (繁體中文)
 - `ja-JP.json` — Japanese (日本語)

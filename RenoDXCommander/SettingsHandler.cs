@@ -50,6 +50,7 @@ public class SettingsHandler
         // Sync toggle state with ViewModel
         _window.CustomShadersCombo.SelectedIndex = ViewModel.Settings.GlobalShadersOff ? 0 : (ViewModel.Settings.UseCustomShaders ? 2 : 1);
         _window.AboutVersionText.Text = $"v{CrashReporter.AppVersion}  ·  {Loc.GetString("App.Subtitle")} {Loc.GetString("Xaml.ByRankftw")}";
+        // Show installed Windows App Runtime version
         // Populate addon watch folder textbox
         _window.AddonWatchFolderBox.Text = ViewModel.Settings.AddonWatchFolder;
         // Populate screenshot path and per-game combo
@@ -204,6 +205,9 @@ public class SettingsHandler
                 _window.ColorRangeCombo.IsEnabled     = false;
                 _window.ColorApplyBtn.IsEnabled       = false;
             }
+
+            // Initialize DLDSR Control
+            InitDldsrControl();
         }
 
         // Populate DLSS defaults summary
@@ -230,10 +234,13 @@ public class SettingsHandler
         _window.DropHelperCombo.SelectedIndex = ViewModel.Settings.DropHelperEnabled ? 1 : 0;
         _window.DropHelperCombo.IsEnabled = VulkanLayerService.IsRunningAsAdmin();
 
-        // Initialize tray combos
-        _window.CloseToTrayCombo.SelectedIndex = ViewModel.Settings.CloseToTray ? 1 : 0;
-        _window.RecentGamesCombo.SelectedIndex = ViewModel.Settings.RecentGamesMenu ? 1 : 0;
+        // Initialize tray combos — set a flag so SelectionChanged handlers skip
+        // writing to the registry/settings during programmatic init.
+        _window.TrayComboInitializing = true;
+        _window.CloseToTrayCombo.SelectedIndex      = ViewModel.Settings.CloseToTray ? 1 : 0;
+        _window.RecentGamesCombo.SelectedIndex      = ViewModel.Settings.RecentGamesMenu ? 1 : 0;
         _window.StartWithWindowsCombo.SelectedIndex = ViewModel.Settings.StartWithWindows ? 1 : 0;
+        _window.TrayComboInitializing = false;
 
         // Initialize Nexus Mods card (dev-only)
         if (FeatureFlags.NexusMods)
@@ -277,15 +284,200 @@ public class SettingsHandler
             });
             var btnRow = new Microsoft.UI.Xaml.Controls.StackPanel
             {
-                Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal,
+                Orientation = Microsoft.UI.Xaml.Controls.Orientation.Vertical,
                 Spacing     = 8,
             };
+            var btnRowTop = new Microsoft.UI.Xaml.Controls.StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 8 };
+            var btnRowBot = new Microsoft.UI.Xaml.Controls.StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 8 };
+            btnRow.Children.Add(btnRowTop);
+            btnRow.Children.Add(btnRowBot);
             var sleepBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestIdle"), FontSize = 11 };
-            sleepBtn.Click += (s, e) => System.Threading.Thread.Sleep(30000);
+            sleepBtn.Click += (s, e) => { _window.ViewModel.IsTestFreezeActive = true; System.Threading.Thread.Sleep(30000); _window.ViewModel.IsTestFreezeActive = false; };
             var spinBtn  = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestPegged"), FontSize = 11 };
-            spinBtn.Click  += (s, e) => { var end = DateTime.UtcNow.AddSeconds(10); while (DateTime.UtcNow < end) { } };
-            btnRow.Children.Add(sleepBtn);
-            btnRow.Children.Add(spinBtn);
+            spinBtn.Click  += (s, e) => { _window.ViewModel.IsTestFreezeActive = true; var end = DateTime.UtcNow.AddSeconds(10); while (DateTime.UtcNow < end) { } _window.ViewModel.IsTestFreezeActive = false; };
+
+            // Native Block: WaitForSingleObject on an unsignaled event — pure native wait, WaitForSingleObject on an unsignaled event — pure native wait,
+            // no managed frames above the wait. Expected top: ntdll!NtWaitForSingleObject,
+            // then KERNELBASE!WaitForSingleObjectEx, then the managed-to-native boundary.
+            var nativeBlockBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestNativeBlock"), FontSize = 11 };
+            nativeBlockBtn.Click += (s, e) =>
+            {
+                var hEvent = NativeInterop.CreateEventW(IntPtr.Zero, true, false, null); // unsignaled manual-reset
+                if (hEvent != IntPtr.Zero)
+                {
+                    _window.ViewModel.IsTestFreezeActive = true;
+                    try    { NativeInterop.WaitForSingleObject(hEvent, 30000); }
+                    finally { NativeInterop.CloseHandle(hEvent); _window.ViewModel.IsTestFreezeActive = false; }
+                }
+            };
+
+            // Idle Baseline: triggers the native stack capture on a healthy UI thread.
+            // Fires CaptureNativeUiThreadStack from a background task immediately.
+            // Output shows what the idle message pump looks like — the reference for real freezes.
+            var idleBaselineBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.CaptureIdleBaseline"), FontSize = 11 };
+            idleBaselineBtn.Click += (s, e) =>
+            {
+                _ = System.Threading.Tasks.Task.Run(() =>
+                {
+                    CrashReporter.LogSync("[Heartbeat.Native] ── IDLE BASELINE CAPTURE ──");
+                    _window.ViewModel.CaptureNativeUiThreadStackPublic();
+                });
+            };
+
+            btnRowTop.Children.Add(sleepBtn);
+            btnRowTop.Children.Add(spinBtn);
+            btnRowTop.Children.Add(nativeBlockBtn);
+            btnRowTop.Children.Add(idleBaselineBtn);
+
+            // Dispatcher Exception: throws inside a TryEnqueue callback.
+            // Checks whether app.UnhandledException fires, e.Handled = true takes effect,
+            // and whether the dispatcher keeps running afterwards (timer + probes should continue).
+            var dispExBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestDispatcherException"), FontSize = 11 };
+            dispExBtn.Click += (s, e) =>
+            {
+                CrashReporter.LogSync("[FreezeDiag] Test Dispatcher Exception: about to throw inside TryEnqueue(Normal)");
+                _window.DispatcherQueue?.TryEnqueue(() =>
+                {
+                    throw new InvalidOperationException("FreezeDiag: intentional dispatcher exception test");
+                });
+            };
+            btnRowBot.Children.Add(dispExBtn);
+
+            // Stress Loop: selects each game in turn every 1.5s for 30 passes.
+            // Reproduces rapid-navigation freeze patterns and shows which game/build triggers it.
+            // Each selection is logged with a sequential counter and timestamp so the last logged
+            // entry before [Heartbeat] *** UI FROZEN *** pinpoints exactly which game killed the dispatcher.
+            var stressBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.StressLoop"), FontSize = 11 };
+            stressBtn.Click += (s, e) =>
+            {
+                if (!stressBtn.IsEnabled) return;
+                stressBtn.IsEnabled = false;
+                CrashReporter.LogSync("[FreezeDiag] Stress loop started");
+                _ = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    try
+                    {
+                        int selectionCount = 0;
+                        for (int pass = 0; pass < 30; pass++)
+                        {
+                            List<GameCardViewModel> games = new();
+                            _window.DispatcherQueue?.TryEnqueue(() => games = _window.ViewModel.DisplayedGames.ToList());
+                            await System.Threading.Tasks.Task.Delay(100).ConfigureAwait(false);
+                            foreach (var card in games)
+                            {
+                                selectionCount++;
+                                CrashReporter.Log($"[FreezeDiag] Stress loop selection #{selectionCount} (pass {pass + 1}/30): {card.GameName}");
+                                _window.RequestReselect(card.GameName);
+                                await System.Threading.Tasks.Task.Delay(1500).ConfigureAwait(false);
+                            }
+                            CrashReporter.Log($"[FreezeDiag] Stress loop pass {pass + 1}/30 complete ({selectionCount} selections so far)");
+                        }
+                    }
+                    finally
+                    {
+                        _window.DispatcherQueue?.TryEnqueue(() => stressBtn.IsEnabled = true);
+                        CrashReporter.LogSync("[FreezeDiag] Stress loop finished");
+                    }
+                });
+            };
+            btnRowBot.Children.Add(stressBtn);
+
+            // Test Fast Restart: directly triggers the auto-restart path after 5 seconds.
+            // Bypasses freeze detection entirely — just tests that restart, unclean marker,
+            // and relaunch all work correctly.
+            var btnRowBot2 = new Microsoft.UI.Xaml.Controls.StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 8 };
+            var fastRestartBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestFastRestart"), FontSize = 11 };
+            fastRestartBtn.Click += (s, e) =>
+            {
+                if (!fastRestartBtn.IsEnabled) return;
+                fastRestartBtn.IsEnabled = false;
+                CrashReporter.LogSync("[FreezeDiag] Test Fast Restart: restarting in 5s");
+                _ = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    await System.Threading.Tasks.Task.Delay(5_000).ConfigureAwait(false);
+
+                    var restartLogPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RHI", "restart_log.txt");
+                    var now = DateTime.UtcNow;
+                    try { System.IO.File.AppendAllText(restartLogPath, now.ToString("O") + Environment.NewLine); } catch { }
+
+                    var uncleanMarkerPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RHI", "rhi_unclean_restart");
+                    try { System.IO.File.WriteAllText(uncleanMarkerPath, now.ToString("O")); } catch { }
+
+                    CrashReporter.LogSync("[FreezeDiag] Test Fast Restart: executing restart now");
+                    CrashReporter.Shutdown();
+                    var exePath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(exePath))
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath) { UseShellExecute = true });
+                    Environment.Exit(2);
+                });
+            };
+            btnRowBot2.Children.Add(fastRestartBtn);
+
+            // Test Known Signature Freeze: blocks the dispatcher thread in a managed semaphore wait
+            // while the Win32 pump stays alive. This matches the real freeze signature:
+            // CPU=IDLE, pump responded, High probe times out → fast-path restart (~5s).
+            var knownSigBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.TestKnownSignatureFreeze"), FontSize = 11 };
+            knownSigBtn.Click += (s, e) =>
+            {
+                if (!knownSigBtn.IsEnabled) return;
+                knownSigBtn.IsEnabled = false;
+                CrashReporter.LogSync("[FreezeDiag] Test Known Signature Freeze: blocking dispatcher in managed wait for 10s");
+                _window.ViewModel.IsTestFreezeActive = true;
+                var sem = new System.Threading.SemaphoreSlim(0, 1);
+                _ = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    await System.Threading.Tasks.Task.Delay(10_000).ConfigureAwait(false);
+                    sem.Release();
+                    _window.ViewModel.IsTestFreezeActive = false;
+                    _window.DispatcherQueue?.TryEnqueue(() => knownSigBtn.IsEnabled = true);
+                    CrashReporter.LogSync("[FreezeDiag] Test Known Signature Freeze: released after 10s");
+                });
+                _window.DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+                {
+                    CrashReporter.LogSync("[FreezeDiag] Test Known Signature Freeze: dispatcher thread entering managed wait");
+                    sem.Wait();
+                    CrashReporter.LogSync("[FreezeDiag] Test Known Signature Freeze: dispatcher thread unblocked");
+                });
+            };
+            btnRowBot2.Children.Add(knownSigBtn);
+            inner.Children.Add(btnRowBot2);
+
+            // EmptyWorkingSet stress: trims the process working set then immediately triggers
+            // a card rebuild — reproduces the idle/trim/wake/rebuild pattern seen in freezes 4 and 5.
+            var btnRowBot3 = new Microsoft.UI.Xaml.Controls.StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 8, Margin = new Microsoft.UI.Xaml.Thickness(0, 4, 0, 0) };
+            var ewsBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.EmptyWorkingSetVisible"), FontSize = 11 };
+            ewsBtn.Click += (s, e) =>
+            {
+                CrashReporter.LogSync("[FreezeDiag] EmptyWorkingSet + Rebuild (visible): trimming then RequestCardRebuild");
+                NativeInterop.EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().Handle);
+                CrashReporter.LogSync("[FreezeDiag] EmptyWorkingSet done — triggering RequestCardRebuild");
+                var card2 = _window.ViewModel.SelectedGame;
+                if (card2 != null) _window.ViewModel.RequestCardRebuild?.Invoke(card2);
+                else CrashReporter.LogSync("[FreezeDiag] EmptyWorkingSet: no selected game");
+            };
+            var ewsMinBtn = new Microsoft.UI.Xaml.Controls.Button { Content = Loc.GetString("Settings.FreezeDiag.EmptyWorkingSetMinimised"), FontSize = 11 };
+            ewsMinBtn.Click += (s, e) =>
+            {
+                CrashReporter.LogSync("[FreezeDiag] EmptyWorkingSet + Rebuild (minimised): hiding, trimming, rebuilding after 500ms");
+                _window.AppWindow.Hide();
+                NativeInterop.EmptyWorkingSet(System.Diagnostics.Process.GetCurrentProcess().Handle);
+                _ = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    await System.Threading.Tasks.Task.Delay(500).ConfigureAwait(false);
+                    CrashReporter.LogSync("[FreezeDiag] EmptyWorkingSet (minimised): triggering RequestCardRebuild from background");
+                    var card2 = _window.ViewModel.SelectedGame;
+                    if (card2 != null) _window.DispatcherQueue?.TryEnqueue(() => _window.ViewModel.RequestCardRebuild?.Invoke(card2));
+                    await System.Threading.Tasks.Task.Delay(5000).ConfigureAwait(false);
+                    _window.DispatcherQueue?.TryEnqueue(() => { _window.AppWindow.Show(); _window.Activate(); });
+                    CrashReporter.LogSync("[FreezeDiag] EmptyWorkingSet (minimised): window restored");
+                });
+            };
+            btnRowBot3.Children.Add(ewsBtn);
+            btnRowBot3.Children.Add(ewsMinBtn);
+            inner.Children.Add(btnRowBot3);
+
             inner.Children.Add(btnRow);
             card.Child = inner;
             _window.SettingsCardsPanel.Children.Add(card);
@@ -430,6 +622,93 @@ public class SettingsHandler
         {
             ViewModel.Settings.RenoDxDbSource = tag;
             ViewModel.SaveSettingsPublic();
+        }
+    }
+
+    // ── DLDSR Control ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Initializes the DLDSR Control card: shows it, populates the saved states combo, and refreshes current state.
+    /// </summary>
+    private void InitDldsrControl()
+    {
+        _window.DldsrControlCard.Visibility = Visibility.Visible;
+        RefreshDldsrStateCombo();
+        RefreshDldsrCurrentState();
+
+        // Wire up slider value changed to update the text display
+        _window.DldsrSmoothnessSlider.ValueChanged += (s, e) =>
+        {
+            _window.DldsrSmoothnessValueText.Text = $"{(int)e.NewValue}%";
+        };
+    }
+
+    /// <summary>
+    /// Populates the DLDSR saved states combo from the captures file.
+    /// </summary>
+    public void RefreshDldsrStateCombo()
+    {
+        var dldsrService = App.Services.GetRequiredService<IDldsrService>();
+        var captures = dldsrService.LoadCaptures();
+        _window.DldsrStateCombo.ItemsSource = captures.Select(c => c.Label).ToList();
+        if (_window.DldsrStateCombo.Items.Count > 0)
+            _window.DldsrStateCombo.SelectedIndex = 0;
+    }
+
+    /// <summary>
+    /// Reads the current DLDSR state from the registry and displays it.
+    /// </summary>
+    public void RefreshDldsrCurrentState()
+    {
+        try
+        {
+            var dldsrService = App.Services.GetRequiredService<IDldsrService>();
+            var states = dldsrService.GetCurrentState();
+
+            if (states.Count == 0)
+            {
+                // Check if it's due to admin rights
+                if (!VulkanLayerService.IsRunningAsAdmin())
+                {
+                    _window.DldsrCurrentStateText.Text = Loc.GetString("Settings.Dldsr.AdminRequired");
+                }
+                else
+                {
+                    _window.DldsrCurrentStateText.Text = Loc.GetString("Settings.Dldsr.NoCapableMonitors");
+                }
+                return;
+            }
+
+            // Update smoothness slider from the first monitor's state
+            var firstSmoothness = dldsrService.GetCurrentSmoothness();
+            if (firstSmoothness >= 0 && firstSmoothness <= 100)
+            {
+                _window.DldsrSmoothnessSlider.Value = firstSmoothness;
+                _window.DldsrSmoothnessValueText.Text = $"{firstSmoothness}%";
+            }
+
+            // Build a summary: "Monitor1: DLDSR 2.25x (matches: dldsr-on)"
+            var lines = new List<string>();
+            foreach (var s in states)
+            {
+                var factorPart = string.IsNullOrEmpty(s.EnabledFactors) ? Loc.GetString("Option.Off") : s.EnabledFactors;
+                var matchPart = string.IsNullOrEmpty(s.MatchesCapture)
+                    ? ""
+                    : Loc.GetString("Settings.Dldsr.StateMatch", s.MatchesCapture);
+                // Shorten monitor ID for display (take last part after underscore)
+                var shortId = s.MonitorId.Contains('_')
+                    ? s.MonitorId.Substring(s.MonitorId.LastIndexOf('_') + 1)
+                    : s.MonitorId;
+                if (shortId.Length > 12) shortId = shortId.Substring(0, 12) + "...";
+                lines.Add(Loc.GetString("Settings.Dldsr.StateSummary", shortId, factorPart, s.Smoothness, matchPart));
+            }
+
+            _window.DldsrCurrentStateText.Text = string.Join("\n", lines);
+        }
+        catch (Exception ex)
+        {
+            _window.DldsrCurrentStateText.Text = Loc.GetString("Settings.Dldsr.Error", ex.Message);
+            CrashReporter.Log($"[SettingsHandler.RefreshDldsrCurrentState] {ex.Message}");
         }
     }
 
@@ -2414,11 +2693,25 @@ public class SettingsHandler
 
     public void RefreshGitHubStatus()
     {
+        // If the token was cleared at startup due to 401, make sure the in-memory values are also cleared
+        if (App._gitHubTokenExpiredOnStartup)
+        {
+            ViewModel.Settings.GitHubOAuthToken = "";
+            ViewModel.Settings.GitHubUsername   = "";
+        }
+
         var token    = ViewModel.Settings.GitHubOAuthToken;
         var username = ViewModel.Settings.GitHubUsername;
         bool connected = !string.IsNullOrEmpty(token);
 
-        if (connected)
+        if (App._gitHubTokenExpiredOnStartup)
+        {
+            _window.GitHubStatusText.Text       = Loc.GetString("GitHub.Status.SessionExpired");
+            _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentAmberDimBrush);
+            _window.GitHubConnectBtn.Content    = Loc.GetString("Dialog.ReConnect");
+            _window.GitHubDisconnectRow.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        }
+        else if (connected)
         {
             var display = string.IsNullOrEmpty(username) ? "GitHub" : $"@{username}";
             _window.GitHubStatusText.Text       = Loc.GetString("GitHub.Status.Connected", display);

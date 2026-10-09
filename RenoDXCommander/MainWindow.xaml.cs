@@ -50,6 +50,9 @@ public sealed partial class MainWindow : Window
 
     private string? _pendingReselect;
     private bool _forceClose;
+
+    /// <summary>Set during Settings panel init to suppress SelectionChanged side-effects on tray combos.</summary>
+    internal bool TrayComboInitializing;
     private DispatcherTimer? _shutdownSignalTimer;
     private DispatcherTimer? _launchTimer;
     private readonly CancellationTokenSource _lifetime = new();
@@ -192,13 +195,18 @@ public sealed partial class MainWindow : Window
         this.Activated += MainWindow_Activated;
         ViewModel.SetDispatcher(DispatcherQueue);
         ViewModel.UiThreadNativeId = NativeInterop.GetCurrentThreadId(); // capture UI thread ID for freeze diagnostics
+        ViewModel.MainWindowHwnd   = WinRT.Interop.WindowNative.GetWindowHandle(this); // for pump-responsiveness probe
+        ViewModel.WindowStateManagerRef = _windowStateManager; // for sleep-resume grace period
         ViewModel.ConfirmForeignDxgiOverwrite = _dialogService.ShowForeignDxgiConfirmDialogAsync;
         ViewModel.ShowVulkanAdminRequiredDialog = _dialogService.ShowVulkanAdminRequiredDialogAsync;
         ViewModel.RequestOverridesPanelRebuild = card =>
             DispatcherQueue.TryEnqueue(() => { BuildOverridesPanel(card); _detailPanelBuilder.ApplySectionOrder(); });
         ViewModel.RequestDetailPanelRebuild = card =>
+        {
+            CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Enqueue] N T{System.Threading.Thread.CurrentThread.ManagedThreadId}(bg) RequestDetailPanelRebuild({card.GameName})");
             DispatcherQueue.TryEnqueue(() =>
             {
+                CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Callback:Start] N UI RequestDetailPanelRebuild({card.GameName})");
                 try
                 {
                     // Re-find the card by name+store in case BuildCards replaced it concurrently
@@ -212,15 +220,24 @@ public sealed partial class MainWindow : Window
                 {
                     _crashReporter?.Log($"[RequestDetailPanelRebuild] Exception: {ex.Message}");
                 }
+                finally { CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Callback:End] N UI RequestDetailPanelRebuild({card.GameName})"); }
             });
+        };
         ViewModel.RequestCardRebuild = card =>
+        {
+            CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Enqueue] N T{System.Threading.Thread.CurrentThread.ManagedThreadId}(bg) RequestCardRebuild({card.GameName})");
             DispatcherQueue.TryEnqueue(() =>
             {
-                // Re-evaluate Luma injection for this card after an API override change.
-                // This updates LumaMod/LumaRenodxCompatible without a full Refresh.
-                ViewModel.ReevaluateLumaForCard(card);
-                PopulateDetailPanel(card);
+                CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Callback:Start] N UI RequestCardRebuild({card.GameName})");
+                try
+                {
+                    // Re-evaluate Luma injection for this card after an API override change.
+                    ViewModel.ReevaluateLumaForCard(card);
+                    PopulateDetailPanel(card);
+                }
+                finally { CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Callback:End] N UI RequestCardRebuild({card.GameName})"); }
             });
+        };
         ViewModel.ShowShaderSelectionPicker = async (current) =>
             await ShaderPopupHelper.ShowAsync(Content.XamlRoot, _shaderPackService, current, ShaderPopupHelper.PopupContext.Global);
         ViewModel.ShowPerGameShaderSelectionPicker = async (gameName, current) =>
@@ -699,6 +716,7 @@ public sealed partial class MainWindow : Window
                                     return;
                                 }
                                 _lastBuiltCard = target;
+                                CrashReporter.RecordEnqueueAction($"[{DateTime.Now:HH:mm:ss.fff}] [Callback:Start] N UI SelectionDebounce({target.GameName})");
                                 _crashReporter?.Log($"[SelectionDebounce] PopulateDetailPanel start: '{target.GameName}'");
                                 PopulateDetailPanel(target);
                                 _crashReporter?.Log($"[SelectionDebounce] PopulateDetailPanel done, BuildOverridesPanel start: '{target.GameName}'");

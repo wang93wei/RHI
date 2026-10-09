@@ -663,7 +663,14 @@ ToolTipService.ToolTip="{Binding [Xaml.LoadingModDataPleaseWait], Source={Static
                                             Click="InstallRefButton_Click"
                                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                             CornerRadius="8" FontSize="12" Height="32"/>
-                                    <Border Grid.Column="4"/>
+                                    <Button x:Name="DetailRefCogBtn" x:FieldModifier="internal" Grid.Column="4"
+                                            Click="RefCogButton_Click"
+                                            Background="{StaticResource SurfaceOverlayBrush}" Foreground="{StaticResource TextSecondaryBrush}"
+                                            BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
+                                            CornerRadius="8" Width="36" Height="32" Padding="0"
+                                            ToolTipService.ToolTip="{Binding [Dialog.RefSettings.Title], Source={StaticResource Loc}}">
+                                        <TextBlock Text="⚙" FontSize="14" HorizontalAlignment="Center"/>
+                                    </Button>
                                     <Button x:Name="DetailRefDeleteBtn" x:FieldModifier="internal" Grid.Column="5"
                                             Click="UninstallRefButton_Click"
                                             Background="{StaticResource AccentRedBgBrush}" Foreground="{StaticResource AccentRedBrush}"
@@ -1624,6 +1631,125 @@ ToolTipService.ToolTip="{Binding [Xaml.CheckAllComponentsAndThe], Source={Static
                                                     Padding="12,6" MinWidth="0" MinHeight="0"
                                                     FontSize="12" VerticalAlignment="Bottom"/>
                                         </Grid>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ══════════════════════════════════════════════════════════
+                             CARD 2b2: DLDSR CONTROL (dev-only — gated by ResolutionControl feature flag)
+                             ══════════════════════════════════════════════════════════ -->
+                        <Border x:Name="DldsrControlCard" x:FieldModifier="internal"
+                                Visibility="Collapsed"
+                                Background="{StaticResource SurfaceRaisedBrush}" CornerRadius="10" Padding="20,16"
+                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding [Settings.Dldsr.Title], Source={StaticResource Loc}}" FontSize="15" FontWeight="Bold"
+                                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button x:Name="DldsrInfoBtn" x:FieldModifier="internal"
+                                            Content="ⓘ" Click="DldsrInfoBtn_Click"
+                                            Background="Transparent" Foreground="{StaticResource AccentTealBrush}"
+                                            BorderThickness="0" Padding="4,0" MinWidth="0" MinHeight="0"
+                                            FontSize="14" VerticalAlignment="Center"
+                                            ToolTipService.ToolTip="{Binding [Settings.Dldsr.Info.Tooltip], Source={StaticResource Loc}}"/>
+                                </StackPanel>
+                                <TextBlock TextWrapping="Wrap" FontSize="11"
+                                           Foreground="{StaticResource InlineDescriptionBrush}" LineHeight="18"
+                                           Text="{Binding [Settings.Dldsr.Description], Source={StaticResource Loc}}"/>
+
+                                <Grid ColumnSpacing="12" RowSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Row 0: Current State Display -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Spacing="4">
+                                        <TextBlock Text="{Binding [Settings.Dldsr.CurrentState], Source={StaticResource Loc}}" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DldsrCurrentStateText" x:FieldModifier="internal"
+                                                   Text="{Binding [Settings.Dldsr.NotChecked], Source={StaticResource Loc}}"
+                                                   FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    </StackPanel>
+
+                                    <!-- Row 1: DSR Smoothness Slider -->
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding [Settings.Dldsr.Smoothness], Source={StaticResource Loc}}" FontSize="12"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="DldsrSmoothnessValueText" x:FieldModifier="internal"
+                                                       Text="{Binding [Settings.Dldsr.DefaultSmoothness], Source={StaticResource Loc}}" FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <Slider x:Name="DldsrSmoothnessSlider" x:FieldModifier="internal"
+                                                Minimum="0" Maximum="100" StepFrequency="1" TickFrequency="10"
+                                                HorizontalAlignment="Stretch"
+                                                ToolTipService.ToolTip="{Binding [Settings.Dldsr.Smoothness.Tooltip], Source={StaticResource Loc}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Row="1" Grid.Column="1" 
+                                            x:Name="DldsrSmoothnessApplyBtn" x:FieldModifier="internal"
+                                            Content="{Binding [Settings.Dldsr.Set.Button], Source={StaticResource Loc}}" Click="DldsrSmoothnessApplyBtn_Click"
+                                            Background="{StaticResource SurfaceOverlayBrush}"
+                                            Foreground="{StaticResource ChipTextBrush}"
+                                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                                            BorderThickness="1" CornerRadius="6"
+                                            Padding="16,6" MinWidth="0" MinHeight="0"
+                                            FontSize="12" VerticalAlignment="Bottom"
+                                            ToolTipService.ToolTip="{Binding [Settings.Dldsr.Set.Tooltip], Source={StaticResource Loc}}"/>
+
+                                    <!-- Row 2: Saved States combo + Apply button -->
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="{Binding [Settings.Dldsr.SavedStates], Source={StaticResource Loc}}" FontSize="12"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <ComboBox x:Name="DldsrStateCombo" x:FieldModifier="internal"
+                                                  FontSize="12" HorizontalAlignment="Stretch"
+                                                  ToolTipService.ToolTip="{Binding [Settings.Dldsr.SavedStates.Tooltip], Source={StaticResource Loc}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Row="2" Grid.Column="1" 
+                                            x:Name="DldsrApplyBtn" x:FieldModifier="internal"
+                                            Content="{Binding [Dialog.Apply], Source={StaticResource Loc}}" Click="DldsrApplyBtn_Click"
+                                            Background="{StaticResource AccentBlueBgBrush}"
+                                            Foreground="{StaticResource AccentBlueBrush}"
+                                            BorderBrush="{StaticResource AccentBlueBorderBrush}"
+                                            BorderThickness="1" CornerRadius="6"
+                                            Padding="16,6" MinWidth="0" MinHeight="0"
+                                            FontSize="12" VerticalAlignment="Bottom"
+                                            ToolTipService.ToolTip="{Binding [Settings.Dldsr.Apply.Tooltip], Source={StaticResource Loc}}"/>
+
+                                    <!-- Row 3: Capture / Delete buttons -->
+                                    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="DldsrCaptureBtn" x:FieldModifier="internal"
+                                                Content="{Binding [Settings.Dldsr.CaptureCurrent.Button], Source={StaticResource Loc}}" Click="DldsrCaptureBtn_Click"
+                                                Background="{StaticResource SurfaceOverlayBrush}"
+                                                Foreground="{StaticResource ChipTextBrush}"
+                                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                                CornerRadius="6" Padding="12,6" MinWidth="0" MinHeight="0"
+                                                FontSize="11"
+                                                ToolTipService.ToolTip="{Binding [Settings.Dldsr.CaptureCurrent.Tooltip], Source={StaticResource Loc}}"/>
+                                        <Button x:Name="DldsrDeleteBtn" x:FieldModifier="internal"
+                                                Content="{Binding [Dialog.Delete], Source={StaticResource Loc}}" Click="DldsrDeleteBtn_Click"
+                                                Background="{StaticResource SurfaceOverlayBrush}"
+                                                Foreground="{StaticResource ChipTextBrush}"
+                                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                                CornerRadius="6" Padding="12,6" MinWidth="0" MinHeight="0"
+                                                FontSize="11"
+                                                ToolTipService.ToolTip="{Binding [Settings.Dldsr.Delete.Tooltip], Source={StaticResource Loc}}"/>
+                                        <Button x:Name="DldsrRefreshBtn" x:FieldModifier="internal"
+                                                Content="{Binding [Xaml.Refresh], Source={StaticResource Loc}}" Click="DldsrRefreshBtn_Click"
+                                                Background="{StaticResource SurfaceOverlayBrush}"
+                                                Foreground="{StaticResource ChipTextBrush}"
+                                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                                CornerRadius="6" Padding="12,6" MinWidth="0" MinHeight="0"
+                                                FontSize="11"
+                                                ToolTipService.ToolTip="{Binding [Settings.Dldsr.Refresh.Tooltip], Source={StaticResource Loc}}"/>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>

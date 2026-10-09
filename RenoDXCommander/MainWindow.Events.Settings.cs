@@ -1307,8 +1307,10 @@ public sealed partial class MainWindow
 
     private void CloseToTrayCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel?.Settings == null || ViewModel.Settings.IsLoadingSettings) return;
-        ViewModel.Settings.CloseToTray = ((ComboBox)sender).SelectedIndex == 1;
+        if (ViewModel?.Settings == null || ViewModel.Settings.IsLoadingSettings || TrayComboInitializing) return;
+        var closeToTray = ((ComboBox)sender).SelectedIndex == 1;
+        if (closeToTray == ViewModel.Settings.CloseToTray) return;
+        ViewModel.Settings.CloseToTray = closeToTray;
         ViewModel.SaveSettingsPublic();
 
         // Initialize tray icon immediately if enabling and not yet created
@@ -1331,8 +1333,10 @@ public sealed partial class MainWindow
 
     private void RecentGamesCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel?.Settings == null || ViewModel.Settings.IsLoadingSettings) return;
-        ViewModel.Settings.RecentGamesMenu = ((ComboBox)sender).SelectedIndex == 1;
+        if (ViewModel?.Settings == null || ViewModel.Settings.IsLoadingSettings || TrayComboInitializing) return;
+        var recentGames = ((ComboBox)sender).SelectedIndex == 1;
+        if (recentGames == ViewModel.Settings.RecentGamesMenu) return;
+        ViewModel.Settings.RecentGamesMenu = recentGames;
         ViewModel.SaveSettingsPublic();
         // Update jump list immediately
         if (ViewModel.Settings.RecentGamesMenu)
@@ -1343,8 +1347,11 @@ public sealed partial class MainWindow
 
     private void StartWithWindowsCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel?.Settings == null || ViewModel.Settings.IsLoadingSettings) return;
+        if (ViewModel?.Settings == null || ViewModel.Settings.IsLoadingSettings || TrayComboInitializing) return;
         var enabled = ((ComboBox)sender).SelectedIndex == 1;
+        // Ignore if the value matches what's already persisted — guards against WinUI
+        // delivering queued SelectionChanged events after async continuations resume.
+        if (enabled == ViewModel.Settings.StartWithWindows) return;
         ViewModel.Settings.StartWithWindows = enabled;
         ViewModel.SaveSettingsPublic();
 
@@ -1559,6 +1566,316 @@ public sealed partial class MainWindow
             : UIFactory.Brush(ResourceKeys.ChipTextBrush);
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DLDSR Control Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private async void DldsrInfoBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var content = new StackPanel { Spacing = 12, MaxWidth = 480 };
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.Title"),
+            FontSize = 14,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.Description"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.InitialSetup"),
+            FontSize = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush),
+            Margin = new Thickness(0, 4, 0, 0),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.SetupSteps"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.DailyUse"),
+            FontSize = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush),
+            Margin = new Thickness(0, 4, 0, 0),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.DailyUseDescription"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Smoothness"),
+            FontSize = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush),
+            Margin = new Thickness(0, 4, 0, 0),
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Settings.Dldsr.Info.SmoothnessDescription"),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+        });
+
+        var dialog = new ContentDialog
+        {
+            Title = Loc.GetString("Settings.Dldsr.Title"),
+            Content = content,
+            CloseButtonText = Loc.GetString("Dialog.GotIt"),
+            XamlRoot = Content.XamlRoot,
+        };
+        await DialogService.ShowSafeAsync(dialog);
+    }
+
+    private async void DldsrApplyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (DldsrStateCombo.SelectedItem is not string selectedLabel || string.IsNullOrEmpty(selectedLabel))
+            return;
+
+        DldsrApplyBtn.IsEnabled = false;
+        DldsrApplyBtn.Content = Loc.GetString("Settings.Dldsr.Applying");
+
+        try
+        {
+            var dldsrService = App.Services.GetRequiredService<IDldsrService>();
+            var success = await dldsrService.ApplyStateAsync(selectedLabel);
+            if (success)
+            {
+                _crashReporter.Log($"[DLDSR] Applied state '{selectedLabel}'");
+                // Give the driver a moment to fully initialize and write registry values
+                await Task.Delay(500);
+                // Refresh the DLDSR current state
+                _settingsHandler.RefreshDldsrCurrentState();
+                // Also refresh the resolution dropdown in case DLDSR factors appeared
+                if (ResolutionTargetCombo != null)
+                {
+                    var resolutions = ResolutionToggleService.GetSupportedResolutions();
+                    ResolutionTargetCombo.ItemsSource = resolutions;
+                    var stored = ViewModel.Settings.ResolutionTarget;
+                    if (!string.IsNullOrEmpty(stored))
+                    {
+                        var match = resolutions.FirstOrDefault(r => r.Key == stored);
+                        if (match != null) ResolutionTargetCombo.SelectedItem = match;
+                    }
+                }
+            }
+            else
+            {
+                _crashReporter.Log($"[DLDSR] Failed to apply state '{selectedLabel}'");
+                var dlg = new ContentDialog
+                {
+                    Title = Loc.GetString("Settings.Dldsr.ApplyFailed.Title"),
+                    Content = Loc.GetString("Settings.Dldsr.ApplyFailed.Content"),
+                    CloseButtonText = Loc.GetString("Dialog.Ok"),
+                    XamlRoot = Content.XamlRoot,
+                };
+                await DialogService.ShowSafeAsync(dlg);
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[DLDSR] Exception applying state — {ex.Message}");
+            var dlg = new ContentDialog
+            {
+                Title = Loc.GetString("Settings.Dldsr.ApplyFailed.Title"),
+                Content = Loc.GetString("Settings.Dldsr.ApplyFailed.Content") + "\n\n" +
+                    Loc.GetString("Settings.Dldsr.Error", ex.Message),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await DialogService.ShowSafeAsync(dlg);
+        }
+        finally
+        {
+            DldsrApplyBtn.IsEnabled = true;
+            DldsrApplyBtn.Content = Loc.GetString("Dialog.Apply");
+        }
+    }
+
+    private async void DldsrCaptureBtn_Click(object sender, RoutedEventArgs e)
+    {
+        // Show input dialog to get a label for the capture
+        var inputBox = new TextBox
+        {
+            PlaceholderText = Loc.GetString("Settings.Dldsr.Capture.Placeholder"),
+            FontSize = 12,
+            Width = 300,
+        };
+        var dialog = new ContentDialog
+        {
+            Title = Loc.GetString("Settings.Dldsr.Capture.Title"),
+            Content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = Loc.GetString("Settings.Dldsr.Capture.Description"),
+                        FontSize = 12,
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+                    },
+                    inputBox,
+                },
+            },
+            PrimaryButtonText = Loc.GetString("Dialog.Capture"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
+            XamlRoot = Content.XamlRoot,
+        };
+
+        var result = await DialogService.ShowSafeAsync(dialog);
+        if (result != ContentDialogResult.Primary) return;
+
+        var label = inputBox.Text?.Trim();
+        if (string.IsNullOrEmpty(label))
+        {
+            var errDlg = new ContentDialog
+            {
+                Title = Loc.GetString("Settings.Dldsr.InvalidLabel.Title"),
+                Content = Loc.GetString("Settings.Dldsr.InvalidLabel.Content"),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await DialogService.ShowSafeAsync(errDlg);
+            return;
+        }
+
+        try
+        {
+            var dldsrService = App.Services.GetRequiredService<IDldsrService>();
+            dldsrService.CaptureCurrentState(label);
+            _crashReporter.Log($"[DLDSR] Captured state as '{label}'");
+            _settingsHandler.RefreshDldsrStateCombo();
+            _settingsHandler.RefreshDldsrCurrentState();
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[DLDSR] Failed to capture state — {ex.Message}");
+            var errDlg = new ContentDialog
+            {
+                Title = Loc.GetString("Settings.Dldsr.CaptureFailed.Title"),
+                Content = Loc.GetString("Settings.Dldsr.CaptureFailed.Content") + "\n\n" +
+                    Loc.GetString("Settings.Dldsr.Error", ex.Message),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await DialogService.ShowSafeAsync(errDlg);
+        }
+    }
+
+    private async void DldsrDeleteBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (DldsrStateCombo.SelectedItem is not string selectedLabel || string.IsNullOrEmpty(selectedLabel))
+            return;
+
+        var confirm = new ContentDialog
+        {
+            Title = Loc.GetString("Settings.Dldsr.Delete.Title"),
+            Content = Loc.GetString("Settings.Dldsr.Delete.Content", selectedLabel),
+            PrimaryButtonText = Loc.GetString("Dialog.Delete"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
+            XamlRoot = Content.XamlRoot,
+        };
+
+        var result = await DialogService.ShowSafeAsync(confirm);
+        if (result != ContentDialogResult.Primary) return;
+
+        try
+        {
+            var dldsrService = App.Services.GetRequiredService<IDldsrService>();
+            dldsrService.DeleteCapture(selectedLabel);
+            _crashReporter.Log($"[DLDSR] Deleted capture '{selectedLabel}'");
+            _settingsHandler.RefreshDldsrStateCombo();
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[DLDSR] Failed to delete capture — {ex.Message}");
+        }
+    }
+
+    private void DldsrRefreshBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsHandler.RefreshDldsrCurrentState();
+        _settingsHandler.RefreshDldsrStateCombo();
+    }
+
+    private async void DldsrSmoothnessApplyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var smoothness = (int)DldsrSmoothnessSlider.Value;
+
+        DldsrSmoothnessApplyBtn.IsEnabled = false;
+        DldsrSmoothnessApplyBtn.Content = Loc.GetString("Settings.Dldsr.Setting");
+
+        try
+        {
+            var dldsrService = App.Services.GetRequiredService<IDldsrService>();
+            var success = await dldsrService.SetSmoothnessAsync(smoothness);
+            if (success)
+            {
+                _crashReporter.Log($"[DLDSR] Set smoothness to {smoothness}%");
+                // Give the driver a moment to fully initialize and write registry values
+                await Task.Delay(500);
+                // Refresh the DLDSR current state and smoothness display
+                _settingsHandler.RefreshDldsrCurrentState();
+            }
+            else
+            {
+                _crashReporter.Log($"[DLDSR] Failed to set smoothness to {smoothness}%");
+                var dlg = new ContentDialog
+                {
+                    Title = Loc.GetString("Settings.Dldsr.SmoothnessFailed.Title"),
+                    Content = Loc.GetString("Settings.Dldsr.SmoothnessFailed.Content"),
+                    CloseButtonText = Loc.GetString("Dialog.Ok"),
+                    XamlRoot = Content.XamlRoot,
+                };
+                await DialogService.ShowSafeAsync(dlg);
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[DLDSR] Exception setting smoothness — {ex.Message}");
+            var dlg = new ContentDialog
+            {
+                Title = Loc.GetString("Settings.Dldsr.SmoothnessFailed.Title"),
+                Content = Loc.GetString("Settings.Dldsr.SmoothnessFailed.Content") + "\n\n" +
+                    Loc.GetString("Settings.Dldsr.Error", ex.Message),
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await DialogService.ShowSafeAsync(dlg);
+        }
+        finally
+        {
+            DldsrSmoothnessApplyBtn.IsEnabled = true;
+            DldsrSmoothnessApplyBtn.Content = Loc.GetString("Settings.Dldsr.Set.Button");
+        }
+    }
+
     private async void BrowseScreenshotPath_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -1728,6 +2045,13 @@ public sealed partial class MainWindow
     private void AboutButton_Click(object sender, RoutedEventArgs e)
     {
         AboutVersionText.Text = $"v{CrashReporter.AppVersion}  ·  {Loc.GetString("App.Subtitle")} {Loc.GetString("Xaml.ByRankftw")}";
+        // Show installed Windows App Runtime version — scan WindowsApps for the installed runtime folder
+        try
+        {
+            var runtimeVersion = App.GetWindowsAppRuntimeVersion();
+            CrashReporter.Log($"[About] Runtime version: '{runtimeVersion}'");
+        }
+        catch { }
         ViewModel.NavigateToAboutCommand.Execute(null);
     }
 
