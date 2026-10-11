@@ -1,0 +1,27 @@
+{
+  "CardMenu.OpenFolder": {"en-US":"Open Folder","zh-CN":"打开文件夹","zh-TW":"開啟資料夾","ja-JP":"フォルダーを開く","ko-KR":"폴더 열기"},
+  "CardMenu.Favourite": {"en-US":"Favourite","zh-CN":"收藏","zh-TW":"收藏","ja-JP":"お気に入りに追加","ko-KR":"즐겨찾기에 추가"},
+  "CardMenu.Unfavourite": {"en-US":"Unfavourite","zh-CN":"取消收藏","zh-TW":"取消收藏","ja-JP":"お気に入りから削除","ko-KR":"즐겨찾기에서 제거"},
+  "CardMenu.Show": {"en-US":"Show","zh-CN":"显示","zh-TW":"顯示","ja-JP":"表示","ko-KR":"표시"},
+  "CardMenu.Hide": {"en-US":"Hide","zh-CN":"隐藏","zh-TW":"隱藏","ja-JP":"非表示","ko-KR":"숨기기"},
+  "CardMenu.DiscussionInstructions": {"en-US":"Discussion / Instructions","zh-CN":"讨论 / 说明","zh-TW":"討論 / 說明","ja-JP":"ディスカッション / 手順","ko-KR":"토론 / 안내"},
+  "CardMenu.ViewNotes": {"en-US":"View Notes","zh-CN":"查看备注","zh-TW":"查看備註","ja-JP":"メモを表示","ko-KR":"참고 사항 보기"},
+  "CardMenu.CreateDesktopShortcut": {"en-US":"Create Desktop Shortcut","zh-CN":"创建桌面快捷方式","zh-TW":"建立桌面捷徑","ja-JP":"デスクトップにショートカットを作成","ko-KR":"바탕 화면 바로 가기 만들기"},
+  "Status.DesktopShortcutCreated": {"en-US":"Shortcut created on Desktop for {0}","zh-CN":"已为 {0} 创建桌面快捷方式","zh-TW":"已為 {0} 建立桌面捷徑","ja-JP":"{0} のショートカットをデスクトップに作成しました","ko-KR":"{0}의 바탕 화면 바로 가기를 만들었습니다"},
+  "Status.DesktopShortcutFailed": {"en-US":"Failed to create shortcut for {0}","zh-CN":"无法为 {0} 创建快捷方式","zh-TW":"無法為 {0} 建立捷徑","ja-JP":"{0} のショートカットを作成できませんでした","ko-KR":"{0}의 바로 가기를 만들지 못했습니다"},
+  "Dialog.ControlUe.RequiredSettingsHeading": {"en-US":"Required in-game settings:","zh-CN":"必须使用的游戏内设置：","zh-TW":"必須使用的遊戲內設定：","ja-JP":"必要なゲーム内設定：","ko-KR":"필수 게임 내 설정:"},
+  "Dialog.ControlUe.RequiredSettingsList": {
+    "en-US":"  •  DLSS ON  •  SSAO ON  •  Post-processing HIGH\n  •  Screen-space reflections HIGH (temporarily turn off RT to change, or set render preset to High/Ultra)\n  •  RT Reflections ON  •  RT Indirect Diffuse ON\n  •  Render resolution must use even integers (can be set in renderer.ini)",
+    "zh-CN":"  •  DLSS：开启  •  SSAO：开启  •  后处理：高\n  •  屏幕空间反射：高（更改此项时暂时关闭光线追踪，或将渲染预设设为高/极高）\n  •  光线追踪反射：开启  •  光线追踪间接漫反射：开启\n  •  渲染分辨率必须使用偶数（可在 renderer.ini 中设置）",
+    "zh-TW":"  •  DLSS：開啟  •  SSAO：開啟  •  後製：高\n  •  螢幕空間反射：高（變更此項時暫時關閉光線追蹤，或將渲染預設設為高/極高）\n  •  光線追蹤反射：開啟  •  光線追蹤間接漫反射：開啟\n  •  渲染解析度必須使用偶數（可在 renderer.ini 中設定）",
+    "ja-JP":"  •  DLSS：オン  •  SSAO：オン  •  ポストプロセス：高\n  •  スクリーンスペース反射：高（変更するには RT を一時的にオフにするか、レンダリングプリセットを高/最高に設定）\n  •  RT 反射：オン  •  RT 間接拡散：オン\n  •  レンダリング解像度は偶数にする必要があります（renderer.ini で設定可能）",
+    "ko-KR":"  •  DLSS: 켜기  •  SSAO: 켜기  •  후처리: 높음\n  •  화면 공간 반사: 높음 (변경하려면 RT를 잠시 끄거나 렌더링 프리셋을 높음/울트라로 설정)\n  •  RT 반사: 켜기  •  RT 간접 확산: 켜기\n  •  렌더링 해상도는 짝수여야 합니다 (renderer.ini에서 설정 가능)"
+  },
+  "Dialog.ControlUe.AlsoList": {
+    "en-US":"  •  Upgrade nvngx_dlss.dll to the newest available version\n  •  Deploy nvngx_dlssd.dll (DLSS Ray Reconstruction runtime)\n  •  Set renderer.ini HDR preset to the correct value\n  •  Clear the DLSS SR preset set in the NVIDIA driver profile for this game\n  •  If OptiScaler FG = Yes: installs OptiScaler Nightly build 2026-10-04 with Frame Generation pre-configured, deploys Streamline and nvngx_dlssg.dll, renames OptiScaler to winmm.dll and ReShade to dxgi.dll, and applies all required FG INI settings",
+    "zh-CN":"  •  将 nvngx_dlss.dll 升级至最新可用版本\n  •  部署 nvngx_dlssd.dll（DLSS 光线重建运行库）\n  •  将 renderer.ini 中的 HDR 预设设为正确值\n  •  清除该游戏 NVIDIA 驱动配置中的 DLSS SR 预设\n  •  若 OptiScaler 帧生成选为“是”：安装已预配置帧生成的 OptiScaler Nightly 2026-10-04 构建，部署 Streamline 和 nvngx_dlssg.dll，将 OptiScaler 重命名为 winmm.dll、ReShade 重命名为 dxgi.dll，并应用全部必需的帧生成 INI 设置",
+    "zh-TW":"  •  將 nvngx_dlss.dll 升級至最新可用版本\n  •  部署 nvngx_dlssd.dll（DLSS 光線重建執行階段）\n  •  將 renderer.ini 中的 HDR 預設設為正確值\n  •  清除該遊戲 NVIDIA 驅動設定檔中的 DLSS SR 預設\n  •  若 OptiScaler 畫格生成選為「是」：安裝已預先配置畫格生成的 OptiScaler Nightly 2026-10-04 組建，部署 Streamline 和 nvngx_dlssg.dll，將 OptiScaler 重新命名為 winmm.dll、ReShade 重新命名為 dxgi.dll，並套用全部必要的畫格生成 INI 設定",
+    "ja-JP":"  •  nvngx_dlss.dll を利用可能な最新バージョンに更新\n  •  nvngx_dlssd.dll（DLSS レイ再構成ランタイム）を配置\n  •  renderer.ini の HDR プリセットを正しい値に設定\n  •  このゲームの NVIDIA ドライバープロファイルに設定された DLSS SR プリセットをクリア\n  •  OptiScaler FG が「はい」の場合：フレーム生成を事前設定した OptiScaler Nightly ビルド 2026-10-04 をインストールし、Streamline と nvngx_dlssg.dll を配置し、OptiScaler を winmm.dll、ReShade を dxgi.dll に変更して、必要なすべての FG INI 設定を適用",
+    "ko-KR":"  •  nvngx_dlss.dll을 사용 가능한 최신 버전으로 업데이트\n  •  nvngx_dlssd.dll 배치 (DLSS 레이 재구성 런타임)\n  •  renderer.ini의 HDR 프리셋을 올바른 값으로 설정\n  •  이 게임의 NVIDIA 드라이버 프로필에 설정된 DLSS SR 프리셋 제거\n  •  OptiScaler FG가 '예'인 경우: 프레임 생성이 사전 설정된 OptiScaler Nightly 빌드 2026-10-04를 설치하고, Streamline 및 nvngx_dlssg.dll을 배치하고, OptiScaler를 winmm.dll로, ReShade를 dxgi.dll로 이름을 변경하고, 필요한 모든 FG INI 설정을 적용"
+  }
+}

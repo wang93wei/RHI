@@ -2,63 +2,113 @@
 
 ⚠ **Sign in with GitHub — strongly recommended** — almost everything RHI downloads comes from GitHub: ReShade, RenoDX, OptiScaler, DLSS versions, shader packs, Luma mods, manifests, update checks, and more. Without a GitHub account connected, all of this shares a single limit of **60 requests per hour**. That quota runs out fast, and when it does, downloads silently fail — installs abort, update checks are skipped, and staging shows as unavailable with no obvious reason why. Signing in raises the limit to **5,000 requests per hour**.
 
-To connect: open **Settings → GitHub API** and click **Sign in with GitHub**. Takes about 30 seconds.
+To connect: open **Settings → GitHub API** and click **Sign in with GitHub**. Takes about 30 seconds. Or paste a Personal Access Token (PAT) — no scopes needed, just generate one at [github.com/settings/tokens](https://github.com/settings/tokens) and paste it in.
 
-## v2.8.6 Beta 7
+## v2.8.6 Beta 10
 
 ### Important
-- **Windows App Runtime 2.5.1 is required for this update.** If RHI fails to launch after updating, download and run the runtime installer: [windowsappruntimeinstall-x64.exe](https://aka.ms/windowsappsdk/2.5/latest/windowsappruntimeinstall-x64.exe). The runtime update includes reliability fixes for WinUI 3 that may reduce the frequency of the UI freeze.
+- **Windows App Runtime 2.5.1 is required for this update.** The installer downloads and installs it automatically if not already present. The runtime update includes reliability fixes for WinUI 3 that may reduce the frequency of the UI freeze.
 
 ### New
 
 **DLDSR Control**
 - Enable or disable DLDSR (Deep Learning Dynamic Super Resolution) factors directly from RHI without opening NVIDIA Control Panel.
+- **DSR Smoothness slider** — adjust smoothness (0–100%) without recapturing. 100 = no sharpening, lower values add sharpening. Recommended range for DLDSR is 55–80 (DLDSR is naturally much sharper than standard DSR, so it needs higher values than you'd expect). Applying smoothness causes the same ~15 second display blackout as applying a full state.
 - **Info button** — click ⓘ next to the header for step-by-step instructions on capturing and applying DLDSR states.
-- **DSR Smoothness slider** — adjust the smoothness setting (0-100%) directly from RHI. Lower values are sharper, higher values are smoother. NVIDIA recommends 33% as the default.
 - **How to use:**
   1. Open **NVIDIA Control Panel → Manage 3D Settings → DSR – Factors**
   2. Enable the DLDSR factors you want (e.g. 1.78x DL, 2.25x DL)
   3. In RHI Settings, scroll to **DLDSR Control** and click **Capture Current** — give it a name like "1.78x + 2.25x"
   4. Now you can disable DLDSR in NVIDIA Control Panel
   5. Whenever you want those factors back, select your saved state and click **Apply** — the screen goes black for ~15 seconds while the GPU restarts, then DLDSR is active
-  6. Use the **DSR Smoothness** slider to adjust sharpness/smoothness without recapturing
+  6. Use the **DSR Smoothness** slider and click **Set** to adjust sharpness/smoothness. This also causes a brief blackout — set it before clicking Apply if you want to apply both in one restart.
 - Useful for toggling DLDSR on/off without navigating NVIDIA Control Panel each time
-- Requires Admin Mode or running RHI as Administrator to read/write the driver registry keys
 - Multiple configurations can be saved (e.g. "Off", "1.78x only", "1.78x + 2.25x")
+- Requires Admin Mode or running RHI as Administrator to read/write the driver registry keys
+
+**Auto HDR (per-game)**
+- Force Windows Auto HDR on a per-game basis from the RenoDX ⚙ cog, directly below the RTX HDR section.
+- Works on any GPU — no NVIDIA App required. Does not require the global Auto HDR toggle in Windows Settings — the per-exe registry entry is sufficient on its own.
+- Writes to two registry locations: a `D3DBehaviors` subkey under `HKCU\Software\Microsoft\Direct3D` to force the game into the Auto HDR pipeline, and `AutoHDRStrength` under `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` to control brightness — exactly the same mechanism as ledoge's autohdr_force tool.
+- Click **Configure Auto HDR** on the RenoDX row to open the settings dialog and adjust brightness (0–100). 0 = no boost, 50 = default, 100 = maximum (~1000 nits peak).
+- Mutual exclusivity with RTX HDR — enabling one disables the other, and enabling either uninstalls any active RenoDX mod.
+- Changes take effect on the next game launch.
+
+**OptiScaler Nightly Build Selection**
+- You can now pin a game to a specific nightly build instead of always using the latest. Open the OptiScaler ⚙ cog and use the new "Nightly Build" dropdown — it lists the last 30 daily builds (about 2 months of history).
+- "Latest (auto-update)" is unchanged — the game tracks the newest nightly and auto-updates as normal.
+- Pinning a build freezes that game at that version and excludes it from auto-updates. Useful when a newer nightly breaks something.
+- Pinned builds download on demand the first time and cache locally for future installs.
+
+**Desktop Shortcuts** *(WIP)*
+- Right-click any game in your library and choose **Create Desktop Shortcut** to place a shortcut on your Desktop.
+- Launching the game through the shortcut goes via RHI — HDR Auto-Toggle and Resolution Auto-Toggle fire exactly as they would from clicking Launch inside the app.
+- Shortcut icons use the game's own icon: pulled from the game executable for Steam, GOG, EA, Epic, and manually added games. Xbox/Game Pass games pull cover art from the Steam or Microsoft Store since the game executables are not directly accessible — icon quality and visibility for Xbox games is a work in progress and will be improved in a future update.
+- The context menu also includes **Favourite** and **Hide/Show** alongside the existing Open Folder and View Notes items.
+
+**RTX Encore**
+- RTX Encore (SilyNoMeta) is now available as a new Extras row, between OptiScaler and DLSS Enabler.
+- Provides frame generation X2–X6, Smooth Motion on RTX 30, and Neural Rendering for RTX 20/30/40, in games that support DLSS Frame Generation.
+- Click Install to choose a proxy DLL name (version.dll, dinput8.dll, winmm.dll, dxgi.dll, d3d9/10/11/12.dll, and more — or rtx-encore.asi for ASI-loader games). Names in use by other RHI components are disabled. Names with an existing file on disk are shown in amber — RTX Encore backs them up and restores them on uninstall.
+- The ⚙ cog lets you deploy `nvngx_dlssnr.dll` version 310.8.0 for Neural Rendering — RTX Encore requires exactly this version and refuses any other. The file is shared with other NR components and only removed when no other component still needs it.
+- Auto-updates alongside other components.
 
 **RE Framework**
-- Added a ⚙ cog button to the RE Framework row. It contains a "Delete _storage_ folder" button — RE Framework uses this folder as a cache and rebuilds it on every launch, so deleting it is safe.
+- Added a ⚙ cog button to the RE Framework row with a "Delete _storage_ folder" button — RE Framework uses this folder as a cache and rebuilds it on each launch, so deleting it is always safe.
+
+### Changes
+
+**Control Ultimate Edition — OptiScaler FG**
+- When installing OptiScaler FG via the Control install dialog, RHI now automatically pins the game to OptiScaler nightly build 2026-10-04. Newer nightly builds break DLSS Frame Generation compatibility with Control — this ensures it works correctly out of the box.
+
+**GitHub Personal Access Token**
+- Added a PAT input field in Settings → GitHub API as an alternative to the OAuth sign-in flow.
+- Paste any classic PAT (no scopes needed — RHI only reads public repos). The token is saved locally and never expires unless you revoke it on GitHub.
+- Useful if you prefer not to use OAuth, or if your OAuth session keeps expiring.
 
 ### Bug Fixes
 
-**Output Colour Settings**
-- Fixed the Colour Depth and Dynamic Range dropdowns being empty and unclickable. The NVAPI display enumeration method was returning "device not found" for all monitors.
+**UI Freeze**
+- RHI now detects and recovers from the UI freeze in about 5 seconds, down from up to 60 seconds.
+- Fixed the auto-restart incorrectly firing after waking from sleep. A 30-second grace period now suppresses the restart check after a system resume.
+- Fixed the auto-restart firing while an install was in progress. The restart is now deferred up to 30 seconds if any component is mid-install.
+- Fixed a recurring freeze after switching between games quickly. Rapid navigation could queue two back-to-back panel rebuilds, causing the UI thread to hang.
+- Fixed a freeze that could occur when opening the Settings panel while a game was selected. Changing certain global driver settings (VSync, ReBAR) was triggering a panel rebuild that conflicted with the Settings page opening.
+- Fixed RHI silently swallowing internal framework messages (WM_APP/0x8000) that were intended for WinUI rather than the system tray icon. These are now forwarded correctly.
+- Fixed several places where NVIDIA driver settings were read on the UI thread before opening a dialog. Opening Configure RTX HDR, Multi Frame Gen, or DXVK settings could block the UI for up to 25 seconds if NVAPI was slow. Values are now fetched in the background first.
+- Fixed DLSS version information refreshing on the UI thread after swapping a DLSS DLL, which could stall the UI on slow disks or with antivirus active.
+- Fixed settings, game library, and addon records being left corrupt if RHI was killed mid-write. These files are now written atomically.
+- After an auto-restart, RHI reselects the game that was open before the freeze and shows a brief status bar notice.
 
-**Neural Rendering**
-- Fixed dgVoodoo2 appearing as a required component for DX11/DX12 games. UE4 games contain a legacy DX9 import as a compatibility shim which was being misread as the game running DX9. dgVoodoo2 is now only required when DX9 is the game's primary graphics API.
+**DLSS/Streamline Detection**
+- Added `dlssPathOverrides` and `streamlinePathOverrides` manifest fields — allows RHI to find DLSS and Streamline DLLs in games that store them in non-standard deep subdirectories that the recursive scanner doesn't reach. The Sinking City 2 is the first game to use this.
+
+**DLSS/Streamline — The Sinking City 2**
+- Fixed the DLSS/Streamline section showing empty for The Sinking City 2. The game stores its DLLs 8 levels deep inside the Engine plugins folder rather than alongside the executable.
+
+**Output Colour Settings**
+- Fixed the Colour Depth and Dynamic Range dropdowns being empty and unclickable. The NVAPI display enumeration was returning "device not found" for all monitors.
+
+**OptiScaler Detection**
+- Fixed RTX Encore's `winmm.dll` being incorrectly detected as an OptiScaler installation. The binary signature scan used the generic string "OptiScaler" which RTX Encore also contains as a reference. Detection now uses file description metadata (`FileDescription = "OptiScaler"`, `CompanyName = "nitec"`) as the primary check, with a secondary binary scan using more specific internal strings.
+
+**Cyberpunk 2077**
+- Fixed the install button showing "Download from Discord" instead of using the normal wiki/database mod download. The game now installs RenoDX like any other mod.
 
 **Start with Windows**
-- Fixed "Start with Windows" disabling itself on every launch. The settings panel was removing the Windows startup entry while initialising, causing it to always be off after the first restart.
+- Fixed "Start with Windows" disabling itself on every launch. The settings panel was removing the startup entry during initialisation.
 
 **GitHub API**
 - Fixed RenoDX mods not appearing for users whose GitHub session had expired. Previously RHI would keep using a stale login token without realising it had stopped working, causing mods, updates, and downloads to silently fail while the settings page still showed "Connected". RHI now checks the token is valid at startup and clears it immediately if not, showing a notice in the status bar so you know to sign in again.
 
-**UI Freeze**
-- RHI now detects and recovers from the UI freeze in about 5 seconds, down from up to 60 seconds previously.
-- Fixed the auto-restart incorrectly firing after waking the PC from sleep. A 30-second grace period now suppresses the restart check immediately after a system resume.
-- Fixed the auto-restart firing while an install or download was in progress. The restart is now deferred for up to 30 seconds if any component is mid-install.
-- Fixed a recurring freeze that could happen after switching between games quickly. Navigating away and back to the same game could queue two back-to-back panel rebuilds, causing the UI thread to hang.
-- Fixed a freeze that could occur when opening the Settings panel while a game was selected. Changing certain global driver settings (VSync, ReBAR) was triggering a panel rebuild that conflicted with the Settings page opening.
-- Fixed several places where RHI was reading NVIDIA driver settings on the UI thread before opening a dialog. Opening Configure RTX HDR, Multi Frame Gen settings, or DXVK settings could block the UI for up to 25 seconds if NVAPI was slow or unresponsive. Values are now fetched in the background before the dialog opens.
-- Fixed DLSS version information being refreshed on the UI thread after swapping a DLSS DLL, which could stall the UI on a slow disk or with antivirus active.
-- Fixed settings, game library, and addon deployment records being left in a corrupt state if RHI was killed mid-write. These files are now written safely so a forced restart can never leave them half-written.
-- After an auto-restart, RHI reselects the game that was open before the freeze and shows a brief notice in the status bar.
-
 **Process Doesn't Close**
-- Fixed RHI staying open and using CPU after you close the window. Background tasks now stop when RHI closes, and a hard exit fallback ensures the process always terminates within a few seconds.
+- Fixed RHI staying open and using CPU after closing the window. Background tasks now stop on close, with a hard exit fallback to ensure the process always terminates.
 
 **Appearance**
-- Fixed all dialogs rendering in light theme on systems with Windows set to light mode. RHI now forces dark theme on every dialog regardless of system setting.
+- Fixed all dialogs rendering in light theme on systems with Windows set to light mode. RHI now forces dark theme on every dialog.
+
+**DLDSR Control**
+- The Current State display now shows your monitor's friendly name (e.g. "LG ULTRAGEAR", "MSI MPG343CQR") instead of a raw hex identifier.
 
 **Refresh**
 - Fixed the game detail panel going blank after pressing Refresh.
@@ -76,9 +126,17 @@ To connect: open **Settings → GitHub API** and click **Sign in with GitHub**. 
 **Engine.ini**
 - Fixed Engine.ini not being written on install for games that have never been launched when the config path comes from the PCGW database.
 
+**DLSS Fix**
+- Fixed DLSS Fix downloading as an update multiple times per day. A transient network failure during the version check was returning an unknown result, which RHI was incorrectly treating as a new version. The update is now skipped when the version check can't be resolved.
+
 ### Manifest Updates
+- Added `installPathOverrides` for Baldur's Gate 3 (`bin` subfolder)
+- Added `dlssPathOverrides` for The Sinking City 2 — DLSS DLLs are in a non-standard deep subdirectory that the recursive scanner doesn't reach
 - STAR WARS: Galactic Racer — Engine.ini path added for UE-Extended HDR support.
 - The Witcher 3: Wild Hunt - Game of the Year Edition now installs the same RenoDX mod as the standard edition.
+- Mirror's Edge Catalyst — wiki-unlinked.
+
+---
 
 ## v2.8.5
 

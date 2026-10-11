@@ -70,6 +70,13 @@ public class InstallEventHandler
             return;
         }
 
+        // If Auto HDR is active, open the Auto HDR configuration dialog
+        if (checkCard?.IsAutoHdrEnabled == true)
+        {
+            _window.AutoHdrConfigButton_Click(sender, e);
+            return;
+        }
+
         if (sender is not Button btn || btn.Tag is not GameCardViewModel card) return;
 
         // Warn when installing RenoDX alongside an already-installed Luma mod
@@ -223,9 +230,10 @@ public class InstallEventHandler
         card.OsIsInstalling = true;
         card.OsActionMessage = Loc.GetString("Status.InstallingOptiScaler");
         card.OsProgress = 0;
+        AuxInstalledRecord? osRecord = null;
         try
         {
-            var osRecord = await _optiScalerService.InstallAsync(card,
+            osRecord = await _optiScalerService.InstallAsync(card,
                 new Progress<(string message, double percent)>(p =>
                 {
                     card.OsActionMessage = p.message;
@@ -234,7 +242,8 @@ public class InstallEventHandler
                 gpuType,
                 useDlssInputs,
                 ViewModel.Settings.OsHotkey,
-                osVariant);
+                osVariant,
+                nightlyBuildHint: osVariant == "Nightly" ? (ViewModel.GetOsNightlyBuild(card.GameName, card.Source ?? "") is { Length: > 0 } b ? b : null) : null);
 
             if (osRecord == null)
             {
@@ -318,6 +327,9 @@ public class InstallEventHandler
         finally
         {
             card.OsIsInstalling = false;
+            // Update installed version from the record — shows the actual build date rather than latest staged
+            if (osRecord != null && osVariant == "Nightly" && !string.IsNullOrEmpty(osRecord.OsNightlyBuild))
+                card.OsInstalledVersion = osRecord.OsNightlyBuild;
             _window.DispatcherQueue?.TryEnqueue(() =>
             {
                 card.NotifyAll();

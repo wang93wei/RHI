@@ -1641,10 +1641,18 @@ public sealed partial class MainWindow
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         });
 
+        var scrollViewer = new ScrollViewer
+        {
+            Content = content,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 520,
+            Padding = new Thickness(0, 0, 16, 0),
+        };
+
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Settings.Dldsr.Title"),
-            Content = content,
+            Content = scrollViewer,
             CloseButtonText = Loc.GetString("Dialog.GotIt"),
             XamlRoot = Content.XamlRoot,
         };
@@ -1662,7 +1670,7 @@ public sealed partial class MainWindow
         try
         {
             var dldsrService = App.Services.GetRequiredService<IDldsrService>();
-            var success = await dldsrService.ApplyStateAsync(selectedLabel);
+            var success = await dldsrService.ApplyStateAsync(selectedLabel, smoothnessOverride: (int)DldsrSmoothnessSlider.Value);
             if (success)
             {
                 _crashReporter.Log($"[DLDSR] Applied state '{selectedLabel}'");

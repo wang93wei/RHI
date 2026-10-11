@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -26,6 +27,76 @@ public class DldsrService : IDldsrService
     public DldsrService(ILocalizationService loc)
     {
         _loc = loc;
+    }
+
+    // ── Win32 for monitor friendly name lookup ────────────────────────────────
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool EnumDisplayDevices(string? lpDevice, uint iDevNum,
+        ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct DISPLAY_DEVICE
+    {
+        public uint   cb;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]  public string DeviceName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceString;
+        public uint   StateFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceID;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceKey;
+    }
+
+    /// <summary>
+    /// Builds a map of DLDSR registry subkey name → monitor friendly name.
+    /// The last underscore-separated segment of the key (e.g. "53" from "CND3DE2_03_07E8_53")
+    /// is the decimal display number in hex, corresponding to \\.\DISPLAYn.
+    /// EnumDisplayDevices on that adapter returns the monitor's friendly DeviceString.
+    /// </summary>
+    public static Dictionary<string, string> GetMonitorFriendlyNames(IEnumerable<string> monitorIds)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            // Build EDID-prefix → friendly name map.
+            // EnumDisplayDevices gives DeviceID like "MONITOR\CND3DE2\{GUID}" — the second segment
+            // is the EDID hardware ID prefix, which is also the start of the nvlddmkm registry key
+            // (e.g. "CND3DE2_03_07E8_53"). GetGdiNameMap provides the QueryDisplayConfig friendly
+            // name (e.g. "MPG 341QR X36") keyed by GDI device name (e.g. "\\.\DISPLAY86").
+            var gdiToFriendly = HdrToggleService.GetGdiNameMap();
+            var edidToFriendly = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            for (uint i = 0; i < 16; i++)
+            {
+                var adapterDev = new DISPLAY_DEVICE { cb = (uint)Marshal.SizeOf<DISPLAY_DEVICE>() };
+                if (!EnumDisplayDevices(null, i, ref adapterDev, 0)) break;
+                var monDev = new DISPLAY_DEVICE { cb = (uint)Marshal.SizeOf<DISPLAY_DEVICE>() };
+                if (!EnumDisplayDevices(adapterDev.DeviceName, 0, ref monDev, 0)) continue;
+
+                var devId = monDev.DeviceID ?? "";
+                var parts = devId.Split('\\');
+                var edidPrefix = parts.Length >= 2 ? parts[1] : "";
+                if (string.IsNullOrEmpty(edidPrefix)) continue;
+
+                var friendly = monDev.DeviceString?.Trim() ?? "";
+                if (gdiToFriendly.TryGetValue(adapterDev.DeviceName, out var qdc))
+                    friendly = qdc;
+                if (!string.IsNullOrEmpty(friendly))
+                    edidToFriendly[edidPrefix] = friendly;
+            }
+
+            foreach (var monitorId in monitorIds)
+            {
+                var matched = edidToFriendly.FirstOrDefault(kv =>
+                    monitorId.StartsWith(kv.Key, StringComparison.OrdinalIgnoreCase));
+                if (matched.Key != null)
+                    result[monitorId] = matched.Value;
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DldsrService.GetMonitorFriendlyNames] {ex.Message}");
+        }
+        return result;
     }
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -241,9 +312,9 @@ public class DldsrService : IDldsrService
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "RHI");
 
-    public async Task<bool> ApplyStateAsync(string label, IProgress<string>? progress = null)
+    public async Task<bool> ApplyStateAsync(string label, IProgress<string>? progress = null, int? smoothnessOverride = null)
     {
-        CrashReporter.Log($"[DldsrService.ApplyStateAsync] Applying state '{label}'");
+        CrashReporter.Log($"[DldsrService.ApplyStateAsync] Applying state '{label}'" + (smoothnessOverride.HasValue ? $" with smoothness override {smoothnessOverride}%" : ""));
         progress?.Report(_loc.GetString("Settings.Dldsr.Progress.LoadingCapture"));
 
         var captures = LoadCaptures();
@@ -269,7 +340,39 @@ public class DldsrService : IDldsrService
         var stateFile = Path.Combine(ProgramDataDir, "dldsr-state.json");
         try
         {
-            var stateJson = JsonSerializer.Serialize(capture, _jsonOptions);
+            // If a smoothness override is provided, bake it into the capture blobs before writing
+            DldsrCapture captureToApply = capture;
+            if (smoothnessOverride.HasValue)
+            {
+                var modifiedMonitors = capture.Monitors.Select(mon =>
+                {
+                    if (!mon.Values.TryGetValue(SmoothScalingDataName, out var hex)) return mon;
+                    try
+                    {
+                        var bytes = (byte[])hex.Split(',').Select(b => Convert.ToByte(b.Trim(), 16)).ToArray().Clone();
+                        if (bytes.Length == 32)
+                        {
+                            var sb = BitConverter.GetBytes((uint)smoothnessOverride.Value);
+                            Array.Copy(sb, 0, bytes, 12, 4);
+                            uint checksum = 0;
+                            for (int i = 0; i < 28; i++) checksum += bytes[i];
+                            var cb = BitConverter.GetBytes(checksum);
+                            Array.Copy(cb, 0, bytes, 28, 4);
+                            var newValues = new Dictionary<string, string>(mon.Values)
+                            {
+                                [SmoothScalingDataName] = string.Join(",", bytes.Select(b => b.ToString("X2")))
+                            };
+                            return new DldsrMonitorCapture(mon.MonitorId, newValues);
+                        }
+                    }
+                    catch { }
+                    return mon;
+                }).ToList();
+                captureToApply = new DldsrCapture(capture.Label, capture.Time, capture.Driver, modifiedMonitors);
+                CrashReporter.Log($"[DldsrService.ApplyStateAsync] Baked smoothness {smoothnessOverride}% into capture");
+            }
+
+            var stateJson = JsonSerializer.Serialize(captureToApply, _jsonOptions);
             await File.WriteAllTextAsync(stateFile, stateJson);
             CrashReporter.Log($"[DldsrService.ApplyStateAsync] Wrote state file to {stateFile}");
         }
@@ -669,11 +772,50 @@ try {
 
         try
         {
-            // Read current state from all monitors
+            // Read current state from the last applied capture file — NOT from live registry.
+            // After a GPU restart, the driver may reset DisplayDatabase to defaults before
+            // the next read, which would zero out the DLDSR factor bits. The capture file
+            // always contains the correct blob with factors intact.
+            var lastStateFile = Path.Combine(ProgramDataDir, "dldsr-state.json");
+            DldsrCapture? existingCapture = null;
+            try
+            {
+                if (File.Exists(lastStateFile))
+                {
+                    var json = await File.ReadAllTextAsync(lastStateFile);
+                    existingCapture = JsonSerializer.Deserialize<DldsrCapture>(json, _jsonOptions);
+                }
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[DldsrService.SetSmoothnessAsync] Failed to read state file — {ex.Message}");
+            }
+
             var monitorData = new List<(string MonitorId, byte[] SmoothData, byte[] MultData)>();
 
-            using (var baseKey = Registry.LocalMachine.OpenSubKey(DisplayDbPath))
+            if (existingCapture != null)
             {
+                // Use the saved capture as the base — has correct factor bits
+                foreach (var mon in existingCapture.Monitors)
+                {
+                    var smoothHex = mon.Values.TryGetValue(SmoothScalingDataName, out var sh) ? sh : null;
+                    var multHex = mon.Values.TryGetValue(SmoothScalingMultiplierDataName, out var mh) ? mh : null;
+                    if (smoothHex == null || multHex == null) continue;
+                    try
+                    {
+                        var smoothData = smoothHex.Split(',').Select(b => Convert.ToByte(b.Trim(), 16)).ToArray();
+                        var multData = multHex.Split(',').Select(b => Convert.ToByte(b.Trim(), 16)).ToArray();
+                        if (smoothData.Length == 32)
+                            monitorData.Add((mon.MonitorId, smoothData, multData));
+                    }
+                    catch { }
+                }
+            }
+
+            // Fallback to live registry if no state file exists
+            if (monitorData.Count == 0)
+            {
+                using var baseKey = Registry.LocalMachine.OpenSubKey(DisplayDbPath);
                 if (baseKey == null)
                 {
                     CrashReporter.Log("[DldsrService.SetSmoothnessAsync] DisplayDatabase key not found");
@@ -744,7 +886,9 @@ try {
                 return false;
             }
 
-            // Restart GPU adapter
+            // GPU restart required — the driver reads DisplayDatabase at adapter startup only,
+            // not live. nvcontainer.exe updates smoothness live via a privileged IPC channel
+            // that is not available to third-party apps.
             progress?.Report(_loc.GetString("Settings.Dldsr.Progress.RestartingGpu"));
             if (!await RestartGpuAdapterAsync())
             {

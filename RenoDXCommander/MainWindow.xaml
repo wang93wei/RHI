@@ -300,7 +300,9 @@ ToolTipService.ToolTip="{Binding [Xaml.LoadingModDataPleaseWait], Source={Static
                                 <DataTemplate x:DataType="vm:GameCardViewModel">
                                     <Border Background="{x:Bind SidebarItemBackground, Mode=OneWay}"
                                             BorderBrush="{x:Bind SidebarItemBorderBrush, Mode=OneWay}"
-                                            BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                            BorderThickness="1" CornerRadius="6" Padding="8,6"
+                                            RightTapped="GameRow_RightTapped"
+                                            Tag="{x:Bind}">
                                         <Grid ColumnSpacing="6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -1957,7 +1959,41 @@ ToolTipService.ToolTip="{Binding [Xaml.CheckAllComponentsAndThe], Source={Static
                                                     CornerRadius="6" Padding="12,4" MinWidth="0"
                                                     FontSize="11" HorizontalAlignment="Left"/>
                                         </StackPanel>
-                                    </StackPanel>                                </Grid>
+
+                                        <!-- PAT (Personal Access Token) alternative -->
+                                        <TextBlock Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource InlineDescriptionBrush}"
+                                                   Text="{Binding [Settings.GitHub.Pat.Description], Source={StaticResource Loc}}"/>
+                                        <HyperlinkButton NavigateUri="https://github.com/settings/tokens/new?description=RHI&amp;scopes="
+                                                         FontSize="11" Padding="0" Margin="0,-4,0,0"
+                                                         Content="{Binding [Settings.GitHub.Pat.CreateLink], Source={StaticResource Loc}}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBox x:Name="GitHubPatBox" x:FieldModifier="internal"
+                                                     PlaceholderText="{Binding [Settings.GitHub.Pat.Placeholder], Source={StaticResource Loc}}"
+                                                     FontSize="11" Width="220" CornerRadius="6"
+                                                     IsSpellCheckEnabled="False"
+                                                     InputScope="Url"/>
+                                            <Button x:Name="GitHubPatSaveBtn" x:FieldModifier="internal"
+                                                    Content="{Binding [Dialog.Save], Source={StaticResource Loc}}"
+                                                    Click="GitHubPatSaveBtn_Click"
+                                                    Background="{StaticResource AccentBlueBgBrush}"
+                                                    Foreground="{StaticResource AccentBlueBrush}"
+                                                    BorderBrush="{StaticResource AccentBlueBorderBrush}" BorderThickness="1"
+                                                    CornerRadius="6" Padding="10,4" MinWidth="0" FontSize="11"/>
+                                            <Button x:Name="GitHubPatClearBtn" x:FieldModifier="internal"
+                                                    Content="{Binding [Dialog.Clear], Source={StaticResource Loc}}"
+                                                    Click="GitHubPatClearBtn_Click"
+                                                    Background="Transparent"
+                                                    Foreground="{StaticResource AccentRedBrush}"
+                                                    BorderBrush="{StaticResource AccentRedBrush}" BorderThickness="1"
+                                                    CornerRadius="6" Padding="10,4" MinWidth="0" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="GitHubPatStatusText" x:FieldModifier="internal"
+                                                   FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                                   Text="" Visibility="Collapsed"/>
+                                    </StackPanel>
+                                </Grid>
                         </Border>
 
                         <!-- ══════════════════════════════════════════════════════════

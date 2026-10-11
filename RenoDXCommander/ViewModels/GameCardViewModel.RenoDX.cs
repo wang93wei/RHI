@@ -15,6 +15,7 @@ public partial class GameCardViewModel
         {
             if (IsInstalling) return Tr("Status.Installing");
             if (IsRtxHdrEnabled) return Tr("Action.ConfigureRtxHdr");
+            if (IsAutoHdrEnabled) return Tr("Action.ConfigureAutoHdr");
             if (!IsRsInstalled && !ExcludeFromUpdateAllReShade && Mod?.SnapshotUrl != null && !IsExternalOnly)
                 return Tr("Action.ReShadeRequired");
             // No mod available and nothing manually installed
@@ -27,7 +28,7 @@ public partial class GameCardViewModel
         }
     }
 
-    public bool CanInstall => IsRtxHdrEnabled || (Mod?.SnapshotUrl != null && !IsInstalling && !IsExternalOnly && (IsRsInstalled || ExcludeFromUpdateAllReShade));
+    public bool CanInstall => IsRtxHdrEnabled || IsAutoHdrEnabled || (Mod?.SnapshotUrl != null && !IsInstalling && !IsExternalOnly && (IsRsInstalled || ExcludeFromUpdateAllReShade));
 
     public string GenericModLabel => IsGenericMod
         ? (EngineHint.Contains("Unity")

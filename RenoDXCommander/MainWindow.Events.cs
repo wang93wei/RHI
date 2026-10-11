@@ -707,6 +707,12 @@ public sealed partial class MainWindow
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(card.InstallPath) { UseShellExecute = true });
     }
 
+    internal void GameRow_RightTapped(object sender, Microsoft.UI.Xaml.Input.RightTappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is GameCardViewModel)
+            CardMoreMenu_Click(fe, e);
+    }
+
     internal void CardMoreMenu_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement anchor || anchor.Tag is not GameCardViewModel card)
@@ -722,16 +728,25 @@ public sealed partial class MainWindow
         // ── Open Folder ──
         var openFolderItem = new MenuFlyoutItem
         {
-            Text = Loc.GetString("Dialog.OpenFolder2"),
+            Text = Loc.GetString("CardMenu.OpenFolder"),
             Tag = card,
         };
         openFolderItem.Click += CardOpenFolder_Click;
         menu.Items.Add(openFolderItem);
 
+        // ── Favourite ──
+        var favItem = new MenuFlyoutItem
+        {
+            Text = Loc.GetString(card.IsFavourite ? "CardMenu.Unfavourite" : "CardMenu.Favourite"),
+            Tag  = card,
+        };
+        favItem.Click += (s, ev) => ViewModel.ToggleFavouriteCommand.Execute(card);
+        menu.Items.Add(favItem);
+
         // ── Hide / Show ──
         var hideItem = new MenuFlyoutItem
         {
-            Text = card.HideButtonLabel,
+            Text = Loc.GetString(card.IsHidden ? "CardMenu.Show" : "CardMenu.Hide"),
             Tag = card,
         };
         hideItem.Click += (s, ev) => ViewModel.ToggleHideGameCommand.Execute(card);
@@ -744,7 +759,7 @@ public sealed partial class MainWindow
         {
             var discussionItem = new MenuFlyoutItem
             {
-                Text = Loc.GetString("Dialog.DiscussionInstructions"),
+                Text = Loc.GetString("CardMenu.DiscussionInstructions"),
                 Tag = card,
             };
             discussionItem.Click += async (s, ev) =>
@@ -760,7 +775,7 @@ public sealed partial class MainWindow
         {
             var notesItem = new MenuFlyoutItem
             {
-                Text = Loc.GetString("Dialog.ViewNotes"),
+                Text = Loc.GetString("CardMenu.ViewNotes"),
                 Tag = card,
             };
             notesItem.Click += async (s, ev) =>
@@ -773,7 +788,43 @@ public sealed partial class MainWindow
             menu.Items.Add(notesItem);
         }
 
+        // ── Create Desktop Shortcut ──
+        menu.Items.Add(new MenuFlyoutSeparator());
+        var shortcutItem = new MenuFlyoutItem
+        {
+            Text = Loc.GetString("CardMenu.CreateDesktopShortcut"),
+            Tag  = card,
+        };
+        shortcutItem.Click += async (s, ev) => await CreateDesktopShortcutAsync(card);
+        menu.Items.Add(shortcutItem);
+
         menu.ShowAt(anchor);
+    }
+
+    private async Task CreateDesktopShortcutAsync(GameCardViewModel card)
+    {
+        try
+        {
+            var http = App.Services.GetRequiredService<System.Net.Http.HttpClient>();
+            var pcgw = App.Services.GetRequiredService<IPcgwService>();
+            var lnkPath = await ShortcutService.CreateGameShortcutAsync(
+                card.GameName, card, _gameNameService, ViewModel.Manifest, http, pcgw);
+
+            var msg = lnkPath != null
+                ? Loc.GetString("Status.DesktopShortcutCreated", card.GameName)
+                : Loc.GetString("Status.DesktopShortcutFailed", card.GameName);
+            StatusBarText.Text = msg;
+            _ = Task.Delay(8000).ContinueWith(_ =>
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    if (StatusBarText.Text == msg)
+                        StatusBarText.Text = ViewModel.StatusText;
+                }));
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[MainWindow.CreateDesktopShortcutAsync] {ex.Message}");
+        }
     }
 
     internal async void InfoButton_Click(object sender, RoutedEventArgs e)
@@ -887,6 +938,12 @@ public sealed partial class MainWindow
 
     private void GitHubDisconnectBtn_Click(object sender, RoutedEventArgs e)
         => _settingsHandler.GitHubDisconnectBtn_Click(sender, e);
+
+    private void GitHubPatSaveBtn_Click(object sender, RoutedEventArgs e)
+        => _settingsHandler.GitHubPatSaveBtn_Click(sender, e);
+
+    private void GitHubPatClearBtn_Click(object sender, RoutedEventArgs e)
+        => _settingsHandler.GitHubPatClearBtn_Click(sender, e);
 
     private async void NexusModsLink_Click(object sender, RoutedEventArgs e)
     {

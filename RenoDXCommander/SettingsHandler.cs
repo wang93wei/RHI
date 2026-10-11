@@ -689,18 +689,26 @@ public class SettingsHandler
 
             // Build a summary: "Monitor1: DLDSR 2.25x (matches: dldsr-on)"
             var lines = new List<string>();
+            var friendlyNames = DldsrService.GetMonitorFriendlyNames(states.Select(s => s.MonitorId));
             foreach (var s in states)
             {
                 var factorPart = string.IsNullOrEmpty(s.EnabledFactors) ? Loc.GetString("Option.Off") : s.EnabledFactors;
-                var matchPart = string.IsNullOrEmpty(s.MatchesCapture)
-                    ? ""
-                    : Loc.GetString("Settings.Dldsr.StateMatch", s.MatchesCapture);
-                // Shorten monitor ID for display (take last part after underscore)
-                var shortId = s.MonitorId.Contains('_')
-                    ? s.MonitorId.Substring(s.MonitorId.LastIndexOf('_') + 1)
-                    : s.MonitorId;
-                if (shortId.Length > 12) shortId = shortId.Substring(0, 12) + "...";
-                lines.Add(Loc.GetString("Settings.Dldsr.StateSummary", shortId, factorPart, s.Smoothness, matchPart));
+                var matchPart = string.IsNullOrEmpty(s.MatchesCapture) ? "" : Loc.GetString("Settings.Dldsr.StateMatch", s.MatchesCapture);
+                // Use friendly monitor name if available, otherwise fall back to shortened key
+                string displayName;
+                if (friendlyNames.TryGetValue(s.MonitorId, out var fn))
+                {
+                    displayName = fn;
+                }
+                else
+                {
+                    var shortId = s.MonitorId.Contains('_')
+                        ? s.MonitorId.Substring(s.MonitorId.LastIndexOf('_') + 1)
+                        : s.MonitorId;
+                    if (shortId.Length > 12) shortId = shortId.Substring(0, 12) + "...";
+                    displayName = shortId;
+                }
+                lines.Add(Loc.GetString("Settings.Dldsr.StateSummary", displayName, factorPart, s.Smoothness, matchPart));
             }
 
             _window.DldsrCurrentStateText.Text = string.Join("\n", lines);
@@ -2704,6 +2712,25 @@ public class SettingsHandler
         var username = ViewModel.Settings.GitHubUsername;
         bool connected = !string.IsNullOrEmpty(token);
 
+        // Check if a PAT file is active
+        var patPath = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "RHI", "github_api.txt");
+        bool hasPat = System.IO.File.Exists(patPath);
+
+        // Update the PAT status text to show file state
+        if (hasPat)
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.Active");
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentGreenBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        }
+        else
+        {
+            // Only hide if we haven't just shown a save/clear message
+            // (leave it visible if it was just set by a button click)
+        }
+
         if (App._gitHubTokenExpiredOnStartup)
         {
             _window.GitHubStatusText.Text       = Loc.GetString("GitHub.Status.SessionExpired");
@@ -2721,8 +2748,8 @@ public class SettingsHandler
         }
         else
         {
-            _window.GitHubStatusText.Text       = Loc.GetString("Xaml.GitHubNotConnected");
-            _window.GitHubStatusText.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
+            _window.GitHubStatusText.Text       = hasPat ? Loc.GetString("Settings.GitHub.Pat.Using") : Loc.GetString("Xaml.GitHubNotConnected");
+            _window.GitHubStatusText.Foreground = hasPat ? UIFactory.Brush(ResourceKeys.AccentGreenBrush) : UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
             _window.GitHubConnectBtn.Content    = Loc.GetString("Xaml.ConnectGitHub");
             _window.GitHubDisconnectRow.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         }
@@ -2826,6 +2853,128 @@ public class SettingsHandler
         GitHubAuthService.ApplyTokenToHttpClient(http, fileToken);
 
         CrashReporter.Log("[SettingsHandler.GitHubDisconnectBtn_Click] GitHub OAuth token removed");
+        RefreshGitHubStatus();
+    }
+
+    public async void GitHubPatSaveBtn_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        var pat = _window.GitHubPatBox.Text?.Trim() ?? "";
+        if (string.IsNullOrEmpty(pat))
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.Empty");
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            return;
+        }
+
+        // Basic format check
+        if (!pat.StartsWith("ghp_", StringComparison.OrdinalIgnoreCase) &&
+            !pat.StartsWith("github_pat_", StringComparison.OrdinalIgnoreCase))
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.FormatHint");
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentAmberDimBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        }
+
+        _window.GitHubPatSaveBtn.IsEnabled = false;
+        _window.GitHubPatSaveBtn.Content = Loc.GetString("Settings.GitHub.Pat.Validating");
+
+        // Validate the token
+        bool valid = false;
+        string? username = null;
+        try
+        {
+            var http = App.Services.GetRequiredService<HttpClient>();
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, "https://api.github.com/user");
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {pat}");
+            req.Headers.TryAddWithoutValidation("User-Agent", "RHI");
+            using var resp = await http.SendAsync(req, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            valid = resp.IsSuccessStatusCode;
+            if (valid)
+            {
+                var json = await resp.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                doc.RootElement.TryGetProperty("login", out var loginEl);
+                username = loginEl.GetString();
+            }
+        }
+        catch { valid = false; }
+
+        _window.GitHubPatSaveBtn.IsEnabled = true;
+        _window.GitHubPatSaveBtn.Content = Loc.GetString("Dialog.Save");
+
+        if (!valid)
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.ValidationFailed");
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            return;
+        }
+
+        // Write to github_api.txt
+        try
+        {
+            var path = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "RHI", "github_api.txt");
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+            System.IO.File.WriteAllText(path, pat);
+        }
+        catch (Exception ex)
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.SaveFailed", ex.Message);
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            return;
+        }
+
+        // Apply immediately
+        var http2 = App.Services.GetRequiredService<HttpClient>();
+        DevUnlockService.ResetTokenCache();
+        DevUnlockService.UpdateToken(pat);
+        GitHubAuthService.ApplyTokenToHttpClient(http2, pat);
+
+        _window.GitHubPatBox.Text = "";
+        _window.GitHubPatStatusText.Text = username != null
+            ? Loc.GetString("Settings.GitHub.Pat.SavedAs", username)
+            : Loc.GetString("Settings.GitHub.Pat.Saved");
+        _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentGreenBrush);
+        _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+        CrashReporter.Log($"[SettingsHandler.GitHubPatSave] PAT saved to github_api.txt (user={username ?? "unknown"})");
+        RefreshGitHubStatus();
+    }
+
+    public void GitHubPatClearBtn_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "RHI", "github_api.txt");
+            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.ClearFailed", ex.Message);
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            return;
+        }
+
+        // Revert HttpClient to OAuth token if present, else unauthenticated
+        DevUnlockService.ResetTokenCache();
+        var http = App.Services.GetRequiredService<HttpClient>();
+        var oauthToken = ViewModel.Settings.GitHubOAuthToken;
+        GitHubAuthService.ApplyTokenToHttpClient(http, string.IsNullOrEmpty(oauthToken) ? null : oauthToken);
+
+        _window.GitHubPatBox.Text = "";
+        _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.Cleared");
+        _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
+        _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+
+        CrashReporter.Log("[SettingsHandler.GitHubPatClear] github_api.txt removed");
         RefreshGitHubStatus();
     }
 

@@ -227,6 +227,38 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
+    // ── OptiScaler Nightly Build ──────────────────────────────────────────────
+
+    /// <summary>Returns the pinned nightly build date for a game. Empty string = "Latest" (auto-update).</summary>
+    public string GetOsNightlyBuild(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.OsNightlyBuild.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.OsNightlyBuild.TryGetValue(gameName, out var v2) && !string.IsNullOrEmpty(v2)) return v2;
+        return ""; // absent = Latest
+    }
+
+    /// <summary>Sets the pinned nightly build date for a game. Null or empty = Latest (removes pin and auto-update exemption).</summary>
+    public void SetOsNightlyBuild(string gameName, string? buildDate, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(buildDate))
+        {
+            _gameNameService.OsNightlyBuild.Remove(key);
+            _gameNameService.OsNightlyBuild.Remove(gameName);
+            // Remove auto-update exemption when reverting to Latest
+            _gameNameService.UpdateAllExcludedOs.Remove(key);
+            _gameNameService.UpdateAllExcludedOs.Remove(gameName);
+        }
+        else
+        {
+            _gameNameService.OsNightlyBuild[key] = buildDate;
+            // Pin a specific build → exempt this game from OptiScaler auto-updates
+            _gameNameService.UpdateAllExcludedOs.Add(key);
+        }
+        SaveNameMappings();
+    }
+
     // ── NR Runtime ────────────────────────────────────────────────────────────
 
     /// <summary>Returns the NR runtime version for a game. Empty string = use newest from manifest.</summary>
@@ -810,6 +842,49 @@ public partial class MainViewModel
     {
         var key = GameKey.From(gameName, store).ToKey();
         _gameNameService.Dlssg2030GpuGen[key] = gpuGen;
+        SaveNameMappings();
+    }
+
+    // ── RTX Encore ────────────────────────────────────────────────────────────
+
+    public string? GetRtxEncoreInstalledAs(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.RtxEncoreInstalledAs.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.RtxEncoreInstalledAs.TryGetValue(gameName, out var v2) && !string.IsNullOrEmpty(v2)) return v2;
+        return null;
+    }
+
+    public void SetRtxEncoreInstalledAs(string gameName, string? dllName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (!string.IsNullOrEmpty(dllName))
+            _gameNameService.RtxEncoreInstalledAs[key] = dllName;
+        else
+        {
+            _gameNameService.RtxEncoreInstalledAs.Remove(key);
+            _gameNameService.RtxEncoreInstalledAs.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    public bool GetRtxEncoreNrDllDeployed(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.RtxEncoreNrDllDeployed.Contains(key)
+            || _gameNameService.RtxEncoreNrDllDeployed.Contains(gameName);
+    }
+
+    public void SetRtxEncoreNrDllDeployed(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value)
+            _gameNameService.RtxEncoreNrDllDeployed.Add(key);
+        else
+        {
+            _gameNameService.RtxEncoreNrDllDeployed.Remove(key);
+            _gameNameService.RtxEncoreNrDllDeployed.Remove(gameName);
+        }
         SaveNameMappings();
     }
 

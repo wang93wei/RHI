@@ -1,0 +1,114 @@
+{
+  "Settings.GitHub.Pat.Description": {
+    "en-US": "Or paste a GitHub Personal Access Token (PAT) — stays valid until you revoke it. No scopes needed, just generate and paste.",
+    "zh-CN": "也可粘贴 GitHub 个人访问令牌（PAT）。令牌在撤销前保持有效。无需选择权限范围，生成后粘贴即可。",
+    "zh-TW": "也可貼上 GitHub 個人存取權杖（PAT）。權杖在撤銷前保持有效。無需選擇權限範圍，產生後貼上即可。",
+    "ja-JP": "GitHub Personal Access Token（PAT）を貼り付けることもできます。取り消すまで有効です。スコープを選択せずに生成し、貼り付けてください。",
+    "ko-KR": "GitHub 개인 액세스 토큰(PAT)을 붙여넣을 수도 있습니다. 취소할 때까지 유효합니다. 권한 범위를 선택하지 않고 생성한 후 붙여넣으세요."
+  },
+  "Settings.GitHub.Pat.CreateLink": {
+    "en-US": "Create a token at github.com/settings/tokens (no boxes to tick)",
+    "zh-CN": "在 github.com/settings/tokens 创建令牌（无需勾选权限）",
+    "zh-TW": "在 github.com/settings/tokens 建立權杖（無需勾選權限）",
+    "ja-JP": "github.com/settings/tokens でトークンを作成（権限のチェックは不要）",
+    "ko-KR": "github.com/settings/tokens에서 토큰 생성(권한 체크 불필요)"
+  },
+  "Settings.GitHub.Pat.Placeholder": {
+    "en-US": "ghp_...",
+    "zh-CN": "ghp_...",
+    "zh-TW": "ghp_...",
+    "ja-JP": "ghp_...",
+    "ko-KR": "ghp_..."
+  },
+  "Settings.GitHub.Pat.Active": {
+    "en-US": "PAT file active — 5,000 req/hr (persists across restarts)",
+    "zh-CN": "PAT 文件已启用，每小时可请求 5,000 次（重启后仍有效）",
+    "zh-TW": "PAT 檔案已啟用，每小時可請求 5,000 次（重新啟動後仍有效）",
+    "ja-JP": "PAT ファイルが有効です。毎時 5,000 リクエスト（再起動後も有効）",
+    "ko-KR": "PAT 파일 사용 중 · 시간당 요청 5,000회(다시 시작한 후에도 유지)"
+  },
+  "Settings.GitHub.Pat.Using": {
+    "en-US": "Using PAT · 5,000 req/hr",
+    "zh-CN": "使用 PAT · 每小时 5,000 次请求",
+    "zh-TW": "使用 PAT · 每小時 5,000 次請求",
+    "ja-JP": "PAT を使用中 · 毎時 5,000 リクエスト",
+    "ko-KR": "PAT 사용 중 · 시간당 요청 5,000회"
+  },
+  "Settings.GitHub.Pat.Empty": {
+    "en-US": "Please enter a token first.",
+    "zh-CN": "请先输入令牌。",
+    "zh-TW": "請先輸入權杖。",
+    "ja-JP": "先にトークンを入力してください。",
+    "ko-KR": "먼저 토큰을 입력하세요."
+  },
+  "Settings.GitHub.Pat.FormatHint": {
+    "en-US": "Token should start with ghp_ or github_pat_",
+    "zh-CN": "令牌应以 ghp_ 或 github_pat_ 开头。",
+    "zh-TW": "權杖應以 ghp_ 或 github_pat_ 開頭。",
+    "ja-JP": "トークンは ghp_ または github_pat_ で始まる必要があります。",
+    "ko-KR": "토큰은 ghp_ 또는 github_pat_로 시작해야 합니다."
+  },
+  "Settings.GitHub.Pat.Validating": {
+    "en-US": "Validating...",
+    "zh-CN": "正在验证…",
+    "zh-TW": "正在驗證…",
+    "ja-JP": "検証中…",
+    "ko-KR": "검증 중…"
+  },
+  "Settings.GitHub.Pat.ValidationFailed": {
+    "en-US": "Token validation failed — check the token and try again.",
+    "zh-CN": "令牌验证失败。请检查令牌后重试。",
+    "zh-TW": "權杖驗證失敗。請檢查權杖後重試。",
+    "ja-JP": "トークンの検証に失敗しました。トークンを確認して再試行してください。",
+    "ko-KR": "토큰 검증에 실패했습니다. 토큰을 확인하고 다시 시도하세요."
+  },
+  "Settings.GitHub.Pat.SaveFailed": {
+    "en-US": "Failed to save: {0}",
+    "zh-CN": "保存失败：{0}",
+    "zh-TW": "儲存失敗：{0}",
+    "ja-JP": "保存に失敗しました: {0}",
+    "ko-KR": "저장 실패: {0}"
+  },
+  "Settings.GitHub.Pat.SavedAs": {
+    "en-US": "PAT saved — authenticated as @{0}",
+    "zh-CN": "PAT 已保存，已通过 @{0} 的身份验证。",
+    "zh-TW": "PAT 已儲存，已通過 @{0} 的身分驗證。",
+    "ja-JP": "PAT を保存しました。@{0} として認証済みです。",
+    "ko-KR": "PAT를 저장했습니다. @{0}(으)로 인증되었습니다."
+  },
+  "Settings.GitHub.Pat.Saved": {
+    "en-US": "PAT saved and applied.",
+    "zh-CN": "PAT 已保存并应用。",
+    "zh-TW": "PAT 已儲存並套用。",
+    "ja-JP": "PAT を保存し、適用しました。",
+    "ko-KR": "PAT를 저장하고 적용했습니다."
+  },
+  "Settings.GitHub.Pat.ClearFailed": {
+    "en-US": "Failed to clear: {0}",
+    "zh-CN": "清除失败：{0}",
+    "zh-TW": "清除失敗：{0}",
+    "ja-JP": "削除に失敗しました: {0}",
+    "ko-KR": "삭제 실패: {0}"
+  },
+  "Settings.GitHub.Pat.Cleared": {
+    "en-US": "PAT cleared.",
+    "zh-CN": "PAT 已清除。",
+    "zh-TW": "PAT 已清除。",
+    "ja-JP": "PAT を削除しました。",
+    "ko-KR": "PAT를 삭제했습니다."
+  },
+  "Settings.Dldsr.Info.Description": {
+    "en-US": "DLDSR (Deep Learning Dynamic Super Resolution) renders games at higher resolutions and downscales with AI for sharper image quality. This feature lets you switch DLDSR presets without opening NVIDIA Control Panel.\n\nDLDSR uses a Lanczos algorithm — less jaggies, more stable, but can look slightly painterly. Standard DSR uses a Gaussian filter — more natural but with more aliasing. DLDSR is generally sharper than DSR at equivalent settings.\n\nRecommended factors: DLDSR 2.25x offers the best balance of quality and performance. DSR 4.00x uses significantly more VRAM. DLDSR 1.78x is the most VRAM-friendly option.",
+    "zh-CN": "DLDSR（深度学习动态超级分辨率）以更高分辨率渲染游戏，再用 AI 缩小画面，提高图像清晰度。此功能可在不打开 NVIDIA 控制面板的情况下切换 DLDSR 预设。\n\nDLDSR 使用 Lanczos 算法。锯齿更少，画面更稳定，但可能略显油画质感。标准 DSR 使用高斯滤波，画面更自然，但锯齿更多。在相同设置下，DLDSR 通常比 DSR 更清晰。\n\n建议倍率：DLDSR 2.25x 在画质和性能之间最均衡。DSR 4.00x 占用的显存明显更多。DLDSR 1.78x 最节省显存。",
+    "zh-TW": "DLDSR（深度學習動態超級解析度）以更高解析度算繪遊戲，再用 AI 縮小畫面，提高影像清晰度。此功能可在不開啟 NVIDIA 控制面板的情況下切換 DLDSR 預設。\n\nDLDSR 使用 Lanczos 演算法。鋸齒更少，畫面更穩定，但可能略顯油畫質感。標準 DSR 使用高斯濾波，畫面更自然，但鋸齒更多。在相同設定下，DLDSR 通常比 DSR 更清晰。\n\n建議倍率：DLDSR 2.25x 在畫質和效能之間最均衡。DSR 4.00x 佔用的顯示記憶體明顯更多。DLDSR 1.78x 最節省顯示記憶體。",
+    "ja-JP": "DLDSR（Deep Learning Dynamic Super Resolution）はゲームを高い解像度で描画し、AI で縮小して画質を鮮明にします。この機能では NVIDIA コントロール パネルを開かずに DLDSR プリセットを切り替えられます。\n\nDLDSR は Lanczos アルゴリズムを使用します。ジャギーが少なく、画面が安定しますが、少し絵画のように見える場合があります。標準 DSR はガウスフィルターを使用します。見た目はより自然ですが、エイリアシングが多くなります。同等の設定では、通常 DLDSR のほうが DSR より鮮明です。\n\n推奨倍率: DLDSR 2.25x は画質と性能のバランスに優れています。DSR 4.00x は VRAM 使用量が大幅に増えます。DLDSR 1.78x は最も VRAM 使用量が少ない選択肢です。",
+    "ko-KR": "DLDSR(Deep Learning Dynamic Super Resolution)는 게임을 더 높은 해상도로 렌더링한 후 AI로 축소하여 더 선명한 화질을 제공합니다. 이 기능으로 NVIDIA 제어판을 열지 않고 DLDSR 프리셋을 전환할 수 있습니다.\n\nDLDSR는 Lanczos 알고리즘을 사용합니다. 계단 현상이 적고 화면이 안정적이지만, 약간 그림처럼 보일 수 있습니다. 표준 DSR는 가우시안 필터를 사용합니다. 더 자연스럽지만 계단 현상이 더 많습니다. 동일한 설정에서는 일반적으로 DLDSR가 DSR보다 선명합니다.\n\n권장 배율: DLDSR 2.25x는 화질과 성능의 균형이 가장 좋습니다. DSR 4.00x는 VRAM을 훨씬 더 많이 사용합니다. DLDSR 1.78x는 VRAM을 가장 적게 사용합니다."
+  },
+  "Settings.Dldsr.Info.SmoothnessDescription": {
+    "en-US": "Controls the sharpening/smoothing applied during downscale. 100 = no sharpening (pure Lanczos downscale). Lower values add sharpening — the image gets progressively sharper as you reduce it.\n\nRecommended DLDSR smoothness values (from r/MotionClarity):\n  • 100 — No sharpening\n  • 80 — Sharp without artifacts\n  • 75 — Clear\n  • 65 — Clearer\n  • 55-65 — Similar clarity to DSR 4.00x at 0% (recommended range)\n  • 45 — As sharp as DSR 4.00x everywhere\n\nNote: DLDSR uses a Lanczos algorithm — it is naturally much sharper than standard DSR (Gaussian), so it requires higher smoothness values for a comparable look.\n\nChanging smoothness causes the same ~15 second display blackout as applying a full state. Tip: set smoothness first, then click Apply — both will apply together in a single restart.",
+    "zh-CN": "控制缩小画面时的锐化和平滑程度。100 表示不锐化（仅使用 Lanczos 缩小）。降低此值会增加锐化，数值越低，画面越锐利。\n\n建议的 DLDSR 平滑度（来自 r/MotionClarity）：\n  • 100 — 不锐化\n  • 80 — 锐利且无伪影\n  • 75 — 清晰\n  • 65 — 更清晰\n  • 55-65 — 接近 DSR 4.00x 在 0% 平滑度下的清晰度（建议范围）\n  • 45 — 整个画面均与 DSR 4.00x 一样锐利\n\n注意：DLDSR 使用 Lanczos 算法，其画面本身比标准 DSR（高斯滤波）锐利得多。因此，需要更高的平滑度才能获得相近的效果。\n\n修改平滑度与应用完整状态一样，会使显示器黑屏约 15 秒。建议先设置平滑度，再点击“应用”。两项设置会在一次重启中同时应用。",
+    "zh-TW": "控制縮小畫面時的銳化和平滑程度。100 表示不銳化（僅使用 Lanczos 縮小）。降低此值會增加銳化，數值越低，畫面越銳利。\n\n建議的 DLDSR 平滑度（來自 r/MotionClarity）：\n  • 100 — 不銳化\n  • 80 — 銳利且無偽影\n  • 75 — 清晰\n  • 65 — 更清晰\n  • 55-65 — 接近 DSR 4.00x 在 0% 平滑度下的清晰度（建議範圍）\n  • 45 — 整個畫面均與 DSR 4.00x 一樣銳利\n\n注意：DLDSR 使用 Lanczos 演算法，其畫面本身比標準 DSR（高斯濾波）銳利得多。因此，需要更高的平滑度才能獲得相近的效果。\n\n修改平滑度與套用完整狀態一樣，會使顯示器黑屏約 15 秒。建議先設定平滑度，再按「套用」。兩項設定會在一次重新啟動中同時套用。",
+    "ja-JP": "縮小時のシャープ化と平滑化を調整します。100 はシャープ化なし（Lanczos による縮小のみ）です。値を下げるほどシャープ化が強くなり、画像がより鮮明になります。\n\n推奨 DLDSR 平滑度（r/MotionClarity より）:\n  • 100 — シャープ化なし\n  • 80 — アーティファクトを抑えた鮮明な画面\n  • 75 — 鮮明\n  • 65 — さらに鮮明\n  • 55-65 — 平滑度 0% の DSR 4.00x と同程度の鮮明さ（推奨範囲）\n  • 45 — 画面全体が DSR 4.00x と同程度に鮮明\n\n注意: DLDSR は Lanczos アルゴリズムを使用し、標準 DSR（ガウス）より元からかなり鮮明です。同程度の見た目にするには、平滑度を高くする必要があります。\n\n平滑度を変更すると、状態全体の適用と同様に画面が約 15 秒間暗転します。先に平滑度を設定してから「適用」を押すと、1 回の再起動で両方を適用できます。",
+    "ko-KR": "축소 시 적용할 선명도와 부드러움을 조절합니다. 100은 선명화 없음(Lanczos 축소만 적용)을 의미합니다. 값을 낮추면 선명화가 추가되어 화면이 점점 더 선명해집니다.\n\n권장 DLDSR 부드러움 값(r/MotionClarity 출처):\n  • 100 — 선명화 없음\n  • 80 — 아티팩트 없이 선명함\n  • 75 — 또렷함\n  • 65 — 더 또렷함\n  • 55-65 — 부드러움 0%의 DSR 4.00x와 비슷한 선명도(권장 범위)\n  • 45 — 화면 전체가 DSR 4.00x만큼 선명함\n\n참고: DLDSR는 Lanczos 알고리즘을 사용하므로 기본적으로 표준 DSR(가우시안)보다 훨씬 선명합니다. 비슷한 화면을 얻으려면 부드러움 값을 더 높여야 합니다.\n\n부드러움을 변경하면 전체 상태를 적용할 때와 마찬가지로 화면이 약 15초 동안 꺼집니다. 먼저 부드러움을 설정한 후 “적용”을 누르면 한 번의 다시 시작으로 두 설정을 함께 적용할 수 있습니다."
+  }
+}

@@ -1,0 +1,2 @@
+# Design
+Perform a normal merge without committing, resolving conflicts by retaining both upstream functionality and current localization. Split localization ownership by source files; workers produce separate translation additions, then one worker consolidates the five catalogs. Do not redesign upstream features. Keep workflow_dispatch and default NuGet cache path. Remote Windows runners provide all executable verification.

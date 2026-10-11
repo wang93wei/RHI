@@ -1,0 +1,177 @@
+{
+  "Extras.RtxEncore.Label": {
+    "en-US": "RTX Encore (Beta)",
+    "zh-CN": "RTX Encore（测试版）",
+    "zh-TW": "RTX Encore（測試版）",
+    "ja-JP": "RTX Encore（ベータ版）",
+    "ko-KR": "RTX Encore (베타)"
+  },
+  "Extras.RtxEncore.Tooltip": {
+    "en-US": "RTX Encore — frame generation X2-X6, Smooth Motion and Neural Rendering for RTX 20/30/40.",
+    "zh-CN": "RTX Encore：为 RTX 20/30/40 提供 2–6 倍帧生成、平滑运动和神经渲染。",
+    "zh-TW": "RTX Encore：為 RTX 20/30/40 提供 2–6 倍影格生成、平滑運動和神經渲染。",
+    "ja-JP": "RTX Encore：RTX 20/30/40 で 2～6 倍のフレーム生成、Smooth Motion、ニューラルレンダリングを使用できます。",
+    "ko-KR": "RTX Encore: RTX 20/30/40에서 2~6배 프레임 생성, Smooth Motion 및 뉴럴 렌더링을 지원합니다."
+  },
+  "Extras.RtxEncore.Info.Tooltip": {
+    "en-US": "Open RTX Encore GitHub page",
+    "zh-CN": "打开 RTX Encore 的 GitHub 页面",
+    "zh-TW": "開啟 RTX Encore 的 GitHub 頁面",
+    "ja-JP": "RTX Encore の GitHub ページを開く",
+    "ko-KR": "RTX Encore GitHub 페이지 열기"
+  },
+  "Extras.RtxEncore.Reinstall.Button": {
+    "en-US": "↺  Reinstall RTX Encore (Beta)",
+    "zh-CN": "↺  重新安装 RTX Encore（测试版）",
+    "zh-TW": "↺  重新安裝 RTX Encore（測試版）",
+    "ja-JP": "↺  RTX Encore（ベータ版）を再インストール",
+    "ko-KR": "↺  RTX Encore (베타) 다시 설치"
+  },
+  "Extras.RtxEncore.Install.Button": {
+    "en-US": "⬇  Install RTX Encore (Beta)",
+    "zh-CN": "⬇  安装 RTX Encore（测试版）",
+    "zh-TW": "⬇  安裝 RTX Encore（測試版）",
+    "ja-JP": "⬇  RTX Encore（ベータ版）をインストール",
+    "ko-KR": "⬇  RTX Encore (베타) 설치"
+  },
+  "Extras.RtxEncore.Reinstall.Tooltip": {
+    "en-US": "Reinstall RTX Encore (currently '{0}')",
+    "zh-CN": "重新安装 RTX Encore（当前文件名为“{0}”）",
+    "zh-TW": "重新安裝 RTX Encore（目前檔名為「{0}」）",
+    "ja-JP": "RTX Encore を再インストール（現在のファイル名：{0}）",
+    "ko-KR": "RTX Encore 다시 설치 (현재 파일 이름: {0})"
+  },
+  "Extras.RtxEncore.Install.Tooltip": {
+    "en-US": "Install RTX Encore — choose which DLL name to use",
+    "zh-CN": "安装 RTX Encore，并选择 DLL 文件名",
+    "zh-TW": "安裝 RTX Encore，並選擇 DLL 檔名",
+    "ja-JP": "RTX Encore をインストールして DLL のファイル名を選択",
+    "ko-KR": "RTX Encore를 설치하고 DLL 파일 이름 선택"
+  },
+  "Extras.RtxEncore.Settings.Tooltip": {
+    "en-US": "RTX Encore settings",
+    "zh-CN": "RTX Encore 设置",
+    "zh-TW": "RTX Encore 設定",
+    "ja-JP": "RTX Encore の設定",
+    "ko-KR": "RTX Encore 설정"
+  },
+  "Extras.RtxEncore.Settings.Title": {
+    "en-US": "RTX Encore Settings",
+    "zh-CN": "RTX Encore 设置",
+    "zh-TW": "RTX Encore 設定",
+    "ja-JP": "RTX Encore の設定",
+    "ko-KR": "RTX Encore 설정"
+  },
+  "Extras.RtxEncore.Nr.Title": {
+    "en-US": "Neural Rendering (nvngx_dlssnr.dll)",
+    "zh-CN": "神经渲染（nvngx_dlssnr.dll）",
+    "zh-TW": "神經渲染（nvngx_dlssnr.dll）",
+    "ja-JP": "ニューラルレンダリング（nvngx_dlssnr.dll）",
+    "ko-KR": "뉴럴 렌더링 (nvngx_dlssnr.dll)"
+  },
+  "Extras.RtxEncore.Nr.RequiredVersion": {
+    "en-US": "RTX Encore requires nvngx_dlssnr.dll version 310.8.0 exactly. Other versions are refused.",
+    "zh-CN": "RTX Encore 仅支持 nvngx_dlssnr.dll 310.8.0。其他版本不能使用。",
+    "zh-TW": "RTX Encore 僅支援 nvngx_dlssnr.dll 310.8.0。其他版本無法使用。",
+    "ja-JP": "RTX Encore には nvngx_dlssnr.dll のバージョン 310.8.0 が必要です。他のバージョンは使用できません。",
+    "ko-KR": "RTX Encore에는 nvngx_dlssnr.dll 버전 310.8.0이 필요합니다. 다른 버전은 사용할 수 없습니다."
+  },
+  "Extras.RtxEncore.Nr.Deploy": {
+    "en-US": "Deploy NR DLL",
+    "zh-CN": "部署 NR DLL",
+    "zh-TW": "部署 NR DLL",
+    "ja-JP": "NR DLL を配置",
+    "ko-KR": "NR DLL 배포"
+  },
+  "Extras.RtxEncore.Nr.Deploy.Tooltip": {
+    "en-US": "Deploy nvngx_dlssnr.dll 310.8.0 alongside RTX Encore for Neural Rendering support.",
+    "zh-CN": "在 RTX Encore 旁部署 nvngx_dlssnr.dll 310.8.0，以支持神经渲染。",
+    "zh-TW": "在 RTX Encore 旁部署 nvngx_dlssnr.dll 310.8.0，以支援神經渲染。",
+    "ja-JP": "RTX Encore と同じフォルダーに nvngx_dlssnr.dll 310.8.0 を配置してニューラルレンダリングを有効にします。",
+    "ko-KR": "RTX Encore와 같은 폴더에 nvngx_dlssnr.dll 310.8.0을 배포하여 뉴럴 렌더링을 지원합니다."
+  },
+  "Extras.RtxEncore.Nr.Download.Tooltip": {
+    "en-US": "nvngx_dlssnr.dll 310.8.0 not yet cached — selecting Yes will download it automatically.",
+    "zh-CN": "尚未缓存 nvngx_dlssnr.dll 310.8.0。选择“是”将自动下载。",
+    "zh-TW": "尚未快取 nvngx_dlssnr.dll 310.8.0。選擇「是」將自動下載。",
+    "ja-JP": "nvngx_dlssnr.dll 310.8.0 はまだキャッシュされていません。「はい」を選択すると自動でダウンロードします。",
+    "ko-KR": "nvngx_dlssnr.dll 310.8.0이 아직 캐시되지 않았습니다. 예를 선택하면 자동으로 다운로드합니다."
+  },
+  "Extras.RtxEncore.Nr.Source": {
+    "en-US": "Source: {0}",
+    "zh-CN": "来源：{0}",
+    "zh-TW": "來源：{0}",
+    "ja-JP": "取得元：{0}",
+    "ko-KR": "소스: {0}"
+  },
+  "Extras.RtxEncore.Nr.DownloadNote": {
+    "en-US": "310.8.0 not yet downloaded — will download on Apply.",
+    "zh-CN": "尚未下载 310.8.0。点击“应用”后下载。",
+    "zh-TW": "尚未下載 310.8.0。按下「套用」後下載。",
+    "ja-JP": "310.8.0 はまだダウンロードされていません。「適用」を押すとダウンロードします。",
+    "ko-KR": "310.8.0이 아직 다운로드되지 않았습니다. 적용을 누르면 다운로드합니다."
+  },
+  "Extras.RtxEncore.Remove.Tooltip": {
+    "en-US": "Remove RTX Encore from this game",
+    "zh-CN": "从此游戏移除 RTX Encore",
+    "zh-TW": "從此遊戲移除 RTX Encore",
+    "ja-JP": "このゲームから RTX Encore を削除",
+    "ko-KR": "이 게임에서 RTX Encore 제거"
+  },
+  "Extras.RtxEncore.ExistingFile": {
+    "en-US": "existing file",
+    "zh-CN": "现有文件",
+    "zh-TW": "現有檔案",
+    "ja-JP": "既存のファイル",
+    "ko-KR": "기존 파일"
+  },
+  "Extras.RtxEncore.Badge.AsiPlugin": {
+    "en-US": "ASI plugin",
+    "zh-CN": "ASI 插件",
+    "zh-TW": "ASI 外掛",
+    "ja-JP": "ASI プラグイン",
+    "ko-KR": "ASI 플러그인"
+  },
+  "Extras.RtxEncore.Badge.InUseBy": {
+    "en-US": "In use by {0}",
+    "zh-CN": "由 {0} 使用",
+    "zh-TW": "由 {0} 使用",
+    "ja-JP": "{0} が使用中",
+    "ko-KR": "{0}에서 사용 중"
+  },
+  "Extras.RtxEncore.Badge.OnDisk": {
+    "en-US": "On disk: {0}",
+    "zh-CN": "磁盘上已有：{0}",
+    "zh-TW": "磁碟上已有：{0}",
+    "ja-JP": "ディスク上に存在：{0}",
+    "ko-KR": "디스크에 있음: {0}"
+  },
+  "Extras.RtxEncore.DllInUse.Tooltip": {
+    "en-US": "In use by {0}. Choose a different name.",
+    "zh-CN": "{0} 正在使用此名称。请选择其他名称。",
+    "zh-TW": "{0} 正在使用此名稱。請選擇其他名稱。",
+    "ja-JP": "{0} がこの名前を使用しています。他の名前を選択してください。",
+    "ko-KR": "{0}에서 이 이름을 사용 중입니다. 다른 이름을 선택하세요."
+  },
+  "Extras.RtxEncore.DllOnDisk.Tooltip": {
+    "en-US": "A '{0}' already exists ({1}). RHI will back it up and restore it on uninstall.",
+    "zh-CN": "“{0}”已存在（{1}）。RHI 将备份此文件，并在卸载时恢复。",
+    "zh-TW": "「{0}」已存在（{1}）。RHI 將備份此檔案，並在解除安裝時還原。",
+    "ja-JP": "「{0}」はすでに存在します（{1}）。RHI はこのファイルをバックアップし、アンインストール時に復元します。",
+    "ko-KR": "{0} 파일이 이미 있습니다 ({1}). RHI는 이 파일을 백업하고 제거 시 복원합니다."
+  },
+  "Extras.RtxEncore.DllPicker.Title": {
+    "en-US": "Choose RTX Encore DLL name",
+    "zh-CN": "选择 RTX Encore DLL 文件名",
+    "zh-TW": "選擇 RTX Encore DLL 檔名",
+    "ja-JP": "RTX Encore DLL のファイル名を選択",
+    "ko-KR": "RTX Encore DLL 파일 이름 선택"
+  },
+  "Extras.RtxEncore.DllPicker.Content": {
+    "en-US": "Select the filename for RTX Encore. Names in use by RHI components are disabled. Amber names already have a file on disk — RHI will back it up and restore on uninstall.",
+    "zh-CN": "选择 RTX Encore 的文件名。RHI 组件正在使用的名称不可选。琥珀色名称表示磁盘上已有文件。RHI 将备份此文件，并在卸载时恢复。",
+    "zh-TW": "選擇 RTX Encore 的檔名。RHI 元件正在使用的名稱無法選取。琥珀色名稱表示磁碟上已有檔案。RHI 將備份此檔案，並在解除安裝時還原。",
+    "ja-JP": "RTX Encore のファイル名を選択します。RHI コンポーネントが使用中の名前は選択できません。琥珀色の名前はディスク上に既存のファイルがあることを示します。RHI はこのファイルをバックアップし、アンインストール時に復元します。",
+    "ko-KR": "RTX Encore의 파일 이름을 선택하세요. RHI 구성 요소가 사용 중인 이름은 선택할 수 없습니다. 황색 이름은 디스크에 파일이 이미 있음을 나타냅니다. RHI는 이 파일을 백업하고 제거 시 복원합니다."
+  }
+}

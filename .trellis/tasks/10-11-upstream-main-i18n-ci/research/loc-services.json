@@ -1,0 +1,65 @@
+{
+  "Action.ConfigureAutoHdr": {
+    "en-US": "Configure Auto HDR",
+    "zh-CN": "配置自动 HDR",
+    "zh-TW": "設定自動 HDR",
+    "ja-JP": "自動 HDR を設定",
+    "ko-KR": "자동 HDR 설정"
+  },
+  "Shortcut.Description": {
+    "en-US": "Launch {0} via RHI",
+    "zh-CN": "通过 RHI 启动 {0}",
+    "zh-TW": "透過 RHI 啟動 {0}",
+    "ja-JP": "RHI で {0} を起動",
+    "ko-KR": "RHI로 {0} 실행"
+  },
+  "RtxEncore.Progress.Downloading": {
+    "en-US": "Downloading RTX Encore...",
+    "zh-CN": "正在下载 RTX Encore...",
+    "zh-TW": "正在下載 RTX Encore...",
+    "ja-JP": "RTX Encore をダウンロード中...",
+    "ko-KR": "RTX Encore 다운로드 중..."
+  },
+  "RtxEncore.Progress.Ready": {
+    "en-US": "RTX Encore ready",
+    "zh-CN": "RTX Encore 已就绪",
+    "zh-TW": "RTX Encore 已就緒",
+    "ja-JP": "RTX Encore の準備完了",
+    "ko-KR": "RTX Encore 준비 완료"
+  },
+  "OptiScaler.Nightly.Progress.UpToDate": {
+    "en-US": "OptiScaler Nightly up to date",
+    "zh-CN": "OptiScaler Nightly 已是最新版本",
+    "zh-TW": "OptiScaler Nightly 已是最新版本",
+    "ja-JP": "OptiScaler Nightly は最新です",
+    "ko-KR": "OptiScaler Nightly가 최신 버전입니다"
+  },
+  "OptiScaler.Nightly.Progress.BuildReady": {
+    "en-US": "OptiScaler Nightly {0} ready",
+    "zh-CN": "OptiScaler Nightly {0} 已就绪",
+    "zh-TW": "OptiScaler Nightly {0} 已就緒",
+    "ja-JP": "OptiScaler Nightly {0} の準備完了",
+    "ko-KR": "OptiScaler Nightly {0} 준비 완료"
+  },
+  "OptiScaler.Nightly.Progress.CheckingBuild": {
+    "en-US": "Checking OptiScaler Nightly {0}...",
+    "zh-CN": "正在检查 OptiScaler Nightly {0}...",
+    "zh-TW": "正在檢查 OptiScaler Nightly {0}...",
+    "ja-JP": "OptiScaler Nightly {0} を確認中...",
+    "ko-KR": "OptiScaler Nightly {0} 확인 중..."
+  },
+  "OptiScaler.Nightly.Progress.DownloadingBuild": {
+    "en-US": "Downloading {0}... {1} KB / {2} KB",
+    "zh-CN": "正在下载 {0}... {1} KB / {2} KB",
+    "zh-TW": "正在下載 {0}... {1} KB / {2} KB",
+    "ja-JP": "{0} をダウンロード中... {1} KB / {2} KB",
+    "ko-KR": "{0} 다운로드 중... {1} KB / {2} KB"
+  },
+  "OptiScaler.Nightly.Progress.ExtractingBuild": {
+    "en-US": "Extracting OptiScaler Nightly {0}...",
+    "zh-CN": "正在解压 OptiScaler Nightly {0}...",
+    "zh-TW": "正在解壓縮 OptiScaler Nightly {0}...",
+    "ja-JP": "OptiScaler Nightly {0} を展開中...",
+    "ko-KR": "OptiScaler Nightly {0} 압축 해제 중..."
+  }
+}

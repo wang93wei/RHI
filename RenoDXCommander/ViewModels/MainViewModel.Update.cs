@@ -327,6 +327,10 @@ public partial class MainViewModel
 
                     LogResourceCounters("at-freeze");
 
+                    // Window inventory at freeze — compare class/handle state against startup
+                    try { WindowStateManagerRef?.LogWindowInventory("at-freeze"); }
+                    catch (Exception winvEx) { CrashReporter.LogSync($"[Heartbeat.WindowInventory] Failed: {winvEx.GetType().Name}: {winvEx.Message}"); }
+
                     // ThreadState + WaitReason
                     try
                     {
@@ -1208,6 +1212,24 @@ public partial class MainViewModel
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic Dlssg2030 check failed — {ex.Message}"); }
 
+                try
+                {
+                    var rtxEncoreSvc = App.Services.GetRequiredService<RtxEncoreService>();
+                    await rtxEncoreSvc.CheckForUpdateAsync(forceRefresh: true);
+                    if (rtxEncoreSvc.HasUpdate)
+                    {
+                        await rtxEncoreSvc.EnsureStagingAsync();
+                        if (rtxEncoreSvc.IsStagingReady)
+                            foreach (var c in _allCards.Where(c => !string.IsNullOrEmpty(c.InstallPath)))
+                            {
+                                var installedAs = GetRtxEncoreInstalledAs(c.GameName, c.Source ?? "");
+                                if (!string.IsNullOrEmpty(installedAs) && rtxEncoreSvc.IsInstalledIn(c.InstallPath!, installedAs))
+                                    await rtxEncoreSvc.InstallAsync(c.InstallPath!, installedAs, installedAs);
+                            }
+                    }
+                }
+                catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic RTX Encore check failed — {ex.Message}"); }
+
                 _forceUpdateCheck = true; // bypass cooldown since we ARE the cooldown
                 var records = _installer.LoadAll();
                 var auxRecords = _auxInstaller.LoadAll();
@@ -2059,8 +2081,42 @@ public partial class MainViewModel
         foreach (var card in osCards)
         {
             var cardVariant = GetOsVariant(card.GameName, card.Source ?? "");
-            try { await _optiScalerService.UpdateAsync(card, variantHint: cardVariant); }
-            catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] Failed for '{card.GameName}': {ex.Message}"); }
+            // For nightly: pass the pinned build date if set (exempt games are already filtered out above)
+            var nightlyBuild = cardVariant == "Nightly" ? GetOsNightlyBuild(card.GameName, card.Source ?? "") : null;
+            if (!string.IsNullOrEmpty(nightlyBuild))
+            {
+                // Pinned build — should have been excluded by ExcludeFromUpdateAllOs, but guard here too
+                _crashReporter.Log($"[UpdateAllOsAsync] Skipping '{card.GameName}' — pinned to nightly build {nightlyBuild}");
+                continue;
+            }
+            try { await _optiScalerService.UpdateAsync(card, variantHint: cardVariant, nightlyBuildHint: null); }
+            catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] Failed for '{card.GameName}': {ex.Message}"); continue; }
+
+            // Re-deploy Streamline and DLSS Enabler if they were enabled — UpdateAsync doesn't handle this
+            if ((cardVariant == "Nightly" || cardVariant == "DlssNr") && !string.IsNullOrEmpty(card.InstallPath))
+            {
+                if (GetOsDeployStreamline(card.GameName, card.Source ?? ""))
+                {
+                    try
+                    {
+                        var slVersion = GetOsStreamlineVersion(card.GameName, card.Source ?? "");
+                        _optiScalerService.DeployStreamlineToGame(card.InstallPath, slVersion);
+                        _crashReporter.Log($"[UpdateAllOsAsync] Re-deployed Streamline to '{card.GameName}' post-update");
+                    }
+                    catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] Streamline re-deploy failed for '{card.GameName}' — {ex.Message}"); }
+                }
+                if (GetOsDeployDlssEnabler(card.GameName, card.Source ?? ""))
+                {
+                    try
+                    {
+                        var dlssEnablerService = App.Services.GetRequiredService<DlssEnablerService>();
+                        var optiScalerDir = System.IO.Path.Combine(card.InstallPath, "OptiScaler");
+                        await dlssEnablerService.InstallAsync(optiScalerDir).ConfigureAwait(false);
+                        _crashReporter.Log($"[UpdateAllOsAsync] Re-deployed DLSS Enabler to '{card.GameName}' post-update");
+                    }
+                    catch (Exception ex) { _crashReporter.Log($"[UpdateAllOsAsync] DLSS Enabler re-deploy failed for '{card.GameName}' — {ex.Message}"); }
+                }
+            }
         }
 
         DispatcherQueue?.TryEnqueue(() =>
@@ -2350,6 +2406,8 @@ public partial class MainViewModel
             if (anyNightly)
             {
                 await _optiScalerService.CheckForNightlyUpdateAsync().ConfigureAwait(false);
+                // Also refresh the available builds list so the cog dialog has current entries
+                _ = _optiScalerService.FetchAvailableNightlyBuildsAsync();
                 _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] OS nightly update result: {_optiScalerService.HasUpdateNightly}");
             }
 
@@ -2410,6 +2468,40 @@ public partial class MainViewModel
             catch (Exception ex)
             {
                 _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] DLSS Enabler check failed — {ex.Message}");
+            }
+
+            // Check RTX Encore update and auto-deploy to installed games
+            try
+            {
+                var rtxEncoreSvc = App.Services.GetRequiredService<RtxEncoreService>();
+                var rtxOldVersion = rtxEncoreSvc.StagedVersion;
+                await rtxEncoreSvc.CheckForUpdateAsync().ConfigureAwait(false);
+                if (rtxEncoreSvc.HasUpdate)
+                {
+                    await rtxEncoreSvc.EnsureStagingAsync().ConfigureAwait(false);
+                    if (rtxEncoreSvc.IsStagingReady)
+                    {
+                        App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+                        {
+                            Timestamp     = DateTime.UtcNow,
+                            Category      = "Component",
+                            ComponentName = "RTX Encore",
+                            OldVersion    = rtxOldVersion,
+                            NewVersion    = rtxEncoreSvc.StagedVersion,
+                        });
+                        foreach (var c in cards.Where(c => !string.IsNullOrEmpty(c.InstallPath)))
+                        {
+                            var installedAs = GetRtxEncoreInstalledAs(c.GameName, c.Source ?? "");
+                            if (!string.IsNullOrEmpty(installedAs) && rtxEncoreSvc.IsInstalledIn(c.InstallPath!, installedAs))
+                                await rtxEncoreSvc.InstallAsync(c.InstallPath!, installedAs, installedAs).ConfigureAwait(false);
+                        }
+                    }
+                }
+                _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] RTX Encore: cached={rtxOldVersion}, remote={rtxEncoreSvc.LatestVersion}, hasUpdate={rtxEncoreSvc.HasUpdate}");
+            }
+            catch (Exception ex)
+            {
+                _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] RTX Encore check failed — {ex.Message}");
             }
 
             // Check RenoDX DLSS5 addon update and auto-deploy if newer version available

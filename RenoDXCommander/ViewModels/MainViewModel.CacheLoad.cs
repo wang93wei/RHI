@@ -624,6 +624,9 @@ public partial class MainViewModel
                 ExcludeFromUpdateAllOs      = _gameNameService.UpdateAllExcludedOs.Contains(savedLibKey),
                 ExcludeFromUpdateAllRef     = _gameNameService.UpdateAllExcludedRef.Contains(savedLibKey),
                 UseNormalReShade           = _gameNameService.NormalReShadeGames.Contains(savedLibKey),
+                IsRtxHdrEnabled            = _gameNameService.RtxHdrGames.Contains(game.Name),
+                IsAutoHdrEnabled           = _gameNameService.AutoHdrGames.Contains(game.Name),
+                AutoHdrStrength            = _gameNameService.AutoHdrStrengths.TryGetValue(game.Name, out var ahStrC) ? ahStrC : 50,
                 ShaderModeOverride     = _perGameShaderMode.TryGetValue(savedLibKey, out var smCache) ? smCache : null,
                 VulkanRenderingPath    = _vulkanRenderingPaths.TryGetValue(savedLibKey, out var vrpCache) ? vrpCache : "DirectX",
                 DllOverrideEnabled     = _dllOverrides.ContainsKey(game.Name),
@@ -681,7 +684,9 @@ public partial class MainViewModel
                 newCard.OsInstalledVersion = !string.IsNullOrEmpty(osGameManifest?.Version)
                     ? osGameManifest.Version
                     : osRec.OsVariant switch {
-                        "Nightly" => _optiScalerService.StagedVersionNightly,
+                        "Nightly" => !string.IsNullOrEmpty(osRec.OsNightlyBuild)
+                            ? osRec.OsNightlyBuild
+                            : _optiScalerService.StagedVersionNightly,
                         "DlssNr"  => _optiScalerService.StagedVersionDlssNr,
                         _         => _optiScalerService.StagedVersion
                     };

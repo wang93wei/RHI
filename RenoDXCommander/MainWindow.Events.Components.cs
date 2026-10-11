@@ -1153,6 +1153,9 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         } // end hasRenoDxMod
 
         // ── RTX HDR Toggle ─────────────────────────────────────────────────────
+        // autoHdrCombo is declared here at method scope so the RTX HDR SelectionChanged
+        // handler can reference it for mutual exclusivity (before the Auto HDR section builds it).
+        ComboBox? autoHdrCombo = null;
         content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
         content.Children.Add(new TextBlock
         {
@@ -1202,6 +1205,23 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             {
                 gameNameService.RtxHdrGames.Add(card.GameName);
                 card.IsRtxHdrEnabled = true;
+
+                // Mutual exclusivity: if Auto HDR is on, turn it off
+                if (card.IsAutoHdrEnabled)
+                {
+                    gameNameService.AutoHdrGames.Remove(card.GameName);
+                    card.IsAutoHdrEnabled = false;
+                    autoHdrCombo!.SelectedIndex = 0;
+                    var capturedAutoHdrSvc = App.Services.GetRequiredService<IAutoHdrService>();
+                    var capturedAutoHdrCard = card;
+                    _ = Task.Run(() =>
+                    {
+                        var exePath = capturedAutoHdrSvc.ResolveExePath(
+                            capturedAutoHdrCard.GameName, capturedAutoHdrCard.InstallPath,
+                            gameNameService.LaunchExeOverrides, ViewModel.Manifest?.LaunchExeOverrides);
+                        if (!string.IsNullOrEmpty(exePath)) capturedAutoHdrSvc.Disable(exePath);
+                    });
+                }
 
                 // Uninstall RenoDX if installed
                 if (card.Status == GameStatus.Installed && card.InstalledRecord != null)
@@ -1282,6 +1302,118 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         rtxHdrRow.Children.Add(rtxHdrCombo);
         content.Children.Add(rtxHdrRow);
 
+        // ── Auto HDR Toggle ────────────────────────────────────────────────────
+        content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 10, 0, 2) });
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Dialog.AutoHdr.Title"),
+            FontSize = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Dialog.AutoHdr.Description"),
+            FontSize = 11,
+            Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush),
+            TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 4),
+        });
+
+        autoHdrCombo = new ComboBox { FontSize = 11, MinWidth = 100 };
+        autoHdrCombo.Items.Add(LocOpt.T("Off"));
+        autoHdrCombo.Items.Add(LocOpt.T("On"));
+
+        var autoHdrService = App.Services.GetRequiredService<IAutoHdrService>();
+        bool isAutoHdrEnabled = gameNameService.AutoHdrGames.Contains(card.GameName);
+        int autoHdrStrength = gameNameService.AutoHdrStrengths.TryGetValue(card.GameName, out var savedStrength) ? savedStrength : 50;
+        card.IsAutoHdrEnabled = isAutoHdrEnabled;
+        card.AutoHdrStrength  = autoHdrStrength;
+        autoHdrCombo.SelectedIndex = isAutoHdrEnabled ? 1 : 0;
+
+        autoHdrCombo.SelectionChanged += (s, ev) =>
+        {
+            bool enableAh = autoHdrCombo.SelectedIndex == 1;
+
+            if (enableAh)
+            {
+                gameNameService.AutoHdrGames.Add(card.GameName);
+                card.IsAutoHdrEnabled = true;
+
+                // Mutual exclusivity: if RTX HDR is on, turn it off first
+                if (card.IsRtxHdrEnabled)
+                {
+                    gameNameService.RtxHdrGames.Remove(card.GameName);
+                    card.IsRtxHdrEnabled = false;
+                    rtxHdrCombo.SelectedIndex = 0;
+                    var capturedDlssSvc = App.Services.GetRequiredService<DlssPresetService>();
+                    var capturedName2 = card.GameName; var capturedPath2 = card.InstallPath;
+                    _ = Task.Run(() =>
+                    {
+                        capturedDlssSvc.SetRtxHdrEnable(capturedName2, capturedPath2, 0x00);
+                        capturedDlssSvc.SetRtxHdrContrast(capturedName2, capturedPath2, 100);
+                        capturedDlssSvc.SetRtxHdrSaturation(capturedName2, capturedPath2, 100);
+                        capturedDlssSvc.SetRtxHdrPeakBrightness(capturedName2, capturedPath2, 0);
+                        capturedDlssSvc.SetRtxHdrMiddleGrey(capturedName2, capturedPath2, 50);
+                        capturedDlssSvc.DeleteSettingRaw(capturedName2, capturedPath2, 0x00432F84);
+                    });
+                }
+
+                // Mutual exclusivity: uninstall RenoDX if installed
+                if (card.Status == GameStatus.Installed && card.InstalledRecord != null)
+                    ViewModel.UninstallMod(card);
+
+                // Write registry entry on background thread
+                var capturedEnableCard = card;
+                var capturedEnableStrength = card.AutoHdrStrength;
+                _ = Task.Run(() =>
+                {
+                    var exePath = autoHdrService.ResolveExePath(
+                        capturedEnableCard.GameName,
+                        capturedEnableCard.InstallPath,
+                        gameNameService.LaunchExeOverrides,
+                        ViewModel.Manifest?.LaunchExeOverrides);
+                    if (!string.IsNullOrEmpty(exePath))
+                        autoHdrService.Enable(exePath, capturedEnableStrength);
+                    else
+                        CrashReporter.Log($"[RdxCog.AutoHDR] Could not resolve exe for '{capturedEnableCard.GameName}' — registry not written");
+                });
+            }
+            else
+            {
+                gameNameService.AutoHdrGames.Remove(card.GameName);
+                card.IsAutoHdrEnabled = false;
+
+                var capturedDisableCard = card;
+                _ = Task.Run(() =>
+                {
+                    var exePath = autoHdrService.ResolveExePath(
+                        capturedDisableCard.GameName,
+                        capturedDisableCard.InstallPath,
+                        gameNameService.LaunchExeOverrides,
+                        ViewModel.Manifest?.LaunchExeOverrides);
+                    if (!string.IsNullOrEmpty(exePath))
+                        autoHdrService.Disable(exePath);
+                });
+            }
+
+            card.NotifyAll();
+            ViewModel.SaveSettingsPublic();
+            _detailPanelBuilder?.UpdateDetailComponentRows(card);
+            PopulateDetailPanel(card);
+        };
+
+        var autoHdrRow = new StackPanel { Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal, Spacing = 12 };
+        autoHdrRow.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Dialog.AutoHdr.Enable"),
+            FontSize = 11,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        autoHdrRow.Children.Add(autoHdrCombo);
+        content.Children.Add(autoHdrRow);
+
         var dialog = new ContentDialog
         {
             Title = Loc.GetString("Xaml.RenodxSettings"),
@@ -1290,7 +1422,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             XamlRoot = Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
-        dialog.Resources["ContentDialogMaxWidth"] = 740.0;
+        dialog.Resources["ContentDialogMaxWidth"] = 520.0;
         await DialogService.ShowSafeAsync(dialog);
         _detailPanelBuilder?.UpdateDetailComponentRows(card);
     }
@@ -1654,6 +1786,171 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             CrashReporter.Log($"[RtxHdrConfigButton_Click] Applied RTX HDR settings for '{card.GameName}': PeakNits={peakNits}, Contrast={contrastStored}, Sat={satStored}, MidGrey={middleGrey}, Deband=0x{debanding:X2}");
         });
         card.ActionMessage = Loc.GetString("Rdx.Status.RtxHdrApplied");
+        card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
+    }
+
+    internal async void AutoHdrConfigButton_Click(object sender, RoutedEventArgs e)
+    {
+        var card = (sender as FrameworkElement)?.Tag as GameCardViewModel
+                ?? (sender as Button)?.Tag as GameCardViewModel;
+        if (card == null || string.IsNullOrEmpty(card.InstallPath)) return;
+
+        var autoHdrService  = App.Services.GetRequiredService<IAutoHdrService>();
+        var gameNameService = App.Services.GetRequiredService<IGameNameService>();
+
+        // Resolve the exe path so we can read the live registry value
+        var exePath = autoHdrService.ResolveExePath(
+            card.GameName, card.InstallPath,
+            gameNameService.LaunchExeOverrides,
+            ViewModel.Manifest?.LaunchExeOverrides);
+
+        // Read current strength from registry (fall back to persisted value, then 50)
+        int currentStrength = 50;
+        if (!string.IsNullOrEmpty(exePath))
+        {
+            var liveStrength = autoHdrService.GetStrength(exePath);
+            currentStrength = liveStrength >= 0 ? liveStrength : card.AutoHdrStrength;
+        }
+        else
+        {
+            currentStrength = card.AutoHdrStrength;
+        }
+
+        var content = new StackPanel { Spacing = 6 };
+
+        // ── Brightness / Intensity ────────────────────────────────────────────
+        string StrengthLabel(int val)
+        {
+            if (val == 0)   return Loc.GetString("Dialog.AutoHdr.BrightnessZero");
+            if (val == 50)  return Loc.GetString("Dialog.AutoHdr.BrightnessDefault");
+            if (val == 100) return Loc.GetString("Dialog.AutoHdr.BrightnessMaximum");
+            return Loc.GetString("Dialog.AutoHdr.BrightnessValue", val);
+        }
+
+        var strengthRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var strengthLabel = new TextBlock
+        {
+            Text = StrengthLabel(currentStrength),
+            FontSize = 12,
+            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            MinWidth = 220,
+        };
+        var strengthWarning = new TextBlock
+        {
+            Text = Loc.GetString("Dialog.AutoHdr.HighValueWarning"),
+            FontSize = 10,
+            Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush),
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = currentStrength > 75 ? 1.0 : 0.0,
+        };
+        strengthRow.Children.Add(strengthLabel);
+        strengthRow.Children.Add(strengthWarning);
+
+        var strengthSlider = new Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            StepFrequency = 1,
+            Value = currentStrength,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        strengthSlider.ValueChanged += (s, ev) =>
+        {
+            strengthLabel.Text  = StrengthLabel((int)strengthSlider.Value);
+            strengthWarning.Opacity = (int)strengthSlider.Value > 75 ? 1.0 : 0.0;
+        };
+        content.Children.Add(strengthRow);
+        content.Children.Add(strengthSlider);
+
+        // ── Preset buttons ────────────────────────────────────────────────────
+        var presetsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 2, 0, 4) };
+        foreach (var (label, value) in new[]
+        {
+            (Loc.GetString("Dialog.AutoHdr.PresetLow"), 25),
+            (Loc.GetString("Dialog.AutoHdr.PresetDefault"), 50),
+            (Loc.GetString("Dialog.AutoHdr.PresetHigh"), 75),
+            (Loc.GetString("Dialog.AutoHdr.PresetMaximum"), 100),
+        })
+        {
+            var btn = new Button
+            {
+                Content = label,
+                FontSize = 11,
+                Padding = new Thickness(10, 4, 10, 4),
+            };
+            var capturedValue = value;
+            btn.Click += (s, ev) =>
+            {
+                strengthSlider.Value = capturedValue;
+                strengthLabel.Text   = StrengthLabel(capturedValue);
+                strengthWarning.Opacity = capturedValue > 75 ? 1.0 : 0.0;
+            };
+            presetsPanel.Children.Add(btn);
+        }
+        content.Children.Add(presetsPanel);
+
+        content.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(0, 4, 0, 4) });
+
+        // ── Info note ─────────────────────────────────────────────────────────
+        content.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Dialog.AutoHdr.NextLaunch"),
+            FontSize = 11,
+            Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush),
+            TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+        });
+
+        if (string.IsNullOrEmpty(exePath))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = Loc.GetString("Dialog.AutoHdr.MissingExeWarning"),
+                FontSize = 11,
+                Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush),
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0),
+            });
+        }
+        else
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = Loc.GetString("Dialog.AutoHdr.ExePath", exePath),
+                FontSize = 10,
+                Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 0),
+            });
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = Loc.GetString("Dialog.AutoHdr.SettingsTitle"),
+            Content = new ScrollViewer { Content = content, MaxHeight = 600, Padding = new Thickness(0, 0, 16, 0) },
+            PrimaryButtonText = Loc.GetString("Dialog.Apply"),
+            CloseButtonText   = Loc.GetString("Dialog.Cancel"),
+            XamlRoot          = Content.XamlRoot,
+            RequestedTheme    = ElementTheme.Dark,
+        };
+
+        var result = await DialogService.ShowSafeAsync(dialog);
+        if (result != ContentDialogResult.Primary) return;
+
+        int newStrength = (int)strengthSlider.Value;
+        card.AutoHdrStrength = newStrength;
+        gameNameService.AutoHdrStrengths[card.GameName] = newStrength;
+        ViewModel.SaveSettingsPublic();
+
+        if (!string.IsNullOrEmpty(exePath))
+        {
+            _ = Task.Run(() =>
+            {
+                autoHdrService.Enable(exePath, newStrength);
+                CrashReporter.Log($"[AutoHdrConfigButton_Click] Applied Auto HDR strength={newStrength} for '{card.GameName}' exe='{exePath}'");
+            });
+        }
+
+        card.ActionMessage = Loc.GetString("Dialog.AutoHdr.Applied");
         card.FadeMessage(m => card.ActionMessage = m, card.ActionMessage);
     }
 
@@ -2347,8 +2644,71 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         }
         RefreshUpscalerCombo(apiDefault);
 
+        // ── Nightly Build selector (row 1, nightly only — between Version and Upscaler) ──
+        if (ViewModel.GetOsVariant(card.GameName, card.Source ?? "") == "Nightly")
+        {
+            var currentBuild = ViewModel.GetOsNightlyBuild(card.GameName, card.Source ?? "");
+            var availableBuilds = _optiScalerService.AvailableNightlyBuilds;
+
+            var latestBuildLabel = Loc.GetString("Dialog.OptiScaler.NightlyLatest");
+            var fetchingBuildsLabel = Loc.GetString("Dialog.OptiScaler.NightlyFetching");
+            var buildItems = new List<string> { latestBuildLabel };
+            foreach (var b in availableBuilds)
+            {
+                if (b.Length == 8 && b.All(char.IsDigit))
+                    buildItems.Add($"{b[..4]}-{b[4..6]}-{b[6..8]}");
+            }
+            if (availableBuilds.Count == 0)
+                buildItems.Add(fetchingBuildsLabel);
+
+            bool isInstalled = card.IsOsInstalled;
+            var buildCombo = new ComboBox
+            {
+                FontSize = 12,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                IsEnabled = !isInstalled,
+                Opacity = isInstalled ? 0.45 : 1.0,
+            };
+            var tooltip = isInstalled
+                ? Loc.GetString("Dialog.OptiScaler.NightlyInstalledTooltip")
+                : Loc.GetString("Dialog.OptiScaler.NightlyPinTooltip");
+            ToolTipService.SetToolTip(buildCombo, tooltip);
+            buildCombo.ItemsSource = buildItems;
+
+            string selectedBuildItem = latestBuildLabel;
+            if (!string.IsNullOrEmpty(currentBuild) && currentBuild.Length == 8 && currentBuild.All(char.IsDigit))
+                selectedBuildItem = $"{currentBuild[..4]}-{currentBuild[4..6]}-{currentBuild[6..8]}";
+            buildCombo.SelectedItem = buildItems.Contains(selectedBuildItem) ? selectedBuildItem : latestBuildLabel;
+
+            bool buildComboInitializing = true;
+            AddRow(unifiedGrid, 1, Loc.GetString("Dialog.OptiScaler.NightlyBuild"), buildCombo, null, null);
+            buildComboInitializing = false;
+
+            buildCombo.SelectionChanged += async (s, ev) =>
+            {
+                if (buildComboInitializing) return;
+                var sel = buildCombo.SelectedItem as string ?? latestBuildLabel;
+                if (sel == latestBuildLabel || sel == fetchingBuildsLabel)
+                {
+                    ViewModel.SetOsNightlyBuild(card.GameName, null, card.Source ?? "");
+                    return;
+                }
+                var buildDate = sel.Replace("-", "");
+                if (buildDate.Length != 8 || !buildDate.All(char.IsDigit)) return;
+
+                ViewModel.SetOsNightlyBuild(card.GameName, buildDate, card.Source ?? "");
+                CrashReporter.Log($"[OsCog] Pinned nightly build {buildDate} for '{card.GameName}'");
+
+                if (!_optiScalerService.IsNightlyBuildStaged(buildDate))
+                {
+                    CrashReporter.Log($"[OsCog] Build {buildDate} not staged — downloading on demand");
+                    await _optiScalerService.EnsureNightlyBuildStagingAsync(buildDate);
+                }
+            };
+        }
+
         bool apiComboInitializing = true;
-        AddRow(unifiedGrid, 1, Loc.GetString("Dialog.OptiScaler.UpscalerApi"), apiCombo, Loc.GetString("Dialog.OptiScaler.Upscaler"), apiUpscalerCombo);
+        AddRow(unifiedGrid, 2, Loc.GetString("Dialog.OptiScaler.UpscalerApi"), apiCombo, Loc.GetString("Dialog.OptiScaler.Upscaler"), apiUpscalerCombo);
         apiComboInitializing = false;
 
         apiCombo.SelectionChanged += (s, ev) =>
@@ -2431,18 +2791,16 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             FgNvngxToIni  = (string d) => d switch { "Nukem's" => "Nukems", "Enabler" => "Arturs", "FSR 3/4 FG" => "FFX", "Combo" => "Combo", _ => "None" };
             string IniToFgInput(string v) => v switch { "upscaler" => "OptiFG (Upscaler)", "dlssg" => "DLSSG via Streamline", "nvngxfg" => "DLSSG via Nvngx", "fsrfg" => "FSR 3.1 FG", "fsrfg30" => "FSR 3.0 FG", "xefg" => "XeFG", _ => "Auto (Default)" };
             string IniToFgOutput(string v) => v switch { "fsrfg" => "FSR FG", "dlssg" => "DLSSG", "xefg" => "XeFG", _ => "Auto (Default)" };
-            string IniToFgNvngx(string v) => v switch { "Nukems" => "Nukem's", "Arturs" => "Enabler", "FFX" => "FSR 3/4 FG", "Combo" => "Combo", _ => "None (Real DLSSG)" };
-
-            // Separator row between version and nightly settings (spans all 4 columns)
+            string IniToFgNvngx(string v) => v switch { "Nukems" => "Nukem's", "Arturs" => "Enabler", "FFX" => "FSR 3/4 FG", "Combo" => "Combo", _ => "None (Real DLSSG)" };            // Separator row between version/build and nightly settings (spans all 4 columns)
             unifiedGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var versionSep = MakeSeparator();
-            Grid.SetRow(versionSep, 2); Grid.SetColumn(versionSep, 0); Grid.SetColumnSpan(versionSep, 4);
+            Grid.SetRow(versionSep, 3); Grid.SetColumn(versionSep, 0); Grid.SetColumnSpan(versionSep, 4);
             unifiedGrid.Children.Add(versionSep);
 
             // Section heading: Frame Generation Settings
             unifiedGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var fgHeading = new TextBlock { Text = Loc.GetString("Dialog.FrameGenerationSettings"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) };
-            Grid.SetRow(fgHeading, 3); Grid.SetColumn(fgHeading, 0); Grid.SetColumnSpan(fgHeading, 4);
+            Grid.SetRow(fgHeading, 4); Grid.SetColumn(fgHeading, 0); Grid.SetColumnSpan(fgHeading, 4);
             unifiedGrid.Children.Add(fgHeading);
 
             // Row 4: FG Enabled — master on/off, first option in the FG section
@@ -2455,7 +2813,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             };
             ToolTipService.SetToolTip(fgEnabledCombo,
                 Loc.GetString("Dialog.OptiScaler.FgEnabledTooltip"));
-            AddRow(unifiedGrid, 4, Loc.GetString("Dialog.OptiScaler.FgEnabled"), fgEnabledCombo, null, null);
+            AddRow(unifiedGrid, 5, Loc.GetString("Dialog.OptiScaler.FgEnabled"), fgEnabledCombo, null, null);
 
             // All nightly rows go into the same unifiedGrid so columns align with the version row above
             // Row 2: Streamline/DLSS Enabler (combined) | Streamline Version
@@ -2474,7 +2832,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
             combinedCombo = new ComboBox { ItemsSource = new[] { "No", "Yes" }, SelectedItem = combinedOn ? "Yes" : "No" };
             ToolTipService.SetToolTip(combinedCombo, Loc.GetString("Dialog.OptiScaler.CombinedTooltip"));
             var slVersionCombo = new ComboBox { ItemsSource = slVersions.Count > 0 ? (IEnumerable<string>)slVersions : new[] { slVersionDefault }, SelectedItem = slVersionDefault, IsEnabled = combinedOn };
-AddRow(unifiedGrid, 5, Loc.GetString("Dialog.OptiScaler.StreamlineDlssEnabler"), combinedCombo, Loc.GetString("Dialog.OptiScaler.StreamlineVersion"), slVersionCombo);
+AddRow(unifiedGrid, 6, Loc.GetString("Dialog.OptiScaler.StreamlineDlssEnabler"), combinedCombo, Loc.GetString("Dialog.OptiScaler.StreamlineVersion"), slVersionCombo);
 
             // Row 4: FG Input (left) | HUD Fix (right)
             fgInputCombo = new ComboBox { ItemsSource = new[] { "Auto (Default)", "OptiFG (Upscaler)", "DLSSG via Streamline", "DLSSG via Nvngx", "FSR 3.1 FG", "FSR 3.0 FG", "XeFG" }, SelectedItem = IniToFgInput(ViewModel.GetOsFgInput(card.GameName, card.Source ?? "")) };
@@ -2502,7 +2860,7 @@ AddRow(unifiedGrid, 5, Loc.GetString("Dialog.OptiScaler.StreamlineDlssEnabler"),
             hudFixCombo = new ComboBox { ItemsSource = new[] { "Default", "On", "Off" }, SelectedItem = hudFixSelected };
             ToolTipService.SetToolTip(hudFixCombo!, Loc.GetString("Dialog.OptiScaler.HudFixTooltip"));
 
-AddRow(unifiedGrid, 6, Loc.GetString("Dialog.OptiScaler.FgInput"), fgInputCombo!, Loc.GetString("Dialog.OptiScaler.HudFix"), hudFixCombo!);
+AddRow(unifiedGrid, 7, Loc.GetString("Dialog.OptiScaler.FgInput"), fgInputCombo!, Loc.GetString("Dialog.OptiScaler.HudFix"), hudFixCombo!);
 
             // Row 5: FG Output (left) | FG Nvngx Override (right)
             fgOutputCombo = new ComboBox { ItemsSource = new[] { "Auto (Default)", "FSR FG", "DLSSG", "XeFG" }, SelectedItem = IniToFgOutput(ViewModel.GetOsFgOutput(card.GameName, card.Source ?? "")) };
@@ -2512,7 +2870,7 @@ AddRow(unifiedGrid, 6, Loc.GetString("Dialog.OptiScaler.FgInput"), fgInputCombo!
             object? nvngxSelected = nvngxItems.FirstOrDefault(i => i is ComboBoxItem cb ? (cb.Content as string) == currentNvngxDisplay : (i as string) == currentNvngxDisplay) ?? nvngxItems[0];
             fgNvngxCombo = new ComboBox { ItemsSource = nvngxItems, SelectedItem = nvngxSelected };
 ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxTooltip"));
-            AddRow(unifiedGrid, 7, Loc.GetString("Dialog.OptiScaler.FgOutput"), fgOutputCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"), fgNvngxCombo!);
+            AddRow(unifiedGrid, 8, Loc.GetString("Dialog.OptiScaler.FgOutput"), fgOutputCombo!, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"), fgNvngxCombo!);
 
             bool fgOutputIsDlssg = fgOutputCombo!.SelectedItem as string == "DLSSG";
             fgNvngxCombo!.Opacity = fgOutputIsDlssg ? 1.0 : 0.35;
@@ -2561,7 +2919,7 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
             ToolTipService.SetToolTip(reflexMarkersCombo,
                 Loc.GetString("Dialog.OptiScaler.UseGamesReflexMarkersTooltip"));
 
-            AddRow(unifiedGrid, 8, Loc.GetString("Dialog.OptiScaler.ForceReflex"), forceReflexCombo, Loc.GetString("Dialog.OptiScaler.UseGamesReflexMarkers"), reflexMarkersCombo);
+            AddRow(unifiedGrid, 9, Loc.GetString("Dialog.OptiScaler.ForceReflex"), forceReflexCombo, Loc.GetString("Dialog.OptiScaler.UseGamesReflexMarkers"), reflexMarkersCombo);
 
             // ── Wire handlers ──────────────────────────────────────────────
             combinedCombo!.SelectionChanged += (s, ev) =>
@@ -3316,7 +3674,7 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
             {
                 int row = Grid.GetRow(child);
                 int col = Grid.GetColumn(child);
-                if (row >= 1 || col >= 2)
+                if (row >= 2 || col >= 2)
                 {
                     child.IsHitTestVisible = false;
                     child.Opacity = 0.45;
