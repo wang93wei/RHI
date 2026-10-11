@@ -258,3 +258,26 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 ### Status
 
 [OK] **Completed**
+
+
+## Session 8: 合并上游 main、五语本地化与 Windows CI 验证
+<!-- trellis-session: v=2 fp=fd4eaef89f60ea03 -->
+
+**Date**: 2026-10-11
+**Task**: 合并上游 main、五语本地化与 Windows CI 验证
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream/main e9eef5d 至 feat/i18n；每种语言新增82键、更新3键，更新AGENTS与i18n规范。GitHub Build & Test 38120066437和Package38120069702通过，62测试通过，2133键100%覆盖，安装器与便携包已生成。编译158警告（旧运行146）；未运行本地构建测试或安装.NET。任务已归档。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `27d6a44` | feat: 合并上游更新并补全五语本地化 |
+| `1f826a2` | docs(ci): 记录上游合并与CI验证结果 |
+
+### Status
+
+[OK] **Completed**
