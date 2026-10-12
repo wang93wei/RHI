@@ -281,3 +281,26 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: 合并上游 main、五语补全与远程CI验证
+<!-- trellis-session: v=2 fp=4cfbfc49cca76d95 -->
+
+**Date**: 2026-10-12
+**Task**: 合并上游 main、五语补全与远程CI验证
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream/main 7bca127 至 feat/i18n；补全F5五语、配置打包与CI门禁，修复更新/卸载遗漏。Build & Test38190846568和Package38190846211均成功，62应用测试及10检查脚本测试通过，五语2140键，158警告与基线相同。未安装.NET或执行本地编译测试；提交代理曾误执行一次空白检查，已记录并披露。任务已归档。Windows UI与游戏行为未验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d0230af` | feat(optiscaler): 增加 F5 DLSSNR 支持并完善汉化与 CI |
+| `6a088be` | docs: 记录上游集成证据与F5生命周期约定 |
+
+### Status
+
+[OK] **Completed**
