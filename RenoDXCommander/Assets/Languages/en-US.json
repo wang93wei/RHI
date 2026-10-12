@@ -530,7 +530,7 @@
   "Dialog.OptiScaler.UpscalerTooltip": "Upscaler for the selected API. 'Auto' lets OptiScaler choose based on your GPU.",
   "Dialog.OptiScaler.UseGamesReflexMarkers": "Use Games Reflex Markers",
   "Dialog.OptiScaler.UseGamesReflexMarkersTooltip": "UseGamesReflexMarkers: whether to use the game's Reflex markers for Frame Generation timing. Default is true.",
-  "Dialog.OptiScaler.VariantTooltip": "Stable: official release. Nightly: daily build. DLSS NR: Neural Rendering fork with multi-pass NR support.",
+  "Dialog.OptiScaler.VariantTooltip": "Stable: official release. Nightly: daily build. DLSS NR: Neural Rendering fork with multi-pass NR support. F5 DLSSNR: F5 fork with DLSS Neural Rendering and multi-pass support.",
   "Dialog.OptiScaler.Version": "OptiScaler Version",
   "Dialog.OptiScalerCompatibility": "OptiScaler Compatibility",
   "Dialog.OptiScalerSetup": "⚠ OptiScaler Setup",
@@ -2131,5 +2131,12 @@
   "Settings.GitHub.Pat.SavedAs": "PAT saved — authenticated as @{0}",
   "Settings.GitHub.Pat.Saved": "PAT saved and applied.",
   "Settings.GitHub.Pat.ClearFailed": "Failed to clear: {0}",
-  "Settings.GitHub.Pat.Cleared": "PAT cleared."
+  "Settings.GitHub.Pat.Cleared": "PAT cleared.",
+  "Extras.OptiScaler.Fork.Tooltip": "Open the {0} GitHub page",
+  "Dialog.OptiScaler.DeployIniNote": "Settings above apply in real time. Deploy an INI only if the game folder has no OptiScaler.ini, or if you want a new file. The deployed file does not include the settings configured above.",
+  "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR staging ready",
+  "OptiScaler.F5.Progress.Checking": "Checking OptiScaler F5 DLSSNR release...",
+  "OptiScaler.F5.Progress.UpToDate": "OptiScaler F5 DLSSNR up to date",
+  "OptiScaler.F5.Progress.Downloading": "Downloading OptiScaler F5 DLSSNR ({0})...",
+  "OptiScaler.F5.Progress.DownloadSize": "Downloading F5 DLSSNR... {0} MB / {1} MB"
 }

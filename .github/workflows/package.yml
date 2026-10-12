@@ -64,7 +64,9 @@ jobs:
               'ReShade64.json', 'RHI_PatchNotes.md', 'relimiter.ini', 'reshade.rdr2.ini',
               'OptiScaler.nvidia.ini', 'OptiScaler.amd-dlss.ini', 'OptiScaler.amd-nodlss.ini',
               'OptiScaler_nightly.nvidia.ini', 'OptiScaler_nightly.amd-dlss.ini',
-              'OptiScaler_nightly.amd-nodlss.ini')) {
+              'OptiScaler_nightly.amd-nodlss.ini',
+              'OptiScaler_f5.nvidia.ini', 'OptiScaler_f5.amd-dlss.ini',
+              'OptiScaler_f5.amd-nodlss.ini')) {
             Copy-Item "$SRC/$f" $OUT -Force
           }
           New-Item "$OUT/Assets/icons" -ItemType Directory -Force | Out-Null
@@ -74,6 +76,16 @@ jobs:
           if (Test-Path "$SRC/Assets/Languages") {
             New-Item "$OUT/Assets/Languages" -ItemType Directory -Force | Out-Null
             Copy-Item "$SRC/Assets/Languages/*.json" "$OUT/Assets/Languages/" -Force
+          }
+          foreach ($file in @(
+              'OptiScaler_f5.nvidia.ini', 'OptiScaler_f5.amd-dlss.ini',
+              'OptiScaler_f5.amd-nodlss.ini',
+              'Assets/Languages/en-US.json', 'Assets/Languages/zh-CN.json',
+              'Assets/Languages/zh-TW.json', 'Assets/Languages/ja-JP.json',
+              'Assets/Languages/ko-KR.json')) {
+            if (-not (Test-Path "$OUT/$file" -PathType Leaf)) {
+              throw "Required package content missing: $file"
+            }
           }
 
       # Both packagers only read the assembled folder and write separate outputs.
@@ -89,7 +101,22 @@ jobs:
 
       - name: Zip portable build
         shell: pwsh
-        run: Compress-Archive -Path publish/RHI/* -DestinationPath RHI-portable.zip
+        run: |
+          Compress-Archive -Path publish/RHI/* -DestinationPath RHI-portable.zip
+          $archive = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $PWD 'RHI-portable.zip'))
+          try {
+            $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
+            foreach ($file in @(
+                'OptiScaler_f5.nvidia.ini', 'OptiScaler_f5.amd-dlss.ini',
+                'OptiScaler_f5.amd-nodlss.ini',
+                'Assets/Languages/en-US.json', 'Assets/Languages/zh-CN.json',
+                'Assets/Languages/zh-TW.json', 'Assets/Languages/ja-JP.json',
+                'Assets/Languages/ko-KR.json')) {
+              if ($file -notin $entries) { throw "Required portable entry missing: $file" }
+            }
+          } finally {
+            $archive.Dispose()
+          }
 
       - name: Upload portable artifact
         id: upload-portable

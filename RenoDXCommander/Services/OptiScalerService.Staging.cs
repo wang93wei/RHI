@@ -1626,4 +1626,213 @@ public partial class OptiScalerService
             CrashReporter.Log($"[OptiScalerService.ClearDlssNrStaging] Failed — {ex.Message}");
         }
     }
+
+    // ── F5 DLSSNR variant staging ─────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task EnsureF5StagingAsync(IProgress<(string message, double percent)>? progress = null)
+    {
+        try
+        {
+            if (IsStagingReadyF5 && !HasUpdateF5)
+            {
+                CrashReporter.Log("[OptiScalerService.EnsureF5StagingAsync] Staging already valid — skipping");
+                progress?.Report((_loc.GetString("OptiScaler.F5.Progress.Ready"), 100));
+                return;
+            }
+
+            progress?.Report((_loc.GetString("OptiScaler.F5.Progress.Checking"), 5));
+            string? json;
+            try { json = await _etagCache.GetWithETagAsync(_http, F5ReleasesApi).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] API request failed — {ex.Message}");
+                return;
+            }
+            if (json == null)
+            {
+                CrashReporter.Log("[OptiScalerService.EnsureF5StagingAsync] API returned null");
+                return;
+            }
+
+            string? tagName = null, assetName = null, downloadUrl = null;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                // /releases/latest returns a single object
+                if (root.TryGetProperty("tag_name", out var t)) tagName = t.GetString()?.TrimStart('v');
+                if (root.TryGetProperty("assets", out var assets))
+                {
+                    foreach (var asset in assets.EnumerateArray())
+                    {
+                        var name = asset.TryGetProperty("name", out var n) ? n.GetString() : null;
+                        var url  = asset.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
+                        // Pick the main OptiScaler zip — must start with "OptiScaler-DLSSNR-F5-" to skip
+                        // optional companion zips like Optional-Vendor-Neutral-DLSS5-Forwarder.zip
+                        if (name?.StartsWith("OptiScaler-DLSSNR-F5-", StringComparison.OrdinalIgnoreCase) == true
+                            && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                            && url != null)
+                        {
+                            assetName = name; downloadUrl = url; break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Parse failed — {ex.Message}");
+                return;
+            }
+
+            if (assetName == null || downloadUrl == null)
+            {
+                CrashReporter.Log("[OptiScalerService.EnsureF5StagingAsync] No .zip asset found");
+                return;
+            }
+
+            var cachedVersion = StagedVersionF5;
+            if (cachedVersion != null && string.Equals(cachedVersion, tagName, StringComparison.Ordinal) && IsStagingReadyF5)
+            {
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Already up to date ({tagName})");
+                progress?.Report((_loc.GetString("OptiScaler.F5.Progress.UpToDate"), 100));
+                return;
+            }
+
+            progress?.Report((_loc.GetString("OptiScaler.F5.Progress.Downloading", assetName), 10));
+            CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Downloading {assetName} from {downloadUrl}");
+
+            Directory.CreateDirectory(F5StagingDir);
+            var tempArchive = Path.Combine(F5StagingDir, assetName + ".tmp");
+
+            try
+            {
+                using var dlResp = await _http.GetAsync(downloadUrl, System.Net.Http.HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                if (!dlResp.IsSuccessStatusCode)
+                {
+                    CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Download failed ({dlResp.StatusCode})");
+                    return;
+                }
+                var total = dlResp.Content.Headers.ContentLength ?? -1L;
+                long downloaded = 0;
+                var buf = new byte[1024 * 1024];
+                using var net  = await dlResp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                using var file = new FileStream(tempArchive, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true);
+                int read;
+                while ((read = await net.ReadAsync(buf).ConfigureAwait(false)) > 0)
+                {
+                    await file.WriteAsync(buf.AsMemory(0, read)).ConfigureAwait(false);
+                    downloaded += read;
+                    if (total > 0) progress?.Report((_loc.GetString("OptiScaler.F5.Progress.DownloadSize", downloaded / 1024 / 1024, total / 1024 / 1024), 10 + (double)downloaded / total * 80));
+                }
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Downloaded {downloaded} bytes");
+            }
+            catch (Exception ex)
+            {
+                if (File.Exists(tempArchive)) try { File.Delete(tempArchive); } catch { }
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Download exception — {ex.Message}");
+                return;
+            }
+
+            try
+            {
+                var tempExtractDir = Path.Combine(Path.GetTempPath(), $"RHI_optiscaler_f5_{Guid.NewGuid():N}");
+                Directory.CreateDirectory(tempExtractDir);
+                try
+                {
+                    System.IO.Compression.ZipFile.ExtractToDirectory(tempArchive, tempExtractDir, overwriteFiles: true);
+                    File.Delete(tempArchive);
+
+                    // Find the directory containing OptiScaler.dll (may be in a subfolder)
+                    var dllCandidates = Directory.GetFiles(tempExtractDir, "OptiScaler.dll", SearchOption.AllDirectories);
+                    if (dllCandidates.Length == 0)
+                    {
+                        CrashReporter.Log("[OptiScalerService.EnsureF5StagingAsync] OptiScaler.dll not found in extracted archive");
+                        return;
+                    }
+                    var sourceDir = Path.GetDirectoryName(dllCandidates[0])!;
+
+                    foreach (var existingFile in Directory.GetFiles(F5StagingDir))
+                        try { File.Delete(existingFile); } catch { }
+                    foreach (var existingDir in Directory.GetDirectories(F5StagingDir))
+                        try { Directory.Delete(existingDir, recursive: true); } catch { }
+
+                    foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+                    {
+                        var relativePath = Path.GetRelativePath(sourceDir, file);
+                        var destPath = Path.Combine(F5StagingDir, relativePath);
+                        Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                        File.Copy(file, destPath, overwrite: true);
+                    }
+                    CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Extracted to F5 staging from {sourceDir}");
+                }
+                finally
+                {
+                    try { Directory.Delete(tempExtractDir, recursive: true); } catch (Exception ex) { CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Failed to clean up temp dir — {ex.Message}"); }
+                }
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Extraction failed — {ex.Message}");
+                return;
+            }
+
+            try
+            {
+                File.WriteAllText(F5VersionFilePath, tagName ?? "unknown");
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Version tag written: {tagName}");
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Failed to write version file — {ex.Message}");
+            }
+
+            HasUpdateF5 = false;
+            progress?.Report((_loc.GetString("OptiScaler.F5.Progress.Ready"), 100));
+            CrashReporter.Log("[OptiScalerService.EnsureF5StagingAsync] Staging complete");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[OptiScalerService.EnsureF5StagingAsync] Unexpected error — {ex.Message}");
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task CheckForF5UpdateAsync()
+    {
+        try
+        {
+            string? json;
+            try { json = await _etagCache.GetWithETagAsync(_http, F5ReleasesApi).ConfigureAwait(false); }
+            catch { return; }
+            if (json == null) return;
+
+            string? remoteTag = null;
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("tag_name", out var t))
+                remoteTag = t.GetString()?.TrimStart('v');
+
+            HasUpdateF5 = !string.Equals(StagedVersionF5, remoteTag, StringComparison.Ordinal);
+            CrashReporter.Log($"[OptiScalerService.CheckForF5UpdateAsync] Local={StagedVersionF5}, Remote={remoteTag}, HasUpdate={HasUpdateF5}");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[OptiScalerService.CheckForF5UpdateAsync] Failed — {ex.Message}");
+        }
+    }
+
+    /// <inheritdoc />
+    public void ClearF5Staging()
+    {
+        try
+        {
+            if (Directory.Exists(F5StagingDir))
+                Directory.Delete(F5StagingDir, true);
+            CrashReporter.Log("[OptiScalerService.ClearF5Staging] F5 staging folder cleared");
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[OptiScalerService.ClearF5Staging] Failed — {ex.Message}");
+        }
+    }
 }

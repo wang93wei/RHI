@@ -530,7 +530,7 @@
   "Dialog.OptiScaler.UpscalerTooltip": "所选 API 的超分，“自动”则由 OptiScaler 根据你的显卡选择。",
   "Dialog.OptiScaler.UseGamesReflexMarkers": "使用游戏 Reflex 标记",
   "Dialog.OptiScaler.UseGamesReflexMarkersTooltip": "UseGamesReflexMarkers：是否使用游戏的 Reflex 标记进行帧生成计时。默认为 true。",
-  "Dialog.OptiScaler.VariantTooltip": "Stable：官方正式版。Nightly：每日构建。DLSS NR：支持多遍神经渲染的社区分支。",
+  "Dialog.OptiScaler.VariantTooltip": "稳定版：官方正式版。每夜版：每日构建。DLSS NR：支持多遍神经渲染的社区分支。F5 DLSSNR：支持 DLSS 神经渲染和多遍处理的 F5 分支。",
   "Dialog.OptiScaler.Version": "OptiScaler 版本",
   "Dialog.OptiScalerCompatibility": "OptiScaler 兼容性",
   "Dialog.OptiScalerSetup": "⚠ OptiScaler 设置",
@@ -2131,5 +2131,12 @@
   "Settings.GitHub.Pat.SavedAs": "PAT 已保存，已通过 @{0} 的身份验证。",
   "Settings.GitHub.Pat.Saved": "PAT 已保存并应用。",
   "Settings.GitHub.Pat.ClearFailed": "清除失败：{0}",
-  "Settings.GitHub.Pat.Cleared": "PAT 已清除。"
+  "Settings.GitHub.Pat.Cleared": "PAT 已清除。",
+  "Extras.OptiScaler.Fork.Tooltip": "打开 {0} 的 GitHub 页面",
+  "Dialog.OptiScaler.DeployIniNote": "上方设置实时生效。仅在游戏目录没有 OptiScaler.ini，或需要新文件时部署 INI。部署的文件不包含上方已配置的设置。",
+  "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR 暂存文件已就绪",
+  "OptiScaler.F5.Progress.Checking": "正在检查 OptiScaler F5 DLSSNR 版本...",
+  "OptiScaler.F5.Progress.UpToDate": "OptiScaler F5 DLSSNR 已是最新版本",
+  "OptiScaler.F5.Progress.Downloading": "正在下载 OptiScaler F5 DLSSNR（{0}）...",
+  "OptiScaler.F5.Progress.DownloadSize": "正在下载 F5 DLSSNR... {0} MB / {1} MB"
 }

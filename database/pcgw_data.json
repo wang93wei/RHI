@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "game_count": 55498,
-  "generated": "2026-10-10T22:12:21Z",
+  "game_count": 55529,
+  "generated": "2026-10-11T20:29:17Z",
   "name_overrides": {
     "ACE COMBAT 8: WINGS OF THEVE": "Ace Combat 8: Wings of Theve",
     "AFOP": "Avatar: Frontiers of Pandora",
@@ -2940,6 +2940,7 @@
       "config_path": "%LOCALAPPDATA%\\AAAAXY\\",
       "engine": "Ebitengine"
     },
+    "Aaargh!": {},
     "Aaero": {
       "steam_appid": 499890,
       "config_path": "HKEY_CURRENT_USER\\Software\\Mad Fellows Ltd\\Aaero\\",
@@ -11700,6 +11701,10 @@
     "Asemblance: Oversight": {
       "steam_appid": 809950
     },
+    "Asgard's Fall: Viking Survivors": {
+      "steam_appid": 2780710,
+      "config_path": "%LOCALAPPDATA%\\AsgardsFall\\Save Files\\"
+    },
     "Asgard's Wrath": {
       "config_path": "C:\\Program Files\\Oculus\\Software\\Software\\sanzaru-games-inc-wrath\\WindowsNoEditor\\",
       "engine": "Unreal Engine 4"
@@ -17442,6 +17447,8 @@
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Worm Animation LLC\\BeatTheGame\\Unity\\807cdfa4-d8b2-495f-975e-b0952098c488\\Analytics",
       "engine": "Unity"
     },
+    "Beat the House": {},
+    "Beat the House 2": {},
     "Beat the Rhythm VR": {
       "steam_appid": 781200
     },
@@ -18719,6 +18726,7 @@
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Luckshot Games\\Big Hops",
       "engine": "Unity"
     },
+    "Big Job": {},
     "Big Journey to Home": {
       "steam_appid": 388440
     },
@@ -23019,6 +23027,7 @@
     "Box PC3": {
       "config_path": "C:\\pc3\\drakssen\\boxeo\\keywiz.cfg"
     },
+    "Box World": {},
     "Box: The Game": {
       "steam_appid": 879850,
       "dx11": true,
@@ -25524,6 +25533,7 @@
       "steam_appid": 760330,
       "engine": "L├ûVE"
     },
+    "Byzantine: The Betrayal": {},
     "Bzzzt": {
       "steam_appid": 1293170,
       "dx11": true,
@@ -25759,6 +25769,11 @@
     "CaesarIA": {
       "steam_appid": 327640
     },
+    "Caesars Palace": {},
+    "Caesars Palace (1992)": {},
+    "Caesars Palace (1997)": {},
+    "Caesars Palace 2000": {},
+    "Caesars Palace Slots": {},
     "CAFE 0 ~The Drowned Mermaid~": {
       "steam_appid": 335660,
       "opengl": true,
@@ -27300,6 +27315,7 @@
       "steam_appid": 1009920,
       "engine": "RPG Maker"
     },
+    "Carrier: Fortress at Sea": {},
     "Carrion": {
       "steam_appid": 953490,
       "opengl": true,
@@ -40944,7 +40960,7 @@
     "Dead Island 2": {
       "steam_appid": 934700,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\DeadIsland\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\DeadIsland\\Saved\\Config\\WindowsNoEditor",
       "engine": "Unreal Engine 4"
     },
     "Dead Island: Definitive Edition": {
@@ -44792,6 +44808,7 @@
       "config_path": "HKEY_CURRENT_USER\\SOFTWARE\\Treyarch\\Die By The Sword, <path-to-game>\\DBTS.INI",
       "engine": "Vsim"
     },
+    "Die DillyBillys": {},
     "Die Drachen von Laas": {},
     "Die Drei ??? - Geheimnis der Schattenhelden": {
       "steam_appid": 735620
@@ -62280,6 +62297,7 @@
     "Fly to KUMA MAKER": {
       "steam_appid": 517860
     },
+    "Fly!": {},
     "Fly'N": {
       "steam_appid": 223730,
       "config_path": "<path-to-game>\\Source\\Content\\Config\\slot1\\*.xml"
@@ -98337,6 +98355,7 @@
       "steam_appid": 571500
     },
     "Magic Jigsaw Puzzles": {},
+    "Magic Johnson's Basketball": {},
     "Magic Lantern": {
       "steam_appid": 575110
     },
@@ -106854,6 +106873,7 @@
     "Motocross: Chasing the Dream": {
       "steam_appid": 830540
     },
+    "MotoGP 07": {},
     "MotoGP 08": {
       "steam_appid": 21610,
       "dx9": true,
@@ -112778,6 +112798,9 @@
     "Nil-Ninjahtic: Ronin": {
       "steam_appid": 454130
     },
+    "Nile: Passage to Egypt": {
+      "engine": "Director"
+    },
     "Nimbatus": {
       "steam_appid": 383840,
       "dx11": true,
@@ -112910,6 +112933,13 @@
       "engine": "Platinum Engine"
     },
     "Ninja Gaiden II: The Dark Sword of Chaos": {},
+    "Ninja Gaiden Σ2": {
+      "steam_appid": 1580790,
+      "dx11": true,
+      "config_path": "%USERPROFILE%\\Documents\\KoeiTecmo\\NINJAGAIDENSIGMA2\\<user-id>\\SYSTEMSAVE\\SYSTEMSAVE.DAT, %USERPROFILE%\\Documents\\KoeiTecmo\\NINJAGAIDENSIGMA2\\<user-id>\\USER_SETTING\\WINSTATE.DAT",
+      "config_path_xbox": "%LOCALAPPDATA%\\Packages\\946B6A6E.NINJAGAIDENSIGMA2_dkffhzhmh6pmy\\SystemAppData\\wgs",
+      "engine": "Hybrid Engine"
+    },
     "Ninja Gaiden ╬ú": {
       "steam_appid": 1580780,
       "dx11": true,
@@ -114374,6 +114404,7 @@
     "NVL": {
       "steam_appid": 756880
     },
+    "NY Warriors": {},
     "Nya Nya Nya Girls (╩╗╩╗╩╗) (=^´¢Ñ¤ë´¢Ñ^=) (╩╗╩╗╩╗)": {
       "steam_appid": 963330
     },
@@ -116807,6 +116838,9 @@
     },
     "Operation: Cheek Clapper": {
       "steam_appid": 1152670
+    },
+    "Operation: Eco-Nightmare": {
+      "engine": "Director"
     },
     "Operation: Followthrough": {
       "steam_appid": 3720530
@@ -138660,6 +138694,11 @@
     "Sacrament": {
       "steam_appid": 734380
     },
+    "Sacrata": {
+      "steam_appid": 3201450,
+      "dx12": true,
+      "config_path": "<path-to-game>\\Windows\\SACRATA\\Saved\\Config\\Windows\\"
+    },
     "Sacred": {
       "steam_appid": 12320,
       "config_path": "<path-to-game>\\SETTINGS.CFG"
@@ -139625,6 +139664,7 @@
       "steam_appid": 1639080,
       "engine": "Unity"
     },
+    "Sandwarriors": {},
     "Sandwich Sudoku": {
       "steam_appid": 1117310
     },
@@ -139979,6 +140019,7 @@
       "dx9": true,
       "config_path": "%LOCALAPPDATA%\\SAVAGE_The_Shard_of_Gosen\\settings.ini"
     },
+    "Savage: The Ultimate Quest for Survival": {},
     "Savana": {
       "steam_appid": 494970
     },
@@ -144862,6 +144903,7 @@
     "Sideway New York": {
       "steam_appid": 200190
     },
+    "SideWinder": {},
     "Sidewords": {
       "steam_appid": 682230
     },
@@ -145197,6 +145239,7 @@
       "engine": "Unreal Engine 5"
     },
     "Silkolene Honda Motocross GP": {},
+    "Silkroad Online": {},
     "Silly Polly Beast": {
       "steam_appid": 1598780,
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Andrei Chernyshov\\Silly Polly Beast\\",
@@ -151972,6 +152015,8 @@
     },
     "Spirit of the North": {
       "steam_appid": 1213700,
+      "dx11": true,
+      "config_path": "%LOCALAPPDATA%\\Infused\\Saved\\Config\\WindowsNoEditor\\",
       "engine": "Unreal Engine 4"
     },
     "Spirit of the North 2": {
@@ -152566,8 +152611,7 @@
     },
     "Squadron 42": {
       "steam_appid": 4045720,
-      "dx11": true,
-      "engine": "Starengine"
+      "engine": "StarEngine"
     },
     "Squadron: Sky Guardians": {
       "steam_appid": 673570
@@ -152970,7 +153014,7 @@
       "dx11": true,
       "vulkan": true,
       "config_path": "<path-to-game>\\LIVE\\USER",
-      "engine": "Starengine"
+      "engine": "StarEngine"
     },
     "Star Clash": {
       "steam_appid": 798190
@@ -162023,6 +162067,9 @@
     },
     "Team Up VR (Beta)": {
       "steam_appid": 916390
+    },
+    "Team Xtreme: Operation Weather Disaster": {
+      "engine": "Director"
     },
     "Teamfight Manager": {
       "steam_appid": 1372810,
@@ -185702,6 +185749,7 @@
     "Virtual Pirate VR": {
       "steam_appid": 849870
     },
+    "Virtual Pool": {},
     "Virtual Pool 2": {},
     "Virtual Pool 3": {
       "config_path": "HKEY_CURRENT_USER\\SOFTWARE\\Celeris\\Virtual Pool 3\\Current Version"
@@ -185712,6 +185760,7 @@
     "Virtual Pool 4 Multiplayer": {
       "steam_appid": 432310
     },
+    "Virtual Pool Hall": {},
     "Virtual Race Car Engineer 2018": {
       "steam_appid": 728150
     },
@@ -185760,6 +185809,7 @@
     "Virtual SlotCars": {
       "steam_appid": 642730
     },
+    "Virtual Snooker": {},
     "Virtual Soccer Zone": {
       "steam_appid": 954620
     },
@@ -187861,7 +187911,9 @@
       "dx11": true
     },
     "WarBreeds": {
-      "steam_appid": 2464660
+      "steam_appid": 2464660,
+      "config_path": "<path-to-game>\\WARBREED.CFG, <path-to-game>\\DATA\\prefs.dbg",
+      "engine": "Mohawk"
     },
     "Warbrush": {
       "steam_appid": 1168960
@@ -195058,6 +195110,10 @@
     },
     "Z-Aftershock": {
       "steam_appid": 652730
+    },
+    "Z-Company": {
+      "steam_appid": 1583820,
+      "engine": "Unity"
     },
     "Z-End": {
       "steam_appid": 582610

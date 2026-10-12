@@ -530,7 +530,7 @@
   "Dialog.OptiScaler.UpscalerTooltip": "選択した API 用のアップスケーラーです。「Auto」にすると、OptiScaler が GPU に基づいて選択します。",
   "Dialog.OptiScaler.UseGamesReflexMarkers": "ゲームの Reflex マーカーを使用",
   "Dialog.OptiScaler.UseGamesReflexMarkersTooltip": "UseGamesReflexMarkers：フレーム生成のタイミングにゲームの Reflex マーカーを使用するかどうか。既定は true です。",
-  "Dialog.OptiScaler.VariantTooltip": "Stable: 公式リリース。Nightly: デイリービルド。DLSS NR: マルチパス NR 対応のコミュニティフォーク。",
+  "Dialog.OptiScaler.VariantTooltip": "安定版：公式リリース。ナイトリー：毎日のビルド。DLSS NR：マルチパスの神経レンダリングに対応したコミュニティフォーク。F5 DLSSNR：DLSS 神経レンダリングとマルチパスに対応した F5 フォーク。",
   "Dialog.OptiScaler.Version": "OptiScaler バージョン",
   "Dialog.OptiScalerCompatibility": "OptiScaler 互換性",
   "Dialog.OptiScalerSetup": "⚠ OptiScaler セットアップ",
@@ -2131,5 +2131,12 @@
   "Settings.GitHub.Pat.SavedAs": "PAT を保存しました。@{0} として認証済みです。",
   "Settings.GitHub.Pat.Saved": "PAT を保存し、適用しました。",
   "Settings.GitHub.Pat.ClearFailed": "削除に失敗しました: {0}",
-  "Settings.GitHub.Pat.Cleared": "PAT を削除しました。"
+  "Settings.GitHub.Pat.Cleared": "PAT を削除しました。",
+  "Extras.OptiScaler.Fork.Tooltip": "{0} の GitHub ページを開く",
+  "Dialog.OptiScaler.DeployIniNote": "上の設定はリアルタイムで適用されます。ゲームフォルダーに OptiScaler.ini がない場合、または新しいファイルが必要な場合にのみ INI を配置してください。配置したファイルには上で指定した設定は含まれません。",
+  "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR の一時配置ファイルが準備できました",
+  "OptiScaler.F5.Progress.Checking": "OptiScaler F5 DLSSNR のリリースを確認中...",
+  "OptiScaler.F5.Progress.UpToDate": "OptiScaler F5 DLSSNR は最新です",
+  "OptiScaler.F5.Progress.Downloading": "OptiScaler F5 DLSSNR（{0}）をダウンロード中...",
+  "OptiScaler.F5.Progress.DownloadSize": "F5 DLSSNR をダウンロード中... {0} MB / {1} MB"
 }

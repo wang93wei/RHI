@@ -121,15 +121,22 @@ public static class ShortcutService
                 var icoPath = Path.Combine(iconDir, $"{safeName}.ico");
                 bool downloaded = false;
 
-                var pcgwSteamId = pcgwService?.GetSteamAppIdFromCentralData(gameName);
-                if (pcgwSteamId.HasValue && pcgwSteamId.Value > 0)
+                try
                 {
-                    CrashReporter.Log($"[ShortcutService] Xbox '{gameName}' — PCGW Steam AppID={pcgwSteamId}");
-                    downloaded = await TryDownloadSteamIconAsync(http, pcgwSteamId.Value, icoPath);
-                }
+                    var pcgwSteamId = pcgwService?.GetSteamAppIdFromCentralData(gameName);
+                    if (pcgwSteamId.HasValue && pcgwSteamId.Value > 0)
+                    {
+                        CrashReporter.Log($"[ShortcutService] Xbox '{gameName}' — PCGW Steam AppID={pcgwSteamId}");
+                        downloaded = await TryDownloadSteamIconAsync(http, pcgwSteamId.Value, icoPath);
+                    }
 
-                if (!downloaded)
-                    downloaded = await TryDownloadMsStoreIconAsync(http, gameName, xboxAumid, icoPath);
+                    if (!downloaded)
+                        downloaded = await TryDownloadMsStoreIconAsync(http, gameName, xboxAumid, icoPath);
+                }
+                catch (Exception ex)
+                {
+                    CrashReporter.Log($"[ShortcutService] Xbox icon fetch failed for '{gameName}' — {ex.Message}. Using RHI icon.");
+                }
 
                 if (downloaded)
                     iconPath = icoPath;

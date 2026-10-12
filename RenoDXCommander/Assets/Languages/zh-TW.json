@@ -530,7 +530,7 @@
   "Dialog.OptiScaler.UpscalerTooltip": "所選 API 的升頻器。'Auto' 讓 OptiScaler 依你的 GPU 選擇。",
   "Dialog.OptiScaler.UseGamesReflexMarkers": "使用遊戲 Reflex 標記",
   "Dialog.OptiScaler.UseGamesReflexMarkersTooltip": "UseGamesReflexMarkers：是否使用遊戲的 Reflex 標記進行畫格生成計時。預設為 true。",
-  "Dialog.OptiScaler.VariantTooltip": "Stable：官方正式版。Nightly：每日組建。DLSS NR：支援多通道神經渲染的社群分支。",
+  "Dialog.OptiScaler.VariantTooltip": "穩定版：官方正式版。每夜版：每日組建。DLSS NR：支援多遍神經渲染的社群分支。F5 DLSSNR：支援 DLSS 神經渲染和多遍處理的 F5 分支。",
   "Dialog.OptiScaler.Version": "OptiScaler 版本",
   "Dialog.OptiScalerCompatibility": "OptiScaler 相容性",
   "Dialog.OptiScalerSetup": "⚠ OptiScaler 設定",
@@ -2131,5 +2131,12 @@
   "Settings.GitHub.Pat.SavedAs": "PAT 已儲存，已通過 @{0} 的身分驗證。",
   "Settings.GitHub.Pat.Saved": "PAT 已儲存並套用。",
   "Settings.GitHub.Pat.ClearFailed": "清除失敗：{0}",
-  "Settings.GitHub.Pat.Cleared": "PAT 已清除。"
+  "Settings.GitHub.Pat.Cleared": "PAT 已清除。",
+  "Extras.OptiScaler.Fork.Tooltip": "開啟 {0} 的 GitHub 頁面",
+  "Dialog.OptiScaler.DeployIniNote": "上方設定即時生效。僅在遊戲目錄沒有 OptiScaler.ini，或需要新檔案時部署 INI。部署的檔案不包含上方已設定的內容。",
+  "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR 暫存檔案已就緒",
+  "OptiScaler.F5.Progress.Checking": "正在檢查 OptiScaler F5 DLSSNR 版本...",
+  "OptiScaler.F5.Progress.UpToDate": "OptiScaler F5 DLSSNR 已是最新版本",
+  "OptiScaler.F5.Progress.Downloading": "正在下載 OptiScaler F5 DLSSNR（{0}）...",
+  "OptiScaler.F5.Progress.DownloadSize": "正在下載 F5 DLSSNR... {0} MB / {1} MB"
 }

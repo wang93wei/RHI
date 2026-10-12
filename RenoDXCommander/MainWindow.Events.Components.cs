@@ -2562,8 +2562,16 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         }
         fpsLimitCombo.SelectedIndex = Array.IndexOf(fpsRawLabels, currentFpsStr);
 
+        var osVariantItems = new[]
+        {
+            new ComboBoxItem { Content = LocOpt.T("Stable"), Tag = "Stable" },
+            new ComboBoxItem { Content = LocOpt.T("Nightly"), Tag = "Nightly" },
+            new ComboBoxItem { Content = "DLSS NR", Tag = "DlssNr" },
+            new ComboBoxItem { Content = "F5 DLSSNR", Tag = "F5" },
+        };
+        var currentOsVariant = ViewModel.GetOsVariant(card.GameName, card.Source ?? "") ?? "Stable";
         AddRow(unifiedGrid, 0, Loc.GetString("Dialog.OptiScaler.Version"),
-            new ComboBox { ItemsSource = new[] { "Stable", "Nightly", "DLSS NR" }, SelectedItem = ViewModel.GetOsVariant(card.GameName, card.Source ?? "") == "DlssNr" ? "DLSS NR" : ViewModel.GetOsVariant(card.GameName, card.Source ?? ""), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch },
+            new ComboBox { ItemsSource = osVariantItems, SelectedItem = osVariantItems.FirstOrDefault(item => (string)item.Tag == currentOsVariant), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch },
             Loc.GetString("Dialog.OptiScaler.FramerateLimit"), fpsLimitCombo);
         // Grab the variant combo we just added
         var variantCombo = (ComboBox)unifiedGrid.Children.Cast<UIElement>().Where(c => c is ComboBox).First();
@@ -2732,9 +2740,8 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         variantCombo.SelectionChanged += (s, ev) =>
         {
             if (variantComboInitializing) return;
-            var selected = variantCombo.SelectedItem as string ?? "Stable";
-            // Map display name to internal value
-            var internalValue = selected switch { "DLSS NR" => "DlssNr", "Stable" => null, _ => selected };
+            var selected = (variantCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "Stable";
+            var internalValue = selected == "Stable" ? null : selected;
             ViewModel.SetOsVariant(card.GameName, internalValue, card.Source ?? "");
             if (card.IsOsInstalled && !string.IsNullOrEmpty(card.InstallPath))
             {
@@ -2752,6 +2759,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
 
         bool isNightly = ViewModel.GetOsVariant(card.GameName, card.Source ?? "") == "Nightly";
         bool isDlssNr  = ViewModel.GetOsVariant(card.GameName, card.Source ?? "") == "DlssNr";
+        bool isF5      = ViewModel.GetOsVariant(card.GameName, card.Source ?? "") == "F5";
 
         // These are declared at method scope so the presets closures (built later, outside the
         // nightly block) can capture them. They are only non-null when isNightly == true.
@@ -2783,7 +2791,7 @@ Text = Loc.GetString("Xaml.EngineIniHdr"),
         ComboBox? forceReflexCombo    = null;
         ComboBox? reflexMarkersCombo  = null;
 
-        if (isNightly || isDlssNr)
+        if (isNightly || isDlssNr || isF5)
         {
             // ── INI value converters ───────────────────────────────────────
             FgInputToIni  = (string d) => d switch { "OptiFG (Upscaler)" => "upscaler", "DLSSG via Streamline" => "dlssg", "DLSSG via Nvngx" => "nvngxfg", "FSR 3.1 FG" => "fsrfg", "FSR 3.0 FG" => "fsrfg30", "XeFG" => "xefg", _ => "auto" };
@@ -3175,8 +3183,8 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
                 };
             }
 
-            // ── DLSS NR Settings section (DlssNr variant only) ────────────
-            if (isDlssNr)
+            // ── DLSS NR Settings section (DlssNr and F5 variants) ────────────
+            if (isDlssNr || isF5)
             {
                 content.Children.Add(MakeSeparator());
                 content.Children.Add(new TextBlock { Text = Loc.GetString("Xaml.NeuralRenderingSettings"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush), Margin = new Thickness(0, 2, 0, 0) });
@@ -3324,7 +3332,7 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
         var bottomBorder = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
         bottomBorder.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush) });
 
-        if (isNightly || isDlssNr)
+        if (isNightly || isDlssNr || isF5)
         {
             var presetsLabel = new TextBlock { Text = Loc.GetString("Dialog.Presets"), FontSize = 13, Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush) };
             bottomBorder.Children.Add(presetsLabel);
@@ -3414,7 +3422,12 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
                     string? capturedHudFix      = hudFixCombo?.SelectedItem is string hf ? (hf == "On" ? "true" : hf == "Off" ? "false" : "auto") : null;
 
                     // Capture the 6 previously missing settings
-                    string? capturedVariant     = variantCombo.SelectedItem as string; // "Stable", "Nightly", "DLSS NR"
+                    string? capturedVariant     = ((variantCombo.SelectedItem as ComboBoxItem)?.Tag as string) switch
+                    {
+                        "DlssNr" => "DLSS NR",
+                        "F5" => "F5 DLSSNR",
+                        var value => value,
+                    };
                     string? capturedUpscalerApi = apiCombo.SelectedItem as string;     // "DX11", "DX12", "Vulkan"
                     string? capturedUpscaler    = apiCombo.SelectedItem is string upApi && apiUpscalerCombo.SelectedItem is string upSel
                                                   ? UpscalerOptionToIni(upApi, upSel) : null;
@@ -3594,7 +3607,7 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
                     // OsVariant — change if preset has one and it differs from current
                     if (p.OsVariant != null)
                     {
-                        var internalVariant = p.OsVariant switch { "DLSS NR" => "DlssNr", "Stable" => null, _ => p.OsVariant };
+                        var internalVariant = p.OsVariant switch { "DLSS NR" => "DlssNr", "F5 DLSSNR" => "F5", "Stable" => null, _ => p.OsVariant };
                         ViewModel.SetOsVariant(card.GameName, internalVariant, card.Source ?? "");
                     }
 
@@ -3636,7 +3649,14 @@ ToolTipService.SetToolTip(fgNvngxCombo!, Loc.GetString("Dialog.OptiScaler.FgNvng
             bottomBorder.Children.Add(presetsGrid);
         }
 
-        bottomBorder.Children.Add(new Border { Height = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush) });
+        bottomBorder.Children.Add(new TextBlock
+        {
+            Text = Loc.GetString("Dialog.OptiScaler.DeployIniNote"),
+            FontSize = 11,
+            Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 4),
+        });
 
         var deployBtn = new Button
         {
