@@ -15,12 +15,12 @@
   "branch": "feat/i18n",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "d0230afd2573fcc3f6be2c44010b5e9ea6e0a084",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Upstream 7bca127 merged; Build & Test 38190846568 and Package 38190846211 succeeded on d0230af. 62+10 tests passed. See verification.md for limitations and local whitespace-check boundary violation.",
   "meta": {}
 }

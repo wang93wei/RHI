@@ -62,3 +62,8 @@
 - **不要** 在 Service 构造函数中做 IO/网络，应在 `InitializeAsync` 中。
 - **不要** 新建 `HttpClient` 实例，注入共享单例。
 - **不要** 用 `async void`（除事件处理器），一律 `async Task`。
+
+## OptiScaler Variant Lifecycle
+
+- Keep `Stable`, `Nightly`, `DlssNr`, and `F5` consistent across install/update staging readiness, runtime DLL deployment, saved records, displayed versions, update flags and `RhiInstallManifest.Variant`. A partial variant addition can update the wrong staging directory or persist the install as Stable (`OptiScalerService.Install.cs`, `UpdateAsync`).
+- When uninstall restores a variant-specific original DLL, add that DLL to `explicitlyHandled` before generic deployed-file cleanup. Otherwise the generic loop deletes the restored original (F5 `DlssNrForwarderName`, `OptiScalerService.Install.cs`, `Uninstall`).
