@@ -304,3 +304,26 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 ### Status
 
 [OK] **Completed**
+
+
+## Session 10: 上游 2.8.7 合并、五语言与远程 CI
+<!-- trellis-session: v=2 fp=cd98ff27acf16e2b -->
+
+**Date**: 2026-10-13
+**Task**: 上游 2.8.7 合并、五语言与远程 CI
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream/main b9ba0dc 至 feat/i18n。子代理完成冲突合并、五语言四新键和 Nightly 批量更新修复，独立源码审查完成。Windows Build & Test 38331745268 和 Package 38331748578 在 8b0fede 均通过：2144 keys、10 catalog tests、62 application tests、0 errors，两个 artifacts。未安装或使用本地 .NET；提交代理曾误跑一次禁止的 whitespace check，已停止并记录。真实 Windows UI/下载/游戏部署未验证，既有风险见归档 review.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8b0fede` | fix(optiscaler): 修复 Nightly 更新并合并上游变更 |
+| `f337e98` | docs: 记录远程 CI 验证结果 |
+
+### Status
+
+[OK] **Completed**
