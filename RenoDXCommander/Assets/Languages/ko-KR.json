@@ -1,4 +1,7 @@
 {
+  "OptiScaler.Nightly.Progress.Ready": "OptiScaler 나이틀리 임시 파일 준비 완료",
+  "OptiScaler.Nightly.Progress.Checking": "OptiScaler 나이틀리 릴리스 확인 중...",
+  "OptiScaler.Progress.StagingUnavailable": "OptiScaler {0} 임시 파일을 사용할 수 없습니다",
   "Action.ConfigureRtxHdr": "RTX HDR 설정",
   "Action.GetOnNexus": "Nexus Mods에서 받기",
   "Action.Install": "⬇  {0} 설치",
@@ -2133,6 +2136,7 @@
   "Settings.GitHub.Pat.ClearFailed": "삭제 실패: {0}",
   "Settings.GitHub.Pat.Cleared": "PAT를 삭제했습니다.",
   "Extras.OptiScaler.Fork.Tooltip": "{0} GitHub 페이지 열기",
+  "Extras.OptiScaler.Nightly.Tooltip": "OptiScaler 나이틀리 GitHub 페이지 열기",
   "Dialog.OptiScaler.DeployIniNote": "위 설정은 실시간으로 적용됩니다. 게임 폴더에 OptiScaler.ini가 없거나 새 파일이 필요한 경우에만 INI를 배포하세요. 배포한 파일에는 위에서 구성한 설정이 포함되지 않습니다.",
   "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR 임시 파일 준비 완료",
   "OptiScaler.F5.Progress.Checking": "OptiScaler F5 DLSSNR 릴리스 확인 중...",

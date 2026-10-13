@@ -1,4 +1,7 @@
 {
+  "OptiScaler.Nightly.Progress.Ready": "OptiScaler ナイトリーの一時配置ファイルが準備できました",
+  "OptiScaler.Nightly.Progress.Checking": "OptiScaler ナイトリーのリリースを確認中...",
+  "OptiScaler.Progress.StagingUnavailable": "OptiScaler {0} の一時配置ファイルを利用できません",
   "Action.ConfigureRtxHdr": "RTX HDR を設定",
   "Action.GetOnNexus": "Nexus Mods で入手",
   "Action.Install": "⬇  {0} をインストール",
@@ -2133,6 +2136,7 @@
   "Settings.GitHub.Pat.ClearFailed": "削除に失敗しました: {0}",
   "Settings.GitHub.Pat.Cleared": "PAT を削除しました。",
   "Extras.OptiScaler.Fork.Tooltip": "{0} の GitHub ページを開く",
+  "Extras.OptiScaler.Nightly.Tooltip": "OptiScaler ナイトリーの GitHub ページを開く",
   "Dialog.OptiScaler.DeployIniNote": "上の設定はリアルタイムで適用されます。ゲームフォルダーに OptiScaler.ini がない場合、または新しいファイルが必要な場合にのみ INI を配置してください。配置したファイルには上で指定した設定は含まれません。",
   "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR の一時配置ファイルが準備できました",
   "OptiScaler.F5.Progress.Checking": "OptiScaler F5 DLSSNR のリリースを確認中...",

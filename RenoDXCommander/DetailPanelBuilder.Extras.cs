@@ -764,6 +764,8 @@ if (!string.IsNullOrEmpty(vm.GetUalInstalledAs(gn, gs)))                        
                 ? "https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass/releases"
                 : osVariant == "F5"
                 ? "https://github.com/janblade/OptiScaler-F5-DLSSNR-Multipass/releases"
+                : osVariant == "Nightly"
+                ? "https://github.com/optiscaler/OptiScaler-nightly/releases"
                 : "https://github.com/optiscaler/OptiScaler/wiki";
             ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.OptiScaler.Releases.Tooltip"));
             statusBlock.PointerPressed += async (s, e) =>
@@ -786,12 +788,16 @@ if (!string.IsNullOrEmpty(vm.GetUalInstalledAs(gn, gs)))                        
         };
         ApplyInfoButtonStyle(infoBtn, card, AddonType.OptiScaler);
         var osVariantForInfo = _window.ViewModel.GetOsVariant(card.GameName, card.Source ?? "");
-        if (osVariantForInfo == "DlssNr" || osVariantForInfo == "F5")
+        if (osVariantForInfo == "DlssNr" || osVariantForInfo == "F5" || osVariantForInfo == "Nightly")
         {
             var forkUrl = osVariantForInfo == "F5"
                 ? "https://github.com/janblade/OptiScaler-F5-DLSSNR-Multipass"
-                : "https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass";
-            ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.OptiScaler.Fork.Tooltip", osVariantForInfo == "F5" ? "F5 DLSSNR" : "DLSS NR"));
+                : osVariantForInfo == "DlssNr"
+                ? "https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass"
+                : "https://github.com/optiscaler/OptiScaler-nightly";
+            ToolTipService.SetToolTip(infoBtn, osVariantForInfo == "Nightly"
+                ? Loc.GetString("Extras.OptiScaler.Nightly.Tooltip")
+                : Loc.GetString("Extras.OptiScaler.Fork.Tooltip", osVariantForInfo == "F5" ? "F5 DLSSNR" : "DLSS NR"));
             infoBtn.Click += (s, e) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(forkUrl));
         }
         else

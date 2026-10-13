@@ -1,4 +1,7 @@
 {
+  "OptiScaler.Nightly.Progress.Ready": "OptiScaler Nightly staging ready",
+  "OptiScaler.Nightly.Progress.Checking": "Checking OptiScaler Nightly release...",
+  "OptiScaler.Progress.StagingUnavailable": "OptiScaler {0} staging not available",
   "Action.ConfigureRtxHdr": "Configure RTX HDR",
   "Action.GetOnNexus": "Get on Nexus Mods",
   "Action.Install": "⬇  Install {0}",
@@ -2133,6 +2136,7 @@
   "Settings.GitHub.Pat.ClearFailed": "Failed to clear: {0}",
   "Settings.GitHub.Pat.Cleared": "PAT cleared.",
   "Extras.OptiScaler.Fork.Tooltip": "Open the {0} GitHub page",
+  "Extras.OptiScaler.Nightly.Tooltip": "Open the OptiScaler Nightly GitHub page",
   "Dialog.OptiScaler.DeployIniNote": "Settings above apply in real time. Deploy an INI only if the game folder has no OptiScaler.ini, or if you want a new file. The deployed file does not include the settings configured above.",
   "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR staging ready",
   "OptiScaler.F5.Progress.Checking": "Checking OptiScaler F5 DLSSNR release...",

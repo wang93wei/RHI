@@ -1,4 +1,7 @@
 {
+  "OptiScaler.Nightly.Progress.Ready": "OptiScaler 每夜版暫存檔案已就緒",
+  "OptiScaler.Nightly.Progress.Checking": "正在檢查 OptiScaler 每夜版版本...",
+  "OptiScaler.Progress.StagingUnavailable": "OptiScaler {0} 暫存檔案無法使用",
   "Action.ConfigureRtxHdr": "設定 RTX HDR",
   "Action.GetOnNexus": "前往 Nexus Mods 取得",
   "Action.Install": "⬇  安裝 {0}",
@@ -2133,6 +2136,7 @@
   "Settings.GitHub.Pat.ClearFailed": "清除失敗：{0}",
   "Settings.GitHub.Pat.Cleared": "PAT 已清除。",
   "Extras.OptiScaler.Fork.Tooltip": "開啟 {0} 的 GitHub 頁面",
+  "Extras.OptiScaler.Nightly.Tooltip": "開啟 OptiScaler 每夜版的 GitHub 頁面",
   "Dialog.OptiScaler.DeployIniNote": "上方設定即時生效。僅在遊戲目錄沒有 OptiScaler.ini，或需要新檔案時部署 INI。部署的檔案不包含上方已設定的內容。",
   "OptiScaler.F5.Progress.Ready": "OptiScaler F5 DLSSNR 暫存檔案已就緒",
   "OptiScaler.F5.Progress.Checking": "正在檢查 OptiScaler F5 DLSSNR 版本...",

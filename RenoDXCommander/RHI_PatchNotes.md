@@ -20,6 +20,14 @@ To connect: open **Settings → GitHub API** and click **Sign in with GitHub**. 
 
 ### Bug Fixes
 
+**OptiScaler Nightly**
+- Fixed nightly builds not auto-updating to newer builds when the update check cooldown was active. The available builds list is now checked at startup and on every refresh, and update detection no longer depends on the update check running first.
+- Fixed clicking Update on a nightly game installing the old build instead of downloading the new one. The install flow now always downloads the latest nightly when an update is flagged, and re-resolves the staging directory after download.
+- The Info button and version number on the OptiScaler row now link to the nightly GitHub page and releases when the Nightly variant is active.
+
+**RTX Encore**
+- Fixed RTX Encore not auto-updating when a new beta release was available. The update check is now wired into the standard component update flow and the update appears in the update history.
+
 **ReShade Screenshot Discord Fix**
 - Fixed the 32-bit addon not being deployed to 32-bit games. When downloading from GitHub releases, RHI now stages both the `.addon32` and `.addon64` files when both are available as release assets.
 

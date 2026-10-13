@@ -81,8 +81,11 @@ public partial class OptiScalerService
             }
 
             // ── 4. Validate staging ──────────────────────────────────────────
+            // For nightly with an update, always re-ensure staging (ClearNightlyStaging
+            // preserves versioned dirs so IsStagingReadyNightly stays true, but the
+            // latest build may not be staged yet).
             bool stagingReady = isF5 ? IsStagingReadyF5 : isDlssNr ? IsStagingReadyDlssNr : isNightly ? IsStagingReadyNightly : IsStagingReady;
-            if (!stagingReady)
+            if (!stagingReady || (isNightly && hasUpdate))
             {
                 CrashReporter.Log($"[OptiScalerService.InstallAsync] {variant} staging not ready — attempting download");
                 if (isF5) await EnsureF5StagingAsync(progress);
@@ -93,8 +96,16 @@ public partial class OptiScalerService
                 if (!stagingReady)
                 {
                     CrashReporter.Log($"[OptiScalerService.InstallAsync] {variant} staging still not ready after download attempt — aborting");
-                    progress?.Report(($"OptiScaler {variant} staging not available", 0));
+                    var variantLabel = isF5 ? "F5 DLSSNR" : isDlssNr ? "DLSS NR" : _loc.GetString(isNightly ? "Option.Nightly" : "Option.Stable");
+                    progress?.Report((_loc.GetString("OptiScaler.Progress.StagingUnavailable", variantLabel), 0));
                     return null;
+                }
+                // Re-resolve nightly build dir — a new build may have been downloaded
+                if (isNightly && string.IsNullOrEmpty(nightlyBuildHint))
+                {
+                    effectiveNightlyBuild = GetLatestStagedNightlyBuild();
+                    effectiveStagingDir   = effectiveNightlyBuild != null ? GetNightlyBuildDir(effectiveNightlyBuild) : NightlyStagingDir;
+                    CrashReporter.Log($"[OptiScalerService.InstallAsync] Nightly re-resolved after download: build={effectiveNightlyBuild}, dir={effectiveStagingDir}");
                 }
             }
 
@@ -1044,7 +1055,7 @@ public partial class OptiScalerService
 
             // ── 1. Force re-download staging to get the latest version ────
             bool hasUpdate = isF5 ? HasUpdateF5 : isDlssNr ? HasUpdateDlssNr : isNightly ? HasUpdateNightly : HasUpdate;
-            if (hasUpdate && isNightly && effectiveNightlyBuild == null)
+            if (hasUpdate && isNightly && string.IsNullOrEmpty(nightlyBuildHint))
             {
                 // No pinned build — update to latest
                 CrashReporter.Log("[OptiScalerService.UpdateAsync] Nightly update available — will fetch latest");
@@ -1060,21 +1071,24 @@ public partial class OptiScalerService
             bool stagingReady = isF5 ? IsStagingReadyF5 : isDlssNr ? IsStagingReadyDlssNr
                 : isNightly ? (effectiveNightlyBuild != null ? IsNightlyBuildStaged(effectiveNightlyBuild) : IsStagingReadyNightly)
                 : IsStagingReady;
-            if (!stagingReady)
+            if (!stagingReady || (isNightly && hasUpdate && string.IsNullOrEmpty(nightlyBuildHint)))
             {
                 CrashReporter.Log($"[OptiScalerService.UpdateAsync] {variant} staging not ready — downloading");
                 if (isF5) await EnsureF5StagingAsync(progress);
                 else if (isDlssNr) await EnsureDlssNrStagingAsync(progress);
                 else if (isNightly)
                 {
-                    if (effectiveNightlyBuild != null)
-                        await EnsureNightlyBuildStagingAsync(effectiveNightlyBuild, progress);
+                    if (!string.IsNullOrEmpty(nightlyBuildHint))
+                        await EnsureNightlyBuildStagingAsync(nightlyBuildHint, progress);
                     else
                         await EnsureNightlyStagingAsync(progress);
-                    // Re-resolve the effective build and dir after download
-                    effectiveNightlyBuild = GetLatestStagedNightlyBuild();
-                    if (effectiveNightlyBuild != null)
-                        effectiveStagingDir = GetNightlyBuildDir(effectiveNightlyBuild);
+                    // Re-resolve latest after download; an explicit pinned build stays selected.
+                    if (string.IsNullOrEmpty(nightlyBuildHint))
+                    {
+                        effectiveNightlyBuild = GetLatestStagedNightlyBuild();
+                        if (effectiveNightlyBuild != null)
+                            effectiveStagingDir = GetNightlyBuildDir(effectiveNightlyBuild);
+                    }
                 }
                 else await EnsureStagingAsync(progress);
                 stagingReady = isF5 ? IsStagingReadyF5 : isDlssNr ? IsStagingReadyDlssNr
@@ -1083,7 +1097,8 @@ public partial class OptiScalerService
                 if (!stagingReady)
                 {
                     CrashReporter.Log($"[OptiScalerService.UpdateAsync] {variant} staging still not ready after download attempt — aborting");
-                    progress?.Report(($"OptiScaler {variant} staging not available", 0));
+                    var variantLabel = isF5 ? "F5 DLSSNR" : isDlssNr ? "DLSS NR" : _loc.GetString(isNightly ? "Option.Nightly" : "Option.Stable");
+                    progress?.Report((_loc.GetString("OptiScaler.Progress.StagingUnavailable", variantLabel), 0));
                     return;
                 }
             }

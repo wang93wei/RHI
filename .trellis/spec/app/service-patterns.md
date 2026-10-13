@@ -67,3 +67,11 @@
 
 - Keep `Stable`, `Nightly`, `DlssNr`, and `F5` consistent across install/update staging readiness, runtime DLL deployment, saved records, displayed versions, update flags and `RhiInstallManifest.Variant`. A partial variant addition can update the wrong staging directory or persist the install as Stable (`OptiScalerService.Install.cs`, `UpdateAsync`).
 - When uninstall restores a variant-specific original DLL, add that DLL to `explicitlyHandled` before generic deployed-file cleanup. Otherwise the generic loop deletes the restored original (F5 `DlssNrForwarderName`, `OptiScalerService.Install.cs`, `Uninstall`).
+
+## Nightly Update Staging Contract
+
+- `OptiScalerService.ClearNightlyStaging()` clears metadata/cache but preserves versioned build directories and `HasUpdateNightly`. Existing staging readiness is not proof that the latest build is present.
+- For an unpinned Nightly install/update with `HasUpdateNightly`, run `EnsureNightlyStagingAsync` even if an older build is ready, then resolve `GetLatestStagedNightlyBuild()` again before choosing the deployment directory. Apply this to both `InstallAsync` and `UpdateAsync`; `MainViewModel.UpdateAllOsAsync` calls the latter with a null build hint.
+- A nonempty `nightlyBuildHint` is an explicit selection. `UpdateAsync` must ensure that build with `EnsureNightlyBuildStagingAsync` and retain its directory after download. Do not replace the explicit selection with the latest staged build.
+- `EnsureNightlyStagingAsync` invalidates the release ETag when an update is known. An already-staged API result must not clear `HasUpdateNightly` when the available-build list identifies a newer build.
+- Source review covers both direct install and bulk update callers. Windows CI proves compilation/catalog/test/package results; real release download and game deployment require separate runtime evidence.

@@ -830,11 +830,14 @@ public partial class OptiScalerService
             if (IsStagingReadyNightly && !HasUpdateNightly)
             {
                 CrashReporter.Log("[OptiScalerService.EnsureNightlyStagingAsync] Staging already valid — skipping");
-                progress?.Report(("OptiScaler Nightly staging ready", 100));
+                progress?.Report((_loc.GetString("OptiScaler.Nightly.Progress.Ready"), 100));
                 return;
             }
 
-            progress?.Report(("Checking OptiScaler Nightly release...", 5));
+            progress?.Report((_loc.GetString("OptiScaler.Nightly.Progress.Checking"), 5));
+            // When an update is known, invalidate the ETag so we get a fresh response
+            // instead of a 304 that would return the old tagName.
+            if (HasUpdateNightly) _etagCache.Invalidate(NightlyReleasesApi);
             string? json;
             try { json = await _etagCache.GetWithETagAsync(_http, NightlyReleasesApi).ConfigureAwait(false); }
             catch (Exception ex)
@@ -893,7 +896,13 @@ public partial class OptiScalerService
             if (IsNightlyBuildStaged(tagName))
             {
                 CrashReporter.Log($"[OptiScalerService.EnsureNightlyStagingAsync] Already staged ({tagName})");
-                HasUpdateNightly = false;
+                // Only clear the update flag if this IS the newest available build.
+                // If the available builds list has a newer entry, keep HasUpdateNightly=true
+                // so the next EnsureNightlyStagingAsync call (after the ETag cache refreshes)
+                // actually downloads it.
+                var newestAvailable = _availableNightlyBuilds.FirstOrDefault();
+                if (newestAvailable == null || string.Equals(newestAvailable, tagName, StringComparison.Ordinal))
+                    HasUpdateNightly = false;
                 progress?.Report((_loc.GetString("OptiScaler.Nightly.Progress.UpToDate"), 100));
                 return;
             }
@@ -954,7 +963,8 @@ public partial class OptiScalerService
             if (File.Exists(NightlyVersionFilePath)) File.Delete(NightlyVersionFilePath);
             if (File.Exists(NightlyAvailableBuildsPath)) File.Delete(NightlyAvailableBuildsPath);
             _availableNightlyBuilds.Clear();
-            HasUpdateNightly = false;
+            // Do NOT reset HasUpdateNightly here — the caller set it true for a reason.
+            // EnsureNightlyStagingAsync checks HasUpdateNightly to decide whether to download.
             CrashReporter.Log("[OptiScalerService.ClearNightlyStaging] Nightly staging cache cleared (versioned builds preserved)");
         }
         catch (Exception ex)
@@ -1024,6 +1034,17 @@ public partial class OptiScalerService
 
             _availableNightlyBuilds.Clear();
             _availableNightlyBuilds.AddRange(builds);
+
+            // If the newest available build is newer than what's staged, flag as update available.
+            // This catches the case where the update check cooldown prevented CheckForNightlyUpdateAsync
+            // from running — the available builds list is always fresh (fetched at startup).
+            var newestAvailable = builds.FirstOrDefault();
+            var newestStaged    = GetLatestStagedNightlyBuild();
+            if (newestAvailable != null && newestAvailable != newestStaged)
+            {
+                HasUpdateNightly = true;
+                CrashReporter.Log($"[OptiScalerService.FetchAvailableNightlyBuildsAsync] Update detected: staged={newestStaged ?? "(none)"}, available={newestAvailable} → HasUpdateNightly=True");
+            }
 
             // Persist to disk
             try
