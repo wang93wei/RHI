@@ -327,3 +327,25 @@ JSON+ILocalizationService 五语言全量 i18n：XAML 绑定清零、C# 弹窗/V
 ### Status
 
 [OK] **Completed**
+
+
+## Session 11: 合并上游 PCGW 数据并通过远程 Windows CI
+<!-- trellis-session: v=2 fp=89739a2c5f6c3ab5 -->
+
+**Date**: 2026-10-15
+**Task**: 合并上游 PCGW 数据并通过远程 Windows CI
+**Branch**: `feat/i18n`
+
+### Summary
+
+合并 upstream/main b057033 到 feat/i18n；子代理核查合并及汉化影响，无需新增翻译。GitHub Build & Test 38672484741 与 Package 38672487878 通过：62 应用测试、10 目录检查器测试，安装版与便携版已生成。仅源码审阅，未本地验证或安装 .NET；上游已有缺陷不修复。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cd4e7a0` | chore(database): 同步 PCGW 游戏数据 |
+
+### Status
+
+[OK] **Completed**

@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
-- **Last Active**: 2026-10-13
+- **Total Sessions**: 11
+- **Last Active**: 2026-10-15
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~329 | Active |
+| `journal-1.md` | ~351 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-10-15 | 合并上游 PCGW 数据并通过远程 Windows CI | `cd4e7a0` | `feat/i18n` |
 | 10 | 2026-10-13 | 上游 2.8.7 合并、五语言与远程 CI | `8b0fede`, `f337e98` | `feat/i18n` |
 | 9 | 2026-10-12 | 合并上游 main、五语补全与远程CI验证 | `d0230af`, `6a088be` | `feat/i18n` |
 | 8 | 2026-10-11 | 合并上游 main、五语本地化与 Windows CI 验证 | `27d6a44`, `1f826a2` | `feat/i18n` |
