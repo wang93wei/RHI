@@ -118,7 +118,7 @@ public sealed partial class MainWindow
     private Grid BuildOsUserSlotsRow(OsCogContext ctx, Action<string, bool> showStatus)
     {
         var slots = OsPresetService.Load();
-        static string SlotLabel(OsPreset? p, int i) =>
+        string SlotLabel(OsPreset? p, int i) =>
             p == null ? Loc.GetString("Dialog.OptiScaler.SlotEmpty", i + 1) : string.IsNullOrWhiteSpace(p.Name) ? Loc.GetString("Dialog.OptiScaler.Slot", i + 1) : p.Name!;
 
         if (_osSelectedSlot < 0 || _osSelectedSlot > 3)

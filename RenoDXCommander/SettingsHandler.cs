@@ -39,7 +39,7 @@ public partial class SettingsHandler
     }
 
     private MainViewModel ViewModel => _window.ViewModel;
-    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     public async void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
