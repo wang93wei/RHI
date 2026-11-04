@@ -48,6 +48,32 @@ Items that improve maintainability, performance, or reliability. No user-facing 
 - Bind version labels, status dots, enabled states to observable properties
 - Structural changes (add/remove rows) stay imperative
 
+### Split manifest.json into topic files
+`manifest.json` is ~79 KB / 75 fields in one file, which is cumbersome to edit. Plan (agreed Nov 2026, not started):
+
+- **Source of truth becomes `manifest/`**, ~9 topic files (largest ~13 KB), following the file's existing `_comment_` sections:
+  | File | Fields |
+  |---|---|
+  | `core.json` | version, featureFlags, componentUrls, rtxHdrInfoUrl, pcgwUseAppId, pcgwUrlCacheVersion |
+  | `detection.json` | blacklistPrefixes, blacklist, wikiUnlinks, wikiNameOverrides, lumaNameOverrides, installPathOverrides, splitGames, emulatorGames, wikiStatusOverrides |
+  | `engine.json` | engineHintOverrides, engineIniPathOverrides, graphicsApiOverrides, thirtyTwoBitGames, sixtyFourBitGames, dlssSkipGames, pdUpscalerGames, dlssPathOverrides, streamlinePathOverrides |
+  | `hdr-luma.json` | nativeHdrGames, ueExtendedCompatibility, ueExtendedGames, lumaRenodxCompat, lumaRequiresDgVoodoo, dgVoodooVersions, dofFixForceGames |
+  | `install.json` | installWarnings, forceExternalOnly, snapshotOverrides, dllNameOverrides, gacSymlinkGames, launchExeOverrides, renodxIniOverrides, engineIniFiles, legacyReShadeVersions, legacyReShadeAvailable, dxvkBlacklist |
+  | `notes.json` | gameNotes, reshadeGameInfo, lumaGameNotes, dxvkGameNotes |
+  | `links.json` | authorDisplayNames, donationUrls, authorRoles, authorOverrides, nexusUrlOverrides, pcgwUrlOverrides, uwFixUrlOverrides, ultraPlusUrlOverrides, optiScalerWikiNames |
+  | `nvidia.json` | profileNameOverrides, dlssPresets, dlssPresetsDev |
+  | `packs.json` | shaderPacks, addonPacks, renodxExtraSettings |
+- **The app keeps downloading the single `manifest.json`**, now generated from the parts. Reasons: every released RHI fetches `manifest.json` and must keep working; one GitHub API call per fetch instead of nine (60/hour limit without a token); no app code changes (cache, `Normalize()`, both init paths untouched).
+- **Work needed:**
+  1. One-time split script: cut today's file into the parts; verify that joining them gives identical data.
+  2. Build script (`tools/build-manifest.py`): join parts → `manifest.json` in a fixed field order, CRLF, add a `_generated` note ("edit manifest/ instead"); fail if a field is in two parts or none.
+  3. `tools/check-manifest.py`: also check each part, and fail if `manifest.json` doesn't match the parts. Add `manifest/**` to `.github/workflows/manifest-check.yml` paths.
+  4. Manifest Editor (`tools/RHI-ManifestEditor`, `Json/JsonDoc.cs`): open one `JsonDoc` per part and route each field's edits to the part that holds it; saving stays text-preserving.
+  5. Docs: "Push manifest" workflow in CLAUDE.md (edit part → build → push `manifest/` + `manifest.json` together), `.claude/rules/rhi-manifest.md` + `.kiro` copy, `docs/manifest-field-reference.md`.
+- `game-db/seed_from_manifest.py` reads `manifest.json` and keeps working unchanged.
+- **Optional cleanup:** `_engineOverrides` (~5 KB) is switched-off data ("engine names now sourced from pcgw_data.json") and could be removed.
+- **Rejected:** one file per game (hundreds of files; edits happen by topic), and having the app fetch the parts itself (more API calls, older versions still need `manifest.json`).
+
 ### Test Infrastructure
 - Baseline verification (37 tests passing): `dotnet test RenoDXCommander.Tests/RenoDXCommander.Tests.csproj -p:Platform=x64`
 - Add integration tests: install/uninstall roundtrip, manifest parse → card assertions, settings save/load
@@ -58,6 +84,9 @@ Items that improve maintainability, performance, or reliability. No user-facing 
 ## 🚀 Feature Ideas
 
 User-requested features and enhancements. Not committed — just captured.
+
+### Selectable layouts (planned for v2.9.0)
+Classic / Tabs / Spotlight main-page layouts, switchable in Settings, with Steam artwork for Spotlight. Full plan: [layouts-plan-2.9.0.md](layouts-plan-2.9.0.md).
 
 ### Steam Full Library Integration
 Show the user's complete Steam catalog (owned, family shared, not just installed) to browse compatibility before downloading.

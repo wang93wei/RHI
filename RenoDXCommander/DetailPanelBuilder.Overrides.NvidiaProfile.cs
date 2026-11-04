@@ -1,4 +1,4 @@
-// DetailPanelBuilder.Overrides.NvidiaProfile.cs — DLSS / Streamline section (independent panel).
+﻿// DetailPanelBuilder.Overrides.NvidiaProfile.cs — DLSS / Streamline section (independent panel).
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -20,8 +20,7 @@ public partial class DetailPanelBuilder
 
         // ── Collapsible header ────────────────────────────────────────────────
         const string nvSectionKey = "NvidiaProfileDlss";
-        var nvSettings   = _window.ViewModel.Settings;
-        bool nvCollapsed = nvSettings.CollapsedDetailSections.Contains(nvSectionKey);
+        bool nvCollapsed = Layout.IsCollapsed(nvSectionKey);
 
 var headerText = Loc.GetString("Detail.DlssStreamline");
 
@@ -42,10 +41,13 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
             VerticalAlignment = VerticalAlignment.Center,
         };
         var nvHeaderRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
+        ToolTipService.SetToolTip(nvArrow, SectionHeaderTooltip);
+        ToolTipService.SetToolTip(nvTitle, SectionHeaderTooltip);
         nvHeaderRow.Children.Add(MakeDragHandle(_window.NvidiaProfileDlssContainer));
         nvHeaderRow.Children.Add(nvArrow);
         nvHeaderRow.Children.Add(nvTitle);
         _window.NvidiaProfileDlssPanel.Children.Add(nvHeaderRow);
+        Layout.RegisterHeader(nvSectionKey, nvHeaderRow);
 
         var nvBody = new StackPanel { Spacing = 6, Visibility = nvCollapsed ? Visibility.Collapsed : Visibility.Visible };
         _window.NvidiaProfileDlssPanel.Children.Add(nvBody);
@@ -67,16 +69,11 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
             if (_nvHeaderRow != null && _nvHeaderRow.Children.Count > 3
                 && _nvHeaderRow.Children[3] is TextBlock nvSummaryTb)
                 nvSummaryTb.Visibility = nowCollapsed ? Visibility.Visible : Visibility.Collapsed;
-            if (nowCollapsed) nvSettings.CollapsedDetailSections.Add(nvSectionKey);
-            else              nvSettings.CollapsedDetailSections.Remove(nvSectionKey);
-            _window.ViewModel.SaveSettingsPublic();
+            Layout.SetCollapsed(nvSectionKey, nowCollapsed);
         };
 
         // Store header row so BuildNvidiaProfileBody can append/update the summary
         _nvHeaderRow = nvHeaderRow;
-
-        // _nvBodyPanel is no longer used by BuildDriverProfileSection (it now owns its own panel)
-        _nvBodyPanel = null;
 
         // Capture card state before the background scan
         var gameName    = card.GameName;
@@ -172,6 +169,8 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                 var dlssAvailW = dlssContainer.ActualWidth > 0 ? dlssContainer.ActualWidth : _window.NvidiaProfileDlssPanel.ActualWidth;
                 BuildNvidiaProfileBody(capturedCard, capturedName, tempBody, dlssData,
                     hasDlss, hasDlssd, hasDlssg, hasStreamline, hasDlssnr, dlssAvailW);
+                // Tabs (mockup A): the same controls as one card, arranged before it's shown
+                if (Layout.IsTabs) Layout.ArrangeDlss(tempBody);
                 dlssContainer.Children.Clear();
                 dlssContainer.Children.Add(tempBody);
                 sw.Stop();
@@ -323,6 +322,13 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                 Opacity = (fgEnabled && presetService.IsSupported) ? 1.0 : 0.4,
             };
             ToolTipService.SetToolTip(mfgBtn, Loc.GetString("Overrides.Mfg.Tooltip"));
+            // Disabled buttons show no tooltip — when FG is present but NVAPI isn't available,
+            // explain on the "Frame Generation" column label instead (a missing FG DLL is
+            // already explained there by BuildDlssColumn).
+            if (fgEnabled && !presetService.IsSupported
+                && fgCol.Children.Count > 0 && fgCol.Children[0] is TextBlock fgLabel)
+                ToolTipService.SetToolTip(fgLabel,
+                    Loc.GetString("Overrides.Mfg.NvapiRequired.Tooltip"));
             mfgBtn.Click += async (s, ev) =>
             {
                 var xamlRoot = (s as FrameworkElement)?.XamlRoot ?? _window.Content.XamlRoot;
@@ -392,7 +398,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                         {
                             dlssService.Restore(tc.DlssDetection.DlssnrPath);
                             // Clean up custom marker on restore
-                            try { File.Delete(tc.DlssDetection.DlssnrPath + ".rhi_custom"); } catch { }
+                            try { File.Delete(tc.DlssDetection.DlssnrPath + ".rhi_custom"); } catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildNvidiaProfileBody] Failed to delete .rhi_custom marker — {ex.Message}"); }
                         }
                         else if (version == "Custom")
                             await dlssService.SwapDlssCustomAsync(tc.DlssDetection.DlssnrPath);
@@ -400,7 +406,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                         {
                             await dlssService.SwapDlssnrAsync(tc.DlssDetection.DlssnrPath, version);
                             // Clean up custom marker when switching to a managed version
-                            try { File.Delete(tc.DlssDetection.DlssnrPath + ".rhi_custom"); } catch { }
+                            try { File.Delete(tc.DlssDetection.DlssnrPath + ".rhi_custom"); } catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildNvidiaProfileBody] Failed to delete .rhi_custom marker — {ex.Message}"); }
                         }
                         tc.RefreshDlssVersions(dlssService);
                         // Sync the NR section's persisted version selection to match what was just swapped,
@@ -485,7 +491,7 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                             {
                                 await dlssService.SwapDlssCustomAsync(tc.DlssDetection.DlssnrPath);
                                 // Write custom marker so version shows as "Custom"
-                                try { File.WriteAllText(tc.DlssDetection.DlssnrPath + ".rhi_custom", ""); } catch { }
+                                try { File.WriteAllText(tc.DlssDetection.DlssnrPath + ".rhi_custom", ""); } catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildNvidiaProfileBody] Failed to write .rhi_custom marker — {ex.Message}"); }
                             }
                             else
                             {
@@ -499,7 +505,7 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                                     return;
                                 }
                                 File.Copy(customSrc, destPath, overwrite: true);
-                                try { File.WriteAllText(destPath + ".rhi_custom", ""); } catch { }
+                                try { File.WriteAllText(destPath + ".rhi_custom", ""); } catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildNvidiaProfileBody] Failed to write .rhi_custom marker — {ex.Message}"); }
                                 CrashReporter.Log($"[NrDeployBtn] Deployed custom nvngx_dlssnr.dll to '{tc.InstallPath}'");
                             }
                         }
@@ -516,7 +522,7 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                             {
                                 await dlssService.SwapDlssnrAsync(destPath, versionToDeploy).ConfigureAwait(false);
                                 // Clean custom marker if present
-                                try { File.Delete(destPath + ".rhi_custom"); } catch { }
+                                try { File.Delete(destPath + ".rhi_custom"); } catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildNvidiaProfileBody] Failed to delete .rhi_custom marker — {ex.Message}"); }
                                 cachedPath = destPath; // SwapDlssnrAsync already wrote to destPath
                             }
 
@@ -533,7 +539,7 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                             {
                                 // Fresh install of newest
                                 File.Copy(cachedPath, destPath, overwrite: true);
-                                try { File.Delete(destPath + ".rhi_custom"); } catch { }
+                                try { File.Delete(destPath + ".rhi_custom"); } catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildNvidiaProfileBody] Failed to delete .rhi_custom marker — {ex.Message}"); }
                                 CrashReporter.Log($"[NrDeployBtn] Deployed nvngx_dlssnr.dll (newest) to '{tc.InstallPath}'");
                             }
                         }
@@ -658,7 +664,7 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                 null,
                 originalVersion: card.DlssDetection?.OriginalStreamlineVersion);
 
-            int slColumn = FeatureFlags.DlssNr ? 6 : 6;
+            int slColumn = 6; // after SR, RR, FG, MFG, NR and their spacers
 
             // Add Restore All button into the SL column (fills the preset slot)
             // Enabled when any backup exists OR any preset is non-default
@@ -785,37 +791,46 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                 rrOverride = pSvc.IsSupported && settings.DefaultRrDriverOverride;
                 fgOverride = pSvc.IsSupported && settings.DefaultFgDriverOverride;
 
-                if (!string.IsNullOrEmpty(settings.DefaultDlssVersion) && targetCard.HasDlss && targetCard.DlssDetection.DlssPath != null
-                    && !(targetCard.DlssInstalledVersion?.StartsWith("1.") == true) && !srOverride)
+                try
                 {
-                    if (settings.DefaultDlssVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
-                        await svc.SwapDlssCustomAsync(targetCard.DlssDetection.DlssPath);
-                    else
-                        await svc.SwapDlssAsync(targetCard.DlssDetection.DlssPath, settings.DefaultDlssVersion);
+                    if (!string.IsNullOrEmpty(settings.DefaultDlssVersion) && targetCard.HasDlss && targetCard.DlssDetection.DlssPath != null
+                        && !(targetCard.DlssInstalledVersion?.StartsWith("1.") == true) && !srOverride)
+                    {
+                        if (settings.DefaultDlssVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
+                            await svc.SwapDlssCustomAsync(targetCard.DlssDetection.DlssPath);
+                        else
+                            await svc.SwapDlssAsync(targetCard.DlssDetection.DlssPath, settings.DefaultDlssVersion);
+                    }
+                    if (!string.IsNullOrEmpty(settings.DefaultDlssdVersion) && targetCard.HasDlssd && targetCard.DlssDetection.DlssdPath != null
+                        && !(targetCard.DlssdInstalledVersion?.StartsWith("1.") == true) && !rrOverride)
+                    {
+                        if (settings.DefaultDlssdVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
+                            await svc.SwapDlssCustomAsync(targetCard.DlssDetection.DlssdPath);
+                        else
+                            await svc.SwapDlssdAsync(targetCard.DlssDetection.DlssdPath, settings.DefaultDlssdVersion);
+                    }
+                    if (!string.IsNullOrEmpty(settings.DefaultDlssgVersion) && targetCard.HasDlssg && targetCard.DlssDetection.DlssgPath != null
+                        && !fgOverride)
+                    {
+                        if (settings.DefaultDlssgVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
+                            await svc.SwapDlssCustomAsync(targetCard.DlssDetection.DlssgPath);
+                        else
+                            await svc.SwapDlssgAsync(targetCard.DlssDetection.DlssgPath, settings.DefaultDlssgVersion);
+                    }
+                    if (!string.IsNullOrEmpty(settings.DefaultStreamlineVersion) && targetCard.HasStreamline && targetCard.DlssDetection.StreamlineFolder != null
+                        && !(targetCard.StreamlineInstalledVersion?.StartsWith("1.") == true))
+                    {
+                        if (settings.DefaultStreamlineVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
+                            await svc.SwapStreamlineCustomAsync(targetCard.DlssDetection.StreamlineFolder);
+                        else
+                            await svc.SwapStreamlineAsync(targetCard.DlssDetection.StreamlineFolder, settings.DefaultStreamlineVersion);
+                    }
                 }
-                if (!string.IsNullOrEmpty(settings.DefaultDlssdVersion) && targetCard.HasDlssd && targetCard.DlssDetection.DlssdPath != null
-                    && !(targetCard.DlssdInstalledVersion?.StartsWith("1.") == true) && !rrOverride)
+                catch (DlssSwapException ex)
                 {
-                    if (settings.DefaultDlssdVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
-                        await svc.SwapDlssCustomAsync(targetCard.DlssDetection.DlssdPath);
-                    else
-                        await svc.SwapDlssdAsync(targetCard.DlssDetection.DlssdPath, settings.DefaultDlssdVersion);
-                }
-                if (!string.IsNullOrEmpty(settings.DefaultDlssgVersion) && targetCard.HasDlssg && targetCard.DlssDetection.DlssgPath != null
-                    && !fgOverride)
-                {
-                    if (settings.DefaultDlssgVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
-                        await svc.SwapDlssCustomAsync(targetCard.DlssDetection.DlssgPath);
-                    else
-                        await svc.SwapDlssgAsync(targetCard.DlssDetection.DlssgPath, settings.DefaultDlssgVersion);
-                }
-                if (!string.IsNullOrEmpty(settings.DefaultStreamlineVersion) && targetCard.HasStreamline && targetCard.DlssDetection.StreamlineFolder != null
-                    && !(targetCard.StreamlineInstalledVersion?.StartsWith("1.") == true))
-                {
-                    if (settings.DefaultStreamlineVersion.Equals("Custom", StringComparison.OrdinalIgnoreCase))
-                        await svc.SwapStreamlineCustomAsync(targetCard.DlssDetection.StreamlineFolder);
-                    else
-                        await svc.SwapStreamlineAsync(targetCard.DlssDetection.StreamlineFolder, settings.DefaultStreamlineVersion);
+                    // Presets and render scales below are driver-profile settings, so still apply them
+                    CrashReporter.Log($"[DetailPanelBuilder.QuickApply] DLL swap failed for '{targetCard.GameName}' — {ex.Message}");
+                    await ShowDlssSwapErrorAsync(ex.Message);
                 }
 
                 if (settings.DefaultSrPreset != 0 && targetCard.HasDlss && !(targetCard.DlssInstalledVersion?.StartsWith("1.") == true))
@@ -828,7 +843,17 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                 if (FeatureFlags.DlssNr)
                 {
                     if (!string.IsNullOrEmpty(settings.DefaultDlssnrVersion) && targetCard.HasDlssnr && targetCard.DlssDetection?.DlssnrPath != null)
-                        await svc.SwapDlssnrAsync(targetCard.DlssDetection.DlssnrPath, settings.DefaultDlssnrVersion);
+                    {
+                        try
+                        {
+                            await svc.SwapDlssnrAsync(targetCard.DlssDetection.DlssnrPath, settings.DefaultDlssnrVersion);
+                        }
+                        catch (DlssSwapException ex)
+                        {
+                            CrashReporter.Log($"[DetailPanelBuilder.QuickApply] NR swap failed for '{targetCard.GameName}' — {ex.Message}");
+                            await ShowDlssSwapErrorAsync(ex.Message);
+                        }
+                    }
                     if (settings.DefaultNrPreset != 0 && targetCard.HasDlssnr)
                         pSvc.SetNrPreset(targetCard.GameName, targetCard.InstallPath, settings.DefaultNrPreset);
                 }
@@ -842,10 +867,21 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                 _window.DispatcherQueue?.TryEnqueue(() => BuildOverridesPanel(targetCard));
             };
 
-            // Add buttons to SL column: Quick Apply first, then spacer, then Restore All at bottom
-            slCol.Children.Add(applyBtn);
+            // Add buttons to SL column: Quick Apply first, then spacer, then Restore All at bottom.
+            // Each button sits in a transparent Border: WinUI shows no tooltip on a disabled
+            // button, so the wrapper carries the "why is this disabled" tooltip instead.
+            var applyWrap = new Border { Background = UIFactory.GetBrush("transparent"), Child = applyBtn };
+            if (!applyBtn.IsEnabled)
+                ToolTipService.SetToolTip(applyWrap, !hasDefaults
+                    ? Loc.GetString("Overrides.DlssDefaults.QuickApply.NoDefaults.Tooltip")
+                    : Loc.GetString("Overrides.DlssDefaults.QuickApply.NoDlls.Tooltip"));
+            var restoreWrap = new Border { Background = UIFactory.GetBrush("transparent"), Child = dlssRestoreBtn };
+            if (!dlssRestoreBtn.IsEnabled)
+                ToolTipService.SetToolTip(restoreWrap,
+                    Loc.GetString("Overrides.DlssDefaults.Restore.Nothing.Tooltip"));
+            slCol.Children.Add(applyWrap);
             slCol.Children.Add(new TextBlock { Text = " ", FontSize = 10, Margin = new Thickness(0, 2, 0, 0) });
-            slCol.Children.Add(dlssRestoreBtn);
+            slCol.Children.Add(restoreWrap);
 
             // Override column opacity so buttons aren't dimmed by the SL column's 0.4 opacity.
             // Manually dim the SL label and version combo if Streamline isn't present.
@@ -855,7 +891,7 @@ var presetPlaceholderLabel = new TextBlock { Text = Loc.GetString("Dialog.Preset
                 // Dim the SL-specific children (label, version sub-label, combo, etc.) but not buttons
                 foreach (var child in slCol.Children.OfType<UIElement>())
                 {
-                    if (child != applyBtn && child != dlssRestoreBtn)
+                    if (child != applyWrap && child != restoreWrap)
                         child.Opacity = 0.4;
                 }
             }
@@ -926,13 +962,18 @@ var nvOverride = Loc.GetString("Overrides.Summary.NvOverride");
             if (card.HasStreamline)
                 nvSummaryEntries.Add(("SL", card.StreamlineInstalledVersion));
 
-            var nvSummaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(nvSummaryEntries);
+            var nvSummaryTip = FeatureFlags.DlssNr && card.HasDlssnr
+                ? Loc.GetString("Overrides.NvidiaProfile.Summary.Tooltip.Nr")
+                : Loc.GetString("Overrides.NvidiaProfile.Summary.Tooltip");
+            if (nvSummaryEntries.Any(e => e.Item2 == nvOverride))
+                nvSummaryTip += "\n" + Loc.GetString("Overrides.NvidiaProfile.Summary.NvOverride");
+            var nvSummaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(nvSummaryEntries, nvSummaryTip);
             if (nvSummaryTb != null)
             {
-                var nvCollapsed = _window.ViewModel.Settings.CollapsedDetailSections
-                    .Contains("NvidiaProfileDlss");
+                var nvCollapsed = Layout.IsCollapsed("NvidiaProfileDlss");
                 nvSummaryTb.Visibility = nvCollapsed ? Visibility.Visible : Visibility.Collapsed;
                 _nvHeaderRow.Children.Add(nvSummaryTb);
+                Layout.SummaryChanged(); // Tabs: refresh the Overview tile
             }
         }
     }

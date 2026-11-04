@@ -49,13 +49,12 @@ public partial class App : Application
                 InitialHttp2StreamWindowSize = 1024 * 1024, // 1 MB
             };
 
-            var client = new HttpClient(handler);
+            // GitHub API token — raises rate limit from 60 to 5000 req/hour. Attached per request,
+            // for GitHub hosts only, by GitHubTokenHandler (never a default header: this client
+            // also talks to non-GitHub hosts and manifest URLs).
+            GitHubTokenHandler.SetToken(DevUnlockService.GitHubApiToken);
+            var client = new HttpClient(new GitHubTokenHandler(handler));
             client.DefaultRequestHeaders.Add("User-Agent", "RHI/2.0");
-            // GitHub API token — raises rate limit from 60 to 5000 req/hour for all services.
-            // Set as a default header so every service inherits it without per-request wiring.
-            var ghToken = DevUnlockService.GitHubApiToken;
-            if (!string.IsNullOrEmpty(ghToken))
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ghToken}");
             // Per-request timeout — generous enough for large files on slow connections.
             // Individual services can set per-request timeouts via CancellationTokenSource
             // if they need tighter control.
@@ -80,7 +79,6 @@ public partial class App : Application
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<ILumaService, LumaService>();
         services.AddSingleton<IShaderPackService, ShaderPackService>();
-        services.AddSingleton<ILiliumShaderService, LiliumShaderService>();
         services.AddSingleton<IGameDetectionService, GameDetectionService>();
         services.AddSingleton<IPeHeaderService, PeHeaderService>();
         services.AddSingleton<ICrashReporter, CrashReporterService>();
@@ -211,7 +209,32 @@ public partial class App : Application
         if (File.Exists(minimizedSignalPath))
         {
             startMinimized = true;
-            try { File.Delete(minimizedSignalPath); } catch { }
+            try { File.Delete(minimizedSignalPath); } catch (Exception ex) { CrashReporter.Log($"[App.OnLaunched] Failed to delete start-minimized signal file — {ex.Message}"); }
+        }
+
+        // A game to launch handed over by the non-elevated instance (Admin Mode relaunch below):
+        // schtasks /Run can't pass arguments, so a desktop shortcut's --launch arrives this way
+        var pendingLaunchPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "RHI", "rhi_pending_launch");
+        if (File.Exists(pendingLaunchPath))
+        {
+            try
+            {
+                var lines = File.ReadAllLines(pendingLaunchPath);
+                File.Delete(pendingLaunchPath);
+                // Only a fresh hand-off counts, so a leftover file can't launch a game later
+                if (launchGameArg == null && lines.Length >= 2
+                    && DateTime.TryParse(lines[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var written)
+                    && DateTime.UtcNow - written.ToUniversalTime() < TimeSpan.FromMinutes(2)
+                    && !string.IsNullOrWhiteSpace(lines[1]))
+                {
+                    launchGameArg = lines[1].Trim();
+                    CrashReporter.Log($"[App.OnLaunched] Launch request handed over from the non-elevated instance: '{launchGameArg}'");
+                }
+            }
+            catch (IOException ex) { CrashReporter.Log($"[App.OnLaunched] Couldn't read the pending launch file — {ex.Message}"); }
+            catch (UnauthorizedAccessException ex) { CrashReporter.Log($"[App.OnLaunched] Couldn't read the pending launch file — {ex.Message}"); }
         }
 
         CrashReporter.Log($"[App.OnLaunched] Args: [{string.Join(", ", cmdArgs)}], startMinimized={startMinimized}");
@@ -232,7 +255,7 @@ public partial class App : Application
                     CrashReporter.Log($"[App.OnLaunched] GPU driver: {gpuDriver.ModuleName} v{fi.FileVersion} ({System.IO.File.GetLastWriteTime(gpuDriver.FileName):yyyy-MM-dd})");
                 }
             }
-            catch { }
+            catch (Exception ex) { CrashReporter.Log($"[App.OnLaunched] GPU driver version detection failed — {ex.Message}"); }
         });
 
         if (!SingleInstanceService.TryAcquire())
@@ -246,7 +269,7 @@ public partial class App : Application
                 SingleInstanceService.SendToRunningInstance(addonArg);
             else
                 SingleInstanceService.SendToRunningInstance("--activate");
-            try { File.Delete(CrashReporter.CurrentSessionLogPath); } catch { }
+            try { File.Delete(CrashReporter.CurrentSessionLogPath); } catch (Exception) { /* Safe to ignore: deleting this instance's session log right before exit; logging here would recreate the file. */ }
             Environment.Exit(0);
             return;
         }
@@ -274,6 +297,14 @@ public partial class App : Application
                     Directory.CreateDirectory(signalDir);
                     File.WriteAllText(Path.Combine(signalDir, "rhi_start_minimized"), "");
                 }
+                // Same for a desktop shortcut / jump list launch: hand the game over to the elevated instance
+                if (launchGameArg != null)
+                {
+                    var signalDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RHI");
+                    Directory.CreateDirectory(signalDir);
+                    File.WriteAllLines(Path.Combine(signalDir, "rhi_pending_launch"),
+                        new[] { DateTime.UtcNow.ToString("O"), launchGameArg });
+                }
 
                 var psi = new System.Diagnostics.ProcessStartInfo("schtasks.exe", "/Run /TN \"RHI Admin Mode\"")
                 {
@@ -284,7 +315,7 @@ public partial class App : Application
                 // this exiting process for an active instance and exit itself.
                 SingleInstanceService.Stop();
                 System.Diagnostics.Process.Start(psi);
-                try { File.Delete(CrashReporter.CurrentSessionLogPath); } catch { }
+                try { File.Delete(CrashReporter.CurrentSessionLogPath); } catch (Exception) { /* Safe to ignore: deleting this instance's session log right before exit; logging here would recreate the file. */ }
                 Environment.Exit(0);
                 return;
             }
@@ -310,12 +341,16 @@ public partial class App : Application
         // stripped the token, but by then all requests were already in-flight with a bad header.
         await ApplyStoredGitHubTokenAsync();
 
-        // Check if first-launch setup is needed
         // Check if first-launch setup is needed.
-        // Skip if settings.json already exists with content — that's an existing user.
-        var rawSettings = SettingsViewModel.LoadSettingsFile();
+        // Only a missing settings file means a first launch. A corrupt or locked file is an
+        // existing user (SettingsFile restores corrupt files from .bak) — showing setup there
+        // would overwrite their settings.
+        var rawSettings = SettingsViewModel.LoadSettingsFile(out var settingsStatus);
         bool setupDone = rawSettings.Count > 0
+            || settingsStatus != SafeJsonFile.LoadStatus.Missing
             || (rawSettings.TryGetValue("FirstLaunchSetupDone", out var fls) && fls == "true");
+        if (settingsStatus != SafeJsonFile.LoadStatus.Ok && settingsStatus != SafeJsonFile.LoadStatus.Missing)
+            CrashReporter.Log($"[App.OnLaunched] Settings load status: {settingsStatus}");
 
         if (!setupDone)
         {
@@ -323,14 +358,16 @@ public partial class App : Application
             var setupWindow = new SetupWindow();
             setupWindow.OnComplete = (manageReShade) =>
             {
-                rawSettings["FirstLaunchSetupDone"] = "true";
-                if (!manageReShade)
+                SettingsViewModel.UpdateSettingsFile(s =>
                 {
-                    rawSettings["GlobalSkipRsUpdates"] = "true";
-                    rawSettings["CacheAllShaders"] = "false";
-                    rawSettings["GlobalShadersOff"] = "true";
-                }
-                SettingsViewModel.SaveSettingsFile(rawSettings);
+                    s["FirstLaunchSetupDone"] = "true";
+                    if (!manageReShade)
+                    {
+                        s["GlobalSkipRsUpdates"] = "true";
+                        s["CacheAllShaders"] = "false";
+                        s["GlobalShadersOff"] = "true";
+                    }
+                }, "App.OnLaunched.SetupComplete");
                 CrashReporter.Log($"[App.OnLaunched] Setup complete — manageReShade={manageReShade}");
 
                 setupWindow.AppWindow.Hide();
@@ -512,9 +549,11 @@ public partial class App : Application
                 {
                     tokenValid = false;
                     CrashReporter.Log("[App.ApplyStoredGitHubToken] Token is expired or revoked (401) — clearing from settings");
-                    settings.Remove("GitHubOAuthToken");
-                    settings.Remove("GitHubUsername");
-                    SettingsViewModel.SaveSettingsFile(settings);
+                    SettingsViewModel.UpdateSettingsFile(s =>
+                    {
+                        s.Remove("GitHubOAuthToken");
+                        s.Remove("GitHubUsername");
+                    }, "App.ApplyStoredGitHubToken");
                     // Flag for the window to show a re-auth notice once it opens
                     _gitHubTokenExpiredOnStartup = true;
                 }
@@ -593,7 +632,7 @@ public partial class App : Application
             try { await proc.WaitForExitAsync(timeout.Token); }
             catch (OperationCanceledException)
             {
-                try { proc.Kill(); } catch { }
+                try { proc.Kill(); } catch (Exception ex) { CrashReporter.Log($"[App.IsAdminTaskRegisteredAsync] Failed to kill timed-out schtasks process — {ex.Message}"); }
                 CrashReporter.Log("[App] Admin task query timed out — continuing normal startup");
                 return false;
             }

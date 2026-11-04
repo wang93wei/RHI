@@ -58,7 +58,6 @@ public partial class MainViewModel : ObservableObject
     /// Awaited before the post-init shader sync so packs are available.
     /// </summary>
     private Task? _shaderPackReadyTask;
-    public IShaderPackService ShaderPackServiceInstance => _shaderPackService;
     public IAddonPackService AddonPackServiceInstance => _addonPackService;
     public UltimateAsiLoaderService UalServiceInstance => _ualService;
     public SettingsViewModel Settings => _settingsViewModel;
@@ -256,8 +255,8 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void RefreshStatusBarText()
     {
-        if (!string.IsNullOrEmpty(StatusText) && StatusText.Contains("games detected"))
-            StatusText = $"{_allCards.Count} games detected · {InstalledCount} ReShade installs";
+        if (_statusTextIsGameCount)
+            StatusText = Loc.GetString("Status.GamesDetected", _allCards.Count, InstalledCount);
     }
 
     /// <summary>
@@ -311,6 +310,7 @@ public partial class MainViewModel : ObservableObject
                 foreach (var card in cards)
                 {
                     if (string.IsNullOrEmpty(card.InstallPath)) continue;
+                    if (card.IsHidden) continue; // hidden games are left alone
                     bool rsInstalled = card.RequiresVulkanInstall
                         ? VulkanFootprintService.Exists(card.InstallPath)
                         : card.RsStatus == GameStatus.Installed || card.RsStatus == GameStatus.UpdateAvailable;
@@ -326,6 +326,7 @@ public partial class MainViewModel : ObservableObject
                 foreach (var card in cards)
                 {
                     if (string.IsNullOrEmpty(card.InstallPath)) continue;
+                    if (card.IsHidden) continue; // hidden games are left alone
 
                     bool rsInstalled = card.RequiresVulkanInstall
                         ? VulkanFootprintService.Exists(card.InstallPath)
@@ -448,6 +449,9 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Unity entries from the last DB fetch. Empty when source is WikiOnly or dev-locked.</summary>
     private Dictionary<string, RenoDXDbUnityEntry> _dbUnityEntries =
         new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Source engine entries from the last DB fetch. Only listed in Available Mods for now.</summary>
+    private Dictionary<string, RenoDXDbSourceEntry> _dbSourceEntries =
+        new(StringComparer.OrdinalIgnoreCase);
     /// <summary>
     /// Returns the effective UE-Extended db entry for a game, or null when source is WikiOnly
     /// or the game isn't in the db.
@@ -530,13 +534,13 @@ public partial class MainViewModel : ObservableObject
         _crashReporter.Log($"[MergeDbSources] Source=DbOnly — {_allMods.Count} mods from db, {_genericNotes.Count} generic notes from DB Comments");
     }
 
-    // ── HDR Mods List ─────────────────────────────────────────────────────────
+    // ── Available Mods List ───────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns a merged, alphabetically sorted list of all available HDR mods
-    /// from the RenoDX DB and the Luma wiki. Each entry shows whether a game has
-    /// a RenoDX mod, a Luma mod, or both, plus their download URLs.
-    /// Used by the "Available HDR Mods" dialog.
+    /// Returns a merged, alphabetically sorted list of all available mods
+    /// from the RenoDX DB, the Luma wiki and the Ultra+ games list. Each entry shows
+    /// which of RenoDX, Luma and Ultra+ a game has, plus their page URLs.
+    /// Used by the "Available Mods" dialog.
     /// </summary>
     public List<HdrModEntry> GetAllHdrMods()
     {
@@ -589,6 +593,21 @@ public partial class MainViewModel : ObservableObject
                 LumaUrl:     null);
         }
 
+        // Source engine entries — same RenoDX column (generic Source addon is a RenoDX mod)
+        foreach (var kv in _dbSourceEntries)
+        {
+            if (string.IsNullOrWhiteSpace(kv.Key)) continue;
+            if (dict.ContainsKey(kv.Key)) continue; // named mod already covers it
+            var sourceStatus = string.Equals(kv.Value.Status, "WIP", StringComparison.OrdinalIgnoreCase)
+                ? "WIP" : "Done";
+            dict[kv.Key] = new HdrModEntry(
+                Name:        kv.Value.Name,
+                RenoDXStatus: sourceStatus,
+                RenoDXUrl:   null,
+                LumaStatus:  null,
+                LumaUrl:     null);
+        }
+
         // Luma mods — merge into existing entries or add new ones
         foreach (var luma in _lumaMods)
         {
@@ -608,6 +627,44 @@ public partial class MainViewModel : ObservableObject
                     LumaStatus:  lumaStatus,
                     LumaUrl:     lumaUrl);
             }
+        }
+
+        // Ultra+ mods — matched by normalized name, since Ultra+ titles can differ slightly
+        // (punctuation, trademark symbols) from the RenoDX / Luma names.
+        try
+        {
+            var byNormalized = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var key in dict.Keys)
+            {
+                var norm = _gameDetectionService.NormalizeName(key);
+                if (!string.IsNullOrEmpty(norm)) byNormalized.TryAdd(norm, key);
+            }
+            foreach (var upName in _ultraPlusService.GetAllGameNames())
+            {
+                if (string.IsNullOrWhiteSpace(upName)) continue;
+                var upUrl = _ultraPlusService.ResolveUrl(upName, _manifest);
+                if (string.IsNullOrEmpty(upUrl)) continue;
+                var norm = _gameDetectionService.NormalizeName(upName);
+                if (!string.IsNullOrEmpty(norm) && byNormalized.TryGetValue(norm, out var existingKey))
+                {
+                    dict[existingKey] = dict[existingKey] with { UltraPlusUrl = upUrl };
+                }
+                else if (!dict.ContainsKey(upName))
+                {
+                    dict[upName] = new HdrModEntry(
+                        Name:         upName,
+                        RenoDXStatus: null,
+                        RenoDXUrl:    null,
+                        LumaStatus:   null,
+                        LumaUrl:      null,
+                        UltraPlusUrl: upUrl);
+                    if (!string.IsNullOrEmpty(norm)) byNormalized.TryAdd(norm, upName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[MainViewModel.GetAllHdrMods] Ultra+ merge failed — {ex.Message}");
         }
 
         return dict.Values
@@ -639,6 +696,8 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Transient — stores Control UE install options between dialog and post-install step.</summary>
     private Services.ControlUeInstallOptions? _controlUeInstallOptions;
     private Dictionary<string, MachineType> _bitnessCache = new(StringComparer.OrdinalIgnoreCase);
+    // rootPath (lower) → folder fingerprint for games cached as EngineType.Unknown (see EngineFolderStamp).
+    private Dictionary<string, string> _engineFolderStamps = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Game names that have DXVK enabled (loaded from saved library).</summary>
     private HashSet<string> _dxvkEnabledGames = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Game names excluded from DXVK Update All (loaded from saved library).</summary>
@@ -654,6 +713,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private bool _isBackgroundScanning;
     [ObservableProperty] private string _backgroundScanStatusText = "";
+    /// <summary>True while StatusText shows the "x games detected · y ..." summary, so
+    /// <see cref="RefreshStatusBarText"/> knows it may safely recompute that line.</summary>
+    private bool _statusTextIsGameCount;
     private bool _hasInitialized;
     public bool HasInitialized => _hasInitialized;
     public void MarkInitialized() => _hasInitialized = true;
@@ -706,15 +768,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     public BatchObservableCollection<GameCardViewModel> DisplayedGames { get; } = new();
-
-    // UE common warnings shown at bottom of every generic UE info dialog
-    private const string UnrealWarnings =
-        "\n\n⚠ COMMON UNREAL ENGINE MOD WARNINGS\n\n" +
-        "🖥 Black Screen on Launch\n" +
-        "Upgrade `R10G10B10A2_UNORM` → `output size`\n" +
-        "Unlock upgrade sliders: Settings Mode → Advanced, then restart game.\n\n" +
-        "🖥 DLSS FG Flickering\n" +
-        "Replace DLSSG DLL with older 3.8.x (locks FG x2) or use DLSS FIX (beta) from Discord.";
 
     public MainViewModel(
         HttpClient http,
@@ -887,7 +940,7 @@ public partial class MainViewModel : ObservableObject
     private Dictionary<string, LumaGenericGameEntry> _lumaGenericEntries = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _lumaEnabledGames => _gameNameService.LumaEnabledGames;
     /// <summary>
-    /// Games the user has explicitly disabled Luma for — prevents manifest lumaDefaultGames
+    /// Games the user has explicitly disabled Luma for — prevents automatic Luma enabling
     /// from re-enabling Luma on every refresh.
     /// </summary>
     private HashSet<string> _lumaDisabledGames => _gameNameService.LumaDisabledGames;

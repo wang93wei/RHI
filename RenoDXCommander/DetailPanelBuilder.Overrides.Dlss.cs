@@ -23,13 +23,21 @@ public partial class DetailPanelBuilder
     {
         var col = new StackPanel { Spacing = 4, Opacity = isPresent ? 1.0 : 0.4 };
 
-        col.Children.Add(new TextBlock
+        var columnLabel = new TextBlock
         {
             Text = label,
             FontSize = 11,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
-        });
+        };
+        // The column is dimmed (and its version combo usually disabled) when the DLL is
+        // missing or is 1.x. Disabled controls show no tooltip, so the reason goes on the label.
+        if (!isPresent)
+            ToolTipService.SetToolTip(columnLabel,
+                installedVersion?.StartsWith("1.") == true
+                    ? Loc.GetString("Overrides.Dlss.Column.TooOld.Tooltip")
+                    : Loc.GetString("Overrides.Dlss.Column.Missing.Tooltip"));
+        col.Children.Add(columnLabel);
 
         // Version ComboBox
         var versionLabel = new TextBlock { Text = Loc.GetString("Dialog.Version"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), Margin = new Thickness(0, 2, 0, 0) };
@@ -98,6 +106,8 @@ public partial class DetailPanelBuilder
                 bool matched = false;
                 for (int i = 0; i < entries.Count; i++)
                 {
+                    // MatchKey holds the raw version, so a localized "(Default)" display label
+                    // never affects the installed-version match.
                     var itemBase = entries[i].MatchKey;
                     if (installedVersion.Equals(itemBase, StringComparison.OrdinalIgnoreCase)
                         || itemBase.StartsWith(installedVersion, StringComparison.OrdinalIgnoreCase)
@@ -166,6 +176,18 @@ public partial class DetailPanelBuilder
             try
             {
                 await onVersionSelected(selectedValue);
+            }
+            catch (DlssSwapException ex)
+            {
+                CrashReporter.Log($"[DetailPanelBuilder.BuildDlssColumn] {label} swap to '{selectedValue}' failed — {ex.Message}");
+                // Put the dropdown back to what is actually on disk
+                if (ev.RemovedItems.Count > 0)
+                {
+                    versionInit = true;
+                    versionCombo.SelectedItem = ev.RemovedItems[0];
+                    versionInit = false;
+                }
+                await ShowDlssSwapErrorAsync(ex.Message);
             }
             finally
             {
@@ -273,6 +295,7 @@ public partial class DetailPanelBuilder
                         HorizontalAlignment = HorizontalAlignment.Stretch,
                         MaxLength = 3,
                     };
+                    ToolTipService.SetToolTip(inputBox, Loc.GetString("Overrides.Dlss.RenderScale.InputTooltip"));
                     inputBox.KeyDown += (ks, ke) =>
                     {
                         if (ke.Key == Windows.System.VirtualKey.Enter)
@@ -335,5 +358,19 @@ public partial class DetailPanelBuilder
         };
         Grid.SetColumn(divider, column);
         return divider;
+    }
+
+    /// <summary>Tells the user why a DLSS / Streamline swap couldn't be applied.</summary>
+    private async Task ShowDlssSwapErrorAsync(string message)
+    {
+        var xamlRoot = _window.Content?.XamlRoot;
+        if (xamlRoot == null) return;
+        await DialogService.ShowSafeAsync(new ContentDialog
+        {
+            Title = Loc.GetString("Overrides.Dlss.SwapError.Title"),
+            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
+            XamlRoot = xamlRoot,
+        });
     }
 }

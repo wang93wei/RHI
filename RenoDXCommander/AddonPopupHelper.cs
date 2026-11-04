@@ -93,7 +93,7 @@ public static class AddonPopupHelper
                     UseShellExecute = true,
                 });
             }
-            catch { }
+            catch (Exception ex) { CrashReporter.Log($"[AddonPopupHelper.ShowAsync] Failed to open custom addon folder '{customFolderPath}' — {ex.Message}"); }
         };
         panel.Children.Add(folderLink);
 
@@ -136,6 +136,7 @@ public static class AddonPopupHelper
                 VerticalAlignment = VerticalAlignment.Center,
                 Visibility = isDownloaded ? Visibility.Visible : Visibility.Collapsed,
             };
+            ToolTipService.SetToolTip(tickMark, Loc.GetString("Dialog.Addon.DownloadedTooltip"));
             nameRow.Children.Add(tickMark);
             textPanel.Children.Add(nameRow);
 
@@ -178,7 +179,7 @@ public static class AddonPopupHelper
                 ? "DLSS5 Tool" : null;
             bool peerIsSelected = mutualExclusivePeer != null && selected.Contains(mutualExclusivePeer);
 
-            // RTX 40 MFG conflict — MFG Ada Unlock blocked when new standalone DLL version is installed
+            // Universal MFG Unlocker conflict — MFG Ada Unlock blocked when new standalone DLL version is installed
             bool rtx40MfgConflict = entry.SectionId.Equals("mfgunlock", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(installPath)
                 && Rtx40MfgService.KnownProxyNames.Any(n =>
@@ -193,7 +194,7 @@ public static class AddonPopupHelper
             // Extras button conflict — MFG Ada Unlock blocked when already installed directly via Extras
             bool extrasInstalledConflict = entry.SectionId.Equals("mfgunlock", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(installPath)
-                && File.Exists(Path.Combine(installPath, "renodx-mfgunlock.addon64"));
+                && File.Exists(Path.Combine(ModInstallService.GetAddonDeployPath(installPath), "renodx-mfgunlock.addon64"));
             if (extrasInstalledConflict) peerIsSelected = true;
 
             var toggle = new ToggleSwitch
@@ -277,7 +278,7 @@ public static class AddonPopupHelper
                         await addonPackService.DownloadAddonAsync(capturedEntry);
                         toggle.DispatcherQueue?.TryEnqueue(() => capturedTickMark.Visibility = Visibility.Visible);
                     }
-                    catch { }
+                    catch (Exception ex) { CrashReporter.Log($"[AddonPopupHelper.ShowAsync] Addon download failed for '{capturedEntry.PackageName}' — {ex.Message}"); }
                     finally
                     {
                         toggle.DispatcherQueue?.TryEnqueue(() => toggle.IsEnabled = !peerIsSelected);
@@ -333,13 +334,15 @@ public static class AddonPopupHelper
                     FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                     Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                 });
-                nameRow.Children.Add(new TextBlock
+                var localTick = new TextBlock
                 {
                     Text = "✓",
                     FontSize = 13,
                     Foreground = Brush(ResourceKeys.AccentGreenBrush),
                     VerticalAlignment = VerticalAlignment.Center,
-                });
+                };
+                ToolTipService.SetToolTip(localTick, Loc.GetString("Dialog.Addon.LocalFileTooltip"));
+                nameRow.Children.Add(localTick);
                 textPanel.Children.Add(nameRow);
 
                 if (!string.IsNullOrEmpty(entry.PackageDescription))

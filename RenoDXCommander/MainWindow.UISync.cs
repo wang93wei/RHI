@@ -42,9 +42,13 @@ public sealed partial class MainWindow
                     if (!silent) SettingsBtn.IsEnabled = !loading;
                     // Lock Back button during refresh from Settings page
                     SettingsBackBtn.IsEnabled = !loading;
+                    RefreshStatusBar();
                     if (!silent) StatusDot.Fill = new SolidColorBrush(loading
                         ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
                         : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentGreenBrush]).Color);
+                    if (!silent) ToolTipService.SetToolTip(StatusDot, loading
+                        ? Loc.GetString("MainWindow.StatusBar.Scanning.Tooltip")
+                        : Loc.GetString("MainWindow.StatusBar.UpToDate.Tooltip"));
                     if (!loading)
                     {
                         if (!silent) ViewModel.MarkInitialized();
@@ -55,29 +59,15 @@ public sealed partial class MainWindow
                         // Show one-line notice in status bar if this session was auto-restarted after a freeze
                         if (ViewModel.WasAutoRestarted)
                         {
-                            var msg = Loc.GetString("Status.AutoRestartedAfterFreeze");
-                            // Defer slightly so StatusText updates that fire immediately after loading
-                            // don't overwrite the notice before the user sees it.
-                            _ = System.Threading.Tasks.Task.Delay(500).ContinueWith(_ =>
-                                DispatcherQueue?.TryEnqueue(() =>
-                                {
-                                    StatusBarText.Text = msg;
-                                    _ = System.Threading.Tasks.Task.Delay(12_000).ContinueWith(__ =>
-                                        DispatcherQueue?.TryEnqueue(() => { if (StatusBarText.Text == msg) StatusBarText.Text = ViewModel.StatusText; }));
-                                }));
+                            ShowStatusBarMessage(Loc.GetString("Status.AutoRestartedAfterFreeze"),
+                                TimeSpan.FromSeconds(12));
                         }
 
                         // Show one-line notice if the GitHub token was found to be expired/revoked at startup
                         if (App._gitHubTokenExpiredOnStartup)
                         {
-                            var msg = Loc.GetString("GitHub.Status.SessionExpiredNotice");
-                            _ = System.Threading.Tasks.Task.Delay(500).ContinueWith(_ =>
-                                DispatcherQueue?.TryEnqueue(() =>
-                                {
-                                    StatusBarText.Text = msg;
-                                    _ = System.Threading.Tasks.Task.Delay(15_000).ContinueWith(__ =>
-                                        DispatcherQueue?.TryEnqueue(() => { if (StatusBarText.Text == msg) StatusBarText.Text = ViewModel.StatusText; }));
-                                }));
+                            ShowStatusBarMessage(Loc.GetString("GitHub.Status.SessionExpiredNotice"),
+                                TimeSpan.FromSeconds(15));
                         }
                         // On Refresh (silent=true), the ListView still has its old item selected
                         // so SelectionChanged never fires and PopulateDetailPanel never runs.
@@ -115,8 +105,10 @@ public sealed partial class MainWindow
                 case nameof(ViewModel.SubStatusText):
                     LoadingTitle.Text    = ViewModel.StatusText;
                     LoadingSubtitle.Text = ViewModel.SubStatusText;
-                    StatusBarText.Text   = ViewModel.StatusText
-                        + (string.IsNullOrEmpty(ViewModel.SubStatusText) ? "" : $"  —  {ViewModel.SubStatusText}");
+                    RefreshStatusBar();
+                    break;
+                case nameof(ViewModel.CurrentActivityText):
+                    RefreshStatusBar();
                     break;
                 case nameof(ViewModel.InstalledCount):
                     InstalledCountText.Text = Loc.GetString("Stats.ReShade", ViewModel.InstalledCount);
@@ -163,6 +155,13 @@ public sealed partial class MainWindow
         AboutPanel.Visibility    = ViewModel.CurrentPage == AppPage.About    ? Visibility.Visible : Visibility.Collapsed;
         FaqPanel.Visibility      = ViewModel.CurrentPage == AppPage.Faq      ? Visibility.Visible : Visibility.Collapsed;
 
+        // A layout change made on the Settings page rebuilds the game page now it's visible again
+        if (_layoutRebuildPending && ViewModel.CurrentPage == AppPage.GameView)
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (_layoutRebuildPending && ViewModel.CurrentPage == AppPage.GameView) RebuildForLayout();
+            });
+
         // Auto-select first game if nothing is selected
         if (GameList.SelectedItem == null && ViewModel.DisplayedGames.Count > 0)
         {
@@ -187,6 +186,7 @@ public sealed partial class MainWindow
             b.Background  = new SolidColorBrush(isActive ? active   : inactive);
             b.Foreground  = new SolidColorBrush(isActive ? activeFg : inactiveFg);
         }
+        if (_tabsChromeOn) RefreshTabsChromeSoon(); // Tabs: segmented filter + Filters count
     }
 
     private void TryRestoreSelection()
@@ -244,8 +244,6 @@ public sealed partial class MainWindow
         _detailPanelBuilder.PopulateDetailPanel(card);
     }
 
-    private void UpdateDetailComponentRows(GameCardViewModel card) => _detailPanelBuilder.UpdateDetailComponentRows(card);
-
     private void DetailCard_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => _detailPanelBuilder.DetailCard_PropertyChanged(sender, e);
 
     internal void BuildOverridesPanel(GameCardViewModel card)
@@ -255,23 +253,51 @@ public sealed partial class MainWindow
         _detailPanelBuilder.BuildOverridesPanel(card);
     }
 
-    internal void UpdateLumaToggleStyle(bool isLumaMode)
+    /// <summary>
+    /// Re-lays out the game page after Settings › General › Layout changes. Rebuilds the shown
+    /// game once, because sections are built expanded or collapsed for the layout they're in.
+    /// </summary>
+    internal void ApplyMainLayout()
     {
-        DetailLumaToggleText.Text = isLumaMode
-            ? Loc.GetString("Detail.LumaToggle.On")
-            : Loc.GetString("Detail.LumaToggle.Off");
-        if (isLumaMode)
+        CrashReporter.Log($"[MainWindow.ApplyMainLayout] Layout = {ViewModel.Settings.MainLayout}");
+        UpdateDetailPanelWidth();
+        ApplyTabsChrome();
+
+        // The Layout setting is changed on the Settings page, where DLSS, Driver Settings and
+        // Neural Rendering skip their background build (freeze guard). Rebuilding now would leave
+        // them empty, so rebuild once the game page is showing again.
+        if (ViewModel.CurrentPage != AppPage.GameView)
         {
-            DetailLumaToggle.Background = Brush(ResourceKeys.AccentGreenBgBrush);
-            DetailLumaToggle.Foreground = Brush(ResourceKeys.AccentGreenBrush);
-            DetailLumaToggle.BorderBrush = Brush(ResourceKeys.AccentGreenBorderBrush);
+            _layoutRebuildPending = true;
+            return;
         }
-        else
+        RebuildForLayout();
+    }
+
+    private bool _layoutRebuildPending;
+
+    private void RebuildForLayout()
+    {
+        _layoutRebuildPending = false;
+        if (ViewModel.SelectedGame is { } card && DetailPanel.Visibility == Visibility.Visible)
         {
-            DetailLumaToggle.Background = Brush(ResourceKeys.SurfaceOverlayBrush);
-            DetailLumaToggle.Foreground = Brush(ResourceKeys.TextTertiaryBrush);
-            DetailLumaToggle.BorderBrush = Brush(ResourceKeys.BorderStrongBrush);
+            PopulateDetailPanel(card);
+            BuildOverridesPanel(card);
+
+            // Classic's Extras rows size their columns from the container's width, which is still
+            // the wide Tabs width at this point. Rebuild them once the narrower layout has happened.
+            if (!_detailPanelBuilder.Layout.IsTabs)
+            {
+                void OnResized(object s, SizeChangedEventArgs e)
+                {
+                    ExtrasContainer.SizeChanged -= OnResized;
+                    if (ReferenceEquals(ViewModel.SelectedGame, card))
+                        _detailPanelBuilder.RequestExtrasRebuild(card);
+                }
+                ExtrasContainer.SizeChanged += OnResized;
+            }
         }
+        _detailPanelBuilder.ApplySectionOrder();
     }
 
     /// <summary>Allows DetailPanelBuilder to trigger a pending reselect after overrides save.</summary>
@@ -283,23 +309,8 @@ public sealed partial class MainWindow
 
     // ── Dialog delegation ─────────────────────────────────────────────────────────
 
-    private async Task<bool> ShowForeignDxgiConfirmDialogAsync(GameCardViewModel card, string dxgiPath)
-        => await _dialogService.ShowForeignDxgiConfirmDialogAsync(card, dxgiPath);
-
     private async Task CheckForAppUpdateAsync()
         => await _dialogService.CheckForAppUpdateAsync();
-
-    private async Task ShowUpdateDialogAsync(UpdateInfo updateInfo)
-        => await _dialogService.ShowUpdateDialogAsync(updateInfo);
-
-    private async Task DownloadAndInstallUpdateAsync(UpdateInfo updateInfo)
-        => await _dialogService.DownloadAndInstallUpdateAsync(updateInfo);
-
-    private async Task ShowPatchNotesIfNewVersionAsync()
-        => await _dialogService.ShowPatchNotesIfNewVersionAsync();
-
-    private async Task ShowMotdIfNewAsync()
-        => await _dialogService.ShowMotdIfNewAsync();
 
     private async Task ShowPatchNotesDialogAsync()
         => await _dialogService.ShowPatchNotesDialogAsync();

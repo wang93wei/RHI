@@ -200,14 +200,15 @@ public static class DlssDefaultsDialog
         }
         else if (!string.IsNullOrEmpty(currentDefault))
         {
+            int customIdx = includeDriverOverride ? items.Count - 2 : items.Count - 1;
             if (string.Equals(currentDefault, "Custom", StringComparison.OrdinalIgnoreCase))
             {
-                selectedIdx = items.Count - 1;
+                selectedIdx = customIdx;
             }
             else
             {
-                // versions occupy indexes 1..Count-2 (Default at 0, Custom at the end)
-                for (int i = 1; i < items.Count - 1; i++)
+                // versions occupy indexes 1..versions.Count (Default at 0, Custom at customIdx)
+                for (int i = 1; i <= versions.Count; i++)
                 {
                     if (versions[i - 1].Equals(currentDefault, StringComparison.Ordinal)
                         || versions[i - 1].StartsWith(currentDefault, StringComparison.OrdinalIgnoreCase))
@@ -216,7 +217,7 @@ public static class DlssDefaultsDialog
             }
         }
 
-        return new ComboBox
+        var versionCombo = new ComboBox
         {
             ItemsSource = items,
             SelectedIndex = selectedIdx,
@@ -224,6 +225,10 @@ public static class DlssDefaultsDialog
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
         };
+        ToolTipService.SetToolTip(versionCombo,
+            Loc.GetString("DlssDefaults.Version.Tooltip")
+            + (includeDriverOverride ? Loc.GetString("DlssDefaults.Version.Tooltip.Override") : ""));
+        return versionCombo;
     }
 
     private static ComboBox BuildPresetComboBox((string Name, uint Value)[] presets, uint currentDefault)
@@ -237,7 +242,7 @@ public static class DlssDefaultsDialog
             if (idx >= 0) selectedIdx = idx;
         }
 
-        return new ComboBox
+        var presetCombo = new ComboBox
         {
             ItemsSource = items,
             SelectedIndex = selectedIdx,
@@ -245,6 +250,9 @@ public static class DlssDefaultsDialog
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
         };
+        ToolTipService.SetToolTip(presetCombo,
+            Loc.GetString("DlssDefaults.Preset.Tooltip"));
+        return presetCombo;
     }
 
     private static StackPanel BuildRenderScaleComboBox(uint currentDefault)
@@ -268,6 +276,8 @@ public static class DlssDefaultsDialog
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(6),
         };
+        ToolTipService.SetToolTip(combo,
+            Loc.GetString("DlssDefaults.RenderScale.Tooltip"));
 
         // Inline TextBox shown when "Custom" is selected
         var customBox = new TextBox
@@ -320,8 +330,10 @@ public static class DlssDefaultsDialog
     private static string GetSelectedVersion(ComboBox combo)
     {
         if (combo.SelectedIndex <= 0) return ""; // "Default" = empty = don't change
-        if (combo.SelectedIndex == combo.Items.Count - 1) return "Custom"; // last item is Custom
-        return combo.SelectedItem as string ?? ""; // version numbers are untranslated
+        var item = combo.SelectedItem as string ?? "";
+        if (item == LocOpt.T("Custom")) return "Custom";
+        if (item == LocOpt.T("NVIDIA Override")) return "NVIDIA Override";
+        return item; // version numbers are untranslated
     }
 
     private static uint GetSelectedPreset(ComboBox combo, (string Name, uint Value)[] presets)

@@ -33,7 +33,7 @@ public partial class MainViewModel
                 _gameApiCache[key] = (primary, all);
             }
         }
-        catch { }
+        catch (Exception ex) { CrashReporter.Log($"[MainViewModel.LoadGameApiCache] Failed to load API cache — {ex.Message}"); }
     }
 
     internal static void SaveGameApiCache()
@@ -89,6 +89,7 @@ public partial class MainViewModel
 
             // ── ReShade rename (only if file exists under the old name) ────────────
             if (card.RsRecord != null
+                && !GetRsAsiMode(card.GameName, card.Source ?? "") // "Load ReShade as ASI" keeps its .asi name
                 && !card.RsRecord.InstalledAs.Equals(effectiveRs, StringComparison.OrdinalIgnoreCase))
             {
                 var oldPath = Path.Combine(card.InstallPath, card.RsRecord.InstalledAs);
@@ -151,6 +152,7 @@ public partial class MainViewModel
 
             var rsDefaultName = ResolveAutoReShadeFilename(card.DetectedApis) ?? AuxInstallService.RsNormalName;
             if (!_sfInstalled
+                && !GetRsAsiMode(card.GameName, card.Source ?? "") // "Load ReShade as ASI" keeps its .asi name
                 && card.RsRecord != null
                 && !string.IsNullOrEmpty(card.RsRecord.InstalledAs)
                 && !card.RsRecord.InstalledAs.Equals(rsDefaultName, StringComparison.OrdinalIgnoreCase))
@@ -580,7 +582,7 @@ public partial class MainViewModel
                     return new HashSet<GraphicsApiType> { GraphicsApiType.DirectX12 };
             }
         }
-        catch { }
+        catch (Exception) { /* probe, runs per game each scan; inaccessible folder falls through to exe scan */ }
 
         // Scan all exes in the install directory
         ScanAllExesInDir(installPath, result);

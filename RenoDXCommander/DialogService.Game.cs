@@ -41,32 +41,6 @@ public partial class DialogService
         return result == ContentDialogResult.Primary;
     }
 
-    public async Task<bool> ShowForeignWinmmConfirmDialogAsync(GameCardViewModel card, string winmmPath)
-    {
-        var fileSize = new System.IO.FileInfo(winmmPath).Length;
-        var sizeKB   = fileSize / 1024.0;
-
-        var dlg = new ContentDialog
-        {
-            Title               = Loc.GetString("Dialog.UnknownWinmm.Title"),
-            Content             = new TextBlock
-            {
-                TextWrapping = TextWrapping.Wrap,
-                Foreground   = Brush(ResourceKeys.AccentAmberBrush),
-                FontSize     = 13,
-                Text         = Loc.GetString("Dialog.UnknownWinmm.Content", card.InstallPath, $"{sizeKB:N0}"),
-            },
-            PrimaryButtonText   = Loc.GetString("Dialog.Overwrite"),
-            CloseButtonText     = Loc.GetString("Dialog.Cancel"),
-            XamlRoot            = _window.Content.XamlRoot,
-            Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
-            RequestedTheme      = ElementTheme.Dark,
-        };
-
-        var result = await DialogService.ShowSafeAsync(dlg);
-        return result == ContentDialogResult.Primary;
-    }
-
     // ── UE Extended Warning Dialog ──────────────────────────────────────────────
 
     /// <summary>
@@ -828,47 +802,6 @@ public partial class DialogService
         var rtb = new RichTextBlock { IsTextSelectionEnabled = true };
         rtb.Blocks.Add(para);
         panel.Children.Add(rtb);
-    }
-
-    public async Task ShowUeExtendedWarningAsync(GameCardViewModel card)
-    {
-        try
-        {
-            // Check if user has dismissed this warning permanently
-            if (_window.ViewModel.Settings.UeExtendedWarningDismissed) return;
-
-            while (_window.Content.XamlRoot == null)
-                await Task.Delay(100);
-
-            var hasNotes = !string.IsNullOrWhiteSpace(card.Notes);
-            var notesHint = hasNotes
-                ? Loc.GetString("Dialog.UeExtended.NotesHint")
-                : Loc.GetString("Dialog.UeExtended.NoNotesHint");
-
-            var dlg = new ContentDialog
-            {
-                Title               = Loc.GetString("Dialog.UeExtendedCompatibilityWarning"),
-                Content             = new TextBlock
-                {
-                    TextWrapping = TextWrapping.Wrap,
-                    FontSize     = 13,
-                    Text         = Loc.GetString("Dialog.UeExtended.WarningContent") + notesHint,
-                },
-                PrimaryButtonText   = Loc.GetString("Dialog.OkIUnderstand"),
-                SecondaryButtonText = Loc.GetString("Dialog.DonTShowAgain"),
-                XamlRoot            = _window.Content.XamlRoot,
-                Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
-                RequestedTheme      = ElementTheme.Dark,
-            };
-
-            var result = await DialogService.ShowSafeAsync(dlg);
-            if (result == ContentDialogResult.Secondary)
-            {
-                _window.ViewModel.Settings.UeExtendedWarningDismissed = true;
-                _window.ViewModel.SaveSettingsPublic();
-            }
-        }
-        catch (Exception ex) { CrashReporter.Log($"[DialogService.ShowUeExtendedWarningAsync] Failed to show UE warning for '{card.GameName}' — {ex.Message}"); }
     }
 
     // ── Vulkan Admin Required Dialog ────────────────────────────────────────────

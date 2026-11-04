@@ -172,6 +172,11 @@ public partial class DetailPanelBuilder
             FontSize = 11,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         };
+        // The Addons combo is disabled under the "No Addons" ReShade channel and WinUI
+        // doesn't show tooltips on disabled controls, so the reason goes on the label.
+        if (card.UseNormalReShade)
+            ToolTipService.SetToolTip(addonLabel,
+                Loc.GetString("Shader.Addons.ChannelRequired.Tooltip"));
         Grid.SetRow(addonLabel, 0); Grid.SetColumn(addonLabel, 1);
         shaderAddonGrid.Children.Add(addonLabel);
         Grid.SetRow(addonModeCombo, 1); Grid.SetColumn(addonModeCombo, 1);
@@ -287,6 +292,8 @@ public partial class DetailPanelBuilder
             TextWrapping = TextWrapping.NoWrap,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
+        ToolTipService.SetToolTip(exeHeaderText,
+            Loc.GetString("Overrides.LaunchExe.Header.Tooltip"));
         launchExeHeaderPanel.Children.Add(exeHeaderText);
 
         // Async exe scan — updates the label without blocking the UI thread
@@ -304,7 +311,7 @@ public partial class DetailPanelBuilder
                             .Select(Path.GetFileName)
                             .FirstOrDefault();
                 }
-                catch { }
+                catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildShadersAddonsSection] Exe scan failed for '{card.InstallPath}' — {ex.Message}"); }
                 if (scannedExe != null)
                     _window.DispatcherQueue?.TryEnqueue(() =>
                     {
@@ -424,20 +431,18 @@ public partial class DetailPanelBuilder
 
         var resetLaunchBtn = new Button
         {
-            Content = Loc.GetString("Xaml.Reset"),
+            Content = Loc.GetString("Overrides.LaunchExe.ResetButton"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
-            Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
-            BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
         };
+        ApplyResetButtonStyle(resetLaunchBtn);
         resetLaunchBtn.Click += (s, ev) =>
         {
             launchExeBox.Text = "";
+            launchArgsBox.Text = "";
             _gameNameService.LaunchExeOverrides.Remove(ctx.CapturedName);
+            _gameNameService.LaunchArgsOverrides.Remove(ctx.CapturedName);
             _window.ViewModel.SaveSettingsPublic();
         };
         Grid.SetColumn(resetLaunchBtn, 1);
@@ -463,6 +468,7 @@ public partial class DetailPanelBuilder
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
         };
+        ToolTipService.SetToolTip(resetOverridesBtn, Loc.GetString("Overrides.ResetOverrides.Tooltip"));
         ctx.ResetOverridesBtn = resetOverridesBtn;
         Action resetAction = () =>
         {
@@ -489,7 +495,7 @@ public partial class DetailPanelBuilder
             if (_window.ViewModel.IsUpdateAllExcludedOs(ctx.CapturedName, card.Source))
                 _window.ViewModel.ToggleUpdateAllExclusionOs(ctx.CapturedName, card.Source);
             UpdateInclusionHelper.RefreshSummary(ctx.UpdateSummaryText, _window.ViewModel, ctx.CapturedName, card.IsREEngineGame, card.DxvkEnabled, card.Source ?? "");
-            ctx.WikiExcludeCombo.SelectedItem = LocOpt.T("Included");
+            ctx.WikiExcludeCombo.SelectedItem = WikiIncludedItem;
 
             // Persist all reset values immediately
             var resetName = (ctx.OriginalStoreName ?? gameName).Trim();

@@ -575,13 +575,16 @@ public partial class DetailPanelBuilder
 
         // ── Global update inclusion section (Middle Row right column) ────────────
         var globalUpdateColumn = new StackPanel { Spacing = 0 };
-        globalUpdateColumn.Children.Add(new TextBlock
+        var globalUpdateHeading = new TextBlock
         {
             Text = Loc.GetString("Dialog.GlobalUpdateInclusion"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             Margin = new Thickness(0, 0, 0, 8),
-        });
+        };
+        ToolTipService.SetToolTip(globalUpdateHeading,
+            Loc.GetString("Overrides.GlobalUpdateInclusion.Tooltip"));
+        globalUpdateColumn.Children.Add(globalUpdateHeading);
         globalUpdateColumn.Children.Add(toggleRow);
 
         // ── Middle Row vertical divider ──────────────────────────────────────────

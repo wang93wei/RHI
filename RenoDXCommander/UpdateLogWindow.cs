@@ -126,15 +126,39 @@ public sealed class UpdateLogWindow : Window
             Foreground  = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
         };
-        clearBtn.Click += (_, _) =>
+        ToolTipService.SetToolTip(clearBtn, Loc.GetString("UpdateLog.ClearHistory.Tooltip"));
+        clearBtn.Click += async (_, _) =>
         {
-            _updateLogService.Clear();
-            DispatcherQueue.TryEnqueue(() =>
+            try
             {
-                listPanel.Children.Clear();
-                BuildEntryList(listPanel);
-                countText.Text = BuildCountText(0);
-            });
+                // This window has its own XamlRoot, so a ContentDialog can be shown here.
+                var xamlRoot = clearBtn.XamlRoot;
+                if (xamlRoot == null) return;
+                var confirm = new ContentDialog
+                {
+                    Title             = Loc.GetString("UpdateLog.ClearHistory.Confirm.Title"),
+                    Content           = Loc.GetString("UpdateLog.ClearHistory.Confirm.Content"),
+                    PrimaryButtonText = Loc.GetString("UpdateLog.ClearHistory"),
+                    CloseButtonText   = Loc.GetString("Dialog.Cancel"),
+                    DefaultButton     = ContentDialogButton.Close,
+                    XamlRoot          = xamlRoot,
+                    RequestedTheme    = ElementTheme.Dark,
+                };
+                if (await DialogService.ShowSafeAsync(confirm) != ContentDialogResult.Primary) return;
+
+                _updateLogService.Clear();
+                CrashReporter.Log("[UpdateLogWindow.ClearHistory] Update history cleared");
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    listPanel.Children.Clear();
+                    BuildEntryList(listPanel);
+                    countText.Text = BuildCountText(0);
+                });
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[UpdateLogWindow.ClearHistory] Failed — {ex.Message}");
+            }
         };
         Grid.SetColumn(clearBtn, 1);
         footerRow.Children.Add(clearBtn);
@@ -255,6 +279,8 @@ public sealed class UpdateLogWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming      = TextTrimming.CharacterEllipsis,
         };
+        if (!string.IsNullOrEmpty(versionStr))
+            ToolTipService.SetToolTip(versionText, versionStr);
         Grid.SetColumn(versionText, 2);
         row.Children.Add(versionText);
 
@@ -348,10 +374,13 @@ public sealed class UpdateLogWindow : Window
         "ReShade"            => (ResourceKeys.AccentTealBgBrush,   ResourceKeys.AccentTealBrush,   ResourceKeys.AccentTealBorderBrush),
         "Addon"              => (ResourceKeys.AccentGreenBgBrush,  ResourceKeys.AccentGreenBrush,  ResourceKeys.AccentGreenBorderBrush),
         "Shader Pack"        => (ResourceKeys.AccentPurpleBgBrush, ResourceKeys.AccentPurpleBrush, ResourceKeys.AccentPurpleBorderBrush),
+        "Luma"               => (ResourceKeys.AccentPurpleBgBrush, ResourceKeys.AccentPurpleBrush, ResourceKeys.AccentPurpleBorderBrush),
         "RenoDX DLSS5"       => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),
         "DLSS Tool"          => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),
         "OptiScaler"         => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
         "OptiScaler Nightly" => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
+        "OptiScaler DLSS NR" => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
+        "OptiScaler F5"      => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
         "OptiPatcher"        => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
         "DLSS"               => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),
         "Streamline"         => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),

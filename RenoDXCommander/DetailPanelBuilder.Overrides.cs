@@ -34,6 +34,20 @@ public partial class DetailPanelBuilder
         public Action? ResetAction; // stored separately so mgmt panel can call it directly (automation peer fails on collapsed buttons)
     }
 
+    // Wiki lookup dropdown items (Game Overrides, under Wiki mod name)
+    internal static string WikiIncludedItem => Loc.GetString("Overrides.WikiUse");
+    internal static string WikiExcludedItem => Loc.GetString("Overrides.WikiIgnore");
+
+    /// <summary>Plain grey look shared by the Game Overrides reset buttons (name, DLL names, launch options).</summary>
+    internal static void ApplyResetButtonStyle(Button btn)
+    {
+        btn.Background = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
+        btn.Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush);
+        btn.BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush);
+        btn.BorderThickness = new Thickness(1);
+        btn.CornerRadius = new CornerRadius(8);
+    }
+
     public void BuildOverridesPanel(GameCardViewModel card)
     {
         // Abort any in-progress drag before clearing the header row — prevents stale
@@ -55,8 +69,7 @@ public partial class DetailPanelBuilder
 
         // ── Collapsible header ────────────────────────────────────────────────
         const string overridesSectionKey = "GameOverrides";
-        var ovSettings  = _window.ViewModel.Settings;
-        bool ovCollapsed = ovSettings.CollapsedDetailSections.Contains(overridesSectionKey);
+        bool ovCollapsed = Layout.IsCollapsed(overridesSectionKey);
 
         var ovArrow = new TextBlock
         {
@@ -74,9 +87,12 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
+        ToolTipService.SetToolTip(ovArrow, SectionHeaderTooltip);
+        ToolTipService.SetToolTip(ovTitle, SectionHeaderTooltip);
         _window.OverridesHeaderRow.Children.Add(MakeDragHandle(_window.OverridesContainer));
         _window.OverridesHeaderRow.Children.Add(ovArrow);
         _window.OverridesHeaderRow.Children.Add(ovTitle);
+        Layout.RegisterHeader(overridesSectionKey, _window.OverridesHeaderRow);
         _window.OverridesPanel.Visibility = ovCollapsed ? Visibility.Collapsed : Visibility.Visible;
 
         // ── Collapsed summary ─────────────────────────────────────────────────
@@ -128,9 +144,7 @@ public partial class DetailPanelBuilder
                     && _window.OverridesHeaderRow.Children[3] is TextBlock ovSum)
                     ovSum.Visibility = Visibility.Collapsed;
             }
-            if (nowCollapsed) ovSettings.CollapsedDetailSections.Add(overridesSectionKey);
-            else              ovSettings.CollapsedDetailSections.Remove(overridesSectionKey);
-            _window.ViewModel.SaveSettingsPublic();
+            Layout.SetCollapsed(overridesSectionKey, nowCollapsed);
         };
 
         _window.OverridesHeaderRow.PointerEntered += _ovHeaderEnteredHandler;
@@ -198,6 +212,10 @@ public partial class DetailPanelBuilder
 
         const string DllDefaultSentinel = "--------";
         Button? resetDllBtn = null; // declared early so lambdas can capture it
+        TextBlock? dllOverrideLabel = null; // declared early so UpdateAllDropdowns can refresh its tooltip
+        string DllOverrideLabelTip(bool hasOverride) => hasOverride
+            ? Loc.GetString("Overrides.DllNaming.LabelTip")
+            : Loc.GetString("Overrides.DllNaming.LabelTip.ResetAvailable");
         bool _updatingDropdowns = false; // declared early so UpdateAllDropdowns can use it
 
         var existingRsName = existingCfg?.ReShadeFileName ?? "";
@@ -238,6 +256,7 @@ public partial class DetailPanelBuilder
             ItemsSource = dcNames,
             SelectedItem = DllDefaultSentinel,
         };
+        ToolTipService.SetToolTip(dcNameBox, Loc.GetString("Overrides.DcName.Tooltip"));
         if (!string.IsNullOrEmpty(existingDcName))
         {
             if (dcNames.Contains(existingDcName, StringComparer.OrdinalIgnoreCase))
@@ -273,6 +292,8 @@ public partial class DetailPanelBuilder
             ItemsSource = availableOsNames,
             SelectedItem = DllDefaultSentinel,
         };
+        ToolTipService.SetToolTip(osNameBox,
+            Loc.GetString("Overrides.OsName.Tooltip", OptiScalerService.GetDefaultDllName(card.GraphicsApi)));
         if (!string.IsNullOrEmpty(existingOsName))
         {
             if (availableOsNames.Contains(existingOsName, StringComparer.OrdinalIgnoreCase))
@@ -310,7 +331,7 @@ public partial class DetailPanelBuilder
                 if (card.IsOsInstalled && !string.IsNullOrEmpty(currentOsInstalled)
                     && !string.IsNullOrEmpty(card.InstallPath))
                 {
-                    var defName = OptiScalerService.DefaultDllName;
+                    var defName = OptiScalerService.GetDefaultDllName(card.GraphicsApi);
                     var oldP = System.IO.Path.Combine(card.InstallPath, currentOsInstalled);
                     var newP = System.IO.Path.Combine(card.InstallPath, defName);
                     try
@@ -464,6 +485,8 @@ public partial class DetailPanelBuilder
                 // Enable Reset button when any override is active
                 if (resetDllBtn != null)
                     resetDllBtn.IsEnabled = _window.ViewModel.HasDllOverride(gameName);
+                if (dllOverrideLabel != null)
+                    ToolTipService.SetToolTip(dllOverrideLabel, DllOverrideLabelTip(_window.ViewModel.HasDllOverride(gameName)));
             }
             finally { _updatingDropdowns = false; }
         }
@@ -552,34 +575,30 @@ public partial class DetailPanelBuilder
         resetWikiRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         // Restyle reset button to blue accent
-        resetBtn.Content = Loc.GetString("Xaml.Reset");
+        resetBtn.Content = Loc.GetString("Overrides.GameName.ResetButton");
         resetBtn.FontSize = 12;
         resetBtn.Height = 32;
         resetBtn.HorizontalAlignment = HorizontalAlignment.Stretch;
         resetBtn.VerticalAlignment = VerticalAlignment.Stretch;
         resetBtn.Padding = new Thickness(10, 6, 10, 6);
-        resetBtn.Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush);
-        resetBtn.Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush);
-        resetBtn.BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush);
-        resetBtn.BorderThickness = new Thickness(1);
-        resetBtn.CornerRadius = new CornerRadius(8);
+        ApplyResetButtonStyle(resetBtn);
         Grid.SetColumn(resetBtn, 0);
         resetWikiRow.Children.Add(resetBtn);
 
         // Wiki lookup ComboBox (replaces ToggleSwitch)
-        var wikiExcludeRaw = new[] { "Included", "Excluded" };
-        var wikiExcludeItems = wikiExcludeRaw.Select(LocOpt.T).ToArray();
+        var wikiExcludeItems = new[] { WikiIncludedItem, WikiExcludedItem };
         var wikiExcludeCombo = new ComboBox
         {
             ItemsSource = wikiExcludeItems,
-            SelectedIndex = _window.ViewModel.IsWikiExcluded(gameName) ? 1 : 0,
+            SelectedItem = _window.ViewModel.IsWikiExcluded(gameName) ? WikiExcludedItem : WikiIncludedItem,
             FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         ToolTipService.SetToolTip(wikiExcludeCombo, Loc.GetString("Overrides.WikiExclude.Tooltip"));
         wikiExcludeCombo.SelectionChanged += (s, ev) =>
         {
-            bool shouldExclude = wikiExcludeCombo.SelectedIndex == 1;
+            var selected = wikiExcludeCombo.SelectedItem as string;
+            bool shouldExclude = selected == WikiExcludedItem;
             if (shouldExclude != _window.ViewModel.IsWikiExcluded(capturedName))
                 _window.ViewModel.ToggleWikiExclusion(capturedName);
         };
@@ -609,12 +628,13 @@ public partial class DetailPanelBuilder
         // Column 2: DLL naming override
         var topRightColumn = new StackPanel { Spacing = 6 };
 
-        var dllOverrideLabel = new TextBlock
+        dllOverrideLabel = new TextBlock
         {
             Text = Loc.GetString("Overrides.DllNaming.Header"),
             FontSize = 12,
-            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         };
+        ToolTipService.SetToolTip(dllOverrideLabel, DllOverrideLabelTip(_window.ViewModel.HasDllOverride(gameName)));
         topRightColumn.Children.Add(dllOverrideLabel);
 
         // 3 DLL name boxes side by side, always visible
@@ -627,6 +647,13 @@ public partial class DetailPanelBuilder
 
         // Label row
         var rsLabel = new TextBlock { Text = Loc.GetString("Xaml.Reshade"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
+        // "Load ReShade as ASI" (ReShade ⚙) fixes ReShade's name, so its DLL name can't be changed here
+        if (_window.ViewModel.GetRsAsiMode(gameName, card.Source ?? ""))
+        {
+            rsNameBox.IsEnabled = false;
+            ToolTipService.SetToolTip(rsLabel,
+                Loc.GetString("Overrides.DllNaming.RsAsi.Tooltip", AuxInstallService.RsAsiName(card.Is32Bit)));
+        }
         var dcLabel = new TextBlock { Text = Loc.GetString("Xaml.DisplayCommander"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
         var osLabel = new TextBlock { Text = Loc.GetString("Xaml.Optiscaler"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.InlineDescriptionBrush) };
         Grid.SetColumn(rsLabel, 0); Grid.SetRow(rsLabel, 0);
@@ -649,16 +676,12 @@ public partial class DetailPanelBuilder
         {
             Content = Loc.GetString("Overrides.DllNaming.ResetButton"),
             FontSize = 12,
-            Height = 28,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Padding = new Thickness(10, 4, 10, 4),
+            Height = 32,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(10, 6, 10, 6),
             IsEnabled = _window.ViewModel.HasDllOverride(gameName),
-            Background = UIFactory.Brush(ResourceKeys.AccentRedBgBrush),
-            Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush),
-            BorderBrush = UIFactory.Brush(ResourceKeys.AccentPurpleBorderBrush),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
         };
+        ApplyResetButtonStyle(resetDllBtn);
         ToolTipService.SetToolTip(resetDllBtn,
             Loc.GetString("Overrides.ResetDllNames.Tooltip"));
         resetDllBtn.Click += async (s, e) =>
@@ -674,7 +697,7 @@ public partial class DetailPanelBuilder
                     && !string.IsNullOrEmpty(card.OsInstalledFile)
                     && !string.IsNullOrEmpty(card.InstallPath))
                 {
-                    var defaultOsName = OptiScalerService.DefaultDllName; // "dxgi.dll"
+                    var defaultOsName = OptiScalerService.GetDefaultDllName(card.GraphicsApi); // dxgi.dll, winmm.dll for Vulkan
                     var osOldPath = System.IO.Path.Combine(card.InstallPath, card.OsInstalledFile);
                     var osNewPath = System.IO.Path.Combine(card.InstallPath, defaultOsName);
                     try
@@ -1220,6 +1243,8 @@ public partial class DetailPanelBuilder
         CrashReporter.Log($"[BuildOverridesPanel] RsChannel done: '{card.GameName}'");
         BuildShadersAddonsSection(ctx);
         CrashReporter.Log($"[BuildOverridesPanel] ShadersAddons done: '{card.GameName}'");
+        // Tabs (mockup A): the same controls as grouped cards, arranged before they're shown
+        if (Layout.IsTabs) Layout.ArrangeOverrides(_window.OverridesPanel);
 
         // Sync mutable state back from context
         capturedName = ctx.CapturedName;

@@ -1,0 +1,552 @@
+// DetailPanelBuilder.Extras.AsiLoaders.cs — Extras section: Ultimate ASI Loader and RTX Encore rows with their DLL pickers.
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using RenoDXCommander.Models;
+using RenoDXCommander.Services;
+using RenoDXCommander.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Windows.Foundation;
+
+namespace RenoDXCommander;
+
+public partial class DetailPanelBuilder
+{
+    private void BuildUalRow(GameCardViewModel card, StackPanel body)
+    {
+        _window.ViewModel.SetLastUiAction($"BuildUalRow({card.GameName})");
+        var ualSvc    = _window.ViewModel.UalServiceInstance;
+        var gameName  = card.GameName;
+        var store     = card.Source ?? "";
+        var installPath = card.InstallPath ?? "";
+
+        // Detect current install state
+        var ualRecord   = string.IsNullOrEmpty(installPath) ? null
+            : _auxInstallService.FindRecord(gameName, installPath, UltimateAsiLoaderService.AddonType);
+        bool isInstalled = ualRecord != null;
+        string? installedAs = ualRecord?.InstalledAs;
+
+        // Consistency guard: if the dict says installed but FindRecord finds no record,
+        // the aux record was lost (e.g. Game Pass path version change). Clear the stale dict entry
+        // so the collapsed header doesn't show "ASI Loader winmm.dll" when nothing is actually installed.
+        if (!isInstalled && !string.IsNullOrEmpty(_window.ViewModel.GetUalInstalledAs(gameName, store)))
+        {
+            CrashReporter.Log($"[BuildUalRow] Clearing stale UalInstalledAs entry for '{gameName}' — dict said installed but no aux record found");
+            _window.ViewModel.SetUalInstalledAs(gameName, null, store);
+        }
+
+        // Status text
+        string statusText;
+        string statusColor;
+        if (isInstalled)
+        {
+            var staged = card.Is32Bit ? ualSvc.StagedVersion32 : ualSvc.StagedVersion64;
+            statusText  = staged ?? Loc.GetString("Status.Installed");
+            statusColor = "#5ECB7D";
+        }
+        else
+        {
+            statusText  = Loc.GetString("Status.Ready");
+            statusColor = "#A0AABB";
+        }
+
+        // ── Row grid matching Components section exactly ───────────────────────
+        // Col 0: label (120)  Col 1: status (80)  Col 2: Info (36)
+        // Col 3: install (*)  Col 4: cog (36)     Col 5: delete (36)
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+
+        // Col 0 — label
+        var label = new TextBlock
+        {
+            Text = Loc.GetString("Extras.AsiLoader"),
+            FontSize = 12,
+            Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        ToolTipService.SetToolTip(label, Loc.GetString("Extras.AsiLoader.Tooltip"));
+        Grid.SetColumn(label, 0);
+        row.Children.Add(label);
+
+        // Col 1 — status
+        var statusBlock = new TextBlock
+        {
+            Text = statusText,
+            FontSize = 12,
+            Foreground = UIFactory.GetBrush(statusColor),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
+            TextDecorations = isInstalled ? Windows.UI.Text.TextDecorations.Underline : Windows.UI.Text.TextDecorations.None,
+        };
+        if (isInstalled)
+        {
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.InstalledAs.Tooltip", installedAs));
+            statusBlock.PointerPressed += (s, e) =>
+                _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases"));
+            AttachLinkCursor(statusBlock);
+        }
+        Grid.SetColumn(statusBlock, 1);
+        row.Children.Add(statusBlock);
+
+        // Col 2 — Info button (matches Components style)
+        var infoBtn = new Button
+        {
+            Content = Loc.GetString("Dialog.Info"),
+            FontSize = 11,
+            Padding = new Thickness(6, 2, 6, 2),
+            Width = 36,
+            Height = 32,
+            Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
+            Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
+            BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+        };
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.AsiLoader.Info.Tooltip"));
+        infoBtn.Click += (s, e) =>
+            _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases"));
+        Grid.SetColumn(infoBtn, 2);
+        row.Children.Add(infoBtn);
+
+        // Col 3 — Install button
+        var installBtn = new Button
+        {
+            Content = isInstalled ? Loc.GetString("Extras.AsiLoader.Reinstall.Button") : Loc.GetString("Extras.AsiLoader.Install.Button"),
+            FontSize = 12,
+            Height = 32,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            CornerRadius = new CornerRadius(8),
+            Background = isInstalled
+                ? UIFactory.GetBrush("#182840")
+                : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
+            Foreground = isInstalled
+                ? UIFactory.GetBrush("#7AACDD")
+                : UIFactory.Brush(ResourceKeys.AccentBlueBrush),
+            BorderBrush = isInstalled
+                ? UIFactory.GetBrush("#2A4468")
+                : UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
+            BorderThickness = new Thickness(1),
+        };
+        ToolTipService.SetToolTip(installBtn, isInstalled
+            ? Loc.GetString("Extras.AsiLoader.Reinstall.Tooltip", installedAs)
+            : Loc.GetString("Extras.AsiLoader.Install.Tooltip"));
+        installBtn.Click += async (s, e) =>
+        {
+            if (string.IsNullOrEmpty(installPath)) return;
+            var chosen = await ShowUalDllPickerAsync(card, ualRecord?.InstalledAs);
+            if (chosen == null) return;
+
+            installBtn.IsEnabled = false;
+            installBtn.Content = Loc.GetString("Status.Installing");
+            try
+            {
+                var (success, hookedOriginal) = await ualSvc.InstallAsync(card, chosen);
+                if (success)
+                {
+                    _window.ViewModel.SetUalInstalledAs(gameName, chosen, store);
+                    if (hookedOriginal != null)
+                    {
+                        _ = DialogService.ShowSafeAsync(new ContentDialog
+                        {
+                            Title = Loc.GetString("Extras.OriginalDllChained.Title"),
+                            Content = Loc.GetString("Extras.OriginalDllChained.Content", chosen, hookedOriginal),
+                            CloseButtonText = Loc.GetString("Dialog.Ok"),
+                            XamlRoot = _window.Content.XamlRoot,
+                        });
+                    }
+                    RequestExtrasRebuild(card);
+                }
+                else
+                {
+                    installBtn.Content = Loc.GetString("Dialog.InstallFailed");
+                }
+            }
+            finally { installBtn.IsEnabled = true; }
+        };
+        Grid.SetColumn(installBtn, 3);
+        row.Children.Add(installBtn);
+
+        // Col 4 — Cog (empty for now, matches Components cog size/position)
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.AsiLoader.Settings.Tooltip"));
+        cogBtn.Tag = card;
+        cogBtn.Click += async (s, e) =>
+        {
+            try
+            {
+                var cog = new CogDialog(Loc.GetString("Extras.AsiLoader.Settings.Title"), _window.Content.XamlRoot);
+                cog.AddEmpty(Loc.GetString("Extras.AsiLoader.Settings.Content"));
+                await cog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[DetailPanelBuilder.BuildUalRow] Settings dialog failed — {ex.Message}");
+            }
+        };
+        Grid.SetColumn(cogBtn, 4);
+        row.Children.Add(cogBtn);
+
+        // Col 5 — Remove button
+        var removeBtn = new Button
+        {
+            Width = 36,
+            Height = 32,
+            Padding = new Thickness(0),
+            Background = UIFactory.Brush(ResourceKeys.AccentRedBgBrush),
+            Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush),
+            BorderBrush = UIFactory.Brush(ResourceKeys.AccentPurpleBorderBrush),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Content = new TextBlock { Text = "✕", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush) },
+            Opacity = isInstalled ? 1.0 : 0,
+            IsHitTestVisible = isInstalled,
+        };
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.AsiLoader.Remove.Tooltip"));
+        removeBtn.Click += (s, e) =>
+        {
+            if (string.IsNullOrEmpty(installPath)) return;
+            ualSvc.Uninstall(card);
+            _window.ViewModel.SetUalInstalledAs(gameName, null, store);
+            RequestExtrasRebuild(card);
+        };
+        Grid.SetColumn(removeBtn, 5);
+        row.Children.Add(removeBtn);
+
+        body.Children.Add(row);
+    }
+
+    private async Task<string?> ShowUalDllPickerAsync(GameCardViewModel card, string? currentDllName)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath)) return null;
+
+        var names = card.Is32Bit
+            ? UltimateAsiLoaderService.Win32Names
+            : UltimateAsiLoaderService.Win64Names;
+
+        // Collect files already in the game folder
+        var existingFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            if (Directory.Exists(card.InstallPath))
+                foreach (var f in Directory.GetFiles(card.InstallPath, "*.dll"))
+                    existingFiles.Add(Path.GetFileName(f));
+        }
+        catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.ShowUalDllPickerAsync] Failed to list DLLs in '{card.InstallPath}' — {ex.Message}"); }
+
+        // RHI-managed filenames to flag as conflict
+        var rhiOwned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(card.RsInstalledFile))  rhiOwned.Add(card.RsInstalledFile);
+        if (!string.IsNullOrEmpty(card.OsInstalledFile))  rhiOwned.Add(card.OsInstalledFile);
+        if (!string.IsNullOrEmpty(card.DcInstalledFile))  rhiOwned.Add(card.DcInstalledFile);
+
+        string? chosen = null;
+
+        var listPanel = new StackPanel { Spacing = 4 };
+        var scrollViewer = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 420,
+            Content = listPanel,
+        };
+
+        foreach (var name in names)
+        {
+            bool isRecommended = UltimateAsiLoaderService.RecommendedNames.Contains(name, StringComparer.OrdinalIgnoreCase);
+            bool isRhiConflict = UltimateAsiLoaderService.RhiConflictNames.Contains(name, StringComparer.OrdinalIgnoreCase);
+            bool isTaken       = existingFiles.Contains(name) && !rhiOwned.Contains(name) && name != currentDllName;
+            bool isRhiOwned    = rhiOwned.Contains(name);
+            bool isCurrent     = string.Equals(name, currentDllName, StringComparison.OrdinalIgnoreCase);
+
+            var btn = new Button
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(10, 6, 10, 6),
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                IsEnabled = !isRhiOwned,
+                Opacity = isRhiOwned ? 0.4 : 1.0,
+            };
+
+            // Styling
+            if (isCurrent)
+            {
+                btn.Background   = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush);
+                btn.BorderBrush  = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush);
+            }
+            else
+            {
+                btn.Background  = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
+                btn.BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush);
+            }
+
+            // Content: name + badges
+            var contentRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            contentRow.Children.Add(new TextBlock
+            {
+                Text = name,
+                FontSize = 12,
+                Foreground = isTaken || isRhiOwned
+                    ? UIFactory.Brush(ResourceKeys.TextTertiaryBrush)
+                    : UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+
+            if (isRecommended)
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
+            if (isTaken)
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.InUse"), "#2A1818", "#CC6666", "#5A2828"));
+            if (isRhiOwned)
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.UsedByRhi"), "#2A1818", "#CC6666", "#5A2828"));
+            if (isRhiConflict && !isRhiOwned)
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.MayConflict"), "#2A1A10", "#CC9955", "#5A3A18"));
+            if (isCurrent)
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
+
+            btn.Content = contentRow;
+
+            // Tooltip for taken files
+            if (isTaken)
+                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.AsiLoader.DllTaken.Tooltip", name, Path.GetFileNameWithoutExtension(name)));
+            else if (isRhiOwned)
+                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.DllName.RhiOwned.Tooltip"));
+
+            btn.Tag = name;
+            btn.Click += (s, ev) =>
+            {
+                chosen = (s as Button)?.Tag as string;
+                // Close the dialog by finding and closing it
+                if (s is FrameworkElement fe)
+                {
+                    var dialog = FindParentContentDialog(fe);
+                    dialog?.Hide();
+                }
+            };
+
+            listPanel.Children.Add(btn);
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = Loc.GetString("Extras.AsiLoader.DllPicker.Title"),
+            Content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = Loc.GetString("Extras.AsiLoader.DllPicker.Content"),
+                        FontSize = 11,
+                        Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
+                        TextWrapping = TextWrapping.Wrap,
+                    },
+                    scrollViewer,
+                }
+            },
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
+            XamlRoot = _window.Content.XamlRoot,
+        };
+
+        await DialogService.ShowSafeAsync(dialog);
+        return chosen;
+    }
+
+    // ── RTX Encore ────────────────────────────────────────────────────────────
+
+    private void BuildRtxEncoreRow(GameCardViewModel card, StackPanel body)
+    {
+        _window.ViewModel.SetLastUiAction($"BuildRtxEncoreRow({card.GameName})");
+        var svc         = App.Services.GetRequiredService<RtxEncoreService>();
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+        var installPath = card.InstallPath ?? "";
+
+        var currentDllName = _window.ViewModel.GetRtxEncoreInstalledAs(gameName, store);
+        bool isInstalled   = svc.IsInstalledIn(installPath, currentDllName);
+        bool nrDeployed    = _window.ViewModel.GetRtxEncoreNrDllDeployed(gameName, store);
+
+        string statusText  = isInstalled ? (svc.StagedVersion ?? Loc.GetString("Status.Installed")) : Loc.GetString("Status.Ready");
+        string statusColor = isInstalled ? "#5ECB7D" : "#A0AABB";
+
+        _window.ViewModel.SetLastUiAction($"BuildRtxEncoreRow:BuildGrid({card.GameName})");
+
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+
+        var label = new TextBlock { Text = Loc.GetString("Extras.RtxEncore.Label"), FontSize = 12, Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush), VerticalAlignment = VerticalAlignment.Center };
+        ToolTipService.SetToolTip(label, Loc.GetString("Extras.RtxEncore.Tooltip"));
+        Grid.SetColumn(label, 0); row.Children.Add(label);
+
+        var statusBlock = new TextBlock { Text = statusText, FontSize = 12, Foreground = UIFactory.GetBrush(statusColor), VerticalAlignment = VerticalAlignment.Center, HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center, TextDecorations = isInstalled ? Windows.UI.Text.TextDecorations.Underline : Windows.UI.Text.TextDecorations.None };
+        if (isInstalled) { ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.InstalledAs.Tooltip", currentDllName)); statusBlock.PointerPressed += (s, e) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(RtxEncoreService.RepoUrl + "/releases")); AttachLinkCursor(statusBlock); }
+        Grid.SetColumn(statusBlock, 1); row.Children.Add(statusBlock);
+
+        var infoBtn = new Button { Content = Loc.GetString("Dialog.Info"), FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32, Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush), Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush), BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8) };
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.RtxEncore.Info.Tooltip"));
+        infoBtn.Click += (s, e) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(RtxEncoreService.RepoUrl));
+        Grid.SetColumn(infoBtn, 2); row.Children.Add(infoBtn);
+
+        string installBtnLabel = isInstalled ? Loc.GetString("Extras.RtxEncore.Reinstall.Button") : Loc.GetString("Extras.RtxEncore.Install.Button");
+        var installBtn = new Button { Content = installBtnLabel, FontSize = 12, Height = 32, HorizontalAlignment = HorizontalAlignment.Stretch, CornerRadius = new CornerRadius(8), Background = isInstalled ? UIFactory.GetBrush("#182840") : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush), Foreground = isInstalled ? UIFactory.GetBrush("#7AACDD") : UIFactory.Brush(ResourceKeys.AccentBlueBrush), BorderBrush = isInstalled ? UIFactory.GetBrush("#2A4468") : UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush), BorderThickness = new Thickness(1) };
+        ToolTipService.SetToolTip(installBtn, isInstalled ? Loc.GetString("Extras.RtxEncore.Reinstall.Tooltip", currentDllName) : Loc.GetString("Extras.RtxEncore.Install.Tooltip"));
+        installBtn.Click += async (s, e) =>
+        {
+            if (string.IsNullOrEmpty(installPath)) return;
+            var chosen = await ShowRtxEncoreDllPickerAsync(card, currentDllName);
+            if (chosen == null) return;
+            installBtn.IsEnabled = false; installBtn.Content = Loc.GetString("Status.Installing");
+            try
+            {
+                var oldModDir = string.IsNullOrEmpty(currentDllName) ? null : svc.ModDir(installPath, currentDllName);
+                bool ok = await svc.InstallAsync(installPath, chosen, currentDllName);
+                if (ok)
+                {
+                    _window.ViewModel.SetRtxEncoreInstalledAs(gameName, chosen, store);
+
+                    // If the user had NR DLL deployment enabled in the cog, deploy it now
+                    if (_window.ViewModel.GetRtxEncoreNrDllDeployed(gameName, store))
+                    {
+                        var dlssS = App.Services.GetRequiredService<IDlssStreamlineService>();
+                        if (await svc.EnsureNrDllCachedAsync(dlssS) != null)
+                            await Task.Run(() => svc.DeployNrDll(installPath));
+                        else
+                            CrashReporter.Log($"[RtxEncoreInstall] NR DLL {RtxEncoreService.NrRequiredVer} not available — skipping NR deploy");
+                    }
+
+                    // Intel XeSS files for the XeFG engine, in RTX Encore's own runtime folder beside the mod.
+                    // Not fatal: everything else works without them.
+                    installBtn.Content = Loc.GetString("Extras.RtxEncore.InstallingXess");
+                    var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
+                    var newModDir = svc.ModDir(installPath, chosen);
+                    await mfgSvc.EnsureXessStagingAsync();
+                    bool xessOk = await Task.Run(() =>
+                    {
+                        if (oldModDir != null && !string.Equals(oldModDir, newModDir, StringComparison.OrdinalIgnoreCase))
+                            mfgSvc.RemoveEncoreXessFiles(oldModDir); // moved between the game folder and plugins\
+                        return mfgSvc.DeployEncoreXessFiles(newModDir);
+                    });
+                    if (!xessOk)
+                        CrashReporter.Log($"[RtxEncoreInstall] XeSS files not deployed to '{newModDir}' (download failed or folder not writable)");
+
+                    RequestExtrasRebuild(card);
+                }
+                else { installBtn.Content = Loc.GetString("Extras.InstallFailed.Button"); installBtn.IsEnabled = true; }
+            }
+            catch (Exception ex) { CrashReporter.Log($"[BuildRtxEncoreRow] Install failed — {ex.Message}"); installBtn.Content = Loc.GetString("Extras.InstallFailed.Button"); installBtn.IsEnabled = true; }
+        };
+        Grid.SetColumn(installBtn, 3); row.Children.Add(installBtn);
+
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.RtxEncore.Settings.Tooltip"));
+        cogBtn.Click += async (s, e) =>
+        {
+            try { await ShowRtxEncoreSettingsAsync(card, svc, installPath, isInstalled, nrDeployed); }
+            catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.BuildRtxEncoreRow] Settings dialog failed — {ex.Message}"); }
+        };
+        Grid.SetColumn(cogBtn, 4); row.Children.Add(cogBtn);
+
+        var removeBtn2 = new Button { Width = 36, Height = 32, Padding = new Thickness(0), Background = UIFactory.Brush(ResourceKeys.AccentRedBgBrush), Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush), BorderBrush = UIFactory.Brush(ResourceKeys.AccentPurpleBorderBrush), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Content = new TextBlock { Text = "✕", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush) }, Opacity = isInstalled ? 1.0 : 0, IsHitTestVisible = isInstalled };
+        ToolTipService.SetToolTip(removeBtn2, Loc.GetString("Extras.RtxEncore.Remove.Tooltip"));
+        removeBtn2.Click += (s, e) =>
+        {
+            if (string.IsNullOrEmpty(installPath) || string.IsNullOrEmpty(currentDllName)) return;
+            var modDir = svc.ModDir(installPath, currentDllName); // before the DLL is gone
+            svc.Uninstall(installPath, currentDllName, removeNrDll: nrDeployed);
+            var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
+            _ = Task.Run(() => mfgSvc.RemoveEncoreXessFiles(modDir));
+            _window.ViewModel.SetRtxEncoreInstalledAs(gameName, null, store);
+            if (nrDeployed) _window.ViewModel.SetRtxEncoreNrDllDeployed(gameName, false, store);
+            RequestExtrasRebuild(card);
+        };
+        Grid.SetColumn(removeBtn2, 5); row.Children.Add(removeBtn2);
+
+        body.Children.Add(row);
+        _window.ViewModel.SetLastUiAction($"BuildRtxEncoreRow:Done({card.GameName})");
+    }
+
+    private async Task<string?> ShowRtxEncoreDllPickerAsync(GameCardViewModel card, string? currentDllName)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath)) return null;
+        var rhiConflicts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(card.RsInstalledFile)) rhiConflicts[card.RsInstalledFile] = Loc.GetString("Detail.ReShade");
+        if (!string.IsNullOrEmpty(card.OsInstalledFile)) rhiConflicts[card.OsInstalledFile] = Loc.GetString("Detail.OptiScaler");
+        if (!string.IsNullOrEmpty(card.DcInstalledFile)) rhiConflicts[card.DcInstalledFile] = Loc.GetString("Detail.DisplayCommander");
+        var ualName = _window.ViewModel.GetUalInstalledAs(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(ualName)) rhiConflicts[ualName] = Loc.GetString("Extras.AsiLoader");
+        var mfgName = _window.ViewModel.GetRtx40MfgInstalledAs(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(mfgName)) rhiConflicts[mfgName] = Loc.GetString("Extras.Rtx40Mfg.FullName");
+        var fgName = _window.ViewModel.GetDlssg2030InstalledAs(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(fgName)) rhiConflicts[fgName] = Loc.GetString("Extras.Dlssg2030");
+        if (!string.IsNullOrEmpty(currentDllName)) rhiConflicts.Remove(currentDllName);
+
+        var onDiskConflicts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (Directory.Exists(card.InstallPath))
+        {
+            foreach (var name in RtxEncoreService.KnownProxyNames)
+            {
+                if (rhiConflicts.ContainsKey(name)) continue;
+                if (string.Equals(name, currentDllName, StringComparison.OrdinalIgnoreCase)) continue;
+                var diskPath = name.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)
+                    ? System.IO.Path.Combine(card.InstallPath, "plugins", name)
+                    : System.IO.Path.Combine(card.InstallPath, name);
+                if (File.Exists(diskPath))
+                {
+                    try { var fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(diskPath); onDiskConflicts[name] = !string.IsNullOrEmpty(fvi.FileDescription) ? fvi.FileDescription : !string.IsNullOrEmpty(fvi.ProductName) ? fvi.ProductName : Loc.GetString("Extras.RtxEncore.ExistingFile"); }
+                    catch { onDiskConflicts[name] = Loc.GetString("Extras.RtxEncore.ExistingFile"); }
+                }
+            }
+        }
+
+        string? chosen = null;
+        var listPanel = new StackPanel { Spacing = 4 };
+        var scrollViewer = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 480, Content = listPanel };
+
+        foreach (var name in RtxEncoreService.KnownProxyNames)
+        {
+            bool isRecommended = string.Equals(name, "version.dll", StringComparison.OrdinalIgnoreCase);
+            bool isAsi         = name.EndsWith(".asi", StringComparison.OrdinalIgnoreCase);
+            bool isCurrent     = string.Equals(name, currentDllName, StringComparison.OrdinalIgnoreCase);
+            bool isRhiOwned    = rhiConflicts.ContainsKey(name);
+            bool isOnDisk      = onDiskConflicts.ContainsKey(name);
+            var btn = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1), IsEnabled = !isRhiOwned, Opacity = isRhiOwned ? 0.4 : 1.0, Background = isCurrent ? UIFactory.Brush(ResourceKeys.AccentBlueBgBrush) : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush), BorderBrush = isCurrent ? UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush) : UIFactory.Brush(ResourceKeys.BorderDefaultBrush) };
+            var contentRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            contentRow.Children.Add(new TextBlock { Text = name, FontSize = 12, Foreground = isRhiOwned ? UIFactory.Brush(ResourceKeys.TextTertiaryBrush) : UIFactory.Brush(ResourceKeys.TextPrimaryBrush), VerticalAlignment = VerticalAlignment.Center });
+            if (isRecommended) contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
+            if (isAsi)         contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.AsiPlugin"), "#1A2A3A", "#7AACDD", "#2A4A6A"));
+            if (isRhiOwned)    contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.InUseBy", rhiConflicts[name]), "#2A1818", "#CC6666", "#5A2828"));
+            else if (isOnDisk) contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.OnDisk", onDiskConflicts[name]), "#2A1A10", "#CC9955", "#5A3A18"));
+            if (isCurrent)     contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
+            btn.Content = contentRow;
+            if (isRhiOwned)    ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllInUse.Tooltip", rhiConflicts[name]));
+            else if (isOnDisk) ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllOnDisk.Tooltip", name, onDiskConflicts[name]));
+            btn.Tag = name;
+            btn.Click += (s, ev) => { chosen = (s as Button)?.Tag as string; if (s is FrameworkElement fe) FindParentContentDialog(fe)?.Hide(); };
+            listPanel.Children.Add(btn);
+        }
+
+        var pickerDialog = new ContentDialog
+        {
+            Title = Loc.GetString("Extras.RtxEncore.DllPicker.Title"),
+            Content = new StackPanel { Spacing = 8, Children = { new TextBlock { Text = Loc.GetString("Extras.RtxEncore.DllPicker.Content"), FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush), TextWrapping = TextWrapping.Wrap }, scrollViewer } },
+            CloseButtonText = Loc.GetString("Dialog.Cancel"), XamlRoot = _window.Content.XamlRoot, RequestedTheme = ElementTheme.Dark,
+        };
+        await DialogService.ShowSafeAsync(pickerDialog);
+        return chosen;
+    }
+}

@@ -73,7 +73,7 @@ public static class AddonManagerDialog
                     UseShellExecute = true,
                 });
             }
-            catch { }
+            catch (Exception ex) { CrashReporter.Log($"[AddonManagerDialog.ShowAsync] Failed to open custom addon folder '{customFolderPath}' — {ex.Message}"); }
         };
         panel.Children.Add(folderLink);
 
@@ -191,6 +191,7 @@ public static class AddonManagerDialog
             VerticalAlignment = VerticalAlignment.Center,
             Visibility = isDownloaded ? Visibility.Visible : Visibility.Collapsed,
         };
+        ToolTipService.SetToolTip(tickMark, isCustomAddon ? Loc.GetString("AddonManager.Tooltip.LocalFile") : Loc.GetString("AddonManager.Tooltip.Downloaded"));
         nameRow.Children.Add(tickMark);
         textPanel.Children.Add(nameRow);
 
@@ -220,6 +221,17 @@ public static class AddonManagerDialog
             });
         }
 
+        // Shown under the description when a download fails
+        var errorText = new TextBlock
+        {
+            FontSize = 11,
+            Foreground = Brush(ResourceKeys.AccentRedBrush),
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 450,
+            Visibility = Visibility.Collapsed,
+        };
+        textPanel.Children.Add(errorText);
+
         // Right side: toggle or repository link
         FrameworkElement rightElement;
 
@@ -234,6 +246,7 @@ public static class AddonManagerDialog
                 OffContent = Loc.GetString("Xaml.Off"),
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            ToolTipService.SetToolTip(toggle, Loc.GetString("AddonManager.Tooltip.DownloadToggle"));
 
             toggle.Toggled += async (s, ev) =>
             {
@@ -241,24 +254,37 @@ public static class AddonManagerDialog
 
                 if (toggle.IsOn)
                 {
+                    errorText.Visibility = Visibility.Collapsed;
                     // Download if not already staged (skip for custom addons — they're local files)
                     if (!isCustomAddon && !addonPackService.IsDownloaded(entry.PackageName))
                     {
                         toggle.IsEnabled = false;
+                        string? failure = null;
                         try
                         {
                             await addonPackService.DownloadAddonAsync(entry);
-                            tickMark.Visibility = Visibility.Visible;
+                            // The service logs and swallows most errors, so check the result
+                            if (!addonPackService.IsDownloaded(entry.PackageName))
+                                failure = Loc.GetString("AddonManager.DownloadFailed.Connection");
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Revert on failure
+                            CrashReporter.Log($"[AddonManagerDialog.BuildAddonRow] Download failed for '{entry.PackageName}' — {ex.Message}");
+                            failure = Loc.GetString("AddonManager.DownloadFailed.Reason", ex.Message);
+                        }
+
+                        if (failure != null)
+                        {
+                            CrashReporter.Log($"[AddonManagerDialog.BuildAddonRow] '{entry.PackageName}' not enabled — download failed");
+                            errorText.Text = failure;
+                            errorText.Visibility = Visibility.Visible;
                             suppressToggle = true;
                             toggle.IsOn = false;
                             suppressToggle = false;
                             toggle.IsEnabled = true;
                             return;
                         }
+                        tickMark.Visibility = Visibility.Visible;
                         toggle.IsEnabled = true;
                     }
 
@@ -290,7 +316,7 @@ public static class AddonManagerDialog
                         await addonPackService.DownloadAddonAsync(capturedEntry2);
                         toggle.DispatcherQueue?.TryEnqueue(() => capturedTick2.Visibility = Visibility.Visible);
                     }
-                    catch { }
+                    catch (Exception ex) { CrashReporter.Log($"[AddonManagerDialog.BuildAddonRow] Addon download failed for '{capturedEntry2.PackageName}' — {ex.Message}"); }
                     finally
                     {
                         toggle.DispatcherQueue?.TryEnqueue(() => toggle.IsEnabled = true);

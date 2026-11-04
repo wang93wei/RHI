@@ -54,6 +54,12 @@ public interface IOptiScalerService
     Task<bool> CheckOptiPatcherUpdateAsync();
 
     /// <summary>
+    /// Moves OptiPatcher.asi from &lt;game&gt;\plugins into OptiScaler\plugins for every game with an
+    /// OptiScaler 10 build (nightly, F5, DLSS NR), where older RHI versions put it in the wrong place.
+    /// </summary>
+    void MoveOptiPatcherForAllGames();
+
+    /// <summary>
     /// Checks the GitHub releases API for a newer version than the staged one.
     /// Sets <see cref="HasUpdate"/> accordingly.
     /// </summary>
@@ -178,7 +184,7 @@ public interface IOptiScalerService
     /// Copies OptiScaler.ini from the INIs_Folder to the game folder,
     /// enforcing LoadReshade=true.
     /// </summary>
-    void CopyIniToGame(GameCardViewModel card, string? hotkey = null);
+    void CopyIniToGame(GameCardViewModel card, string? hotkey = null, string gpuType = "NVIDIA", bool dlssInputs = true);
 
     // ── Detection ─────────────────────────────────────────────────────────────
 
@@ -208,12 +214,6 @@ public interface IOptiScalerService
     AuxInstalledRecord? FindRecord(string gameName, string installPath);
 
     // ── DLL naming ────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Resolves the effective OptiScaler DLL filename for a game,
-    /// following the priority chain: user override &gt; manifest override &gt; dxgi.dll.
-    /// </summary>
-    string GetEffectiveOsDllName(string gameName);
 
     // ── Hotkey ────────────────────────────────────────────────────────────────
 

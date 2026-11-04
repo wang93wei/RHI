@@ -66,29 +66,11 @@ public partial class MainViewModel
             return effectiveMod.Notes ?? "";
         }
 
-        var notesParts = new List<string>();
-
-        if (effectiveMod.IsGenericUnreal)
-        {
-            var specific = GetGenericNote(gameName, genericNotes);
-            if (!string.IsNullOrEmpty(specific))
-            {
-                notesParts.Add(Loc.GetString("Wiki.Notes.GameSpecific"));
-                notesParts.Add(specific);
-            }
-            notesParts.Add(UnrealWarnings);
-        }
-        else // Unity
-        {
-            var specific = GetGenericNote(gameName, genericNotes);
-            if (!string.IsNullOrEmpty(specific))
-            {
-                notesParts.Add(Loc.GetString("Wiki.Notes.GameSpecific"));
-                notesParts.Add(specific);
-            }
-        }
-
-        return string.Join("\n", notesParts);
+        // Generic Unreal / Unity — game-specific DB comment only
+        var specific = GetGenericNote(gameName, genericNotes);
+        return string.IsNullOrEmpty(specific)
+            ? ""
+            : Loc.GetString("Wiki.Notes.GameSpecific") + "\n" + specific;
     }
 
     /// <summary>
@@ -366,7 +348,7 @@ public partial class MainViewModel
         _gameLibraryService.Save(detectedGames, addonCache, _hiddenGames, _favouriteGames, _manualGames,
             _engineTypeCache, _resolvedPathCache, _addonFileCache, _bitnessCache, LastSelectedGameName,
             dxvkEnabledGames, dxvkInstalledVersions, excludeFromUpdateAllDxvk, updateSnapshot, dlssPathsCache,
-            rsVersions, rdxVersions);
+            rsVersions, rdxVersions, _engineFolderStamps);
     }
 
     /// <summary>
@@ -395,6 +377,7 @@ public partial class MainViewModel
         _resolvedPathCache = savedLib.ResolvedPathCache ?? new(StringComparer.OrdinalIgnoreCase);
         _addonFileCache    = savedLib.AddonFileCache    ?? new(StringComparer.OrdinalIgnoreCase);
         _bitnessCache      = savedLib.BitnessCache      ?? new(StringComparer.OrdinalIgnoreCase);
+        _engineFolderStamps = savedLib.EngineFolderStamps ?? new(StringComparer.OrdinalIgnoreCase);
         LastSelectedGameName = savedLib.LastSelectedGame;
 
         // 4. Convert cached games to DetectedGame list and deduplicate
@@ -976,7 +959,8 @@ public partial class MainViewModel
                     // Xbox: only apply when PCGW has an explicit Microsoft Store path
                     if (!isXboxCard || pcgwInfo?.ConfigPathXbox != null)
                     {
-                        var chosenPath = isXboxCard ? pcgwInfo?.ConfigPathXbox : pcgwInfo?.ConfigPath;
+                        var chosenPath = AuxInstallService.PcgwConfigPathToCandidates(
+                            isXboxCard ? pcgwInfo?.ConfigPathXbox : pcgwInfo?.ConfigPath);
                         if (chosenPath != null)
                             newCard.EngineIniProjectOverride = chosenPath;
                     }
@@ -1097,7 +1081,7 @@ public partial class MainViewModel
             {
                 var installPathForMfg = newCard.InstallPath ?? "";
                 var mfgAdaPath = !string.IsNullOrEmpty(installPathForMfg)
-                    ? Path.Combine(installPathForMfg, "renodx-mfgunlock.addon64")
+                    ? Path.Combine(ModInstallService.GetAddonDeployPath(installPathForMfg), "renodx-mfgunlock.addon64")
                     : null;
                 bool mfgAdaInstalled = mfgAdaPath != null && File.Exists(mfgAdaPath);
 
@@ -1123,6 +1107,9 @@ public partial class MainViewModel
 
         // Reconcile default naming for games without overrides
         ReconcileDefaultNaming();
+
+        // Games removed from RHI stay out of the list
+        _allCards = WithoutRemovedGames(_allCards);
 
         // Sort cards by game name
         _allCards = _allCards.OrderBy(c => c.GameName, StringComparer.OrdinalIgnoreCase).ToList();
@@ -1172,7 +1159,8 @@ public partial class MainViewModel
         }
 
         // 14. Set StatusText to show cached game count
-        StatusText    = $"{_allCards.Count} games";
+        StatusText    = Loc.GetString("Status.GameCount", _allCards.Count);
+        _statusTextIsGameCount = false;
         SubStatusText = "";
 
         _crashReporter.Log($"[MainViewModel.LoadCacheAndBuildCardsAsync] Cache phase complete — {_allCards.Count} cards displayed");

@@ -162,7 +162,6 @@
     "Minecraft for Windows": "Minecraft: Bedrock Edition",
     "Nioh: Complete Edition": "Nioh",
     "Persona 5 Royal": "Persona 5 Royal (Remake from Ersh\u0027s)",
-    "Red Dead Redemption 2": "Red Dead Redemption 2 (Vulkan)",
     "Teardown": "Teardown (dx12)",
     "Terraria": "Terraria",
     "The Legend of Heroes: Trails of Cold Steel III": "Trails of Cold Steel (3-4-5)",
@@ -258,7 +257,8 @@
     "METAL GEAR SOLID 4: Guns of the Patriots - Master Collection Version": "MGS4",
     "METAL GEAR SOLID: Peace Walker - Master Collection Version": "mgspw",
     "The Witcher 3: Wild Hunt - Complete Edition": "bin\\x64_dx12",
-    "Outlast": "Binaries\\Win64"
+    "Outlast": "Binaries\\Win64",
+    "Portal": "bin"
   },
   "splitGames": {
     "Diablo": [
@@ -544,6 +544,8 @@
     "Beast of Reincarnation": "Unreal Engine 5.4.4",
     "Call of the Elder Gods": "Unreal Engine 5.6.1",
     "Denshattack!": "Unreal Engine 5.6.1",
+    "DAEMON X MACHINA": "Unreal Engine 4.20.3",
+    "Phantom Blade Zero": "Unreal Engine 5.7.4",
     "Dragon Quest VII Reimagined": "Unreal Engine 4.27.2",
     "DRAGON QUEST VII Reimagined": "Unreal Engine 4.27.2",
     "Gears of War: E-Day": "Unreal Engine 5.6.1",
@@ -555,7 +557,11 @@
     "Palworld": "Unreal Engine 5.1.1",
     "Shin Megami Tensei V: Vengeance": "Unreal Engine 4.27.2",
     "Stellar Blade\u2122": "Unreal Engine 4.26.2",
-    "Mistfall Hunter": "Unreal Engine 5.7.4"
+    "Valor Mortis": "Unreal Engine 5.7.3",
+    "Mistfall Hunter": "Unreal Engine 5.7.4",
+    "FINAL FANTASY RESONANCE": "Unreal Engine 5.6",
+    "Kaku Ancient Seal": "Unreal Engine 4.27",
+    "The Witcher 3: Wild Hunt — Remastered": "REDengine 3"
   },
   "engineIniPathOverrides": {
     "Clive Barker's Hellraiser: Revival Demo": "Hellraiser_Demo",
@@ -768,42 +774,6 @@
     "Mass Effect: Andromeda",
     "Persona 5 Royal"
   ],
-  "lumaDefaultGames": [
-    "Alfred Hitchcock - Vertigo",
-    "Bioshock 2 Remastered",
-    "Bioshock Remastered",
-    "Burnout Paradise Remastered",
-    "BurnoutPR",
-    "Call of Duty\u00AE: Black Ops III",
-    "Call of Duty: Black Ops III",
-    "COCOON",
-    "Deus Ex: Human Revolution - Director\u0027s Cut",
-    "FAR: Changing Tides",
-    "FAR: Lone Sails",
-    "FINAL FANTASY VII REMAKE INTERGRADE",
-    "Granblue Fantasy: Relink",
-    "GreedFall",
-    "Hatsune Miku: Project DIVA Mega Mix\u002B",
-    "Heavy Rain",
-    "Hollow Knight: Silksong",
-    "Inside",
-    "Just Cause\u2122 3",
-    "LARA CROFT AND THE TEMPLE OF OSIRIS\u2122",
-    "LEGO\u00AE City Undercover",
-    "Mafia II: Definitive Edition",
-    "Mafia III: Definitive Edition",
-    "Metro 2033 Redux",
-    "Metro: Last Light Redux",
-    "Nioh: Complete Edition",
-    "Prince of Persia The Lost Crown",
-    "Shadows of Doubt",
-    "Thief",
-    "Thumper",
-    "Trine 5: A Clockwork Conspiracy",
-    "Vanquish",
-    "Watch_Dogs\u00AE 2",
-    "White Knuckle"
-  ],
   "lumaRequiresDgVoodoo": [
     "Borderlands 2",
     "Borderlands: The Pre-Sequel",
@@ -812,6 +782,7 @@
     "Vanquish"
   ],
   "dgVoodooVersions": {
+    "2.87.6": "https://github.com/dege-diosg/dgVoodoo2/releases/download/2.87.6/dgVoodoo2_87_6.zip",
     "2.87.5": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.5/dgVoodoo2_87_5.zip",
     "2.87.4": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.4/dgVoodoo2_87_4.zip",
     "2.87.3": "https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.3/dgVoodoo2_87_3.zip"
@@ -871,6 +842,9 @@
     },
     "METAL GEAR SOLID 4: Guns of the Patriots": {
       "luma": "Make sure to switch the game to DX11 before installing Luma."
+    },
+    "Cyberpunk 2077": {
+      "renodx": "The Github version of RenoDX for Cyberpunk is outdated for version 2.5 of the game. Please go to the Cyberpunk channel on the RenoDX Discord and check the pinned messages."
     }
   },
   "forceExternalOnly": {
@@ -1347,7 +1321,8 @@
     "X4: Timelines": "https://www.nexusmods.com/games/x4foundations",
     "Tomb Raider": "https://www.nexusmods.com/games/tombraider2013",
     "Kingdoms of Amalur: Reckoning\u2122": "https://www.nexusmods.com/games/kingdomsofamalurreckoning",
-    "Reckoning": "https://www.nexusmods.com/games/kingdomsofamalurreckoning"
+    "Reckoning": "https://www.nexusmods.com/games/kingdomsofamalurreckoning",
+    "Control Ultimate Edition": "https://www.nexusmods.com/games/control"
   },
   "pcgwUseAppId": true,
   "pcgwUrlCacheVersion": 4,
@@ -1419,7 +1394,8 @@
   "_comment_nvidia": "=== NVIDIA PROFILE \u0026 DLSS ===\nprofileNameOverrides redirects a game to the correct NVIDIA driver profile when auto-matching picks the wrong one.\nprofileExeExclusions adds exe names to the exclusion list for profile matching (prevents false matches).\ndlssPresets injects new DLSS preset options (SR/RR/FG) into the dropdowns without a client update.",
   "profileNameOverrides": {
     "Dead Space": "Dead Space (Remake)",
-    "Lords of the Fallen": "Lords of the Fallen (2023)"
+    "Lords of the Fallen": "Lords of the Fallen (2023)",
+    "Metro 2033 Redux": "Metro Redux"
   },
   "dlssPresets": {
     "sr": [
@@ -1442,6 +1418,16 @@
       {
         "name": "C",
         "value": 3
+      }
+    ],
+    "nr": [
+      {
+        "name": "A",
+        "value": 1
+      },
+      {
+        "name": "B",
+        "value": 2
       }
     ]
   },
@@ -1495,6 +1481,20 @@
       "assetExt": ".fx",
       "description": "Fills ultrawide black pillarboxes with zoomed, mirrored, or frosted glass effects while preserving the centre image and HDR metadata. Supports 21:9, 32:9, and many other aspect ratios.",
       "category": "Extra"
+    },
+    "SdReshadeShaders": {
+      "displayName": "SD Shaders by Starodubysko",
+      "kind": "DirectUrl",
+      "url": "https://github.com/Starodubysko/sd-reshade-shaders/archive/refs/heads/main.zip",
+      "description": "Colour grading for SDR and HDR: SD Subtractive Saturation (lowers brightness as colours get more saturated, keeping them dense) and SD Color Density (darkens saturated colours without shifting hues or neutral tones).",
+      "category": "Extra"
+    },
+    "ZenteonPlus": {
+      "displayName": "Zenteon+ Shaders by Zenteon",
+      "kind": "DirectUrl",
+      "url": "https://www.patreon.com/file?h=145859259&m=580770455",
+      "description": "Zenteon's full shader set (free on Patreon): screen-space reflections, ZenRT path tracing, TurboGI, RadonBloom and XenonBloom, Nebulus, ZXpose exposure, local contrast, motion blur, film grain and more. Includes everything in ZenteonFX, so choose one or the other, not both.",
+      "category": "Extra"
     }
   },
   "addonPacks": {
@@ -1547,6 +1547,12 @@
       "description": "Fixes washed-out HDR screenshots in Discord. Strips the cICP colour chunk from ReShade PNG screenshots so Discord displays them correctly using the embedded ICC profile instead. No configuration needed \u2014 runs silently in the background.",
       "releaseApiUrl": "https://api.github.com/repos/Jahbanny/reshade-screenshot-discord-fix/releases/latest",
       "repositoryUrl": "https://github.com/Jahbanny/reshade-screenshot-discord-fix"
+    },
+    "rest-badassbaboon": {
+      "packageName": "ReshadeEffectShaderToggler (REST) by BadassBaboon",
+      "description": "Updated fork of REST: applies ReShade effects at a chosen point in the frame (for example under the HUD) using groups of game shaders. Adds auto scene colour for DLSS and dynamic resolution games, Vulkan shader hunting, technique routing, HUD suppression and controller shortcuts. Requires ReShade 6.8 or newer. Choose this or the original REST by 4lex4nder, not both.",
+      "releaseApiUrl": "https://api.github.com/repos/BadassBaboon/ReshadeEffectShaderToggler/releases/latest",
+      "repositoryUrl": "https://github.com/BadassBaboon/ReshadeEffectShaderToggler"
     }
   },
   "renodxExtraSettings": [

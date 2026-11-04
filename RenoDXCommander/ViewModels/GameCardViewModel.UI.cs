@@ -151,8 +151,33 @@ public partial class GameCardViewModel
     public string SidebarItemBackground => IsRunning ? "#1A3A20" : IsSelected ? "#1A2840" : "Transparent";
     public string SidebarItemBorderBrush => IsRunning ? "#2A5A30" : IsSelected ? "#2A4060" : "Transparent";
     public string SidebarItemForeground => IsSelected ? "#E2E8FF"
-        : IsManaged ? "#C8D4E8"   // brighter — something is installed
-        : "#5A6880";              // dimmer — untouched game
+        : IsSidebarRsInstalled ? "#C8D4E8"   // brighter — ReShade is installed
+        : "#5A6880";                         // dimmer — ReShade not installed
+
+    /// <summary>Same definition as the "N ReShade" count (FilterViewModel.UpdateCounts).</summary>
+    private bool IsSidebarRsInstalled => RsStatus == GameStatus.Installed || RsStatus == GameStatus.UpdateAvailable;
+
+    /// <summary>Tooltip for the sidebar row: full name (the text trims) plus what the styling means.</summary>
+    public string SidebarTooltip
+    {
+        get
+        {
+            var tip = GameName;
+            if (IsRunning) tip += "\n" + Tr("MainWindow.Sidebar.RunningHint");
+            if (!IsSidebarRsInstalled) tip += "\n" + Tr("MainWindow.Sidebar.NoReShadeHint");
+            return tip;
+        }
+    }
+
+    // SidebarItemForeground is already raised wherever its inputs change (RsStatus, IsSelected,
+    // IsRunning, bulk refresh); piggy-back on it so the tooltip stays in sync without touching
+    // every notifier.
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName is nameof(SidebarItemForeground) or nameof(GameName))
+            base.OnPropertyChanged(new System.ComponentModel.PropertyChangedEventArgs(nameof(SidebarTooltip)));
+    }
 
     // Card highlight styling (computed from CardHighlighted)
     public string CardBackground => CardHighlighted ? "#1A2840" : "#141820";
@@ -331,7 +356,6 @@ public partial class GameCardViewModel
 
     public string InstalledFileLabel  => InstalledAddonFileName != null ? $"📦 {InstalledAddonFileName}" : "";
     public bool HasNotes              => !string.IsNullOrWhiteSpace(Notes);
-    public bool IsUnityGeneric        => IsGenericMod && EngineHint.Contains("Unity");
     public bool HasDualBitMod         => Mod?.HasBothBitVersions == true;
     public bool HasExtraLinks         => NexusUrl != null || (DiscordUrl != null && EffectiveLumaMode) || IsExternalOnly;
     public bool HasNexusModsUrl       => !string.IsNullOrEmpty(NexusModsUrl);
@@ -348,7 +372,6 @@ public partial class GameCardViewModel
 
     public Visibility SourceBadgeVisibility      => string.IsNullOrEmpty(Source) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility GenericBadgeVisibility     => IsGenericMod ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility EngineBadgeVisibility      => !string.IsNullOrEmpty(EngineHint) ? Visibility.Visible : Visibility.Collapsed;
     public string GraphicsApiLabel               => GraphicsApiDetector.GetMultiLabel(DetectedApis, GraphicsApi);
     public bool HasGraphicsApiBadge              => GraphicsApi != GraphicsApiType.Unknown;
     public Visibility NotesButtonVisibility      => HasNotes ? Visibility.Visible : Visibility.Collapsed;
@@ -379,7 +402,6 @@ public partial class GameCardViewModel
                                                       ? Visibility.Visible : Visibility.Collapsed;
     public Visibility IsHiddenVisibility         => IsHidden ? Visibility.Visible : Visibility.Collapsed;
     public Visibility IsNotHiddenVisibility      => IsHidden ? Visibility.Collapsed : Visibility.Visible;
-    public Visibility NameLinkVisibility         => HasNameUrl ? Visibility.Visible : Visibility.Collapsed;
     public Visibility NoModVisibility            => Visibility.Collapsed;
     public Visibility SwitchToLumaVisibility     => (Mod == null && string.IsNullOrEmpty(InstalledAddonFileName)
                                                       && !EffectiveLumaMode
@@ -532,9 +554,9 @@ public partial class GameCardViewModel
             if (lumaAvailable && rdxAuthor == null)
                 return new[] { Tr("Detail.AuthorLabel.Luma", lumaAuthor!) };
 
-            // RenoDX only
+            // RenoDX only: prefixed too, so the badge says what the name is
             if (rdxAuthor != null)
-                return SplitAuthors(rdxAuthor).ToArray();
+                return new[] { Tr("Detail.AuthorLabel.RenoDx", rdxAuthor) };
 
             return Array.Empty<string>();
         }

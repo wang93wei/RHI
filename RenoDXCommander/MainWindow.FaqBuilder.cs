@@ -26,7 +26,7 @@ public sealed partial class MainWindow
         panel.Children.Add(BuildFaqSection(
             null, Loc.GetString("Dialog.WelcomeToRhi"), "AccentTealBrush",
             Loc.GetString("Faq.Body.WelcomeToRhi"),
-            null));
+            Loc.GetString("Faq.Tip.WelcomeToRhi")));
 
         // Step 1: Select a Game
         panel.Children.Add(BuildFaqStep(1,
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
 
         // Step 3a: RenoDX
         panel.Children.Add(BuildFaqSection(
-            "3a", Loc.GetString("Detail.RenoDX"), "AccentTealBrush",
+            "3a", Loc.GetString("Xaml.Renodx"), "AccentTealBrush",
             Loc.GetString("Faq.Body.RenoDX"),
             Loc.GetString("Faq.Tip.RenoDX")));
 
@@ -76,11 +76,36 @@ public sealed partial class MainWindow
             Loc.GetString("Faq.Body.DlssStreamline"),
             Loc.GetString("Faq.Tip.DlssStreamline")));
 
+        // Neural Rendering
+        panel.Children.Add(BuildFaqSpecialSection("N", "AccentGreenBrush",
+            Loc.GetString("Faq.Section.NeuralRendering"),
+            Loc.GetString("Faq.Body.NeuralRendering"),
+            Loc.GetString("Faq.Tip.NeuralRendering")));
+
         // OptiScaler
         panel.Children.Add(BuildFaqSpecialSection("⚙", "AccentAmberBrush",
             Loc.GetString("Faq.Section.OptiScaler"),
             Loc.GetString("Faq.Body.OptiScaler"),
             Loc.GetString("Faq.Tip.OptiScaler")));
+
+        // Extras
+        panel.Children.Add(BuildFaqSpecialSection("X", "AccentAmberBrush",
+            Loc.GetString("Faq.Section.Extras"),
+            Loc.GetString("Faq.Body.Extras"),
+            Loc.GetString("Faq.Tip.Extras")));
+
+        // NVIDIA Driver Settings
+        panel.Children.Add(BuildFaqInfoSection(Loc.GetString("Faq.Section.NvidiaDriverSettings"),
+            Loc.GetString("Faq.Body.NvidiaDriverSettings"),
+            new[]
+            {
+                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.1"),
+                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.2"),
+                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.3"),
+                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.4"),
+                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.5")
+            },
+            Loc.GetString("Faq.Tip.NvidiaDriverSettings")));
 
         // Settings Overview
         panel.Children.Add(BuildFaqInfoSection(Loc.GetString("Settings.Title"),
@@ -91,20 +116,11 @@ public sealed partial class MainWindow
                 Loc.GetString("Faq.Bullets.Settings.2"),
                 Loc.GetString("Faq.Bullets.Settings.3"),
                 Loc.GetString("Faq.Bullets.Settings.4"),
-                Loc.GetString("Faq.Bullets.Settings.5")
+                Loc.GetString("Faq.Bullets.Settings.5"),
+                Loc.GetString("Faq.Bullets.Settings.6"),
+                Loc.GetString("Faq.Bullets.Settings.7"),
+                Loc.GetString("Faq.Bullets.Settings.8")
             }));
-
-        // NVIDIA Driver Settings
-        panel.Children.Add(BuildFaqInfoSection(Loc.GetString("Faq.Section.NvidiaDriverSettings"),
-            Loc.GetString("Faq.Body.NvidiaDriverSettings"),
-            new[]
-            {
-                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.1"),
-                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.2"),
-                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.3"),
-                Loc.GetString("Faq.Bullets.NvidiaDriverSettings.4")
-            },
-            Loc.GetString("Faq.Tip.NvidiaDriverSettings")));
 
         // Vulkan Games
         panel.Children.Add(BuildFaqSpecialSection("V", "AccentPurpleBrush",
@@ -124,7 +140,7 @@ public sealed partial class MainWindow
             Loc.GetString("Faq.Body.UpdatingEverything"),
             Loc.GetString("Faq.Tip.UpdatingEverything")));
 
-        // Troubleshooting - Full Refresh
+        // Troubleshooting
         panel.Children.Add(BuildFaqSpecialSection("↻", "AccentBlueBrush",
             Loc.GetString("Faq.Section.FullRefresh"),
             Loc.GetString("Faq.Body.FullRefresh"),

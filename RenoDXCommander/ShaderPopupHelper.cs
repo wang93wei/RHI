@@ -297,13 +297,15 @@ public static class ShaderPopupHelper
                     Foreground        = Brush(ResourceKeys.TextPrimaryBrush),
                     VerticalAlignment = VerticalAlignment.Center,
                 });
-                folderNameRow.Children.Add(new TextBlock
+                var folderTick = new TextBlock
                 {
                     Text              = "✓",
                     FontSize          = 13,
                     Foreground        = Brush(ResourceKeys.AccentGreenBrush),
                     VerticalAlignment = VerticalAlignment.Center,
-                });
+                };
+                ToolTipService.SetToolTip(folderTick, Loc.GetString("Shader.Tooltip.LocalFiles"));
+                folderNameRow.Children.Add(folderTick);
 
                 var folderExpandBtn = new Button
                 {
@@ -315,6 +317,7 @@ public static class ShaderPopupHelper
                     Background        = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                     BorderThickness   = new Thickness(0),
                 };
+                ToolTipService.SetToolTip(folderExpandBtn, Loc.GetString("Shader.Tooltip.ExpandFolder"));
                 var capturedFolderSubPanel = folderSubPanel;
                 var capturedExpandBtn = folderExpandBtn;
                 folderExpandBtn.Click += (s, ev) =>
@@ -477,13 +480,15 @@ public static class ShaderPopupHelper
                 });
                 if (isCached)
                 {
-                    nameRow.Children.Add(new TextBlock
+                    var cachedTick = new TextBlock
                     {
                         Text              = "✓",
                         FontSize          = 13,
                         Foreground        = Brush(ResourceKeys.AccentGreenBrush),
                         VerticalAlignment = VerticalAlignment.Center,
-                    });
+                    };
+                    ToolTipService.SetToolTip(cachedTick, Loc.GetString("Shader.Tooltip.Downloaded"));
+                    nameRow.Children.Add(cachedTick);
                 }
 
                 if (isCached && fileCbList.Count > 0)
@@ -497,6 +502,7 @@ public static class ShaderPopupHelper
                         Visibility        = Visibility.Visible,
                         VerticalAlignment = VerticalAlignment.Center,
                     };
+                    ToolTipService.SetToolTip(expandBtn, Loc.GetString("Shader.Tooltip.ExpandPack"));
                     expandButtons[id] = expandBtn;
                     nameRow.Children.Add(expandBtn);
 
@@ -892,6 +898,7 @@ public static class ShaderPopupHelper
                     HorizontalContentAlignment = HorizontalAlignment.Left,
                     MinWidth            = 0,
                 };
+                ToolTipService.SetToolTip(nameBtn, Loc.GetString("Shader.Tooltip.LoadProfile"));
                 int nameBtnWidth = context == PopupContext.Global ? 120 : 170;
 
                 nameBtn.Click += (s, ev) =>
@@ -915,6 +922,7 @@ public static class ShaderPopupHelper
                         VerticalAlignment = VerticalAlignment.Center,
                         Opacity           = 0.6,
                     };
+                    ToolTipService.SetToolTip(editBtn, Loc.GetString("Shader.Tooltip.RenameProfile"));
                     editBtn.Click += (s, ev) =>
                     {
                         // Replace name button with inline TextBox in the row
@@ -968,8 +976,32 @@ public static class ShaderPopupHelper
                         Padding           = new Thickness(4, 2, 4, 2),
                         VerticalAlignment = VerticalAlignment.Center,
                     };
+                    // Inline confirm (this list lives inside a ContentDialog, so no second dialog):
+                    // first click arms the button, a second click deletes. Moving the pointer away
+                    // or leaving the button disarms it, so doing nothing means Cancel.
+                    string delTip = Loc.GetString("Shader.Tooltip.DeleteProfile");
+                    bool delArmed = false;
+                    ToolTipService.SetToolTip(delBtn, delTip);
+                    void DisarmDelete()
+                    {
+                        if (!delArmed) return;
+                        delArmed = false;
+                        delBtn.Content = "X";
+                        delBtn.ClearValue(Control.ForegroundProperty);
+                        ToolTipService.SetToolTip(delBtn, delTip);
+                    }
+                    delBtn.PointerExited += (s, ev) => DisarmDelete();
+                    delBtn.LostFocus     += (s, ev) => DisarmDelete();
                     delBtn.Click += (s, ev) =>
                     {
+                        if (!delArmed)
+                        {
+                            delArmed = true;
+                            delBtn.Content    = Loc.GetString("Shader.DeleteConfirm");
+                            delBtn.Foreground = Brush(ResourceKeys.AccentRedBrush);
+                            ToolTipService.SetToolTip(delBtn, Loc.GetString("Shader.Tooltip.DeleteProfileConfirm"));
+                            return;
+                        }
                         CrashReporter.Log($"[ShaderPopupHelper.ShowAsync] Deleted profile '{profiles[capturedIdx].Name}'");
                         profiles.RemoveAt(capturedIdx);
                         if (activeProfileIdx == capturedIdx)
