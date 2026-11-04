@@ -346,8 +346,16 @@ public partial class DragDropHandler
         var gameName = targetCard.GameName;
         var installPath = targetCard.InstallPath;
 
-        // Check for existing RenoDX addon files in the game folder
+        // Check for existing RenoDX addon files in the game folder that would conflict.
+        // Only applies when the dropped file is itself a renodx-* addon — non-renodx addons
+        // (e.g. tw3-darkernights-remastered) coexist alongside the RenoDX mod and should
+        // never trigger removal of renodx-*.addon64.
         string? existingAddon = null;
+        // Only conflict-check and remove existing renodx-* addons when the dropped file is itself
+        // a renodx-* addon (i.e. a direct replacement). Community addons with other naming
+        // conventions (e.g. tw3-darkernights-remastered) coexist alongside renodx mods.
+        bool incomingIsRenodx = addonFileName.StartsWith("renodx", StringComparison.OrdinalIgnoreCase);
+        if (incomingIsRenodx)
         try
         {
             var existing = Directory.GetFiles(installPath, "*.addon64")
@@ -408,9 +416,15 @@ public partial class DragDropHandler
         var confirmResult = await DialogService.ShowSafeAsync(confirmDialog);
         if (confirmResult != ContentDialogResult.Primary) return;
 
-        // Remove existing RenoDX addon files (not DC addons)
-        // Check both the addon search path and the base install path
+        // Remove existing RenoDX addon files — only when the incoming file is itself renodx-*.
+        // Non-renodx addons coexist with renodx mods and must not trigger removal.
+        // Copy the addon file to the resolved addon folder
         var addonDeployPath = ModInstallService.GetAddonDeployPath(installPath);
+
+        // Remove existing RenoDX addon files — only when the incoming file is itself renodx-*.
+        // Non-renodx addons coexist with renodx mods and must not trigger removal.
+        if (incomingIsRenodx)
+        {
         try
         {
             var searchPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { installPath };
@@ -443,12 +457,16 @@ public partial class DragDropHandler
         {
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedAddon] Failed to remove existing addons — {ex.Message}");
         }
+        } // end if (incomingIsRenodx)
 
-        // Copy the addon file to the resolved addon folder
         var effectiveAddonFileName = addonFileName;
         var destPath = Path.Combine(addonDeployPath, effectiveAddonFileName);
         try
         {
+            // Capture the previously-installed version before overwriting — for update log
+            string? previousVersion = null;
+            try { previousVersion = AuxInstallService.ReadInstalledVersion(addonDeployPath, effectiveAddonFileName); } catch (Exception ex) { CrashReporter.Log($"[DragDropHandler.ProcessDroppedAddon] Failed to read previous addon version — {ex.Message}"); }
+
             File.Copy(addonPath, destPath, overwrite: true);
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedAddon] Installed '{effectiveAddonFileName}' to '{addonDeployPath}'");
 
@@ -468,6 +486,24 @@ public partial class DragDropHandler
                 SnapshotUrl   = isNamedMod ? null : targetCard.Mod?.SnapshotUrl,
             };
             _modInstallService.SaveRecordPublic(installRecord);
+
+            // Record in update log
+            try
+            {
+                var newVersion = AuxInstallService.ReadInstalledVersion(addonDeployPath, effectiveAddonFileName);
+                var modId = System.IO.Path.GetFileNameWithoutExtension(effectiveAddonFileName);
+                if (modId.StartsWith("renodx-", StringComparison.OrdinalIgnoreCase))
+                    modId = modId.Substring(7);
+                App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
+                {
+                    Timestamp     = DateTime.UtcNow,
+                    Category      = "RenoDX",
+                    ComponentName = gameName,
+                    OldVersion    = previousVersion,
+                    NewVersion    = newVersion ?? (string.IsNullOrEmpty(modId) ? effectiveAddonFileName : modId),
+                });
+            }
+            catch (Exception ex) { CrashReporter.Log($"[DragDropHandler.ProcessDroppedAddon] Failed to record update log entry — {ex.Message}"); }
 
             // Deploy Engine.ini LUT setting for Unreal Engine games (same as normal install flow)
             if (targetCard.EngineHint?.Contains("Unreal") == true)
@@ -723,7 +759,7 @@ public partial class DragDropHandler
             }
             finally
             {
-                try { if (File.Exists(lumaTemp)) File.Delete(lumaTemp); } catch { }
+                try { if (File.Exists(lumaTemp)) File.Delete(lumaTemp); } catch (Exception ex) { CrashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Failed to delete temp file '{lumaTemp}' — {ex.Message}"); }
             }
             return;
         }
@@ -779,27 +815,23 @@ public partial class DragDropHandler
             RequestedTheme = ElementTheme.Dark,
         };
 
-        // Show dialog non-blocking (acquire dialog gate to prevent concurrent dialogs)
-        if (!DialogService.TryAcquireDialogGate())
+        await using var progressSession = await DialogService.ShowProgressAsync(progressDialog);
+        if (progressSession == null)
         {
             CrashReporter.Log("[DragDropHandler.Addon] Skipped progress dialog — another dialog is open");
             return;
         }
-        bool gateReleased = false;
-        progressDialog.Closed += (_, _) => { if (!gateReleased) { gateReleased = true; DialogService.ReleaseDialogGate(); } };
-        var dialogTask = progressDialog.ShowAsync();
 
         try
         {
             try
             {
-                var response = await s_httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await s_httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] HTTP {(int)response.StatusCode} for URL: {url}");
-                    progressDialog.Hide();
-                    if (!gateReleased) { gateReleased = true; DialogService.ReleaseDialogGate(); }
+                    await progressSession.DisposeAsync();
                     var errDialog = new ContentDialog
                     {
                         Title = "❌ Download Failed",
@@ -854,8 +886,7 @@ public partial class DragDropHandler
             catch (HttpRequestException ex)
             {
                 _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Network error downloading '{url}' — {ex.Message}");
-                progressDialog.Hide();
-                if (!gateReleased) { gateReleased = true; DialogService.ReleaseDialogGate(); }
+                await progressSession.DisposeAsync();
                 var errDialog = new ContentDialog
                 {
                     Title = "❌ Download Failed",
@@ -870,8 +901,7 @@ public partial class DragDropHandler
             catch (TaskCanceledException ex)
             {
                 _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Download timed out for '{url}' — {ex.Message}");
-                progressDialog.Hide();
-                if (!gateReleased) { gateReleased = true; DialogService.ReleaseDialogGate(); }
+                await progressSession.DisposeAsync();
                 var errDialog = new ContentDialog
                 {
                     Title = "❌ Download Timed Out",
@@ -893,9 +923,8 @@ public partial class DragDropHandler
             if (!HasPeSignature(cachePath))
             {
                 _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Downloaded file '{filename}' is not a valid PE binary — deleting");
-                try { File.Delete(cachePath); } catch { }
-                progressDialog.Hide();
-                if (!gateReleased) { gateReleased = true; DialogService.ReleaseDialogGate(); }
+                try { File.Delete(cachePath); } catch (Exception ex) { CrashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] Failed to delete cache file '{cachePath}' — {ex.Message}"); }
+                await progressSession.DisposeAsync();
                 var errDialog = new ContentDialog
                 {
                     Title = "❌ Invalid Addon File",
@@ -909,8 +938,7 @@ public partial class DragDropHandler
             }
 
             // ── Step 7: Dismiss progress and route to existing install flow ───────
-            progressDialog.Hide();
-            if (!gateReleased) { gateReleased = true; DialogService.ReleaseDialogGate(); };
+            await progressSession.DisposeAsync();
             _crashReporter.Log($"[DragDropHandler.ProcessDroppedUrl] PE validation passed for '{filename}', routing to ProcessDroppedAddon");
             await ProcessDroppedAddon(cachePath);
         }

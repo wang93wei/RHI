@@ -3,38 +3,35 @@
 ; Non-commercial use only
 
 #define MyAppName "RHI"
-#define MyAppVersion "2.0.1"
+#ifndef PublishDir
+  #define PublishDir SourcePath + "RenoDXCommander\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
+#endif
+#ifndef InstallerOutputDir
+  #define InstallerOutputDir SourcePath
+#endif
+#ifndef MyAppVersion
+  #define MyAppVersion GetVersionNumbersString(PublishDir + "\RHI.exe")
+#endif
 #define MyAppPublisher "RankFTW"
 #define MyAppURL "www.github.com/rankftw"
 #define MyAppExeName "RHI.exe"
 
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{05342962-55F5-4BA3-BFD3-DBA01D2B8BCB}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
-; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
-; on anything but x64 and Windows 11 on Arm.
 ArchitecturesAllowed=x64compatible
-; "ArchitecturesInstallIn64BitMode=x64compatible" requests that the
-; install be done in "64-bit mode" on x64 or Windows 11 on Arm,
-; meaning it should use the native 64-bit Program Files directory and
-; the 64-bit view of the registry.
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
-; Uncomment the following line to run in non administrative install mode (install for current user only).
-;PrivilegesRequired=lowest
-OutputDir=C:\Users\Mark\OneDrive\Documents\RDXC\Installers
+OutputDir={#InstallerOutputDir}
 OutputBaseFilename=RHI-Setup
-SetupIconFile=C:\Users\Mark\OneDrive\Documents\RDXC\icon.ico
+SetupIconFile={#PublishDir}\icon.ico
 SolidCompression=yes
 WizardStyle=modern dynamic
 
@@ -45,9 +42,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -57,9 +52,183 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Type: filesandordirs; Name: "{localappdata}\RHI"
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; Download Windows App Runtime 2.5.1 if not already installed (only runs if missing)
+Filename: "powershell.exe"; Parameters: "-NoProfile -NonInteractive -WindowStyle Hidden -Command ""Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/2.5/latest/windowsappruntimeinstall-x64.exe' -OutFile '{tmp}\windowsappruntimeinstall-x64.exe' -UseBasicParsing"""; StatusMsg: "Downloading Windows App Runtime 2.5.1..."; Flags: waituntilterminated; Check: NeedsWindowsAppRuntime
+; Install Windows App Runtime 2.5.1 if not already installed
+Filename: "{tmp}\windowsappruntimeinstall-x64.exe"; Parameters: "--quiet"; StatusMsg: "Installing Windows App Runtime 2.5.1..."; Flags: waituntilterminated; Check: NeedsWindowsAppRuntime
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent; BeforeInstall: BeginForegroundHandoff; AfterInstall: CompleteForegroundHandoff
 
 [Code]
+const
+  ForegroundReadyProperty = 'RHI.ForegroundReady.v1';
+  ForegroundRequestMessage = 'RHI.ForegroundRequest.v1';
+
+var
+  ForegroundProgress: TOutputProgressWizardPage;
+  RuntimeChecked: Boolean;
+  RuntimeNeeded: Boolean;
+
+function FindNextTopLevelWindow(Parent, AfterWindow: HWND; ClassName, WindowName: Longint): HWND;
+  external 'FindWindowExW@user32.dll stdcall';
+function ReadWindowProperty(Window: HWND; Name: String): THandle;
+  external 'GetPropW@user32.dll stdcall';
+function ReadWindowProcessId(Window: HWND; var ProcessId: DWORD): DWORD;
+  external 'GetWindowThreadProcessId@user32.dll stdcall';
+function OpenTargetProcess(Access: DWORD; InheritHandle: BOOL; ProcessId: DWORD): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function ReadProcessImage(Process: THandle; Flags: DWORD; FileName: String; var Size: DWORD): BOOL;
+  external 'QueryFullProcessImageNameW@kernel32.dll stdcall';
+function CloseTargetHandle(Handle: THandle): BOOL;
+  external 'CloseHandle@kernel32.dll stdcall';
+function GrantForegroundPermission(ProcessId: DWORD): BOOL;
+  external 'AllowSetForegroundWindow@user32.dll stdcall';
+function RegisterForegroundMessage(Name: String): UINT;
+  external 'RegisterWindowMessageW@user32.dll stdcall';
+function PostForegroundMessage(Window: HWND; Message: UINT; WParam: LongWord; LParam: Longint): BOOL;
+  external 'PostMessageW@user32.dll stdcall';
+
+function IsInstalledRhiProcess(ProcessId: DWORD): Boolean;
+var
+  Process: THandle;
+  ImagePath: String;
+  Size: DWORD;
+begin
+  Result := False;
+  Process := OpenTargetProcess($1000, False, ProcessId);
+  if Process = 0 then Exit;
+  try
+    Size := 32768;
+    SetLength(ImagePath, Size);
+    if ReadProcessImage(Process, 0, ImagePath, Size) then
+    begin
+      SetLength(ImagePath, Size);
+      Result := CompareText(ImagePath, ExpandConstant('{app}\{#MyAppExeName}')) = 0;
+    end;
+  finally
+    CloseTargetHandle(Process);
+  end;
+end;
+
+function FindReadyRhiWindow(var ProcessId: DWORD): HWND;
+var
+  Window: HWND;
+begin
+  Result := 0;
+  Window := FindNextTopLevelWindow(0, 0, 0, 0);
+  while Window <> 0 do
+  begin
+    if ReadWindowProperty(Window, ForegroundReadyProperty) = 1 then
+    begin
+      ProcessId := 0;
+      ReadWindowProcessId(Window, ProcessId);
+      if (ProcessId <> 0) and IsInstalledRhiProcess(ProcessId) then
+      begin
+        Result := Window;
+        Exit;
+      end;
+    end;
+    Window := FindNextTopLevelWindow(0, Window, 0, 0);
+  end;
+end;
+
+procedure BeginForegroundHandoff;
+begin
+  ForegroundProgress := CreateOutputProgressPage('Starting RHI', 'Waiting for the application window...');
+  ForegroundProgress.SetText('Starting RHI (including Admin Mode, if enabled)...', '');
+  ForegroundProgress.Show;
+end;
+
+procedure CompleteForegroundHandoff;
+var
+  Window: HWND;
+  ProcessId, CurrentProcessId: DWORD;
+  Message: UINT;
+  Attempt: Integer;
+begin
+  Window := 0;
+  ProcessId := 0;
+  try
+    for Attempt := 0 to 199 do
+    begin
+      ForegroundProgress.SetProgress(Attempt, 200);
+      Window := FindReadyRhiWindow(ProcessId);
+      if Window <> 0 then Break;
+      Sleep(50);
+    end;
+  finally
+    ForegroundProgress.Hide;
+  end;
+
+  if Window = 0 then
+  begin
+    Log('RHI foreground handoff: no ready window within 10 seconds; normal activation remains available.');
+    Exit;
+  end;
+
+  CurrentProcessId := 0;
+  ReadWindowProcessId(Window, CurrentProcessId);
+  if (CurrentProcessId <> ProcessId) or not IsInstalledRhiProcess(ProcessId) then Exit;
+  Message := RegisterForegroundMessage(ForegroundRequestMessage);
+  if Message = 0 then Exit;
+
+  if GrantForegroundPermission(ProcessId) then
+    Log(Format('RHI foreground permission granted to PID %d.', [ProcessId]))
+  else
+    Log(Format('RHI foreground permission refused for PID %d; RHI will use taskbar attention if necessary.', [ProcessId]));
+
+  WizardForm.Hide;
+  if not PostForegroundMessage(Window, Message, 0, 0) then
+    Log('RHI foreground handoff: could not post activation request.');
+end;
+
+function NeedsWindowsAppRuntime(): Boolean;
+var
+  KeyPath: String;
+  ResultCode: Integer;
+begin
+  // Both [Run] entries call this: check once and reuse the answer
+  if RuntimeChecked then
+  begin
+    Result := RuntimeNeeded;
+    Exit;
+  end;
+  RuntimeChecked := True;
+  RuntimeNeeded := False;
+
+  // Fast: the 2.5.1 package folder. WindowsApps can't be listed, but an exact path can be checked.
+  if DirExists(ExpandConstant('{commonpf64}\WindowsApps\Microsoft.WindowsAppRuntime.2_2.5.1.0_x64__8wekyb3d8bbwe')) then
+  begin
+    Log('Windows App Runtime 2.5.1 found (package folder)');
+    Result := False;
+    Exit;
+  end;
+
+  // Registry key some bootstrapper versions write
+  KeyPath := 'SOFTWARE\Microsoft\WindowsAppRuntime\2.5';
+  if RegKeyExists(HKLM, KeyPath) or RegKeyExists(HKLM64, KeyPath) then
+  begin
+    Log('Windows App Runtime 2.5 found (registry)');
+    Result := False;
+    Exit;
+  end;
+
+  // Fallback: ask Windows for any 2.5.x package. -AllUsers because setup runs as admin, which can be
+  // a different account from the one that has the runtime; plain query if -AllUsers isn't allowed.
+  RuntimeNeeded := True;
+  if ShellExec('', 'powershell.exe',
+      '-NoProfile -NonInteractive -Command "$p = try { Get-AppxPackage -AllUsers -Name Microsoft.WindowsAppRuntime.2 -ErrorAction Stop } catch { Get-AppxPackage -Name Microsoft.WindowsAppRuntime.2 }; if ($p | Where-Object { $_.Version -like ''2.5*'' }) { exit 0 } else { exit 1 }"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    if ResultCode = 0 then
+      RuntimeNeeded := False;
+  end;
+  if RuntimeNeeded then
+    Log('Windows App Runtime 2.5 not found, will install')
+  else
+    Log('Windows App Runtime 2.5 found (Get-AppxPackage)');
+  Result := RuntimeNeeded;
+end;
+
 function IsRhiRunning(): Boolean;
 var
   WMI: Variant;
@@ -82,17 +251,14 @@ var
 begin
   Result := True;
 
-  // Only signal if RHI is actually running
   if not IsRhiRunning() then Exit;
 
-  // Write shutdown signal file to %LocalAppData%\RHI\
   SignalDir := ExpandConstant('{localappdata}\RHI');
   if not DirExists(SignalDir) then
     ForceDirectories(SignalDir);
   SignalPath := SignalDir + '\rhi_shutdown_requested';
   SaveStringToFile(SignalPath, 'update', False);
 
-  // Wait up to 10 seconds for RHI to close itself
   WaitCount := 0;
   while (WaitCount < 20) and IsRhiRunning() do
   begin
@@ -100,6 +266,5 @@ begin
     WaitCount := WaitCount + 1;
   end;
 
-  // If still running, Inno's default CloseApplications will handle it
+  DeleteFile(SignalPath);
 end;
-

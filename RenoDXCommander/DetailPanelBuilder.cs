@@ -34,7 +34,6 @@ public partial class DetailPanelBuilder
     private readonly IPeHeaderService _peHeaderService;
     private readonly DlssPresetService _dlssPresetService;
     private readonly IDlssStreamlineService _dlssStreamlineService;
-    private readonly IDxvkService _dxvkService;
     private readonly IDllOverrideService _dllOverrideService;
     private readonly IAuxInstallService _auxInstallService;
     private readonly IShaderPackService _shaderPackService;
@@ -58,11 +57,11 @@ public partial class DetailPanelBuilder
     {
         _window = window;
         _dispatcherQueue = window.DispatcherQueue;
+        Layout = new DetailLayoutHost(window);
         _gameNameService = gameNameService;
         _peHeaderService = peHeaderService;
         _dlssPresetService = dlssPresetService;
         _dlssStreamlineService = dlssStreamlineService;
-        _dxvkService = dxvkService;
         _dllOverrideService = dllOverrideService;
         _auxInstallService = auxInstallService;
         _shaderPackService = shaderPackService;
@@ -113,6 +112,7 @@ public partial class DetailPanelBuilder
         }
         _window.DetailSourceText.Text = card.Source;
         _window.DetailSourceBadge.Visibility = string.IsNullOrEmpty(card.Source) ? Visibility.Collapsed : Visibility.Visible;
+        UpdateStoreBadgeLink(card);
 
         // Engine badge
         if (!string.IsNullOrEmpty(card.EngineHint))
@@ -153,10 +153,11 @@ public partial class DetailPanelBuilder
         // 32-bit / 64-bit badge
         _window.Detail32BitBadge.Visibility = card.Is32Bit ? Visibility.Visible : Visibility.Collapsed;
         _window.Detail64BitBadge.Visibility = !card.Is32Bit ? Visibility.Visible : Visibility.Collapsed;
+        ToolTipService.SetToolTip(_window.Detail32BitBadge, "32-bit game. Some components aren't available for 32-bit games.");
+        ToolTipService.SetToolTip(_window.Detail64BitBadge, "64-bit game.");
 
         // Wiki status badge — hidden from main UI, shown inside Info button dialog instead
         _window.DetailWikiBadge.Visibility = Visibility.Collapsed;
-        _window.DetailSepPlatformStatus.Visibility = Visibility.Collapsed;
 
         // Author badges
         _window.DetailAuthorBadgePanel.Children.Clear();
@@ -206,11 +207,40 @@ public partial class DetailPanelBuilder
             _window.DetailAuthorBadgePanel.Visibility = Visibility.Collapsed;
         }
 
-        // Install path + installed file
-        _window.DetailInstallPath.Text = card.InstallPath;
-        if (!string.IsNullOrEmpty(card.InstalledAddonFileName))
+        // Install path + installed file. Steam reports some libraries with a lowercase drive letter
+        // ("c:\steam\..."); show it capitalised like every other path (display only).
+        var shownPath = card.InstallPath ?? "";
+        if (shownPath.Length >= 2 && shownPath[1] == ':' && char.IsLower(shownPath[0]))
+            shownPath = char.ToUpperInvariant(shownPath[0]) + shownPath[1..];
+        _window.DetailInstallPath.Text = shownPath;
+
+        // Determine label: RenoDX addon filename + Luma mod name when both are present
+        string? fileLabel = null;
+        bool lumaInstalled = card.LumaStatus is GameStatus.Installed or GameStatus.UpdateAvailable;
+        string? lumaLabel = null;
+        if (lumaInstalled && card.LumaMod != null)
         {
-            _window.DetailInstalledFile.Text = $"{card.InstalledAddonFileName}";
+            // Prefer the actual installed addon filename (e.g. "Luma-Prey.addon") like RenoDX does
+            var addonFile = card.LumaRecord?.InstalledFiles
+                .Select(f => Path.GetFileName(f))
+                .FirstOrDefault(f => f.EndsWith(".addon", StringComparison.OrdinalIgnoreCase)
+                                  || f.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase)
+                                  || f.EndsWith(".addon32", StringComparison.OrdinalIgnoreCase));
+            lumaLabel = addonFile ?? (card.LumaMod.IsGenericLuma ? "Luma" : card.LumaMod.Name);
+        }
+
+        if (!string.IsNullOrEmpty(card.InstalledAddonFileName) && lumaLabel != null)
+            fileLabel = $"{card.InstalledAddonFileName}  ·  {lumaLabel}";
+        else if (!string.IsNullOrEmpty(card.InstalledAddonFileName))
+            fileLabel = card.InstalledAddonFileName;
+        else if (lumaLabel != null)
+            fileLabel = lumaLabel;
+
+        if (!string.IsNullOrEmpty(fileLabel))
+        {
+            _window.DetailInstalledFile.Text = fileLabel;
+            ToolTipService.SetToolTip(_window.DetailInstalledFileBadge,
+                fileLabel.Contains('·') ? "Installed HDR mod files" : "Installed HDR mod file");
             _window.DetailInstalledFileBadge.Visibility = Visibility.Visible;
             _window.DetailSepModPlatform.Visibility = Visibility.Visible;
         }
@@ -277,21 +307,18 @@ public partial class DetailPanelBuilder
 
         // Utility buttons — set Tag for event handlers
         _window.DetailFavBtn.Tag = card;
-        _window.DetailFavIcon.Text = "Favourite";
-        var favColor = card.IsFavourite
-            ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
-            : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
-        _window.DetailFavIcon.Foreground = new SolidColorBrush(favColor);
-        _window.DetailFavBtn.BorderBrush = card.IsFavourite
-            ? new SolidColorBrush(((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color)
-            : UIFactory.Brush(ResourceKeys.BorderSubtleBrush);
+        ApplyFavouriteButtonStyle(_window.DetailFavBtn, _window.DetailFavIcon, card.IsFavourite);
 
         _window.DetailHideBtn.Tag = card;
         _window.DetailHideIcon.Text = card.IsHidden ? "Show" : "Hide";
+        ToolTipService.SetToolTip(_window.DetailHideBtn, card.IsHidden
+            ? "Show this game in the game list again."
+            : "Hide this game from the sidebar (find it again in the Hidden filter)");
         _window.DetailHideBtn.Foreground = UIFactory.Brush(ResourceKeys.ChipTextBrush);
 
         // Folder management buttons
         _window.DetailFolderBtn.Tag = card;
+        _window.DetailLaunchBtn.Tag = card; // Launch starts the game shown in the panel
 
         // AppData button — visible only for UE games with a resolvable AppData/Documents config folder
         // GameConfigRootPath is pre-computed on a background thread (BuildCards/CacheLoad) so
@@ -320,6 +347,7 @@ public partial class DetailPanelBuilder
         _window.DetailHdrToggleText.Foreground = hdrActive
             ? UIFactory.Brush(ResourceKeys.AccentPurpleBrush)
             : UIFactory.Brush(ResourceKeys.ChipTextBrush);
+        ToolTipService.SetToolTip(_window.DetailHdrToggleBtn, HdrToggleTooltip(hdrActive, hdrOverride != null));
 
         // RES toggle button — hidden unless feature enabled
         if (FeatureFlags.ResolutionControl)
@@ -341,6 +369,7 @@ public partial class DetailPanelBuilder
             _window.DetailResToggleText.Foreground = resActive
                 ? UIFactory.Brush(ResourceKeys.AccentPurpleBrush)
                 : UIFactory.Brush(ResourceKeys.ChipTextBrush);
+            ToolTipService.SetToolTip(_window.DetailResToggleBtn, ResToggleTooltip(resActive, resOverride != null));
         }
         else
         {
@@ -371,12 +400,13 @@ public partial class DetailPanelBuilder
         // ── Wire Components section collapse + drag handle ────────────────────
         {
             const string sectionKey = "Components";
-            var settings    = _window.ViewModel.Settings;
-            bool collapsed  = settings.CollapsedDetailSections.Contains(sectionKey);
+            bool collapsed  = Layout.IsCollapsed(sectionKey);
 
             _window.DetailComponentsArrow.Text = collapsed ? "▶" : "▼";
             _window.DetailComponentsBody.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
             _window.DetailComponentsTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
+            ToolTipService.SetToolTip(_window.DetailComponentsArrow, SectionHeaderTooltip);
+            ToolTipService.SetToolTip(_window.DetailComponentsTitle, SectionHeaderTooltip);
 
             // Re-subscribe each time panel is populated (card changes)
             _window.DetailComponentsHeader.PointerPressed -= ComponentsHeader_PointerPressed;
@@ -385,6 +415,8 @@ public partial class DetailPanelBuilder
             _window.DetailComponentsHeader.PointerEntered += ComponentsHeader_PointerEntered;
             _window.DetailComponentsHeader.PointerExited  -= ComponentsHeader_PointerExited;
             _window.DetailComponentsHeader.PointerExited  += ComponentsHeader_PointerExited;
+            if (_window.DetailComponentsHeader.Parent is FrameworkElement componentsHeaderGrid)
+                Layout.RegisterHeader(sectionKey, componentsHeaderGrid);
 
             // Replace drag handle as first child.
             // The XAML starts with [0]=Arrow, [1]=Title.
@@ -420,12 +452,12 @@ public partial class DetailPanelBuilder
 
         // Populate component rows
         UpdateDetailComponentRows(card);
+        Layout.RefreshHeader(); // Tabs: mockup header copies the header filled above
         __sw.Stop();
         if (__sw.ElapsedMilliseconds > 30)
             CrashReporter.Log($"[PopulateDetailPanel] SLOW: '{card.GameName}' took {__sw.ElapsedMilliseconds}ms");
     }
 
-    /// <summary>
     /// <summary>
     /// Clears the graphics API badge panel and adds one badge per detected API.
     /// APIs are shown in a consistent order: DX8 → DX9 → DX10 → DX11 → DX12 → Vulkan → OpenGL.
@@ -491,6 +523,18 @@ public partial class DetailPanelBuilder
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = textBlock,
             };
+            var apiName = api switch
+            {
+                GraphicsApiType.DirectX8  => "DirectX 8",
+                GraphicsApiType.DirectX9  => "DirectX 9",
+                GraphicsApiType.DirectX10 => "DirectX 10",
+                GraphicsApiType.DirectX11 => "DirectX 11",
+                GraphicsApiType.DirectX12 => "DirectX 12",
+                GraphicsApiType.Vulkan    => "Vulkan",
+                GraphicsApiType.OpenGL    => "OpenGL",
+                _                         => label,
+            };
+            ToolTipService.SetToolTip(badge, $"Detected graphics API: {apiName}");
             window.DetailGraphicsApiBadgePanel.Children.Add(badge);
         }
 
@@ -506,57 +550,15 @@ public partial class DetailPanelBuilder
 
     // ── Section order / drag-reorder ─────────────────────────────────────────
 
-    /// <summary>Maps section key → its container Border in DetailPanel.</summary>
-    private Border GetSectionContainer(string key) => key switch
-    {
-        "Components"         => _window.DetailComponentSection,
-        "GameOverrides"      => _window.OverridesContainer,
-        "NeuralRendering"    => _window.NeuralRenderingContainer,
-        "NvidiaProfileDlss"  => _window.NvidiaProfileDlssContainer,
-        "NvidiaProfileDriver"=> _window.NvidiaProfileDriverContainer,
-        "Management"         => _window.ManagementContainer,
-        "Extras"             => _window.ExtrasContainer,
-        _                    => throw new ArgumentException($"Unknown section key: {key}"),
-    };
+    /// <summary>Decides where the sections go, their order and collapse state.</summary>
+    internal DetailLayoutHost Layout { get; }
 
-    /// <summary>
-    /// Reorders the 5 section Borders within DetailPanel.Children to match
-    /// SettingsViewModel.DetailSectionOrder. Call after all sections are populated+visible.
-    /// The 2 header Grids at [0] and [1] are left in place.
-    /// </summary>
-    internal void ApplySectionOrder()
-    {
-        var order = _window.ViewModel.Settings.DetailSectionOrder;
-        var panel = _window.DetailPanel;
-
-        var desired = order
-            .Select(key => { try { return GetSectionContainer(key); } catch { return null; } })
-            .Where(b => b != null).Cast<Border>().ToList();
-
-        // Snapshot visibility
-        var visibilities = new Dictionary<UIElement, Visibility>();
-        for (int i = 2; i < panel.Children.Count; i++)
-            if (panel.Children[i] is UIElement el) visibilities[el] = el.Visibility;
-
-        int insertAt = 2;
-        foreach (var border in desired)
-        {
-            var currentIndex = panel.Children.IndexOf(border);
-            if (currentIndex < 0) continue;
-            if (currentIndex == insertAt) { insertAt++; continue; }
-            panel.Children.RemoveAt(currentIndex);
-            panel.Children.Insert(insertAt, border);
-            insertAt++;
-        }
-
-        // Restore visibility
-        for (int i = 2; i < panel.Children.Count; i++)
-            if (panel.Children[i] is UIElement el && visibilities.TryGetValue(el, out var vis))
-                el.Visibility = vis;
-    }
+    /// <summary>Puts the sections in the saved order. Call after all sections are populated+visible.</summary>
+    internal void ApplySectionOrder() => Layout.ApplySectionOrder();
 
     // Drag state
     private Border?  _dragBorder;
+    private TextBlock? _dragHandle; // reset to grey on drag end (PointerExited is skipped mid-drag)
     private uint     _dragPointerId;
     private double   _dragStartY;
     private int      _dragStartIdx;
@@ -572,7 +574,58 @@ public partial class DetailPanelBuilder
     /// Index is computed from cumulative Y delta (no TransformToVisual queries mid-drag).
     /// Single Remove+Insert per threshold crossing keeps layout stable.
     /// Order is persisted on PointerReleased.
+    /// <summary>
+    /// Calculates a fixed column width for use in star-column grids inside the detail panel.
+    /// Star columns inside StackPanel/ScrollViewer with HorizontalScrollBarVisibility=Disabled
+    /// cause WinUI to enter an infinite layout loop. Use this instead of GridLength.Star.
     /// </summary>
+    /// <param name="numCols">Number of equal columns.</param>
+    /// <param name="spacing">ColumnSpacing value on the grid.</param>
+    /// <param name="overhead">Any additional fixed-width columns (sum of their widths + spacings).</param>
+    internal double PanelColW(int numCols, double spacing = 8, double overhead = 0, double containerWidth = 0)
+    {
+        double w = containerWidth > 0 ? containerWidth : _window.DetailPanel.ActualWidth;
+        if (w <= 0) w = 750;
+        const double SectionPadding = 28;
+        var available = w - SectionPadding - overhead - (numCols - 1) * spacing;
+        return Math.Max(80, available / numCols);
+    }
+
+    /// <summary>
+    /// Favourite button look. Favourited: amber "Favourited" text with the same quiet border as
+    /// the buttons beside it (a full amber outline stood out too much). Not favourited: plain.
+    /// </summary>
+    internal static void ApplyFavouriteButtonStyle(Button btn, TextBlock label, bool isFavourite)
+    {
+        label.Text = isFavourite ? "Favourited" : "Favourite";
+        label.Foreground = UIFactory.Brush(isFavourite ? ResourceKeys.AccentAmberBrush : ResourceKeys.ChipTextBrush);
+        btn.BorderBrush = UIFactory.Brush(ResourceKeys.BorderSubtleBrush);
+        ToolTipService.SetToolTip(btn, isFavourite
+            ? "Favourite. Click to remove it from Favourites."
+            : "Add this game to Favourites (find it with the Favourites filter).");
+    }
+
+    /// <summary>HDR button tooltip that states the current setting for this game.</summary>
+    internal static string HdrToggleTooltip(bool active, bool isOverride)
+    {
+        var source = isOverride ? "set for this game" : "following Settings › Display & HDR";
+        return active
+            ? $"Windows HDR: On ({source}).\nWhen you launch the game from RHI, Windows HDR is turned on, then back off when the game closes.\nClick to turn off for this game."
+            : $"Windows HDR: Off ({source}).\nClick to turn Windows HDR on when you launch this game from RHI (and back off when it closes).";
+    }
+
+    /// <summary>RES button tooltip that states the current setting for this game.</summary>
+    internal static string ResToggleTooltip(bool active, bool isOverride)
+    {
+        var source = isOverride ? "set for this game" : "following Settings › Display & HDR";
+        return active
+            ? $"Change resolution: On ({source}).\nWhen you launch the game from RHI, the display switches to your target resolution, then back when the game closes.\nClick to turn off for this game."
+            : $"Change resolution: Off ({source}).\nClick to switch to your target resolution when you launch this game from RHI (and back when it closes).";
+    }
+
+    /// <summary>Tooltip for the arrow + title of every collapsible detail section header.</summary>
+    internal const string SectionHeaderTooltip = "Click to collapse or expand";
+
     internal TextBlock MakeDragHandle(Border container)
     {
         var handle = new TextBlock
@@ -584,6 +637,7 @@ public partial class DetailPanelBuilder
             Margin            = new Thickness(0, 0, 8, 0),
             ManipulationMode  = Microsoft.UI.Xaml.Input.ManipulationModes.None,
         };
+        ToolTipService.SetToolTip(handle, "Drag to reorder sections");
 
         var handCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
         var arrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
@@ -607,6 +661,7 @@ public partial class DetailPanelBuilder
             if (idx < 2) return;
 
             _dragBorder      = container;
+            _dragHandle      = handle;
             _dragPointerId   = e.Pointer.PointerId;
             _dragStartY      = e.GetCurrentPoint(_window.DetailPanel).Position.Y;
             _dragStartIdx    = idx;
@@ -688,6 +743,8 @@ public partial class DetailPanelBuilder
         panel.PointerCaptureLost  -= DetailPanel_PointerCaptureLost;
         if (_dragBorder != null) _dragBorder.Opacity = 1.0;
         _dragBorder = null;
+        if (_dragHandle != null) _dragHandle.Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush);
+        _dragHandle = null;
         if (save) _window.DispatcherQueue.TryEnqueue(SaveSectionOrder);
     }
 
@@ -702,27 +759,7 @@ public partial class DetailPanelBuilder
     private void DetailPanel_PointerCaptureLost(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
         => DragEnd(save: true);
 
-    private void SaveSectionOrder()
-    {
-        var panel    = _window.DetailPanel;
-        var keyOrder = new List<string>();
-        for (int i = 2; i < panel.Children.Count; i++)
-        {
-            var border = panel.Children[i] as Border;
-            if      (border == _window.DetailComponentSection)     keyOrder.Add("Components");
-            else if (border == _window.OverridesContainer)          keyOrder.Add("GameOverrides");
-            else if (border == _window.NeuralRenderingContainer)    keyOrder.Add("NeuralRendering");
-            else if (border == _window.NvidiaProfileDlssContainer)   keyOrder.Add("NvidiaProfileDlss");
-            else if (border == _window.NvidiaProfileDriverContainer) keyOrder.Add("NvidiaProfileDriver");
-            else if (border == _window.ManagementContainer)         keyOrder.Add("Management");
-            else if (border == _window.ExtrasContainer)             keyOrder.Add("Extras");
-        }
-        if (keyOrder.Count > 0)
-        {
-            _window.ViewModel.Settings.DetailSectionOrder = keyOrder;
-            _window.ViewModel.SaveSettingsPublic();
-        }
-    }
+    private void SaveSectionOrder() => Layout.SaveSectionOrder();
 
     // ── Components section header event handlers (wired per-card in PopulateDetailPanel) ──
 
@@ -733,13 +770,10 @@ public partial class DetailPanelBuilder
     private void ComponentsHeader_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         const string sectionKey = "Components";
-        var settings   = _window.ViewModel.Settings;
         bool collapsed = _window.DetailComponentsBody.Visibility == Visibility.Visible;
         _window.DetailComponentsBody.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
         _window.DetailComponentsArrow.Text      = collapsed ? "▶" : "▼";
 
-        if (collapsed) settings.CollapsedDetailSections.Add(sectionKey);
-        else           settings.CollapsedDetailSections.Remove(sectionKey);
 
         // Rebuild summary on collapse, hide on expand
         if (collapsed)
@@ -759,7 +793,7 @@ public partial class DetailPanelBuilder
                 _componentsSummary.Visibility = Visibility.Collapsed;
         }
 
-        _window.ViewModel.SaveSettingsPublic();
+        Layout.SetCollapsed(sectionKey, collapsed);
     }
 
     private void ComponentsHeader_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
@@ -785,6 +819,7 @@ public partial class DetailPanelBuilder
     // Tasks waiting on _panelScanSemaphore check the token and bail immediately,
     // freeing their thread pool thread instead of sitting blocked.
     private CancellationTokenSource _panelScanCts = new();
+    internal void StopBackgroundWork() => _panelScanCts.Cancel();
 
     // Limits concurrent background scans to prevent thread pool saturation
     // when rapidly clicking through games. Capacity of 1 ensures at most one
@@ -801,7 +836,7 @@ public partial class DetailPanelBuilder
     /// Returns null when the list is empty (nothing installed/active → don't show anything).
     /// </summary>
     internal static TextBlock? MakeSectionSummaryInlines(
-        IEnumerable<(string Label, string? Version)> items)
+        IEnumerable<(string Label, string? Version)> items, string? tooltip = null)
     {
         var entries = items
             .Where(i => !string.IsNullOrWhiteSpace(i.Label))
@@ -843,57 +878,10 @@ public partial class DetailPanelBuilder
             }
         }
 
+        if (!string.IsNullOrEmpty(tooltip))
+            ToolTipService.SetToolTip(tb, tooltip);
+
         return tb;
-    }
-
-    /// <summary>
-    /// Populates a TextBlock's Inlines with the Components section collapsed summary.
-    /// White component names, green version numbers. Clears existing inlines first.
-    /// Returns false when nothing is installed (caller should hide the TextBlock).
-    /// </summary>
-    internal static bool PopulateComponentsSummaryInlines(TextBlock target, GameCardViewModel card)
-    {
-        target.Inlines.Clear();
-
-        var entries = new List<(string Label, string? Version)>();
-        if (card.IsRefInstalled)
-            entries.Add(("RE Framework", card.RefInstalledVersion));
-        if (card.IsRsInstalled && card.LumaStatus is not GameStatus.Installed and not GameStatus.UpdateAvailable)
-            entries.Add(("ReShade", card.RsInstalledVersion));
-        if (card.IsRdxInstalled)
-            entries.Add(("RenoDX", card.RdxInstalledVersion));
-        if (card.IsUlInstalled)
-            entries.Add(("ReLimiter", card.UlInstalledVersion));
-        if (card.IsDcInstalled)
-            entries.Add(("DC", card.DcInstalledVersion));
-        if (card.IsLumaInstalled)
-            entries.Add(("Luma", "On"));
-
-        if (entries.Count == 0) return false;
-
-        for (int i = 0; i < entries.Count; i++)
-        {
-            if (i > 0)
-                target.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run
-                {
-                    Text       = "  ·  ",
-                    Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
-                });
-
-            target.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run
-            {
-                Text       = entries[i].Label,
-                Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
-            });
-
-            if (!string.IsNullOrWhiteSpace(entries[i].Version))
-                target.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run
-                {
-                    Text       = " " + entries[i].Version,
-                    Foreground = UIFactory.GetBrush("#5ECB7D"),
-                });
-        }
-        return true;
     }
 
     /// <summary>
@@ -917,7 +905,7 @@ public partial class DetailPanelBuilder
         if (card.IsLumaInstalled)
             entries.Add(("Luma", "On"));
 
-        return MakeSectionSummaryInlines(entries);
+        return MakeSectionSummaryInlines(entries, "Installed components and versions.");
     }
 
     /// <summary>
@@ -931,11 +919,30 @@ public partial class DetailPanelBuilder
 
         var channel = _window.ViewModel.GetReShadeChannelOverride(card.GameName, card.Source ?? "");
         if (!string.IsNullOrEmpty(channel))
-            entries.Add(("RS:", channel));
+            entries.Add(("RS Channel:", channel));
 
         var apis = _window.ViewModel.GetApiOverride(card.GameName, card.Source ?? "");
         if (apis is { Count: > 0 })
             entries.Add(("API:", string.Join("+", apis)));
+
+        // Shaders / Addons — show when set to non-default
+        var shaderMode = _window.ViewModel.GetPerGameShaderMode(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(shaderMode) && shaderMode != "Global")
+            entries.Add(("Shaders:", shaderMode));
+
+        var addonMode = _window.ViewModel.GetPerGameAddonMode(card.GameName, card.Source ?? "");
+        if (!string.IsNullOrEmpty(addonMode) && addonMode != "Global")
+            entries.Add(("Addons:", addonMode));
+
+        // Update inclusion — show only when any component is excluded
+        var excluded = new List<string>();
+        if (_window.ViewModel.IsUpdateAllExcludedReShade(card.GameName, card.Source ?? "")) excluded.Add("RS");
+        if (_window.ViewModel.IsUpdateAllExcludedRenoDx(card.GameName, card.Source ?? "")) excluded.Add("RDX");
+        if (_window.ViewModel.IsUpdateAllExcludedUl(card.GameName, card.Source ?? ""))     excluded.Add("RL");
+        if (_window.ViewModel.IsUpdateAllExcludedDc(card.GameName, card.Source ?? ""))     excluded.Add("DC");
+        if (_window.ViewModel.IsUpdateAllExcludedOs(card.GameName, card.Source ?? ""))     excluded.Add("OS");
+        if (excluded.Count > 0)
+            entries.Add(("Excluded:", string.Join(" ", excluded)));
 
         var launchArgs = _gameNameService.LaunchArgsOverrides.TryGetValue(card.GameName, out var la)
             ? la : null;
@@ -957,82 +964,10 @@ public partial class DetailPanelBuilder
             }
         }
 
-        return MakeSectionSummaryInlines(entries);
-    }
-
-    /// <summary>
-    /// Builds a collapsible section: a clickable header row (arrow + title) and a body
-    /// StackPanel whose visibility is toggled on click.
-    /// The collapsed state is persisted in SettingsViewModel.CollapsedDetailSections.
-    /// Returns a StackPanel containing [header, body] that should be added to the parent panel.
-    /// The caller should add all section body content into the returned <paramref name="body"/> panel.
-    /// </summary>
-    internal (StackPanel wrapper, StackPanel body) MakeSectionHeader(string title, string sectionKey)
-    {
-        var settings = _window.ViewModel.Settings;
-        bool isCollapsed = settings.CollapsedDetailSections.Contains(sectionKey);
-
-        var arrowText = new TextBlock
-        {
-            Text        = isCollapsed ? "▶" : "▼",
-            FontSize    = 10,
-            Foreground  = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin      = new Thickness(0, 0, 6, 0),
-        };
-
-        var titleText = new TextBlock
-        {
-            Text       = title,
-            FontSize   = 13,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-
-        var headerRow = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing     = 0,
-        };
-        headerRow.Children.Add(arrowText);
-        headerRow.Children.Add(titleText);
-
-        // Make the header row behave like a button
-        headerRow.PointerEntered += (s, e) => titleText.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
-        headerRow.PointerExited  += (s, e) => titleText.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-
-        // Hand cursor on hover
-        var handCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var arrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
-        var cursorProp  = DetailPanelBuilder.CursorProp;
-        headerRow.PointerEntered += (s, e) => cursorProp?.SetValue(headerRow, handCursor);
-        headerRow.PointerExited  += (s, e) => cursorProp?.SetValue(headerRow, arrowCursor);
-
-        var body = new StackPanel
-        {
-            Spacing    = 10,
-            Visibility = isCollapsed ? Visibility.Collapsed : Visibility.Visible,
-        };
-
-        // Toggle on click
-        headerRow.PointerPressed += (s, e) =>
-        {
-            bool nowCollapsed = body.Visibility == Visibility.Visible;
-            body.Visibility = nowCollapsed ? Visibility.Collapsed : Visibility.Visible;
-            arrowText.Text  = nowCollapsed ? "▶" : "▼";
-
-            if (nowCollapsed)
-                settings.CollapsedDetailSections.Add(sectionKey);
-            else
-                settings.CollapsedDetailSections.Remove(sectionKey);
-
-            _window.ViewModel.SaveSettingsPublic();
-        };
-
-        var wrapper = new StackPanel { Spacing = 8 };
-        wrapper.Children.Add(headerRow);
-        wrapper.Children.Add(body);
-        return (wrapper, body);
+        return MakeSectionSummaryInlines(entries,
+            "Game overrides that differ from the defaults.\n"
+            + "RS = ReShade, RDX = RenoDX, RL = ReLimiter, DC = Display Commander, OS = OptiScaler.\n"
+            + "API = graphics API override. Args = launch arguments. DLL = custom DLL file name.\n"
+            + "Excluded = components Update All skips for this game.");
     }
 }

@@ -848,11 +848,14 @@ public partial class MainViewModel
         // Bespoke pre-install dialog for Control Ultimate Edition
         if (string.Equals(card.GameName, ControlUePostInstallService.GameName, StringComparison.OrdinalIgnoreCase))
         {
-            if (!await ControlUePostInstallService.ShowInstallDialogAsync(card.InstallPath))
+            var controlOpts = await ControlUePostInstallService.ShowInstallDialogAsync(card.InstallPath);
+            if (!controlOpts.Proceed)
             {
                 if (swappedTo32 && originalSnapshotUrl != null) card.Mod.SnapshotUrl = originalSnapshotUrl;
                 return;
             }
+            // Store options so they can be passed to RunAsync after the mod installs
+            _controlUeInstallOptions = controlOpts;
         }
 
         card.IsInstalling = true;
@@ -979,7 +982,9 @@ public partial class MainViewModel
             // ── Control Ultimate Edition special post-install ──────────────────
             if (ControlUePostInstallService.IsControlAddon(record.AddonFileName))
             {
-                await ControlUePostInstallService.RunAsync(card.GameName, card.InstallPath).ConfigureAwait(false);
+                var controlOpts = _controlUeInstallOptions;
+                _controlUeInstallOptions = null; // clear after use
+                await ControlUePostInstallService.RunAsync(card.GameName, card.InstallPath, controlOpts).ConfigureAwait(false);
 
                 // Rescan DLSS — nvngx_dlss.dll and nvngx_dlssd.dll were just deployed.
                 // Update the card's detection result and rebuild the overrides panel so
@@ -1038,6 +1043,10 @@ public partial class MainViewModel
                 // Recalculate counts only — do NOT call ApplyFilter() which
                 // would Clear() + re-add every card and flash the whole UI.
                 _filterViewModel.UpdateCounts();
+                // Rebuild the detail panel directly — the game is already selected so
+                // SelectionChanged won't fire, and NotifyAll() doesn't re-run the
+                // imperative panel builders.
+                RequestCardRebuild?.Invoke(card);
             });
         }
         catch (Exception ex)
@@ -1055,16 +1064,6 @@ public partial class MainViewModel
                     card.Mod.SnapshotUrl = originalSnapshotUrl;
             });
         }
-    }
-
-    [RelayCommand]
-    public async Task InstallMod32Async(GameCardViewModel? card)
-    {
-        if (card?.Mod?.SnapshotUrl32 == null) return;
-        var orig = card.Mod.SnapshotUrl;
-        card.Mod.SnapshotUrl = card.Mod.SnapshotUrl32;
-        await InstallModAsync(card);
-        card.Mod.SnapshotUrl = orig;
     }
 
     [RelayCommand]
@@ -1125,6 +1124,7 @@ public partial class MainViewModel
 
         SaveLibrary();
         _filterViewModel.UpdateCounts();
+        RequestCardRebuild?.Invoke(card);
     }
 
     // ── ReLimiter commands ────────────────────────────────────────────────────

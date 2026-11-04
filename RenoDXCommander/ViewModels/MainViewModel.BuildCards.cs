@@ -69,6 +69,30 @@ public partial class MainViewModel
         var newEngineTypeCache   = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var newResolvedPathCache = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var newBitnessCache      = new ConcurrentDictionary<string, MachineType>(StringComparer.OrdinalIgnoreCase);
+        var newEngineFolderStamps = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // Unknown-engine reuse: one folder fingerprint per game per run, shared by the
+        // "is the cached Unknown still valid?" check and the value saved for next launch.
+        var computedStamps = new ConcurrentDictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        string? StampFor(string rootKey, string root) =>
+            computedStamps.GetOrAdd(rootKey, _ => EngineFolderStamp.Compute(root));
+        bool UnknownStillValid(string rootKey, string root) =>
+            _engineFolderStamps.TryGetValue(rootKey, out var saved) && saved == StampFor(rootKey, root);
+        int engineScans = 0, unknownReused = 0, pcgwSkips = 0;
+
+        // True when PCGW names an engine other than the ones detection looks for. Unreal (any
+        // version), Unity and RE Engine — or no PCGW entry — still get the full scan, so a wrong
+        // or missing PCGW entry can't stop a supported engine being detected.
+        bool PcgwSaysOtherEngine(string gameName, out string? pcgwEngine)
+        {
+            pcgwEngine = _pcgwService.GetCachedApiInfo(gameName)?.Engine;
+            if (string.IsNullOrWhiteSpace(pcgwEngine)) return false;
+            return !(pcgwEngine.Contains("Unreal", StringComparison.OrdinalIgnoreCase)
+                  || pcgwEngine.Contains("Unity", StringComparison.OrdinalIgnoreCase)
+                  || pcgwEngine.Contains("RE Engine", StringComparison.OrdinalIgnoreCase));
+        }
+        long engineScanMs = 0;
+        var detectTimer = System.Diagnostics.Stopwatch.StartNew();
 
         var gameInfos = detectedGames.AsParallel().Select(game =>
         {
@@ -99,16 +123,31 @@ public partial class MainViewModel
                 engine = engineOverride;
             }
             else if (_engineTypeCache.TryGetValue(rootKey, out var cachedEngine)
-                && !string.Equals(cachedEngine, nameof(EngineType.Unknown), StringComparison.OrdinalIgnoreCase)
                 && _resolvedPathCache.TryGetValue(rootKey, out var cachedPath)
-                && Directory.Exists(cachedPath))
+                && Directory.Exists(cachedPath)
+                && (!string.Equals(cachedEngine, nameof(EngineType.Unknown), StringComparison.OrdinalIgnoreCase)
+                    || UnknownStillValid(rootKey, game.InstallPath)))
             {
+                // Known engines are reused as-is. Unknown is reused only while the folder
+                // fingerprint is unchanged — a game still downloading or just patched re-scans.
                 installPath = cachedPath;
                 engine = Enum.TryParse<EngineType>(cachedEngine, out var e) ? e : EngineType.Unknown;
+                if (engine == EngineType.Unknown) Interlocked.Increment(ref unknownReused);
+            }
+            else if (PcgwSaysOtherEngine(game.Name, out var pcgwEngine))
+            {
+                // PCGW names an engine RHI has no special handling for (Frostbite, RAGE, Northlight…),
+                // so the marker scan would only end in Unknown. Just find the exe folder.
+                installPath = _gameDetectionService.DetectExeFolder(game.InstallPath);
+                engine = EngineType.Unknown;
+                Interlocked.Increment(ref pcgwSkips);
             }
             else
             {
+                var scanTimer = System.Diagnostics.Stopwatch.StartNew();
                 (installPath, engine) = _gameDetectionService.DetectEngineAndPath(game.InstallPath);
+                Interlocked.Increment(ref engineScans);
+                Interlocked.Add(ref engineScanMs, scanTimer.ElapsedMilliseconds);
             }
 
             // Apply manifest engine override (takes priority over auto-detection and cache)
@@ -117,6 +156,11 @@ public partial class MainViewModel
             // Record for saving
             newEngineTypeCache[rootKey]   = engine.ToString();
             newResolvedPathCache[rootKey] = installPath;
+            if (engine == EngineType.Unknown && engineOverrideLabel == null)
+            {
+                var stamp = StampFor(rootKey, game.InstallPath);
+                if (stamp != null) newEngineFolderStamps[rootKey] = stamp;
+            }
 
             // Apply per-game install path overrides (e.g. Cyberpunk 2077 → bin\x64)
             // Supports pipe-separated paths (try each, use first that exists)
@@ -189,6 +233,10 @@ public partial class MainViewModel
         _engineTypeCache   = new Dictionary<string, string>(newEngineTypeCache, StringComparer.OrdinalIgnoreCase);
         _resolvedPathCache = new Dictionary<string, string>(newResolvedPathCache, StringComparer.OrdinalIgnoreCase);
         _bitnessCache      = new Dictionary<string, MachineType>(newBitnessCache, StringComparer.OrdinalIgnoreCase);
+        _engineFolderStamps = new Dictionary<string, string>(newEngineFolderStamps, StringComparer.OrdinalIgnoreCase);
+        _crashReporter.Log($"[BuildCards] Engine detection: {detectTimer.ElapsedMilliseconds} ms for {gameInfos.Count} games — "
+            + $"{engineScans} folder scans ({engineScanMs} ms total), {unknownReused} unchanged Unknown reused, "
+            + $"{pcgwSkips} skipped via PCGW engine");
         var newAddonFileCache = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var safeAddonCache = new ConcurrentDictionary<string, bool>(addonCache, StringComparer.OrdinalIgnoreCase);
         var cardBag = new ConcurrentBag<GameCardViewModel>();
@@ -236,6 +284,16 @@ public partial class MainViewModel
                 && !record.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase))
             {
                 var oldPath = record.InstallPath;
+
+                // Skip reconciliation if the old path is a parent of the new path (subfolder case).
+                // e.g. old="\The Witcher 3", new="\The Witcher 3\bin\x64_dx12" — the new path is
+                // just a corrected subfolder, not a genuine move. Copying the old addon here would
+                // overwrite a newly-installed different addon with the wrong file.
+                bool oldIsParentOfNew = installPath.StartsWith(oldPath.TrimEnd('\\', '/') + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase);
+
+                if (!oldIsParentOfNew)
+                {
                 var addonFile = record.AddonFileName;
                 // Check both raw install path and addon deploy subfolder
                 var newDeployPath = ModInstallService.GetAddonDeployPath(installPath);
@@ -270,6 +328,7 @@ public partial class MainViewModel
                 {
                     _crashReporter.Log($"[BuildCards] Path reconciliation: '{game.Name}' path changed '{oldPath}' → '{installPath}', addon not found at either path (mod lost during game update)");
                 }
+                } // end !oldIsParentOfNew
 
                 // Always update the record to the new detected path
                 record.InstallPath = installPath;
@@ -689,6 +748,8 @@ public partial class MainViewModel
                 IsManuallyAdded        = game.IsManuallyAdded,
                 UseUeExtended          = useUeExt,
                 IsRtxHdrEnabled        = _gameNameService.RtxHdrGames.Contains(game.Name),
+                IsAutoHdrEnabled       = _gameNameService.AutoHdrGames.Contains(game.Name),
+                AutoHdrStrength        = _gameNameService.AutoHdrStrengths.TryGetValue(game.Name, out var ahStr) ? ahStr : 50,
                 IsExternalOnly         = _wikiExclusions.Contains(game.Name)
                                          ? false
                                          : effectiveMod?.SnapshotUrl == null &&
@@ -883,9 +944,9 @@ public partial class MainViewModel
                     }
                     else
                     {
-                        var chosenPath = isXboxCard
+                        var chosenPath = AuxInstallService.PcgwConfigPathToCandidates(isXboxCard
                             ? pcgwInfo?.ConfigPathXbox
-                            : pcgwInfo?.ConfigPath;
+                            : pcgwInfo?.ConfigPath);
 
                         if (chosenPath != null
                             && (engine == EngineType.Unreal
@@ -1103,7 +1164,9 @@ public partial class MainViewModel
                     newCard.OsInstalledVersion = !string.IsNullOrEmpty(osGameManifest?.Version)
                         ? osGameManifest.Version
                         : osRec.OsVariant switch {
-                            "Nightly" => _optiScalerService.StagedVersionNightly,
+                            "Nightly" => !string.IsNullOrEmpty(osRec.OsNightlyBuild)
+                                ? osRec.OsNightlyBuild
+                                : _optiScalerService.StagedVersionNightly,
                             "DlssNr"  => _optiScalerService.StagedVersionDlssNr,
                             _         => _optiScalerService.StagedVersion
                         };
@@ -1350,6 +1413,34 @@ public partial class MainViewModel
             {
                 try
                 {
+                    // Manifest override: check if a known DLSS path is specified (avoids deep recursive scan)
+                    if (_manifest?.DlssPathOverrides?.TryGetValue(game.Name, out var dlssRelPath) == true
+                        && !string.IsNullOrEmpty(dlssRelPath))
+                    {
+                        var dlssAbsPath = Path.Combine(game.InstallPath, dlssRelPath);
+                        if (Directory.Exists(dlssAbsPath))
+                        {
+                            string? slAbsPath = null;
+                            if (_manifest?.StreamlinePathOverrides?.TryGetValue(game.Name, out var slRelPath) == true
+                                && !string.IsNullOrEmpty(slRelPath))
+                                slAbsPath = Path.Combine(game.InstallPath, slRelPath);
+
+                            var overrideResult = _dlssStreamlineService.DetectFromExactPath(dlssAbsPath, slAbsPath);
+                            if (overrideResult.HasAny)
+                            {
+                                newCard.ApplyDlssDetection(overrideResult);
+                                _dlssStreamlineService.RecordDlssFound(game.Name);
+                                _dlssStreamlineService.RecordTrustedPath(game.Name, overrideResult);
+                                _crashReporter.Log($"[BuildCards] DLSS manifest path override for '{game.Name}': {dlssAbsPath}");
+                            }
+                            else
+                                _crashReporter.Log($"[BuildCards] DLSS manifest path override for '{game.Name}' found no DLLs in '{dlssAbsPath}'");
+                            goto dlssDone;
+                        }
+                        else
+                            _crashReporter.Log($"[BuildCards] DLSS manifest path override for '{game.Name}' — dir not found: '{dlssAbsPath}'");
+                    }
+
                     // Try fast path first (trusted cached paths — no recursive scan)
                     var fastResult = _dlssStreamlineService.TryFastDetect(game.Name, installPath);
                     if (fastResult != null)
@@ -1380,6 +1471,7 @@ public partial class MainViewModel
                 {
                     _crashReporter.Log($"[BuildCards] DLSS detection failed for '{game.Name}' — {ex.Message}");
                 }
+                dlssDone:;
             }
 
             if (lumaMatch != null)
@@ -1411,6 +1503,7 @@ public partial class MainViewModel
                     {
                         Name = game.Name,
                         IsGenericLuma = true,
+                        Author = "Pumbo",
                         DownloadUrl = "https://github.com/Filoppi/Luma-Framework/releases/latest/download/Luma-Unreal_Engine.zip",
                         Status = "✅",
                     };
@@ -1489,7 +1582,7 @@ public partial class MainViewModel
             // Set cached MFG state for Extras panel (avoid File.Exists on UI thread)
             {
                 var mfgAdaPath = !string.IsNullOrEmpty(installPath)
-                    ? Path.Combine(installPath, "renodx-mfgunlock.addon64")
+                    ? Path.Combine(ModInstallService.GetAddonDeployPath(installPath), "renodx-mfgunlock.addon64")
                     : null;
                 bool mfgAdaInstalled = mfgAdaPath != null && File.Exists(mfgAdaPath);
 
@@ -1543,7 +1636,10 @@ public partial class MainViewModel
                             _crashReporter.Log($"[BuildCards] PCGW resolved post-loop: '{card.GameName}' → {url}");
                             // If this card is currently selected, trigger a panel rebuild so the PCGW button appears
                             if (SelectedGame == card)
+                            {
+                                _crashReporter.Log($"[RefreshTrigger] PCGW URL resolved for selected '{card.GameName}' — dispatching RequestCardRebuild");
                                 DispatcherQueue?.TryEnqueue(() => RequestCardRebuild?.Invoke(card));
+                            }
                         }
                     }
                     catch (Exception ex)

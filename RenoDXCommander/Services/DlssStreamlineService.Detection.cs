@@ -6,6 +6,43 @@ public partial class DlssStreamlineService
 {
     // ── Detection ─────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Reads DLSS/Streamline DLL versions directly from a known exact folder path.
+    /// Used when the manifest specifies a <c>dlssPathOverrides</c> entry —
+    /// skips recursive scanning entirely and just checks known DLL filenames.
+    /// </summary>
+    public DlssDetectionResult DetectFromExactPath(string exactFolderPath, string? streamlineFolderPath = null)
+    {
+        var result = new DlssDetectionResult();
+        if (string.IsNullOrEmpty(exactFolderPath) || !Directory.Exists(exactFolderPath)) return result;
+
+        void TryDll(string folder, string dllName, Action<string, string?> setter)
+        {
+            var path = Path.Combine(folder, dllName);
+            if (File.Exists(path)) setter(path, GetFileVersion(path));
+        }
+
+        TryDll(exactFolderPath, DlssDllName,  (p, v) => { result.DlssPath  = p; result.DlssVersion  = v; });
+        TryDll(exactFolderPath, DlssdDllName, (p, v) => { result.DlssdPath = p; result.DlssdVersion = v; });
+        TryDll(exactFolderPath, DlssgDllName, (p, v) => { result.DlssgPath = p; result.DlssgVersion = v; });
+        TryDll(exactFolderPath, DlssnrDllName,(p, v) => { result.DlssnrPath = p; result.DlssnrVersion = v; });
+
+        // Check Streamline — use dedicated path if provided, else check DLSS folder
+        var slFolder = (!string.IsNullOrEmpty(streamlineFolderPath) && Directory.Exists(streamlineFolderPath))
+            ? streamlineFolderPath : exactFolderPath;
+        var slInterposer = Path.Combine(slFolder, StreamlineIndicator);
+        if (File.Exists(slInterposer))
+        {
+            result.StreamlineFolder = slFolder;
+            result.StreamlineInterposerPath = slInterposer;
+            result.StreamlineVersion = GetFileVersion(slInterposer);
+        }
+        // nvngx_dlssg.dll often lives alongside Streamline rather than DLSS — check Streamline folder too
+        if (result.DlssgPath == null)
+            TryDll(slFolder, DlssgDllName, (p, v) => { result.DlssgPath = p; result.DlssgVersion = v; });
+        return result;
+    }
+
     /// <inheritdoc />
     public DlssDetectionResult Detect(string installPath)
     {
@@ -306,9 +343,9 @@ public partial class DlssStreamlineService
                 }
             }
         }
-        catch (UnauthorizedAccessException) { }
-        catch (DirectoryNotFoundException) { }
-        catch (IOException) { } // catches path-too-long errors
+        catch (UnauthorizedAccessException) { /* inaccessible folder; skip (runs for every game on every scan, too noisy to log) */ }
+        catch (DirectoryNotFoundException) { /* folder removed mid-scan; skip */ }
+        catch (IOException) { /* path too long etc.; skip */ } // catches path-too-long errors
 
         // Recurse into subdirectories, skipping any that are inaccessible
         try
@@ -318,8 +355,8 @@ public partial class DlssStreamlineService
                 SearchDirectory(subDir, result, depth + 1);
             }
         }
-        catch (UnauthorizedAccessException) { }
-        catch (DirectoryNotFoundException) { }
-        catch (IOException) { } // catches path-too-long and circular symlink errors
+        catch (UnauthorizedAccessException) { /* inaccessible subfolder; skip (runs for every game on every scan, too noisy to log) */ }
+        catch (DirectoryNotFoundException) { /* folder removed mid-scan; skip */ }
+        catch (IOException) { /* path too long / symlink loop; skip */ } // catches path-too-long and circular symlink errors
     }
 }

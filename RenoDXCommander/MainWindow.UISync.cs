@@ -26,6 +26,10 @@ public sealed partial class MainWindow
                     var loading = ViewModel.IsLoading;
                     // After initial boot, keep the game view visible during refreshes
                     bool silent = ViewModel.HasInitialized;
+                    // A refresh replaces all card objects. Clear _lastBuiltCard so the
+                    // post-refresh debounce always triggers a fresh panel build regardless
+                    // of which game was selected before the refresh started.
+                    if (loading) _lastBuiltCard = null;
                     if (!loading && !silent && ViewModel.CurrentPage == AppPage.GameView)
                     {
                         RemoveSkeletons();
@@ -38,15 +42,33 @@ public sealed partial class MainWindow
                     if (!silent) SettingsBtn.IsEnabled = !loading;
                     // Lock Back button during refresh from Settings page
                     SettingsBackBtn.IsEnabled = !loading;
+                    RefreshStatusBar();
                     if (!silent) StatusDot.Fill = new SolidColorBrush(loading
                         ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
                         : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentGreenBrush]).Color);
+                    if (!silent) ToolTipService.SetToolTip(StatusDot, loading
+                        ? "Scanning your game library…"
+                        : "Game library up to date.");
                     if (!loading)
                     {
                         if (!silent) ViewModel.MarkInitialized();
                         TryRestoreSelection();
                         RefreshFilterButtonStyles();
                         RebuildCustomFilterChips();
+
+                        // Show one-line notice in status bar if this session was auto-restarted after a freeze
+                        if (ViewModel.WasAutoRestarted)
+                        {
+                            ShowStatusBarMessage("⚠ RHI restarted after a UI freeze — check Settings → session log for details",
+                                TimeSpan.FromSeconds(12));
+                        }
+
+                        // Show one-line notice if the GitHub token was found to be expired/revoked at startup
+                        if (App._gitHubTokenExpiredOnStartup)
+                        {
+                            ShowStatusBarMessage("⚠ GitHub sign-in expired — add a token in Settings → Accounts & Data to restore the download rate limit",
+                                TimeSpan.FromSeconds(15));
+                        }
                         // On Refresh (silent=true), the ListView still has its old item selected
                         // so SelectionChanged never fires and PopulateDetailPanel never runs.
                         // Force a panel rebuild for the currently displayed card.
@@ -66,7 +88,13 @@ public sealed partial class MainWindow
                                         GameList.SelectedItem = refreshed;
                                         ViewModel.SelectedGame = refreshed;
                                         PopulateDetailPanel(refreshed);
+                                        DetailPanel.Visibility = Visibility.Visible;
                                         BuildOverridesPanel(refreshed);
+                                        if (OverridesContainer.Visibility != Visibility.Visible)           OverridesContainer.Visibility = Visibility.Visible;
+                                        if (NeuralRenderingContainer.Visibility != Visibility.Visible)     NeuralRenderingContainer.Visibility = Visibility.Visible;
+                                        if (NvidiaProfileDlssContainer.Visibility != Visibility.Visible)   NvidiaProfileDlssContainer.Visibility = Visibility.Visible;
+                                        if (NvidiaProfileDriverContainer.Visibility != Visibility.Visible) NvidiaProfileDriverContainer.Visibility = Visibility.Visible;
+                                        if (ManagementContainer.Visibility != Visibility.Visible)          ManagementContainer.Visibility = Visibility.Visible;
                                         _detailPanelBuilder?.ApplySectionOrder();
                                     }
                                 });
@@ -77,8 +105,10 @@ public sealed partial class MainWindow
                 case nameof(ViewModel.SubStatusText):
                     LoadingTitle.Text    = ViewModel.StatusText;
                     LoadingSubtitle.Text = ViewModel.SubStatusText;
-                    StatusBarText.Text   = ViewModel.StatusText
-                        + (string.IsNullOrEmpty(ViewModel.SubStatusText) ? "" : $"  —  {ViewModel.SubStatusText}");
+                    RefreshStatusBar();
+                    break;
+                case nameof(ViewModel.CurrentActivityText):
+                    RefreshStatusBar();
                     break;
                 case nameof(ViewModel.InstalledCount):
                     InstalledCountText.Text = $"{ViewModel.InstalledCount} ReShade";
@@ -101,6 +131,12 @@ public sealed partial class MainWindow
                     // the new brushes immediately instead of waiting for pointer interaction.
                     Microsoft.UI.Xaml.VisualStateManager.GoToState(UpdateBtn, "Normal", false);
                     break;
+                case nameof(ViewModel.IsBackgroundScanning):
+                    HdrModsListBtn.IsEnabled = !ViewModel.IsBackgroundScanning;
+                    ToolTipService.SetToolTip(HdrModsListBtn, ViewModel.IsBackgroundScanning
+                        ? "Loading mod data, please wait..."
+                        : "Browse all games with available HDR mods");
+                    break;
                 case nameof(ViewModel.CurrentPage):
                     UpdatePageVisibility();
                     break;
@@ -118,6 +154,13 @@ public sealed partial class MainWindow
         SettingsPanel.Visibility = ViewModel.CurrentPage == AppPage.Settings ? Visibility.Visible : Visibility.Collapsed;
         AboutPanel.Visibility    = ViewModel.CurrentPage == AppPage.About    ? Visibility.Visible : Visibility.Collapsed;
         FaqPanel.Visibility      = ViewModel.CurrentPage == AppPage.Faq      ? Visibility.Visible : Visibility.Collapsed;
+
+        // A layout change made on the Settings page rebuilds the game page now it's visible again
+        if (_layoutRebuildPending && ViewModel.CurrentPage == AppPage.GameView)
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (_layoutRebuildPending && ViewModel.CurrentPage == AppPage.GameView) RebuildForLayout();
+            });
 
         // Auto-select first game if nothing is selected
         if (GameList.SelectedItem == null && ViewModel.DisplayedGames.Count > 0)
@@ -143,6 +186,7 @@ public sealed partial class MainWindow
             b.Background  = new SolidColorBrush(isActive ? active   : inactive);
             b.Foreground  = new SolidColorBrush(isActive ? activeFg : inactiveFg);
         }
+        if (_tabsChromeOn) RefreshTabsChromeSoon(); // Tabs: segmented filter + Filters count
     }
 
     private void TryRestoreSelection()
@@ -200,31 +244,60 @@ public sealed partial class MainWindow
         _detailPanelBuilder.PopulateDetailPanel(card);
     }
 
-    private void UpdateDetailComponentRows(GameCardViewModel card) => _detailPanelBuilder.UpdateDetailComponentRows(card);
-
     private void DetailCard_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => _detailPanelBuilder.DetailCard_PropertyChanged(sender, e);
 
     internal void BuildOverridesPanel(GameCardViewModel card)
     {
         ViewModel.SetLastUiAction($"BuildOverridesPanel({card.GameName})");
+        _lastBuiltCard = card;
         _detailPanelBuilder.BuildOverridesPanel(card);
     }
 
-    internal void UpdateLumaToggleStyle(bool isLumaMode)
+    /// <summary>
+    /// Re-lays out the game page after Settings › General › Layout changes. Rebuilds the shown
+    /// game once, because sections are built expanded or collapsed for the layout they're in.
+    /// </summary>
+    internal void ApplyMainLayout()
     {
-        DetailLumaToggleText.Text = isLumaMode ? "Luma ON" : "Luma OFF";
-        if (isLumaMode)
+        CrashReporter.Log($"[MainWindow.ApplyMainLayout] Layout = {ViewModel.Settings.MainLayout}");
+        UpdateDetailPanelWidth();
+        ApplyTabsChrome();
+
+        // The Layout setting is changed on the Settings page, where DLSS, Driver Settings and
+        // Neural Rendering skip their background build (freeze guard). Rebuilding now would leave
+        // them empty, so rebuild once the game page is showing again.
+        if (ViewModel.CurrentPage != AppPage.GameView)
         {
-            DetailLumaToggle.Background = Brush(ResourceKeys.AccentGreenBgBrush);
-            DetailLumaToggle.Foreground = Brush(ResourceKeys.AccentGreenBrush);
-            DetailLumaToggle.BorderBrush = Brush(ResourceKeys.AccentGreenBorderBrush);
+            _layoutRebuildPending = true;
+            return;
         }
-        else
+        RebuildForLayout();
+    }
+
+    private bool _layoutRebuildPending;
+
+    private void RebuildForLayout()
+    {
+        _layoutRebuildPending = false;
+        if (ViewModel.SelectedGame is { } card && DetailPanel.Visibility == Visibility.Visible)
         {
-            DetailLumaToggle.Background = Brush(ResourceKeys.SurfaceOverlayBrush);
-            DetailLumaToggle.Foreground = Brush(ResourceKeys.TextTertiaryBrush);
-            DetailLumaToggle.BorderBrush = Brush(ResourceKeys.BorderStrongBrush);
+            PopulateDetailPanel(card);
+            BuildOverridesPanel(card);
+
+            // Classic's Extras rows size their columns from the container's width, which is still
+            // the wide Tabs width at this point. Rebuild them once the narrower layout has happened.
+            if (!_detailPanelBuilder.Layout.IsTabs)
+            {
+                void OnResized(object s, SizeChangedEventArgs e)
+                {
+                    ExtrasContainer.SizeChanged -= OnResized;
+                    if (ReferenceEquals(ViewModel.SelectedGame, card))
+                        _detailPanelBuilder.RequestExtrasRebuild(card);
+                }
+                ExtrasContainer.SizeChanged += OnResized;
+            }
         }
+        _detailPanelBuilder.ApplySectionOrder();
     }
 
     /// <summary>Allows DetailPanelBuilder to trigger a pending reselect after overrides save.</summary>
@@ -236,23 +309,8 @@ public sealed partial class MainWindow
 
     // ── Dialog delegation ─────────────────────────────────────────────────────────
 
-    private async Task<bool> ShowForeignDxgiConfirmDialogAsync(GameCardViewModel card, string dxgiPath)
-        => await _dialogService.ShowForeignDxgiConfirmDialogAsync(card, dxgiPath);
-
     private async Task CheckForAppUpdateAsync()
         => await _dialogService.CheckForAppUpdateAsync();
-
-    private async Task ShowUpdateDialogAsync(UpdateInfo updateInfo)
-        => await _dialogService.ShowUpdateDialogAsync(updateInfo);
-
-    private async Task DownloadAndInstallUpdateAsync(UpdateInfo updateInfo)
-        => await _dialogService.DownloadAndInstallUpdateAsync(updateInfo);
-
-    private async Task ShowPatchNotesIfNewVersionAsync()
-        => await _dialogService.ShowPatchNotesIfNewVersionAsync();
-
-    private async Task ShowMotdIfNewAsync()
-        => await _dialogService.ShowMotdIfNewAsync();
 
     private async Task ShowPatchNotesDialogAsync()
         => await _dialogService.ShowPatchNotesDialogAsync();

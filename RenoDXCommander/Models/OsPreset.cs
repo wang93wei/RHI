@@ -7,6 +7,7 @@ namespace RenoDXCommander.Models;
 public class OsPreset
 {
     public string? Name                   { get; set; }  // user-editable label
+    public string? OsVariant              { get; set; }  // "Stable", "Nightly", "DlssNr" — null = don't change
     public string? FgInput                { get; set; }  // INI value e.g. "upscaler", "auto"
     public string? FgOutput               { get; set; }  // INI value e.g. "dlssg", "auto"
     public string? FgNvngxReplacement     { get; set; }  // INI value e.g. "Arturs", "None"
@@ -18,6 +19,11 @@ public class OsPreset
     public bool?   DisableFlipMetering    { get; set; }
     public string? HudFix                 { get; set; }  // "true", "false", "auto"
     public float?  FramerateLimit         { get; set; }  // fps value, 0 = Off
+    public string? UpscalerApi            { get; set; }  // "DX11", "DX12", "Vulkan"
+    public string? Upscaler               { get; set; }  // INI value e.g. "dlss", "xess", "auto"
+    public string? FgEnabled              { get; set; }  // "true", "false" (auto = not set)
+    public string? ForceReflex            { get; set; }  // "0", "1", "2"
+    public string? UseGamesReflexMarkers  { get; set; }  // "true", "false"
     // ── DLSS NR preset fields ─────────────────────────────────────────────────
     public string? NrRuntime              { get; set; }  // e.g. "310.8.2", "310.8.SF-v2"
     public string? NrEnabled              { get; set; }  // "true", "false", "auto"
@@ -25,4 +31,16 @@ public class OsPreset
     public string? NrPasses               { get; set; }  // "1", "2", "3", "auto"
     public string? NrWorkingScale         { get; set; }  // "0.5", "0.75", "1.0", "1.5", "auto"
     public string? NrFinishedPicture      { get; set; }  // "true", "false", "auto"
+    // ── Ready-made presets (optiscaler_presets.json) ──────────────────────────
+    public string? Id                     { get; set; }  // stable id, e.g. "RealDlssFg"
+    public string? Description            { get; set; }  // one line, shown under the buttons and as the tooltip
+    public string? StreamlineVersion      { get; set; }  // "latest" or a version like "2.14.16"
+    public bool?   InstallUniversalMfg    { get; set; }  // installs Universal MFG Unlocker if it's missing
+}
+
+/// <summary>The optiscaler_presets.json file: ready-made OptiScaler presets shown in the OptiScaler cog.</summary>
+public class OsPresetManifest
+{
+    public int Version { get; set; }
+    public List<OsPreset>? Presets { get; set; }
 }

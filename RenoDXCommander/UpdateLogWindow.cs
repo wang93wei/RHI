@@ -124,15 +124,39 @@ public sealed class UpdateLogWindow : Window
             Foreground  = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
         };
-        clearBtn.Click += (_, _) =>
+        ToolTipService.SetToolTip(clearBtn, "Delete the whole update history. This can't be undone.");
+        clearBtn.Click += async (_, _) =>
         {
-            _updateLogService.Clear();
-            DispatcherQueue.TryEnqueue(() =>
+            try
             {
-                listPanel.Children.Clear();
-                BuildEntryList(listPanel);
-                countText.Text = "No updates recorded yet.";
-            });
+                // This window has its own XamlRoot, so a ContentDialog can be shown here.
+                var xamlRoot = clearBtn.XamlRoot;
+                if (xamlRoot == null) return;
+                var confirm = new ContentDialog
+                {
+                    Title             = "Clear update history?",
+                    Content           = "This deletes every entry in the update history. It can't be undone.",
+                    PrimaryButtonText = "Clear History",
+                    CloseButtonText   = "Cancel",
+                    DefaultButton     = ContentDialogButton.Close,
+                    XamlRoot          = xamlRoot,
+                    RequestedTheme    = ElementTheme.Dark,
+                };
+                if (await DialogService.ShowSafeAsync(confirm) != ContentDialogResult.Primary) return;
+
+                _updateLogService.Clear();
+                CrashReporter.Log("[UpdateLogWindow.ClearHistory] Update history cleared");
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    listPanel.Children.Clear();
+                    BuildEntryList(listPanel);
+                    countText.Text = "No updates recorded yet.";
+                });
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[UpdateLogWindow.ClearHistory] Failed — {ex.Message}");
+            }
         };
         Grid.SetColumn(clearBtn, 1);
         footerRow.Children.Add(clearBtn);
@@ -253,6 +277,8 @@ public sealed class UpdateLogWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming      = TextTrimming.CharacterEllipsis,
         };
+        if (!string.IsNullOrEmpty(versionStr))
+            ToolTipService.SetToolTip(versionText, versionStr);
         Grid.SetColumn(versionText, 2);
         row.Children.Add(versionText);
 
@@ -282,16 +308,24 @@ public sealed class UpdateLogWindow : Window
 
     private static string BuildVersionString(UpdateLogEntry entry)
     {
-        // Shader pack version tokens are either filenames (source_v4.2.zip) or content hashes.
-        // Show the filename if it looks like one, otherwise just "Updated".
+        // GhRelease packs now store tag_name directly (e.g. "v4.2", "2026.09.10").
+        // DirectUrl packs store an ETag or Last-Modified header — unreadable, show "Updated".
         string FormatVersion(string? v)
         {
             if (string.IsNullOrEmpty(v)) return "";
-            // Hash: 40+ hex chars — not user-friendly
-            if (v.Length >= 32 && v.All(c => "0123456789abcdefABCDEF\"".Contains(c)))
+            // Strip surrounding quotes (ETag format)
+            v = v.Trim('"');
+            // Hash / ETag: 32+ hex chars — not user-friendly
+            if (v.Length >= 32 && v.All(c => "0123456789abcdefABCDEF-".Contains(c)))
                 return "Updated";
-            // Strip surrounding quotes if present
-            return v.Trim('"');
+            // Last-Modified date string (HTTP date format: "Wed, 01 Jan 2025 00:00:00 GMT")
+            if (v.Contains(',') && v.Contains(':'))
+                return "Updated";
+            // Legacy: old tokens were asset filenames — try to extract a version number
+            var vMatch = System.Text.RegularExpressions.Regex.Match(v, @"v?(\d+\.\d+(?:\.\d+)*)");
+            if (vMatch.Success)
+                return vMatch.Value.StartsWith("v") ? vMatch.Value : "v" + vMatch.Groups[1].Value;
+            return v;
         }
 
         var newVer = FormatVersion(entry.NewVersion);
@@ -310,10 +344,13 @@ public sealed class UpdateLogWindow : Window
         "ReShade"            => (ResourceKeys.AccentTealBgBrush,   ResourceKeys.AccentTealBrush,   ResourceKeys.AccentTealBorderBrush),
         "Addon"              => (ResourceKeys.AccentGreenBgBrush,  ResourceKeys.AccentGreenBrush,  ResourceKeys.AccentGreenBorderBrush),
         "Shader Pack"        => (ResourceKeys.AccentPurpleBgBrush, ResourceKeys.AccentPurpleBrush, ResourceKeys.AccentPurpleBorderBrush),
+        "Luma"               => (ResourceKeys.AccentPurpleBgBrush, ResourceKeys.AccentPurpleBrush, ResourceKeys.AccentPurpleBorderBrush),
         "RenoDX DLSS5"       => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),
         "DLSS Tool"          => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),
         "OptiScaler"         => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
         "OptiScaler Nightly" => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
+        "OptiScaler DLSS NR" => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
+        "OptiScaler F5"      => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
         "OptiPatcher"        => (ResourceKeys.AccentAmberBgBrush,  ResourceKeys.AccentAmberBrush,  ResourceKeys.BorderDefaultBrush),
         "DLSS"               => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),
         "Streamline"         => (ResourceKeys.AccentBlueBgBrush,   ResourceKeys.AccentBlueBrush,   ResourceKeys.AccentBlueBorderBrush),

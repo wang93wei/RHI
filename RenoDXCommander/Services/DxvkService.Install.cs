@@ -119,7 +119,7 @@ public partial class DxvkService
                 {
                     // Back up ReShade DLL so we can restore on uninstall
                     var backupPath = localReshade + ".reshade_backup";
-                    try { File.Copy(localReshade, backupPath, overwrite: true); } catch { }
+                    try { File.Copy(localReshade, backupPath, overwrite: true); } catch (Exception ex) { CrashReporter.Log($"[DxvkService.InstallAsync] Failed to back up ReShade d3d9.dll — {ex.Message}"); }
                     File.Delete(localReshade);
                     CrashReporter.Log("[DxvkService.InstallAsync] Direct DX9: removed local ReShade d3d9.dll (backed up)");
                 }
@@ -503,13 +503,13 @@ public partial class DxvkService
                 // Clean up backup file if d3d9.dll was restored
                 if (File.Exists(reshadeBackup) && File.Exists(d3d9Path))
                 {
-                    try { File.Delete(reshadeBackup); } catch { }
+                    try { File.Delete(reshadeBackup); } catch (Exception ex) { CrashReporter.Log($"[DxvkService.UninstallAsync] Failed to delete ReShade backup — {ex.Message}"); }
                 }
                 // Remove Vulkan footprint
                 VulkanFootprintService.Delete(gameDir);
                 // Delete the Vulkan reshade.ini and create a fresh standard DX one
                 var iniPath = Path.Combine(gameDir, "reshade.ini");
-                if (File.Exists(iniPath)) try { File.Delete(iniPath); } catch { }
+                if (File.Exists(iniPath)) try { File.Delete(iniPath); } catch (Exception ex) { CrashReporter.Log($"[DxvkService.UninstallAsync] Failed to delete Vulkan reshade.ini — {ex.Message}"); }
                 AuxInstallService.MergeRsIni(gameDir, gameName: card.GameName);
                 // Reset card to non-Vulkan — re-apply API from detection/override
                 card.VulkanRenderingPath = "DirectX";
@@ -545,7 +545,7 @@ public partial class DxvkService
                         var presetSvc = App.Services.GetRequiredService<DlssPresetService>();
                         presetSvc.ClearLiliumPresentMethod(card.GameName, card.InstallPath);
                     }
-                    catch { }
+                    catch (Exception ex) { CrashReporter.Log($"[DxvkService.UninstallAsync] Failed to clear Lilium present method — {ex.Message}"); }
                 }
                 card.NotifyAll();
                 CrashReporter.Log("[DxvkService.Uninstall] Direct DX9: switched back to local ReShade + standard reshade.ini");
@@ -557,7 +557,7 @@ public partial class DxvkService
                 var proxyDll = Path.Combine(gameDir, ProxyDxvkDllName);
                 if (File.Exists(proxyDll))
                 {
-                    try { File.Delete(proxyDll); } catch { }
+                    try { File.Delete(proxyDll); } catch (Exception ex) { CrashReporter.Log($"[DxvkService.UninstallAsync] Failed to delete legacy proxy DLL — {ex.Message}"); }
                 }
                 RemoveProxySectionFromReShadeIni(gameDir);
                 CrashReporter.Log($"[DxvkService.Uninstall] Legacy proxy mode: removed proxy DLL + [PROXY] section");
@@ -729,19 +729,35 @@ public partial class DxvkService
     // ── CopyConfToGame ────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public void CopyConfToGame(GameCardViewModel card)
+    public string? CopyConfToGame(GameCardViewModel card)
     {
         try
         {
             if (string.IsNullOrEmpty(card.InstallPath) || !Directory.Exists(card.InstallPath))
             {
                 CrashReporter.Log($"[DxvkService.CopyConfToGame] Invalid install path for '{card.GameName}'");
-                return;
+                return "The game folder wasn't found.";
             }
 
             var destPath = Path.Combine(card.InstallPath, "dxvk.conf");
 
-            // Try to copy from the INI presets directory first
+            // For Lilium HDR variant, deploy the preset-specific conf content
+            var record = FindRecord(card.GameName, card.InstallPath);
+            bool isLilium = record?.IsLiliumHdrMode == true;
+            if (isLilium)
+            {
+                bool isDx9 = card.GraphicsApi == GraphicsApiType.DirectX9 ||
+                             (record?.InstalledDlls.Contains("d3d9.dll") == true);
+                int presetIdx = LiliumPresetIndex; // currently set for this card
+                var content = isDx9
+                    ? GetLiliumD3d9ConfContent(presetIdx)
+                    : GetLiliumD3d11ConfContent(presetIdx);
+                File.WriteAllText(destPath, content);
+                CrashReporter.Log($"[DxvkService.CopyConfToGame] Wrote Lilium HDR dxvk.conf (preset {presetIdx}, {(isDx9 ? "DX9" : "DX11")}) to '{card.GameName}'");
+                return null;
+            }
+
+            // Non-Lilium: copy from the user's INI template
             if (File.Exists(ConfTemplatePath))
             {
                 File.Copy(ConfTemplatePath, destPath, overwrite: true);
@@ -749,14 +765,15 @@ public partial class DxvkService
             }
             else
             {
-                // Fall back to writing the default template content
                 File.WriteAllText(destPath, DefaultDxvkConfContent);
                 CrashReporter.Log($"[DxvkService.CopyConfToGame] Wrote default dxvk.conf to {card.GameName}");
             }
+            return null;
         }
         catch (Exception ex)
         {
             CrashReporter.Log($"[DxvkService.CopyConfToGame] {card.GameName} — {ex.Message}");
+            return ex.Message;
         }
     }
 
@@ -1022,38 +1039,6 @@ public partial class DxvkService
     }
 
     // ── ReShade INI proxy section helpers (DX8/DX9 proxy mode) ────────
-
-    /// <summary>
-    /// Adds or updates the [PROXY] section in reshade.ini to chain to the DXVK DLL.
-    /// Creates reshade.ini if it doesn't exist.
-    /// </summary>
-    private static void AddProxySectionToReShadeIni(string gameDir)
-    {
-        var iniPath = Path.Combine(gameDir, "reshade.ini");
-        try
-        {
-            var lines = File.Exists(iniPath)
-                ? new List<string>(File.ReadAllLines(iniPath))
-                : new List<string>();
-
-            // Remove existing [PROXY] section if present
-            RemoveSection(lines, "PROXY");
-
-            // Append the new [PROXY] section
-            if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
-                lines.Add(""); // blank line separator
-            lines.Add("[PROXY]");
-            lines.Add("EnableProxyLibrary=1");
-            lines.Add($"ProxyLibrary={ProxyDxvkDllName}");
-
-            File.WriteAllLines(iniPath, lines);
-            CrashReporter.Log($"[DxvkService] Added [PROXY] section to reshade.ini → {ProxyDxvkDllName}");
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[DxvkService.AddProxySectionToReShadeIni] Failed — {ex.Message}");
-        }
-    }
 
     /// <summary>
     /// Removes the [PROXY] section from reshade.ini (or sets EnableProxyLibrary=0).

@@ -52,31 +52,25 @@ public partial class MainViewModel
         }
 
         // Specific mod — wiki tooltip note (may be null/empty if no tooltip)
-        if (fallback == null) return effectiveMod.Notes ?? "";
-
-        var notesParts = new List<string>();
-
-        if (effectiveMod.IsGenericUnreal)
+        // Also append any DB comment (game-specific notes from rhi-repo database).
+        if (fallback == null)
         {
-            var specific = GetGenericNote(gameName, genericNotes);
-            if (!string.IsNullOrEmpty(specific))
+            var dbComment = GetGenericNote(gameName, genericNotes);
+            if (!string.IsNullOrEmpty(dbComment))
             {
-                notesParts.Add("📋 Game-specific settings:");
-                notesParts.Add(specific);
+                var wikiNote = effectiveMod.Notes ?? "";
+                return string.IsNullOrEmpty(wikiNote)
+                    ? dbComment
+                    : wikiNote + "\n\n" + dbComment;
             }
-            notesParts.Add(UnrealWarnings);
-        }
-        else // Unity
-        {
-            var specific = GetGenericNote(gameName, genericNotes);
-            if (!string.IsNullOrEmpty(specific))
-            {
-                notesParts.Add("📋 Game-specific settings:");
-                notesParts.Add(specific);
-            }
+            return effectiveMod.Notes ?? "";
         }
 
-        return string.Join("\n", notesParts);
+        // Generic Unreal / Unity — game-specific DB comment only
+        var specific = GetGenericNote(gameName, genericNotes);
+        return string.IsNullOrEmpty(specific)
+            ? ""
+            : "📋 Game-specific settings:\n" + specific;
     }
 
     /// <summary>
@@ -354,7 +348,7 @@ public partial class MainViewModel
         _gameLibraryService.Save(detectedGames, addonCache, _hiddenGames, _favouriteGames, _manualGames,
             _engineTypeCache, _resolvedPathCache, _addonFileCache, _bitnessCache, LastSelectedGameName,
             dxvkEnabledGames, dxvkInstalledVersions, excludeFromUpdateAllDxvk, updateSnapshot, dlssPathsCache,
-            rsVersions, rdxVersions);
+            rsVersions, rdxVersions, _engineFolderStamps);
     }
 
     /// <summary>
@@ -383,6 +377,7 @@ public partial class MainViewModel
         _resolvedPathCache = savedLib.ResolvedPathCache ?? new(StringComparer.OrdinalIgnoreCase);
         _addonFileCache    = savedLib.AddonFileCache    ?? new(StringComparer.OrdinalIgnoreCase);
         _bitnessCache      = savedLib.BitnessCache      ?? new(StringComparer.OrdinalIgnoreCase);
+        _engineFolderStamps = savedLib.EngineFolderStamps ?? new(StringComparer.OrdinalIgnoreCase);
         LastSelectedGameName = savedLib.LastSelectedGame;
 
         // 4. Convert cached games to DetectedGame list and deduplicate
@@ -612,6 +607,9 @@ public partial class MainViewModel
                 ExcludeFromUpdateAllOs      = _gameNameService.UpdateAllExcludedOs.Contains(savedLibKey),
                 ExcludeFromUpdateAllRef     = _gameNameService.UpdateAllExcludedRef.Contains(savedLibKey),
                 UseNormalReShade           = _gameNameService.NormalReShadeGames.Contains(savedLibKey),
+                IsRtxHdrEnabled            = _gameNameService.RtxHdrGames.Contains(game.Name),
+                IsAutoHdrEnabled           = _gameNameService.AutoHdrGames.Contains(game.Name),
+                AutoHdrStrength            = _gameNameService.AutoHdrStrengths.TryGetValue(game.Name, out var ahStrC) ? ahStrC : 50,
                 ShaderModeOverride     = _perGameShaderMode.TryGetValue(savedLibKey, out var smCache) ? smCache : null,
                 VulkanRenderingPath    = _vulkanRenderingPaths.TryGetValue(savedLibKey, out var vrpCache) ? vrpCache : "DirectX",
                 DllOverrideEnabled     = _dllOverrides.ContainsKey(game.Name),
@@ -669,7 +667,9 @@ public partial class MainViewModel
                 newCard.OsInstalledVersion = !string.IsNullOrEmpty(osGameManifest?.Version)
                     ? osGameManifest.Version
                     : osRec.OsVariant switch {
-                        "Nightly" => _optiScalerService.StagedVersionNightly,
+                        "Nightly" => !string.IsNullOrEmpty(osRec.OsNightlyBuild)
+                            ? osRec.OsNightlyBuild
+                            : _optiScalerService.StagedVersionNightly,
                         "DlssNr"  => _optiScalerService.StagedVersionDlssNr,
                         _         => _optiScalerService.StagedVersion
                     };
@@ -959,7 +959,8 @@ public partial class MainViewModel
                     // Xbox: only apply when PCGW has an explicit Microsoft Store path
                     if (!isXboxCard || pcgwInfo?.ConfigPathXbox != null)
                     {
-                        var chosenPath = isXboxCard ? pcgwInfo?.ConfigPathXbox : pcgwInfo?.ConfigPath;
+                        var chosenPath = AuxInstallService.PcgwConfigPathToCandidates(
+                            isXboxCard ? pcgwInfo?.ConfigPathXbox : pcgwInfo?.ConfigPath);
                         if (chosenPath != null)
                             newCard.EngineIniProjectOverride = chosenPath;
                     }
@@ -1001,6 +1002,7 @@ public partial class MainViewModel
                 {
                     Name = game.Name,
                     IsGenericLuma = true,
+                    Author = "Pumbo",
                     DownloadUrl = "https://github.com/Filoppi/Luma-Framework/releases/latest/download/Luma-Unreal_Engine.zip",
                     Status = "✅",
                 };
@@ -1079,7 +1081,7 @@ public partial class MainViewModel
             {
                 var installPathForMfg = newCard.InstallPath ?? "";
                 var mfgAdaPath = !string.IsNullOrEmpty(installPathForMfg)
-                    ? Path.Combine(installPathForMfg, "renodx-mfgunlock.addon64")
+                    ? Path.Combine(ModInstallService.GetAddonDeployPath(installPathForMfg), "renodx-mfgunlock.addon64")
                     : null;
                 bool mfgAdaInstalled = mfgAdaPath != null && File.Exists(mfgAdaPath);
 
@@ -1105,6 +1107,9 @@ public partial class MainViewModel
 
         // Reconcile default naming for games without overrides
         ReconcileDefaultNaming();
+
+        // Games removed from RHI stay out of the list
+        _allCards = WithoutRemovedGames(_allCards);
 
         // Sort cards by game name
         _allCards = _allCards.OrderBy(c => c.GameName, StringComparer.OrdinalIgnoreCase).ToList();

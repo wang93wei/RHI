@@ -9,13 +9,6 @@ namespace RenoDXCommander.ViewModels;
 
 public partial class MainViewModel
 {
-    /// <summary>Returns the persisted Vulkan rendering path for a game, or "DirectX" if none set.</summary>
-    public string GetVulkanRenderingPath(string gameName, string store = "")
-    {
-        var key = GameKey.From(gameName, store).ToKey();
-        return _vulkanRenderingPaths.TryGetValue(key, out var path) ? path : "DirectX";
-    }
-
     /// <summary>Sets the per-game Vulkan rendering path preference. "DirectX" removes the override (default).</summary>
     public void SetVulkanRenderingPath(string gameName, string renderingPath, string store = "")
     {
@@ -126,14 +119,7 @@ public partial class MainViewModel
     }
 
     /// <summary>Returns true if the channel value is a legacy version string (not null, not "Stable", not "Nightly", not "Custom").</summary>
-    public static bool IsLegacyVersion(string? channel)
-    {
-        if (string.IsNullOrEmpty(channel)) return false;
-        if (string.Equals(channel, "Stable", StringComparison.OrdinalIgnoreCase)) return false;
-        if (string.Equals(channel, "Nightly", StringComparison.OrdinalIgnoreCase)) return false;
-        if (string.Equals(channel, "Custom", StringComparison.OrdinalIgnoreCase)) return false;
-        return true;
-    }
+    public static bool IsLegacyVersion(string? channel) => AuxInstallService.IsLegacyVersion(channel);
 
     /// <summary>
     /// Resolves the effective ReShade channel for a game.
@@ -224,6 +210,38 @@ public partial class MainViewModel
             _gameNameService.OsVariantOverrides.Remove(key);
         else
             _gameNameService.OsVariantOverrides[key] = value;
+        SaveNameMappings();
+    }
+
+    // ── OptiScaler Nightly Build ──────────────────────────────────────────────
+
+    /// <summary>Returns the pinned nightly build date for a game. Empty string = "Latest" (auto-update).</summary>
+    public string GetOsNightlyBuild(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.OsNightlyBuild.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.OsNightlyBuild.TryGetValue(gameName, out var v2) && !string.IsNullOrEmpty(v2)) return v2;
+        return ""; // absent = Latest
+    }
+
+    /// <summary>Sets the pinned nightly build date for a game. Null or empty = Latest (removes pin and auto-update exemption).</summary>
+    public void SetOsNightlyBuild(string gameName, string? buildDate, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(buildDate))
+        {
+            _gameNameService.OsNightlyBuild.Remove(key);
+            _gameNameService.OsNightlyBuild.Remove(gameName);
+            // Remove auto-update exemption when reverting to Latest
+            _gameNameService.UpdateAllExcludedOs.Remove(key);
+            _gameNameService.UpdateAllExcludedOs.Remove(gameName);
+        }
+        else
+        {
+            _gameNameService.OsNightlyBuild[key] = buildDate;
+            // Pin a specific build → exempt this game from OptiScaler auto-updates
+            _gameNameService.UpdateAllExcludedOs.Add(key);
+        }
         SaveNameMappings();
     }
 
@@ -425,11 +443,57 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
+    // ── dgVoodoo2 Standalone ─────────────────────────────────────────────────
+
+    /// <summary>Returns whether dgVoodoo2 has been standalone-installed for this game via the Extras panel.</summary>
+    public bool GetDgVoodooStandalone(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.DgVoodooStandaloneGames.Contains(key)
+            || _gameNameService.DgVoodooStandaloneGames.Contains(gameName);
+    }
+
+    /// <summary>Sets whether dgVoodoo2 has been standalone-installed for this game.</summary>
+    public void SetDgVoodooStandalone(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value)
+            _gameNameService.DgVoodooStandaloneGames.Add(key);
+        else
+        {
+            _gameNameService.DgVoodooStandaloneGames.Remove(key);
+            _gameNameService.DgVoodooStandaloneGames.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    /// <summary>Returns the per-game dgVoodoo2 version override, or null if using the latest.</summary>
+    public string? GetDgVoodooVersion(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.DgVoodooVersionOverride.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.DgVoodooVersionOverride.TryGetValue(gameName, out var v2) && !string.IsNullOrEmpty(v2)) return v2;
+        return null;
+    }
+
+    /// <summary>Sets the per-game dgVoodoo2 version override. Null or empty clears it (use latest).</summary>
+    public void SetDgVoodooVersion(string gameName, string? version, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(version))
+        {
+            _gameNameService.DgVoodooVersionOverride.Remove(key);
+            _gameNameService.DgVoodooVersionOverride.Remove(gameName);
+        }
+        else
+            _gameNameService.DgVoodooVersionOverride[key] = version;
+        SaveNameMappings();
+    }
+
     // ── Dilated Motion Vectors ────────────────────────────────────────────────
 
     /// <summary>Returns whether Dilated Motion Vectors is set to Off for a game.</summary>
-    public bool GetOsDilatedMotionVectorsOff(string gameName, string store = "")
-    {
+    public bool GetOsDilatedMotionVectorsOff(string gameName, string store = "")    {
         var key = GameKey.From(gameName, store).ToKey();
         return _gameNameService.OsDilatedMotionVectorsOff.Contains(key)
             || _gameNameService.OsDilatedMotionVectorsOff.Contains(gameName);
@@ -709,6 +773,79 @@ public partial class MainViewModel
         return null;
     }
 
+    /// <summary>(InstallPath, InstalledAs) for every game card with RTX 40 MFG installed.</summary>
+    /// <summary>MFG Ada Unlock: give games with the mod Intel's XeSS files, take RHI's copies back where it was removed.</summary>
+    private void ReconcileMfgAdaXessFiles()
+    {
+        var games = _allCards.ToList()
+            .Where(c => !c.IsHidden && !string.IsNullOrEmpty(c.InstallPath)) // hidden games are left alone
+            // Before taking files back, check the disk too, in case the card's flag is out of date
+            .Select(c => (c.InstallPath!, c.MfgAdaInstalled
+                || (Rtx40MfgService.HasAdaXessMarker(c.InstallPath!) && MfgAdaAddonPresent(c.InstallPath!))))
+            .ToList();
+        _rtx40MfgService.ReconcileAdaXessFiles(games);
+    }
+
+    /// <summary>
+    /// RTX Encore catch-up: games that already have it get Intel's XeSS files in its runtime folder once,
+    /// and RHI-deployed NR DLLs older than 310.9.16 are moved to it. Hidden games are left alone.
+    /// </summary>
+    private void ReconcileRtxEncoreFiles()
+    {
+        var svc = App.Services.GetRequiredService<RtxEncoreService>();
+        var games = new List<(string InstallPath, string ModDir, bool NrDeployed)>();
+        foreach (var c in _allCards.ToList())
+        {
+            if (c.IsHidden || string.IsNullOrEmpty(c.InstallPath)) continue;
+            var installedAs = GetRtxEncoreInstalledAs(c.GameName, c.Source ?? "");
+            if (string.IsNullOrEmpty(installedAs) || !svc.IsInstalledIn(c.InstallPath, installedAs)) continue;
+            games.Add((c.InstallPath, svc.ModDir(c.InstallPath, installedAs), GetRtxEncoreNrDllDeployed(c.GameName, c.Source ?? "")));
+        }
+        if (games.Count == 0) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var needXess = games.Where(g => Rtx40MfgService.NeedsEncoreXessFiles(g.ModDir)).ToList();
+                if (needXess.Count > 0)
+                {
+                    await _rtx40MfgService.EnsureXessStagingAsync().ConfigureAwait(false);
+                    foreach (var g in needXess)
+                        if (_rtx40MfgService.DeployEncoreXessFiles(g.ModDir))
+                            _crashReporter.Log($"[MainViewModel.ReconcileRtxEncoreFiles] Added XeSS files for RTX Encore in '{g.ModDir}'");
+                }
+
+                var nrGames = games.Where(g => g.NrDeployed).ToList();
+                if (nrGames.Count > 0 && await svc.EnsureNrDllCachedAsync(_dlssStreamlineService).ConfigureAwait(false) != null)
+                    foreach (var g in nrGames) svc.UpgradeNrDllIfOlder(g.InstallPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
+            {
+                _crashReporter.Log($"[MainViewModel.ReconcileRtxEncoreFiles] Failed — {ex.Message}");
+            }
+        });
+    }
+
+    private static bool MfgAdaAddonPresent(string installPath)
+    {
+        const string addon = "renodx-mfgunlock.addon64";
+        return File.Exists(Path.Combine(ModInstallService.GetAddonDeployPath(installPath), addon))
+            || File.Exists(Path.Combine(installPath, addon));
+    }
+
+    private List<(string InstallPath, string InstalledAs)> GetRtx40MfgInstalls()
+    {
+        var installs = new List<(string, string)>();
+        foreach (var c in _allCards.ToList())
+        {
+            if (string.IsNullOrEmpty(c.InstallPath)) continue;
+            if (c.IsHidden) continue; // hidden games are left alone
+            var installedAs = GetRtx40MfgInstalledAs(c.GameName, c.Source ?? "");
+            if (!string.IsNullOrEmpty(installedAs)) installs.Add((c.InstallPath, installedAs));
+        }
+        return installs;
+    }
+
     public void SetRtx40MfgInstalledAs(string gameName, string? dllName, string store = "")
     {
         var key = GameKey.From(gameName, store).ToKey();
@@ -752,18 +889,72 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
-    public string GetDlssg2030GpuGen(string gameName, string store = "")
+    /// <summary>
+    /// Brings every game with 20/30 FG Unlock up to the staged package. Compares files rather
+    /// than relying on "an update was just downloaded", so installs from before the 0.4.0
+    /// package layout and games that were running during an update are fixed too.
+    /// Safe to call from a background thread.
+    /// </summary>
+    internal void UpdateDlssg2030Installs()
     {
-        var key = GameKey.From(gameName, store).ToKey();
-        if (_gameNameService.Dlssg2030GpuGen.TryGetValue(key, out var v)) return v;
-        if (_gameNameService.Dlssg2030GpuGen.TryGetValue(gameName, out var v2)) return v2;
-        return Dlssg20_30Service.GpuGenRtx30; // default to RTX 30
+        if (!_dlssg2030Service.IsStagingReady) return;
+        foreach (var c in _allCards.ToList())
+        {
+            if (string.IsNullOrEmpty(c.InstallPath)) continue;
+            if (c.IsHidden) continue; // hidden games are left alone
+            var installedAs = GetDlssg2030InstalledAs(c.GameName, c.Source ?? "");
+            if (string.IsNullOrEmpty(installedAs) || !File.Exists(Path.Combine(c.InstallPath, installedAs))) continue;
+            if (!_dlssg2030Service.NeedsUpdate(c.InstallPath, installedAs)) continue;
+
+            var nowAs = _dlssg2030Service.Update(c.InstallPath, installedAs);
+            if (nowAs != null && !nowAs.Equals(installedAs, StringComparison.OrdinalIgnoreCase))
+            {
+                var game = c.GameName; var store = c.Source ?? "";
+                DispatcherQueue?.TryEnqueue(() => SetDlssg2030InstalledAs(game, nowAs, store));
+            }
+        }
     }
 
-    public void SetDlssg2030GpuGen(string gameName, string gpuGen, string store = "")
+    // ── RTX Encore ────────────────────────────────────────────────────────────
+
+    public string? GetRtxEncoreInstalledAs(string gameName, string store = "")
     {
         var key = GameKey.From(gameName, store).ToKey();
-        _gameNameService.Dlssg2030GpuGen[key] = gpuGen;
+        if (_gameNameService.RtxEncoreInstalledAs.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
+        if (_gameNameService.RtxEncoreInstalledAs.TryGetValue(gameName, out var v2) && !string.IsNullOrEmpty(v2)) return v2;
+        return null;
+    }
+
+    public void SetRtxEncoreInstalledAs(string gameName, string? dllName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (!string.IsNullOrEmpty(dllName))
+            _gameNameService.RtxEncoreInstalledAs[key] = dllName;
+        else
+        {
+            _gameNameService.RtxEncoreInstalledAs.Remove(key);
+            _gameNameService.RtxEncoreInstalledAs.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    public bool GetRtxEncoreNrDllDeployed(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.RtxEncoreNrDllDeployed.Contains(key)
+            || _gameNameService.RtxEncoreNrDllDeployed.Contains(gameName);
+    }
+
+    public void SetRtxEncoreNrDllDeployed(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value)
+            _gameNameService.RtxEncoreNrDllDeployed.Add(key);
+        else
+        {
+            _gameNameService.RtxEncoreNrDllDeployed.Remove(key);
+            _gameNameService.RtxEncoreNrDllDeployed.Remove(gameName);
+        }
         SaveNameMappings();
     }
 
@@ -1008,17 +1199,6 @@ public partial class MainViewModel
         SaveNameMappings();
         SaveLibrary();
         card.NotifyAll();
-    }
-
-    public string? GetFolderOverride(string gameName, string store = "")
-    {
-        var key = GameKey.From(gameName, store).ToKey();
-        if (_folderOverrides.TryGetValue(key, out var stored))
-        {
-            var parts = stored.Split('|');
-            return parts[0]; // Return just the override path
-        }
-        return null;
     }
 
     public bool HasDllOverride(string gameName) => _dllOverrideService.HasDllOverride(gameName);
@@ -1415,6 +1595,7 @@ public partial class MainViewModel
                 foreach (var card in cards)
                 {
                     if (string.IsNullOrEmpty(card.InstallPath)) continue;
+                    if (card.IsHidden) continue; // hidden games are left alone
 
                     bool rsInstalled = card.RequiresVulkanInstall
                         ? VulkanFootprintService.Exists(card.InstallPath)
@@ -1466,8 +1647,12 @@ public partial class MainViewModel
         });
     }
 
-    public bool AnyUpdateAvailable =>
-        _allCards.Any(c =>
+    public bool AnyUpdateAvailable => _allCards.Any(IsUpdateAllCandidate);
+
+    /// <summary>How many games Update All would update (the Tabs layout's Update All badge).</summary>
+    public int UpdateAllGameCount => _allCards.Count(IsUpdateAllCandidate);
+
+    private static bool IsUpdateAllCandidate(GameCardViewModel c) =>
             !c.IsHidden
             && !string.IsNullOrEmpty(c.InstallPath)
             && Directory.Exists(c.InstallPath)
@@ -1479,7 +1664,7 @@ public partial class MainViewModel
                 (c.DxvkStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllDxvk) ||
                 (c.RefStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllRef) ||
                 (c.LumaStatus == GameStatus.UpdateAvailable) ||
-                (c.DofFixStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllDofFix)));
+                (c.DofFixStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllDofFix));
 
     // Button colours — purple when updates available, dim when idle
     public string UpdateAllBtnBackground => AnyUpdateAvailable ? "#201838" : "#1E242C";
@@ -1498,10 +1683,6 @@ public partial class MainViewModel
         _updateAllExcludedOs.Contains(GameKey.From(gameName, store).ToKey());
     public bool IsUpdateAllExcludedRef(string gameName, string store = "") => 
         _updateAllExcludedRef.Contains(GameKey.From(gameName, store).ToKey());
-
-    /// <summary>Returns true if the game is configured to use normal (non-addon) ReShade.</summary>
-    public bool IsNormalReShadeGame(string gameName, string store = "") => 
-        _normalReShadeGames.Contains(GameKey.From(gameName, store).ToKey());
 
     public void ToggleUpdateAllExclusionReShade(string gameName, string store = "")
     {
@@ -1715,26 +1896,7 @@ public partial class MainViewModel
     {
         var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
 
-        var settingsPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "RHI", "settings.json");
-
-        if (!File.Exists(settingsPath))
-            return result;
-
-        Dictionary<string, string>? settings;
-        try
-        {
-            settings = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(settingsPath));
-        }
-        catch (Exception ex)
-        {
-            _crashReporter.Log($"[MainViewModel.BuildPackFileLists] Failed to read settings — {ex.Message}");
-            return result;
-        }
-
-        if (settings is null)
-            return result;
+        var settings = SettingsFile.Snapshot();
 
         foreach (var (packId, _, _) in _shaderPackService.AvailablePacks)
         {
@@ -1928,15 +2090,21 @@ public partial class MainViewModel
 
         if (!dlssHasNewVersion && !slHasNewVersion) return;
 
+        using var activity = BeginActivity(dlssHasNewVersion && _settingsViewModel.AutoUpdateDlss
+            ? $"Updating DLSS to {newestDlss}..."
+            : $"Updating Streamline to {newestSl}...");
+
         int dlssUpdated = 0, slUpdated = 0;
 
         foreach (var card in _allCards)
         {
             if (card.DlssDetection == null || !card.HasAnyDlssStreamline) continue;
+            if (card.IsHidden) continue; // hidden games are left alone
 
             // ── DLSS Auto-Update (SR, RR, FG all use the same version set) ──
             if (_settingsViewModel.AutoUpdateDlss && dlssHasNewVersion)
             {
+                bool gameUpdated = false;
                 try
                 {
                     // SR
@@ -1945,8 +2113,8 @@ public partial class MainViewModel
                         && !(card.DlssInstalledVersion?.StartsWith("1.") == true))
                     {
                         await _dlssStreamlineService.SwapDlssAsync(card.DlssDetection.DlssPath, newestDlss);
-                        card.DlssInstalledVersion = _dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssPath);
-                        dlssUpdated++;
+                        card.DlssInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssPath));
+                        gameUpdated = true;
                     }
                     // RR
                     if (card.DlssDetection.DlssdPath != null
@@ -1954,7 +2122,8 @@ public partial class MainViewModel
                         && !(card.DlssdInstalledVersion?.StartsWith("1.") == true))
                     {
                         await _dlssStreamlineService.SwapDlssdAsync(card.DlssDetection.DlssdPath, newestDlss);
-                        card.DlssdInstalledVersion = _dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssdPath);
+                        card.DlssdInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssdPath));
+                        gameUpdated = true;
                     }
                     // FG
                     if (card.DlssDetection.DlssgPath != null
@@ -1962,7 +2131,8 @@ public partial class MainViewModel
                         && !(card.DlssgInstalledVersion?.StartsWith("1.") == true))
                     {
                         await _dlssStreamlineService.SwapDlssgAsync(card.DlssDetection.DlssgPath, newestDlss);
-                        card.DlssgInstalledVersion = _dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssgPath);
+                        card.DlssgInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssgPath));
+                        gameUpdated = true;
                     }
                     // NR (dev-only)
                     if (FeatureFlags.DlssNr
@@ -1970,13 +2140,15 @@ public partial class MainViewModel
                         && string.Equals(card.DlssnrInstalledVersion, previousDlss, StringComparison.OrdinalIgnoreCase))
                     {
                         await _dlssStreamlineService.SwapDlssnrAsync(card.DlssDetection.DlssnrPath, newestDlss);
-                        card.DlssnrInstalledVersion = _dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssnrPath);
+                        card.DlssnrInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssnrPath));
+                        gameUpdated = true;
                     }
                 }
                 catch (Exception ex)
                 {
                     _crashReporter.Log($"[RunDlssAutoUpdateAsync] DLSS auto-update failed for '{card.GameName}' — {ex.Message}");
                 }
+                if (gameUpdated) dlssUpdated++;
             }
 
             // ── Streamline Auto-Update ──
@@ -1989,8 +2161,8 @@ public partial class MainViewModel
                         && !(card.StreamlineInstalledVersion?.StartsWith("1.") == true))
                     {
                         await _dlssStreamlineService.SwapStreamlineAsync(card.DlssDetection.StreamlineFolder, newestSl);
-                        card.StreamlineInstalledVersion = _dlssStreamlineService.GetFileVersion(
-                            card.DlssDetection.StreamlineInterposerPath ?? "");
+                        card.StreamlineInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(
+                            card.DlssDetection.StreamlineInterposerPath ?? ""));
                         slUpdated++;
                     }
                 }

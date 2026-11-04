@@ -11,11 +11,6 @@ namespace RenoDXCommander.ViewModels;
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
-    // Settings stored as JSON — ApplicationData.Current throws in unpackaged WinUI 3
-    private static readonly string _settingsFilePath = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "RHI", "settings.json");
-
     [ObservableProperty] private bool _skipUpdateCheck;
     [ObservableProperty] private bool _betaOptIn;
     [ObservableProperty] private bool _verboseLogging;
@@ -42,6 +37,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _dxvkWarningDismissed;
     [ObservableProperty] private bool _mfgWarningDismissed;
     [ObservableProperty] private bool _engineBadgeWarningDismissed;
+    [ObservableProperty] private bool _umfgReShadeWarningDismissed;
     [ObservableProperty] private bool _lumaRenodxCombinedWarningDismissed;
     [ObservableProperty] private List<string> _enabledGlobalAddons = new();
     [ObservableProperty] private bool _firstLaunchSetupDone;
@@ -53,6 +49,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _globalSkipRefUpdates;
     [ObservableProperty] private bool _cacheAllShaders = true;
     [ObservableProperty] private string _lastUpdateCheckUtc = "";
+    /// <summary>Key of the Settings page section last used (jump list / scroll position), e.g. "General", "Dlss".</summary>
+    [ObservableProperty] private string _settingsLastSection = "General";
+    /// <summary>Game page layout: "Classic" or "Tabs" (DetailLayoutHost / MainLayout).</summary>
+    [ObservableProperty] private string _mainLayout = "Classic";
+    /// <summary>Key of the tab last shown in the Tabs layout: "Overview" or a section key.</summary>
+    [ObservableProperty] private string _detailSelectedTab = "Overview";
     [ObservableProperty] private string _dxvkVariant = "LiliumHdr";
     [ObservableProperty] private string _reShadeChannel = "Stable";
     [ObservableProperty] private int _peakNits;
@@ -62,6 +64,10 @@ public partial class SettingsViewModel : ObservableObject
     // ── Component Auto-Update ────────────────────────────────────────────────
     /// <summary>When true, silently installs component updates in the background after an update check.</summary>
     [ObservableProperty] private bool _autoUpdateComponents;
+
+    // ── Background Update Checks ──────────────────────────────────────────────
+    /// <summary>"On" = full background checks including Nexus (default). "Minimal" = manifest fetches only; Nexus calls only on explicit user action.</summary>
+    [ObservableProperty] private string _backgroundUpdateChecks = "On";
 
     // ── DLSS/Streamline Auto-Update ───────────────────────────────────────────
     [ObservableProperty] private bool _autoUpdateDlss;
@@ -88,6 +94,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _nexusApiKey = "";
     [ObservableProperty] private bool _nexusIsPremium;
     [ObservableProperty] private string _nexusUsername = "";
+
+    // ── GitHub OAuth (device flow) ─────────────────────────────────────────────
+    /// <summary>OAuth token obtained via GitHub Device Flow. Never logged.</summary>
+    [ObservableProperty] private string _gitHubOAuthToken = "";
+    /// <summary>GitHub login name of the authenticated user.</summary>
+    [ObservableProperty] private string _gitHubUsername = "";
 
     // ── Digital Vibrance ──────────────────────────────────────────────────────
     /// <summary>Per-display DVC values. Key = display index (string), Value = 0-100.</summary>
@@ -152,24 +164,15 @@ public partial class SettingsViewModel : ObservableObject
 
     // ── Settings file I/O ─────────────────────────────────────────────────────────
 
-    public static Dictionary<string, string> LoadSettingsFile()
-    {
-        try
-        {
-            if (!System.IO.File.Exists(_settingsFilePath)) return new(StringComparer.OrdinalIgnoreCase);
-            var json = System.IO.File.ReadAllText(_settingsFilePath);
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-                   ?? new(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex) { CrashReporter.Log($"[SettingsViewModel.LoadSettingsFile] Failed to load settings — {ex.Message}"); return new(StringComparer.OrdinalIgnoreCase); }
-    }
+    // All settings.json access goes through SettingsFile (shared lock, .bak, corrupt-file recovery).
+    public static Dictionary<string, string> LoadSettingsFile() => SettingsFile.Load();
 
-    public static void SaveSettingsFile(Dictionary<string, string> settings)
-    {
-        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_settingsFilePath)!);
-        var json = JsonSerializer.Serialize(settings);
-        FileHelper.WriteAllTextWithRetry(_settingsFilePath, json, "SettingsViewModel.SaveSettingsFile");
-    }
+    public static Dictionary<string, string> LoadSettingsFile(out SafeJsonFile.LoadStatus status) =>
+        SettingsFile.Load(out status);
+
+    /// <summary>Read-modify-write of settings.json under the shared lock.</summary>
+    public static bool UpdateSettingsFile(Action<Dictionary<string, string>> mutate, string callerTag) =>
+        SettingsFile.Update(mutate, callerTag);
 
     /// <summary>
     /// Loads settings-specific values (SkipUpdateCheck, VerboseLogging,
@@ -284,6 +287,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("EngineBadgeWarningDismissed", out var ebwdVal))
             EngineBadgeWarningDismissed = ebwdVal == "true";
 
+        if (s.TryGetValue("UmfgReShadeWarningDismissed", out var urwdVal))
+            UmfgReShadeWarningDismissed = urwdVal == "true";
+
         if (s.TryGetValue("EnabledGlobalAddons", out var egaVal))
         {
             try
@@ -313,6 +319,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("GlobalSkipRefUpdates", out var gsrefVal)) GlobalSkipRefUpdates = gsrefVal == "true";
         if (s.TryGetValue("CacheAllShaders", out var casVal)) CacheAllShaders = casVal != "false"; // default true
         if (s.TryGetValue("LastUpdateCheckUtc", out var luc)) LastUpdateCheckUtc = luc;
+        if (s.TryGetValue("SettingsLastSection", out var slsVal) && !string.IsNullOrWhiteSpace(slsVal)) SettingsLastSection = slsVal;
+        if (s.TryGetValue("MainLayout", out var mlVal) && !string.IsNullOrWhiteSpace(mlVal)) MainLayout = mlVal;
+        if (s.TryGetValue("DetailSelectedTab", out var dstVal) && !string.IsNullOrWhiteSpace(dstVal)) DetailSelectedTab = dstVal;
         if (s.TryGetValue("DxvkVariant", out var dvVal)) DxvkVariant = dvVal ?? "LiliumHdr";
         if (s.TryGetValue("ReShadeChannel", out var rscVal)) ReShadeChannel = rscVal ?? "Stable";
         if (s.TryGetValue("PeakNits", out var pnVal) && int.TryParse(pnVal, out var pnInt)) PeakNits = pnInt;
@@ -323,6 +332,7 @@ public partial class SettingsViewModel : ObservableObject
             catch { PeakNitsPresets = new() { 1, 2, 3 }; }
         }
         if (s.TryGetValue("AutoUpdateComponents", out var aucVal)) AutoUpdateComponents = aucVal == "true";
+        if (s.TryGetValue("BackgroundUpdateChecks", out var bucVal) && !string.IsNullOrEmpty(bucVal)) BackgroundUpdateChecks = bucVal;
         if (s.TryGetValue("AutoUpdateDlss", out var audVal)) AutoUpdateDlss = audVal == "true";
         if (s.TryGetValue("AutoUpdateStreamline", out var ausVal)) AutoUpdateStreamline = ausVal == "true";
         if (s.TryGetValue("LastKnownNewestDlss", out var lkndVal)) LastKnownNewestDlss = lkndVal ?? "";
@@ -366,6 +376,10 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("NexusApiKey",    out var nakVal)) NexusApiKey    = nakVal ?? "";
         if (s.TryGetValue("NexusIsPremium", out var nipVal)) NexusIsPremium = nipVal == "true";
         if (s.TryGetValue("NexusUsername",  out var nunVal)) NexusUsername  = nunVal ?? "";
+
+        // GitHub OAuth token — never logged, applied to HttpClient after load
+        if (s.TryGetValue("GitHubOAuthToken", out var ghotVal) && !string.IsNullOrEmpty(ghotVal)) GitHubOAuthToken = ghotVal;
+        if (s.TryGetValue("GitHubUsername",   out var ghuVal)  && !string.IsNullOrEmpty(ghuVal))  GitHubUsername  = ghuVal;
 
         // DLSS/Streamline defaults
         if (s.TryGetValue("DefaultDlssVersion", out var ddv)) DefaultDlssVersion = ddv ?? "";
@@ -474,6 +488,7 @@ public partial class SettingsViewModel : ObservableObject
         s["DxvkWarningDismissed"] = DxvkWarningDismissed ? "true" : "false";
         s["MfgWarningDismissed"] = MfgWarningDismissed ? "true" : "false";
         s["EngineBadgeWarningDismissed"] = EngineBadgeWarningDismissed ? "true" : "false";
+        s["UmfgReShadeWarningDismissed"] = UmfgReShadeWarningDismissed ? "true" : "false";
         s["EnabledGlobalAddons"] = JsonSerializer.Serialize(EnabledGlobalAddons);
         s["FirstLaunchSetupDone"] = FirstLaunchSetupDone ? "true" : "false";
         s["GlobalSkipRdxUpdates"] = GlobalSkipRdxUpdates ? "true" : "false";
@@ -484,6 +499,9 @@ public partial class SettingsViewModel : ObservableObject
         s["GlobalSkipRefUpdates"] = GlobalSkipRefUpdates ? "true" : "false";
         s["CacheAllShaders"] = CacheAllShaders ? "true" : "false";
         s["LastUpdateCheckUtc"] = LastUpdateCheckUtc;
+        s["SettingsLastSection"] = SettingsLastSection;
+        s["MainLayout"] = MainLayout;
+        s["DetailSelectedTab"] = DetailSelectedTab;
         s["DxvkVariant"] = DxvkVariant;
         s["ReShadeChannel"] = ReShadeChannel;
         if (PeakNits > 0) s["PeakNits"] = PeakNits.ToString();
@@ -493,6 +511,7 @@ public partial class SettingsViewModel : ObservableObject
         else
             s.Remove("PeakNitsPresets"); // All 3 checked = default — remove stale non-default value
         if (AutoUpdateComponents) s["AutoUpdateComponents"] = "true"; else s.Remove("AutoUpdateComponents");
+        if (BackgroundUpdateChecks != "On") s["BackgroundUpdateChecks"] = BackgroundUpdateChecks; else s.Remove("BackgroundUpdateChecks"); // "On" is default — omit to keep file clean
         if (AutoUpdateDlss) s["AutoUpdateDlss"] = "true"; else s.Remove("AutoUpdateDlss");
         if (AutoUpdateStreamline) s["AutoUpdateStreamline"] = "true"; else s.Remove("AutoUpdateStreamline");
         if (!string.IsNullOrEmpty(LastKnownNewestDlss)) s["LastKnownNewestDlss"] = LastKnownNewestDlss;
@@ -515,6 +534,10 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrEmpty(NexusApiKey))    s["NexusApiKey"]    = NexusApiKey;
         if (NexusIsPremium)                        s["NexusIsPremium"] = "true";
         if (!string.IsNullOrEmpty(NexusUsername))  s["NexusUsername"]  = NexusUsername;
+
+        // GitHub OAuth token — never logged
+        if (!string.IsNullOrEmpty(GitHubOAuthToken)) s["GitHubOAuthToken"] = GitHubOAuthToken; else s.Remove("GitHubOAuthToken");
+        if (!string.IsNullOrEmpty(GitHubUsername))   s["GitHubUsername"]   = GitHubUsername;   else s.Remove("GitHubUsername");
 
         // DLSS/Streamline defaults
         if (!string.IsNullOrEmpty(DefaultDlssVersion)) s["DefaultDlssVersion"] = DefaultDlssVersion;
