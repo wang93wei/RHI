@@ -140,6 +140,9 @@ public static class OsPresetService
         };
     }
 
+    /// <summary>Built-in preset copies in their default English form (used by tests and as fallback).</summary>
+    internal static IReadOnlyList<OsPreset> BuiltInPresets => BuildBuiltInPresets();
+
     /// <summary>The ready-made presets: fetched, else cached, else built-in.</summary>
     public static IReadOnlyList<OsPreset> ManifestPresets
     {
