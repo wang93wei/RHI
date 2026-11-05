@@ -367,6 +367,7 @@ internal sealed partial class DetailLayoutHost
 
     private void ReturnPanelContent()
     {
+        CloseCog(ContentDialogResult.None); // a cog open in the panel goes with it
         if (_panelKey == null || _panelHost == null) return;
         var key = _panelKey;
         _panelKey = null;
@@ -382,6 +383,9 @@ internal sealed partial class DetailLayoutHost
             container.Visibility = Visibility.Collapsed;
             SectionsPanel.Children.Add(container); // ApplySectionOrder puts it back in order
         }
+        // Settings changed in the panel: bring the Tune tiles up to date
+        SummariesStale?.Invoke();
+        RefreshTuneTiles();
     }
 
     private void SetOverviewHeadingVisible(bool visible)

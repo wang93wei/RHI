@@ -154,11 +154,18 @@ public partial class DetailPanelBuilder
             new[] { "game", "dlaa", "quality", "balanced", "performance", "ultra-performance", "custom" }, "game",
             i => ((Control)customScaleCell.Control).IsEnabled = canEdit && i == 6);
         ((Control)customScaleCell.Control).IsEnabled = canEdit && ((ComboBox)renderScaleCell.Control).SelectedIndex == 6;
+        var xessTensorCell = Choice(Loc.GetString("Extras.RtxEncore.Settings.XeSSonTensorCoresexperimental.Label"),
+            Loc.GetString("Extras.RtxEncore.Settings.XeSSonTensorCoresexperimental.Help"),
+            "xess", "xessTensorCores", RtxOffOn, RtxOffOnValues, "false");
+        var upscalerCell = Choice(Loc.GetString("Extras.RtxEncore.Settings.Upscaler.Label"),
+            Loc.GetString("Extras.RtxEncore.Settings.Upscaler.Help"),
+            "renderingEngines", "reconstructionEngine",
+            new[] { Loc.GetString("Extras.RtxEncore.Opt.Game"), "XeSS" }, new[] { "game", "xess" }, "game",
+            i => ((Control)xessTensorCell.Control).IsEnabled = canEdit && i == 1);
+        ((Control)xessTensorCell.Control).IsEnabled = canEdit && ((ComboBox)upscalerCell.Control).SelectedIndex == 1;
         cog.AddCompactGrid(
-            Choice(Loc.GetString("Extras.RtxEncore.Settings.Upscaler.Label"), Loc.GetString("Extras.RtxEncore.Settings.Upscaler.Help"),
-                "renderingEngines", "reconstructionEngine", new[] { Loc.GetString("Extras.RtxEncore.Opt.Game"), "XeSS" }, new[] { "game", "xess" }, "game"),
-            Choice(Loc.GetString("Extras.RtxEncore.Settings.XeSSonTensorCoresexperimental.Label"), Loc.GetString("Extras.RtxEncore.Settings.XeSSonTensorCoresexperimental.Help"),
-                "xess", "xessTensorCores", RtxOffOn, RtxOffOnValues, "false"),
+            upscalerCell,
+            xessTensorCell,
             renderScaleCell,
             customScaleCell,
             Choice(Loc.GetString("Extras.RtxEncore.Settings.FastSuperResolution.Label"), Loc.GetString("Extras.RtxEncore.Settings.FastSuperResolution.Help"),
@@ -228,8 +235,11 @@ public partial class DetailPanelBuilder
         // ── Intel XeSS files ────────────────────────────────────────────────────
         if (modDir != null)
         {
-            if (Rtx40MfgService.HasEncoreXessFiles(modDir))
-                cog.AddNote(Loc.GetString("Extras.RtxEncore.Settings.XessInstalled", Rtx40MfgService.EncoreRuntimeRelDir));
+            var (intelComplete, inGameFolders) = Rtx40MfgService.GetEncoreIntelState(modDir);
+            if (intelComplete)
+                cog.AddNote(inGameFolders > 0
+                    ? Loc.GetString("Extras.RtxEncore.Settings.XessInstalledInGame", inGameFolders)
+                    : Loc.GetString("Extras.RtxEncore.Settings.XessInstalled"));
             else
                 cog.AddWarning(Loc.GetString("Extras.RtxEncore.Settings.XessMissing"));
         }
@@ -327,7 +337,8 @@ public partial class DetailPanelBuilder
                         cog.SetError(Loc.GetString("Extras.RtxEncore.Nr.DownloadFailed", RtxEncoreService.NrRequiredVer));
                         return;
                     }
-                    if (await Task.Run(() => svc.DeployNrDll(installPath)))
+                    var installedAs = _window.ViewModel.GetRtxEncoreInstalledAs(gameName, store);
+                    if (await Task.Run(() => svc.DeployNrDll(installPath, installedAs)))
                     {
                         nrOn = true;
                         cog.SetSuccess(Loc.GetString("Extras.RtxEncore.Nr.Deployed", RtxEncoreService.NrRequiredVer));
@@ -347,7 +358,7 @@ public partial class DetailPanelBuilder
             }
             else
             {
-                svc.RemoveNrDll(installPath);
+                svc.RemoveNrDll(installPath, _window.ViewModel.GetRtxEncoreInstalledAs(gameName, store));
                 nrOn = false;
                 cog.SetSuccess(Loc.GetString("Extras.RtxEncore.Nr.Removed"));
                 RequestExtrasRebuild(card);

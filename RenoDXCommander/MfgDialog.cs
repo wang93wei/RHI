@@ -43,7 +43,7 @@ public static class MfgDialog
                 Text = Loc.GetString("Dialog.Mfg.WarningContent"),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 13,
-                Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush),
+                Foreground = TabsTheme.B(TabsTheme.AmberPill.Fg),
             });
 
             var dontShowCheck = new CheckBox
@@ -54,16 +54,19 @@ public static class MfgDialog
             };
             warningPanel.Children.Add(dontShowCheck);
 
+            warningPanel.Width = 420;
+            TabsTheme.Restyle(warningPanel);
             var warningDialog = new ContentDialog
             {
-                Title = Loc.GetString("Dialog.HardwareRequirement"),
-                Content = warningPanel,
+                Title = CogDialog.MakeDialogTitle(Loc.GetString("Dialog.HardwareRequirement")),
+                Content = TabsTheme.MakeCard(warningPanel),
                 PrimaryButtonText = Loc.GetString("Dialog.Ok"),
                 CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = xamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
 
+            CogDialog.ApplyDialogLook(warningDialog, 560);
             var warningResult = await DialogService.ShowSafeAsync(warningDialog);
             if (warningResult != ContentDialogResult.Primary)
                 return;
@@ -101,9 +104,8 @@ public static class MfgDialog
         panel.Children.Add(new TextBlock
         {
             Text = Loc.GetString("Dialog.FgMode"),
-            FontSize = 11,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            FontSize = 12,
+            Foreground = TabsTheme.B(TabsTheme.TextSecondary),
         });
 
         var modeItems = new[] { Loc.GetString("Dialog.Mfg.ModeDefault"), Loc.GetString("Dialog.Mfg.ModeFixed"), Loc.GetString("Dialog.Mfg.ModeDynamic") };
@@ -128,9 +130,8 @@ public static class MfgDialog
         panel.Children.Add(new TextBlock
         {
             Text = Loc.GetString("Dialog.FrameCount"),
-            FontSize = 11,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            FontSize = 12,
+            Foreground = TabsTheme.B(TabsTheme.TextSecondary),
             Margin = new Thickness(0, 8, 0, 0),
         });
 
@@ -147,9 +148,8 @@ public static class MfgDialog
         panel.Children.Add(new TextBlock
         {
             Text = Loc.GetString("Dialog.TargetFrameRate"),
-            FontSize = 11,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
+            FontSize = 12,
+            Foreground = TabsTheme.B(TabsTheme.TextSecondary),
             Margin = new Thickness(0, 8, 0, 0),
         });
 
@@ -475,14 +475,21 @@ public static class MfgDialog
         };
 
         // ── Show dialog ──
+        panel.Width = 380;
+        TabsTheme.Restyle(panel);
+        customFpsBox.Width = 120; // Restyle stretches inputs; this one sits in a row beside its Set button
+        customFpsBtn.Width = double.NaN;
         var dialog = new ContentDialog
         {
-            Title = Loc.GetString("Dialog.MultiFrameGeneration"),
-            Content = panel,
+            Title = CogDialog.MakeDialogTitle(
+                Loc.GetString("Dialog.MultiFrameGeneration"),
+                Loc.GetString("Dialog.MultiFrameGeneration.Subtitle")),
+            Content = TabsTheme.MakeCard(panel),
             CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
+        CogDialog.ApplyDialogLook(dialog, 520);
 
         await DialogService.ShowSafeAsync(dialog);
     }

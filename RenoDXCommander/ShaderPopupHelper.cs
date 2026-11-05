@@ -501,6 +501,8 @@ public static class ShaderPopupHelper
                         Margin            = new Thickness(4, 0, 0, 0),
                         Visibility        = Visibility.Visible,
                         VerticalAlignment = VerticalAlignment.Center,
+                        Background        = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                        BorderThickness   = new Thickness(0),
                     };
                     ToolTipService.SetToolTip(expandBtn, Loc.GetString("Shader.Tooltip.ExpandPack"));
                     expandButtons[id] = expandBtn;

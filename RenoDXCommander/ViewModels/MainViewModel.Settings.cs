@@ -192,24 +192,50 @@ public partial class MainViewModel
 
     // ── OptiScaler Variant Override ───────────────────────────────────────────
 
-    /// <summary>Returns the OptiScaler variant for a game. "Stable", "Nightly", or "DlssNr". Defaults to "Stable".</summary>
+    /// <summary>
+    /// Returns the OptiScaler variant for a game: "Stable", "Nightly", "DlssNr" or "F5". A game
+    /// without its own choice uses the Settings default (<see cref="SettingsViewModel.OsDefaultVariant"/>).
+    /// </summary>
     public string GetOsVariant(string gameName, string store = "")
     {
         var key = GameKey.From(gameName, store).ToKey();
         if (_gameNameService.OsVariantOverrides.TryGetValue(key, out var v)) return v;
         // name-only fallback for legacy
         if (_gameNameService.OsVariantOverrides.TryGetValue(gameName, out var v2)) return v2;
-        return "Stable";
+        return string.IsNullOrEmpty(Settings.OsDefaultVariant) ? "Stable" : Settings.OsDefaultVariant;
     }
 
-    /// <summary>Sets the OptiScaler variant for a game. Null or "Stable" removes the override.</summary>
+    /// <summary>Sets the OptiScaler variant for a game ("Stable" is kept as an explicit choice). Null removes it, so the game follows the Settings default.</summary>
     public void SetOsVariant(string gameName, string? value, string store = "")
     {
         var key = GameKey.From(gameName, store).ToKey();
-        if (value == null || value == "Stable")
+        if (value == null)
             _gameNameService.OsVariantOverrides.Remove(key);
         else
             _gameNameService.OsVariantOverrides[key] = value;
+        SaveNameMappings();
+    }
+
+    /// <summary>
+    /// Changes the default OptiScaler version for new installs. Games that already have OptiScaler
+    /// keep the version they have: theirs is saved as their own choice first, so the new default
+    /// only applies to games without OptiScaler.
+    /// </summary>
+    public void SetOsDefaultVariant(string value)
+    {
+        if (value is not ("Stable" or "Nightly" or "DlssNr" or "F5") || value == Settings.OsDefaultVariant) return;
+        int pinned = 0;
+        foreach (var card in _allCards.ToList())
+        {
+            if (!card.IsOsInstalled) continue;
+            var key = GameKey.From(card.GameName, card.Source ?? "").ToKey();
+            if (_gameNameService.OsVariantOverrides.ContainsKey(key) || _gameNameService.OsVariantOverrides.ContainsKey(card.GameName)) continue;
+            _gameNameService.OsVariantOverrides[key] = GetOsVariant(card.GameName, card.Source ?? "");
+            pinned++;
+        }
+        CrashReporter.Log($"[MainViewModel.SetOsDefaultVariant] {Settings.OsDefaultVariant} -> {value}; kept the current version for {pinned} installed game(s)");
+        Settings.OsDefaultVariant = value;
+        SaveSettingsPublic();
         SaveNameMappings();
     }
 
@@ -787,37 +813,42 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// RTX Encore catch-up: games that already have it get Intel's XeSS files in its runtime folder once,
-    /// and RHI-deployed NR DLLs older than 310.9.16 are moved to it. Hidden games are left alone.
+    /// RTX Encore catch-up for games that already have it: Intel's XeSS SDK files are set up (or brought up to
+    /// what RHI now does: libxess.dll, the licence, the game's own copies replaced in place) and refreshed when a
+    /// game update put old copies back; RHI-deployed NR DLLs older than 310.9.16 are moved to it, and moved beside
+    /// the mod for .asi installs. Hidden games are left alone.
     /// </summary>
     private void ReconcileRtxEncoreFiles()
     {
         var svc = App.Services.GetRequiredService<RtxEncoreService>();
-        var games = new List<(string InstallPath, string ModDir, bool NrDeployed)>();
+        var games = new List<(string InstallPath, string InstalledAs, string ModDir, bool NrDeployed)>();
         foreach (var c in _allCards.ToList())
         {
             if (c.IsHidden || string.IsNullOrEmpty(c.InstallPath)) continue;
             var installedAs = GetRtxEncoreInstalledAs(c.GameName, c.Source ?? "");
             if (string.IsNullOrEmpty(installedAs) || !svc.IsInstalledIn(c.InstallPath, installedAs)) continue;
-            games.Add((c.InstallPath, svc.ModDir(c.InstallPath, installedAs), GetRtxEncoreNrDllDeployed(c.GameName, c.Source ?? "")));
+            games.Add((c.InstallPath, installedAs, svc.ModDir(c.InstallPath, installedAs), GetRtxEncoreNrDllDeployed(c.GameName, c.Source ?? "")));
         }
         if (games.Count == 0) return;
         _ = Task.Run(async () =>
         {
             try
             {
-                var needXess = games.Where(g => Rtx40MfgService.NeedsEncoreXessFiles(g.ModDir)).ToList();
-                if (needXess.Count > 0)
+                var needXess = games.Where(g => Rtx40MfgService.NeedsEncoreIntelFiles(g.InstallPath, g.ModDir)).ToList();
+                if (needXess.Count > 0 && await _rtx40MfgService.EnsureEncoreIntelStagingAsync().ConfigureAwait(false))
                 {
-                    await _rtx40MfgService.EnsureXessStagingAsync().ConfigureAwait(false);
                     foreach (var g in needXess)
-                        if (_rtx40MfgService.DeployEncoreXessFiles(g.ModDir))
-                            _crashReporter.Log($"[MainViewModel.ReconcileRtxEncoreFiles] Added XeSS files for RTX Encore in '{g.ModDir}'");
+                        if (_rtx40MfgService.DeployEncoreIntelFiles(g.InstallPath, g.ModDir))
+                            _crashReporter.Log($"[MainViewModel.ReconcileRtxEncoreFiles] Set up Intel XeSS files for RTX Encore in '{g.InstallPath}'");
                 }
 
                 var nrGames = games.Where(g => g.NrDeployed).ToList();
                 if (nrGames.Count > 0 && await svc.EnsureNrDllCachedAsync(_dlssStreamlineService).ConfigureAwait(false) != null)
-                    foreach (var g in nrGames) svc.UpgradeNrDllIfOlder(g.InstallPath);
+                    foreach (var g in nrGames)
+                    {
+                        svc.MoveNrDllBesideMod(g.InstallPath, g.InstalledAs);
+                        svc.UpgradeNrDllIfOlder(g.InstallPath, g.InstalledAs);
+                    }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
             {

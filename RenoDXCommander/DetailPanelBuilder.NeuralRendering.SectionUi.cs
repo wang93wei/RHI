@@ -938,7 +938,7 @@ public partial class DetailPanelBuilder
                     descLink.NavigateUri = new Uri("https://github.com/NIGos/dlss5-bridge");
                     break;
                 case NrMethodShortFuse:
-                    descText.Text = "Recommended for most games with native DLSS. Deploys the full DLSS SR/RR/FG/NR stack and Streamline alongside the ReShade addon. Supports DX12, DX11, DX9, and Vulkan.";
+                    descText.Text = Loc.GetString("NeuralRendering.Description.ShortFuse");
                     descLink.Content = Loc.GetString("NeuralRendering.Link.ShortFuseInfo");
                     descLink.NavigateUri = new Uri("https://discord.com/channels/1408098019194310818/1543975158937821315");
                     break;
@@ -961,7 +961,12 @@ public partial class DetailPanelBuilder
         double btnInstallW = containerWidth > NrSectionPadding
             ? Math.Max(120, containerWidth - NrSectionPadding - 2 - 36 - 36 - 8 - 8) // border(2) + cog(36) + X(36) + 2 gaps(8)
             : 400.0;
-        btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(btnInstallW) });
+        // Tabs / Spotlight: stretch instead. The width above is the page's, and Spotlight shows this
+        // section in its narrower slide-in panel, where a fixed width runs off the right edge.
+        btnRow.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = Layout.IsTabs ? new GridLength(1, GridUnitType.Star) : new GridLength(btnInstallW),
+        });
         btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // cog
         btnRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // ✕ remove
 

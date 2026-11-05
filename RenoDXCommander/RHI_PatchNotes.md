@@ -3,29 +3,31 @@
 1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) and choose **Generate new token (classic)**. Any name and expiry; leave every scope unticked.
 2. In RHI open **Settings → Accounts & Data → GitHub token**, paste it and click **Save**.
 
-## v2.9.0 Beta 2
+## v2.9.0 Beta 3
 
 ### New
 
 **Tabs layout**
-- Settings › General › Game page has a new Layout option. Tabs is a redesigned RHI window that shows the game page one tab at a time instead of one long page. Classic, the layout you know, stays the default, and every setting is available in both.
+- A new layout switch on the top bar (Classic+ | Tabs | Spotlight). Tabs is a redesigned RHI window that shows the game page one tab at a time instead of one long page. Classic+, the layout you know with the new top bar, stays the default, and every setting is available in every layout.
 - **Game header:** the game's name in large type with a Favourite star and Hide, tags for the store, engine, graphics API, 32/64-bit and mod author, the install path with Open folder and Config folder, and links to Nexus Mods, PCGamingWiki and ultrawide fixes. A large Launch button has a menu for the executable, launch arguments and a desktop shortcut, and HDR on launch and Resolution switch are labelled toggles.
 - **Overview tab:** a card for each component (ReShade, RenoDX or Luma, RE Framework, DOF Fix and the frame limiter) with its version, a short description, the main button and Info, ⚙ and remove. ReLimiter and Display Commander share one card with a switch between them. Below, an At a glance tile for every other section shows its summary; click one to open that tab.
 - **Section tabs:**
   - Game Overrides is grouped into four cards: Names and matching, ReShade, DLL names, and Updates and launch.
-  - DLSS / Streamline shows every setting as a labelled dropdown in one card. Driver Settings keeps Classic's groups (VSync and latency, ReBAR, Smooth Motion, and Power, G-Sync and FPS).
+  - DLSS / Streamline has a column each for Super Resolution, Ray Reconstruction, Frame Generation and Neural Rendering, with Streamline underneath. Driver Settings keeps Classic+'s groups (VSync and latency, ReBAR, Smooth Motion, and Power, G-Sync and FPS).
   - Neural Rendering has a card for each method, with the setup underneath.
   - Extras is grouped into Loaders and upscalers, MFG unlocks and API upgrades, with a description for each component. When something can't be installed, the row says why (for example, DLSS Enabler is already provided by OptiScaler).
   - Management is four large buttons.
-- **Top bar and sidebar:** Available Mods and Shaders & Addons along the top, with when RHI last checked for updates, a refresh button, Update All showing how many games have updates (or All up to date), a Help menu and Settings. The Settings button stays lit while Settings is open; click it again, or the RHI logo, to go back to your games. The sidebar has All, Installed, Favourites and Hidden as one switch, with the engine, mod and store filters behind a Filters button.
+- **Sidebar:** All, Installed, Favourites and Hidden as one switch, with the engine, mod and store filters behind a Filters button.
 - The tabs are always in the same order (Overview, Game Overrides, Extras, DLSS / Streamline, Driver Settings, Neural Rendering, Management), and RHI remembers which tab you were on.
+- A component's ⚙ settings open right under it on the page instead of in a pop-up. Click ⚙ again, or ✕, to close them.
 
 **Spotlight layout**
-- A third Layout option in Settings › General › Game page, built around the game you've picked.
+- A third layout on the top bar switch, built around the game you've picked.
 - **Hero banner:** the game's Steam artwork across the top (for any store, when the game is also on Steam), with the same name, tags, path, links, Launch button and HDR / Resolution toggles as Tabs.
 - **Cover shelf:** your games as a row of cover tiles instead of the sidebar list, with the search box, the All / Installed / Favourites / Hidden switch and Filters above it. Scroll it with the mouse wheel; right-click a cover for the usual game menu. A game with an update shows a purple Update label and outline on its cover.
 - **What's installed:** a tile for ReShade, RenoDX or Luma, RE Framework, DOF Fix and the frame limiter showing what's installed, plus Manage components, which opens the component cards.
 - **Tune this game:** a tile for every section with its summary. Click one and that section slides in from the right, laid out as in Tabs; click outside it or ✕ to close.
+- A component's ⚙ settings open in the side panel, with a back button to the section you came from.
 - Artwork is downloaded from Steam only while Spotlight is in use, and saved so it's downloaded once.
 - **Your own artwork:** right-click a cover or the banner and choose Artwork › Set custom cover or Set custom banner to use any image. Use Steam cover / Use Steam banner puts Steam's back. Handy for games that aren't on Steam.
 
@@ -36,13 +38,51 @@
 
 ### Changes
 
+**Top bar**
+- A new top bar, the same in all three layouts (the usual RHI window is now called Classic+): Available Mods and Shaders & Addons, when RHI last checked for updates, refresh, Update All with how many games have updates (or All up to date), the layout switch, a Help menu (Quick Start, Guide, Discord, links, patch notes, Donate, Ko-fi and more) and Settings.
+- The Settings button stays lit while Settings is open; click it again, or the RHI logo, to go back to your games.
+- The game list in Classic+ uses the same dark navy colours.
+- Tooltips everywhere use the same dark navy look.
+- Patch notes, Message from RHI, Support the Mod Authors and Multi Frame Generation are restyled to match; mod authors are shown as cards, two across.
+- Every other pop-up (Update Inclusion, ReShade presets, confirmations and the rest) uses the same dark navy look.
+- Patch notes list every version down the left; click one to read its notes. A search box finds a word across every version and shows each matching line.
+
+**Component settings (⚙)**
+- Restyled to match the new layouts: settings are grouped into cards, in the same dark navy colours.
+
+**DLSS / Streamline**
+- Removed the Deploy DLL button under Neural Rendering. The Neural Rendering section installs the DLL when you pick a method; the version dropdown still changes the DLL a game already has.
+
+**Driver Settings**
+- The Driver Settings summary (the collapsed header, and the Driver Settings tile in Tabs and Spotlight) now shows G-Sync Off when G-Sync is disabled for the game. It updates as soon as you change it.
+
+**OptiScaler**
+- New Default version setting (Settings → Components → OptiScaler): Stable, Nightly, DLSS NR or F5 DLSSNR. It's used when OptiScaler is installed in a game you haven't picked a version for in its ⚙. Games that already have OptiScaler keep the version they have.
+
+**Interface size**
+- New Interface size setting (Settings → General → Windows), from 50% to 150%. It makes RHI's window smaller or larger without changing Windows' scaling, for TVs and high-DPI screens set to 200% or more. Pop-ups, dropdown lists and tooltips keep the Windows size.
+
+**Adding games**
+- A game you add yourself (Add Game, or dropping its exe on RHI) now opens straight away, so you don't have to find it in the list. If your search or filter would hide it, they're cleared.
+
 **Message of the day**
 - Links in the message can now be clicked.
 
 **GitHub**
 - The Sign in with GitHub option has been removed. A token (Settings → Accounts & Data → GitHub token) is the way to raise the GitHub limit. If you're already signed in, it keeps working until you sign out.
 
+**RTX Encore**
+- Intel's XeSS files are now installed the way RTX Encore Hub installs them. If the game already has its own copies (Unreal games often keep them under Engine\Plugins), RHI replaces them where they are with the version RTX Encore needs, and puts the game's copies back when you remove RTX Encore. Files the game doesn't have, and Intel's licence, go in RTX Encore's own folder. Games that already have RTX Encore are updated on the next launch.
+- The ⚙ tooltips have been brought up to date with RTX Encore 1.6.0, and XeSS on Tensor Cores is greyed out unless Upscaler is XeSS.
+
 ### Bug Fixes
+
+**RTX Encore**
+- Fixed the XeSS upscaler not working: RHI didn't install Intel's libxess.dll, which it needs.
+- Fixed games breaking when RTX Encore was installed as binkw64.dll or bink2w64.dll. The game's own Bink file is now kept beside it as binkw64Hooked.dll (or bink2w64Hooked.dll), as RTX Encore requires.
+- Fixed the rtx-encore.asi option installing the wrong file. It now uses the separate ASI build in RTX Encore's release.
+- Fixed Neural Rendering not finding its DLL when RTX Encore was installed as rtx-encore.asi. The DLL now goes in the plugins folder beside it; existing installs are moved on the next launch.
+- Fixed the FAQ still calling RTX Encore a beta.
 
 **Admin Mode**
 - Fixed the hand cursor over links and badges switching back to the normal pointer after a moment when Drop Helper is on.
@@ -53,6 +93,9 @@
 
 **Game Pass and moved games**
 - Fixed installing or updating a component opening a folder browser when the game had been updated or moved since RHI last scanned it. Game Pass games get a new folder with every update. RHI now explains what happened and offers to refresh the game list to find the new folder, with the folder browser still available as an option.
+
+### Manifest Updates
+- Mafia: The Old Country: DLSS and Streamline are now found in the game's plugins folder, so the DLSS / Streamline section is no longer empty.
 
 ## v2.8.9
 

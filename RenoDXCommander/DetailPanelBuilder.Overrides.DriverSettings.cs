@@ -245,43 +245,70 @@ public partial class DetailPanelBuilder
                     CrashReporter.Log($"[BuildDriverProfileSectionWithData] SLOW AddToTree: '{gameName}' took {sw2.ElapsedMilliseconds}ms on UI thread");
 
                 // Update collapsed summary — appended at index 3 of driverHeaderRow
-                if (_driverHeaderRow != null && data != null)
+                if (data != null)
                 {
-                    for (int i = _driverHeaderRow.Children.Count - 1; i >= 3; i--)
-                        if (_driverHeaderRow.Children[i] is TextBlock { Tag: DriverSummaryTag })
-                            _driverHeaderRow.Children.RemoveAt(i);
-
-                    var vsyncName = LocOpt.T(DlssPresetService.VSyncModeOptions
-                        .FirstOrDefault(o => o.Value == data.VSyncMode).Name ?? "Default");
-                    var smoothName = data.SmoothMotionEnable != 0 ? LocOpt.T("On") : null;
-                    // ReBarEnableMode: 0=Off, 1=Auto (default), 2=On
-                    var rebarName = data.ReBarEnableMode == 2 ? LocOpt.T("On")
-                                  : data.ReBarEnableMode == 0 ? LocOpt.T("Off")
-                                  : null; // Auto = default, omit from summary
-
-                    var summaryEntries = new System.Collections.Generic.List<(string, string?)>();
-                    if (!string.IsNullOrEmpty(driverVer))
-                        summaryEntries.Add((Loc.GetString("Overrides.Summary.Driver"), driverVer));
-                    summaryEntries.Add((Loc.GetString("Overrides.Summary.VSync"), vsyncName));
-                    if (smoothName != null)
-                        summaryEntries.Add((Loc.GetString("Overrides.Summary.Smooth"), smoothName));
-                    if (rebarName != null)
-                        summaryEntries.Add((Loc.GetString("Overrides.Summary.ReBar"), rebarName));
-                    if (data.PerGameFpsLimit is uint capFps)
-                        summaryEntries.Add((Loc.GetString("Xaml.FpsLimit"),
-                            capFps == 0 ? Loc.GetString("Xaml.Off") : $"{capFps}"));
-                    var summaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(summaryEntries,
-                        Loc.GetString("Overrides.DriverSummary.Tooltip"));
-                    if (summaryTb != null)
-                    {
-                        summaryTb.Tag = DriverSummaryTag;
-                        summaryTb.Visibility = driverBody.Visibility == Visibility.Collapsed ? Visibility.Visible : Visibility.Collapsed;
-                        _driverHeaderRow.Children.Add(summaryTb);
-                        Layout.SummaryChanged(); // Tabs: refresh the Overview tile
-                    }
+                    _driverSummaryData = data;
+                    _driverSummaryVer = driverVer;
+                    _driverSummaryBody = driverBody;
+                    UpdateDriverSummary();
                 }
             });
         });
+    }
+
+    // Last values shown in the Driver Settings summary, so a change made in the panel can update it
+    private DriverProfileData? _driverSummaryData;
+    private string? _driverSummaryVer;
+    private StackPanel? _driverSummaryBody;
+
+    /// <summary>
+    /// (Re)builds the Driver Settings header summary from <see cref="_driverSummaryData"/>. The same
+    /// summary feeds Classic's collapsed header, Tabs' At a glance and Spotlight's Tune tile.
+    /// </summary>
+    private void UpdateDriverSummary()
+    {
+        var data = _driverSummaryData;
+        if (_driverHeaderRow == null || data == null) return;
+        try
+        {
+            for (int i = _driverHeaderRow.Children.Count - 1; i >= 3; i--)
+                if (_driverHeaderRow.Children[i] is TextBlock { Tag: DriverSummaryTag })
+                    _driverHeaderRow.Children.RemoveAt(i);
+
+            var vsyncName = LocOpt.T(DlssPresetService.VSyncModeOptions
+                .FirstOrDefault(o => o.Value == data.VSyncMode).Name ?? "Default");
+            var smoothName = data.SmoothMotionEnable != 0 ? LocOpt.T("On") : null;
+            // ReBarEnableMode: 0=Off, 1=Auto (default), 2=On
+            var rebarName = data.ReBarEnableMode == 2 ? LocOpt.T("On")
+                          : data.ReBarEnableMode == 0 ? LocOpt.T("Off")
+                          : null; // Auto = default, omit from summary
+
+            var summaryEntries = new System.Collections.Generic.List<(string, string?)>();
+            if (!string.IsNullOrEmpty(_driverSummaryVer))
+                summaryEntries.Add((Loc.GetString("Overrides.Summary.Driver"), _driverSummaryVer));
+            summaryEntries.Add((Loc.GetString("Overrides.Summary.VSync"), vsyncName));
+            if (smoothName != null)
+                summaryEntries.Add((Loc.GetString("Overrides.Summary.Smooth"), smoothName));
+            if (rebarName != null)
+                summaryEntries.Add((Loc.GetString("Overrides.Summary.ReBar"), rebarName));
+            if (!data.PerGameGSyncEnabled)
+                summaryEntries.Add((Loc.GetString("Overrides.Summary.GSync"), Loc.GetString("Xaml.Off")));
+            if (data.PerGameFpsLimit is uint capFps)
+                summaryEntries.Add((Loc.GetString("Xaml.FpsLimit"), capFps == 0 ? Loc.GetString("Xaml.Off") : $"{capFps}"));
+            var summaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(summaryEntries,
+                Loc.GetString("Overrides.DriverSummary.Tooltip"));
+            if (summaryTb != null)
+            {
+                summaryTb.Tag = DriverSummaryTag;
+                summaryTb.Visibility = _driverSummaryBody?.Visibility == Visibility.Collapsed ? Visibility.Visible : Visibility.Collapsed;
+                _driverHeaderRow.Children.Add(summaryTb);
+                Layout.SummaryChanged(); // Tabs / Spotlight: refresh the tile
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[DetailPanelBuilder.UpdateDriverSummary] {ex.Message}");
+        }
     }
 
     private void BuildDriverProfileSectionWithData(GameCardViewModel card, string capturedName,
@@ -682,6 +709,11 @@ public partial class DetailPanelBuilder
                     if (gsyncInit) return;
                     bool enabled = gsyncCombo.SelectedIndex == 0;
                     _ = Task.Run(() => nvidiaPresetService.SetPerGameGSyncEnabled(capturedName, installPathSafe, enabled));
+                    if (_driverSummaryData != null)
+                    {
+                        _driverSummaryData = _driverSummaryData with { PerGameGSyncEnabled = enabled };
+                        UpdateDriverSummary();
+                    }
                 };
                 powerCol.Children.Add(gsyncCombo);
                 gsyncInit = false;

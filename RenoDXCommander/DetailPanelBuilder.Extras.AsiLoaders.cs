@@ -425,25 +425,28 @@ public partial class DetailPanelBuilder
                     {
                         var dlssS = App.Services.GetRequiredService<IDlssStreamlineService>();
                         if (await svc.EnsureNrDllCachedAsync(dlssS) != null)
-                            await Task.Run(() => svc.DeployNrDll(installPath));
+                            await Task.Run(() => svc.DeployNrDll(installPath, chosen));
                         else
                             CrashReporter.Log($"[RtxEncoreInstall] NR DLL {RtxEncoreService.NrRequiredVer} not available — skipping NR deploy");
                     }
 
-                    // Intel XeSS files for the XeFG engine, in RTX Encore's own runtime folder beside the mod.
-                    // Not fatal: everything else works without them.
-                    installBtn.Content = Loc.GetString("Extras.RtxEncore.InstallingXess");
+                    // Intel XeSS SDK files for the XeSS upscaler and XeFG engine: the game's own copies are
+                    // replaced in place, the rest go in RTX Encore's runtime folder. Not fatal: everything else works without them.
                     var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
                     var newModDir = svc.ModDir(installPath, chosen);
-                    await mfgSvc.EnsureXessStagingAsync();
-                    bool xessOk = await Task.Run(() =>
+                    installBtn.Content = mfgSvc.IsEncoreIntelStagingReady
+                        ? Loc.GetString("Extras.RtxEncore.InstallingXess")
+                        : Loc.GetString("Extras.RtxEncore.DownloadingXess");
+                    bool staged = await mfgSvc.EnsureEncoreIntelStagingAsync();
+                    installBtn.Content = Loc.GetString("Extras.RtxEncore.InstallingXess");
+                    bool xessOk = staged && await Task.Run(() =>
                     {
                         if (oldModDir != null && !string.Equals(oldModDir, newModDir, StringComparison.OrdinalIgnoreCase))
-                            mfgSvc.RemoveEncoreXessFiles(oldModDir); // moved between the game folder and plugins\
-                        return mfgSvc.DeployEncoreXessFiles(newModDir);
+                            mfgSvc.RemoveEncoreIntelFiles(installPath, oldModDir); // moved between the game folder and plugins\
+                        return mfgSvc.DeployEncoreIntelFiles(installPath, newModDir);
                     });
                     if (!xessOk)
-                        CrashReporter.Log($"[RtxEncoreInstall] XeSS files not deployed to '{newModDir}' (download failed or folder not writable)");
+                        CrashReporter.Log($"[RtxEncoreInstall] XeSS files not deployed for '{installPath}' (download failed or folder not writable)");
 
                     RequestExtrasRebuild(card);
                 }
@@ -469,7 +472,7 @@ public partial class DetailPanelBuilder
             var modDir = svc.ModDir(installPath, currentDllName); // before the DLL is gone
             svc.Uninstall(installPath, currentDllName, removeNrDll: nrDeployed);
             var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
-            _ = Task.Run(() => mfgSvc.RemoveEncoreXessFiles(modDir));
+            _ = Task.Run(() => mfgSvc.RemoveEncoreIntelFiles(installPath, modDir));
             _window.ViewModel.SetRtxEncoreInstalledAs(gameName, null, store);
             if (nrDeployed) _window.ViewModel.SetRtxEncoreNrDllDeployed(gameName, false, store);
             RequestExtrasRebuild(card);
@@ -534,6 +537,9 @@ public partial class DetailPanelBuilder
             if (isCurrent)     contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
             btn.Content = contentRow;
             if (isRhiOwned)    ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllInUse.Tooltip", rhiConflicts[name]));
+            else if (isOnDisk && name.StartsWith("bink", StringComparison.OrdinalIgnoreCase))
+                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllBink.Tooltip",
+                    name, onDiskConflicts[name], System.IO.Path.GetFileNameWithoutExtension(name) + "Hooked.dll"));
             else if (isOnDisk) ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllOnDisk.Tooltip", name, onDiskConflicts[name]));
             btn.Tag = name;
             btn.Click += (s, ev) => { chosen = (s as Button)?.Tag as string; if (s is FrameworkElement fe) FindParentContentDialog(fe)?.Hide(); };

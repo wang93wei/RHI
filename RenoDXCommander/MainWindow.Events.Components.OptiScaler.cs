@@ -353,7 +353,7 @@ public sealed partial class MainWindow
             {
                 var selected = variantCombo.SelectedItem as string ?? "Stable";
                 // Map display name to internal value
-                var internalValue = selected switch { "DLSS NR" => "DlssNr", "F5 DLSSNR" => "F5", "Stable" => null, _ => selected };
+                var internalValue = selected switch { "DLSS NR" => "DlssNr", "F5 DLSSNR" => "F5", _ => selected };
                 ViewModel.SetOsVariant(card.GameName, internalValue, store);
                 if (card.IsOsInstalled && !string.IsNullOrEmpty(card.InstallPath))
                 {
@@ -459,7 +459,7 @@ public sealed partial class MainWindow
                     fe.IsHitTestVisible = false;
                     fe.Opacity = CogDialog.DisabledOpacity;
                 }
-                foreach (var child in cog.Body.Children.OfType<FrameworkElement>())
+                foreach (var child in cog.Items.ToList())
                 {
                     if (ctx.Ungated.Contains(child)) continue;
                     // Settings grids mix usable and unusable cells: dim cell by cell

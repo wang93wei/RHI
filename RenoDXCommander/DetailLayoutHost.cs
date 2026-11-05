@@ -48,7 +48,11 @@ internal sealed partial class DetailLayoutHost
     /// <summary>Key of the Overview tab (Tabs only; not a section).</summary>
     internal const string OverviewKey = "Overview";
 
-    internal DetailLayoutHost(MainWindow window) => _window = window;
+    internal DetailLayoutHost(MainWindow window)
+    {
+        _window = window;
+        CogDialog.EmbeddedShow = TryShowCog; // ⚙ settings open in the panel (Spotlight) or in place (Tabs)
+    }
 
     private SettingsViewModel Settings => _window.ViewModel.Settings;
 
@@ -161,6 +165,7 @@ internal sealed partial class DetailLayoutHost
     {
         var panel = SectionsPanel;
         bool tabs = IsTabs;
+        CloseCogIfStale();
         if (!IsSpotlight) ClosePanel(); // the panel only exists in Spotlight
         EnsureTabStrip(tabs);
         ApplyHeroMode(IsSpotlight);
@@ -294,7 +299,7 @@ internal sealed partial class DetailLayoutHost
         if (_overview != null)
         {
             _overview.Visibility = selected == OverviewKey ? Visibility.Visible : Visibility.Collapsed;
-            if (selected == OverviewKey) RefreshOverview();
+            if (selected == OverviewKey) { SummariesStale?.Invoke(); RefreshOverview(); }
         }
     }
 
@@ -339,6 +344,7 @@ internal sealed partial class DetailLayoutHost
         if (IsSpotlight) { OpenPanel(key); return; }
         if (Layout != MainLayout.Tabs || IsSelectedTab(key)) return;
         if (key != OverviewKey && GetContainer(key) == null) return;
+        CloseCog(ContentDialogResult.None); // settings opened in place belong to the old tab
         Settings.DetailSelectedTab = key;
         _window.ViewModel.SaveSettingsPublic();
         ApplyTabSelection();
