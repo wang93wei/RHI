@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 
 namespace RenoDXCommander.Services;
@@ -11,11 +12,16 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class REFrameworkService : IREFrameworkService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     // ── Constants ──────────────────────────────────────────────────────────────────
 
     private const string DllFileName = "dinput8.dll";
     private const string DownloadBaseUrl = "https://github.com/praydog/REFramework-nightly/releases/latest/download/";
-    private const string ReleasesApiUrl = "https://api.github.com/repos/praydog/REFramework-nightly/releases";
+    private const string LatestReleasePageUrl = "https://github.com/praydog/REFramework-nightly/releases/latest";
+    private const string ReleasesApiUrl ="https://api.github.com/repos/praydog/REFramework-nightly/releases";
 
     /// <summary>
     /// Maps game names to their RE Framework nightly ZIP filename.
@@ -72,7 +78,7 @@ public class REFrameworkService : IREFrameworkService
         try
         {
             // ── Download game-specific ZIP ────────────────────────────────────
-            progress?.Report(("Downloading RE Framework...", 10));
+            progress?.Report((L("Status.DownloadingReFramework"), 10));
             CrashReporter.Log($"[REFrameworkService.InstallAsync] Downloading {downloadUrl}");
 
             using var response = await _http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
@@ -82,8 +88,10 @@ public class REFrameworkService : IREFrameworkService
             {
                 await response.Content.CopyToAsync(fs);
             }
+            var zipSize = new FileInfo(zipPath).Length;
+            CrashReporter.Log($"[REFrameworkService.InstallAsync] Downloaded {zipName} ({zipSize:N0} bytes)");
 
-            progress?.Report(("Extracting dinput8.dll...", 50));
+            progress?.Report((L("Status.ExtractingDinput8"), 50));
 
             // ── Extract dinput8.dll from ZIP ──────────────────────────────────
             ExtractDllFromZip(zipPath, cachedDll);
@@ -96,14 +104,15 @@ public class REFrameworkService : IREFrameworkService
             }
 
             // ── Copy cached DLL to game directory ─────────────────────────────
-            progress?.Report(("Installing dinput8.dll...", 80));
+            progress?.Report((L("Status.InstallingDinput8"), 80));
             AuxInstallService.SentinelBackup(destPath);
             File.Copy(cachedDll, destPath, overwrite: true);
 
             // ── Fetch version tag ─────────────────────────────────────────────
             var version = await GetLatestVersionAsync() ?? "unknown";
+            CrashReporter.Log($"[REFrameworkService.InstallAsync] Installed RE Framework build {version} ({zipName} {zipSize:N0} bytes, {DllFileName} {new FileInfo(destPath).Length:N0} bytes) for '{gameName}' in '{installPath}'");
 
-            progress?.Report(("RE Framework installed!", 100));
+            progress?.Report((L("Status.ReFrameworkInstalled"), 100));
 
             // ── Persist install record ────────────────────────────────────────
             var record = new REFrameworkInstalledRecord
@@ -175,6 +184,17 @@ public class REFrameworkService : IREFrameworkService
         if (_cachedLatestVersion != null)
             return _cachedLatestVersion;
 
+        // The web page redirect costs no API quota (60/hour without a token) and is the same
+        // release the zip downloads from. When rate limited, the API below only returns the
+        // stale cached list, which left users stuck on an old build.
+        var fromRedirect = await GetLatestVersionFromRedirectAsync().ConfigureAwait(false);
+        if (fromRedirect != null)
+        {
+            _cachedLatestVersion = fromRedirect;
+            CrashReporter.Log($"[REFrameworkService.GetLatestVersionAsync] Latest tag (web): {_cachedLatestVersion}");
+            return _cachedLatestVersion;
+        }
+
         try
         {
             CrashReporter.Log("[REFrameworkService.GetLatestVersionAsync] Fetching latest release tag");
@@ -206,6 +226,36 @@ public class REFrameworkService : IREFrameworkService
         catch (Exception ex)
         {
             CrashReporter.Log($"[REFrameworkService.GetLatestVersionAsync] Failed — {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads the latest tag from where github.com/.../releases/latest redirects
+    /// (…/releases/tag/nightly-01438-…). Returns null if that fails.
+    /// </summary>
+    private async Task<string?> GetLatestVersionFromRedirectAsync()
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var request = new HttpRequestMessage(HttpMethod.Head, LatestReleasePageUrl);
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            var finalUrl = response.RequestMessage?.RequestUri?.AbsolutePath ?? "";
+            const string marker = "/releases/tag/";
+            var idx = finalUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (!response.IsSuccessStatusCode || idx < 0)
+            {
+                CrashReporter.Log($"[REFrameworkService.GetLatestVersionFromRedirectAsync] No tag in redirect (HTTP {(int)response.StatusCode}, '{finalUrl}')");
+                return null;
+            }
+            var tag = Uri.UnescapeDataString(finalUrl[(idx + marker.Length)..].Trim('/'));
+            var version = ExtractVersionNumber(tag);
+            return string.IsNullOrEmpty(version) || !version.All(char.IsDigit) ? null : version;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            CrashReporter.Log($"[REFrameworkService.GetLatestVersionFromRedirectAsync] Failed — {ex.Message}");
             return null;
         }
     }
@@ -269,7 +319,7 @@ public class REFrameworkService : IREFrameworkService
             Directory.CreateDirectory(tempDir);
 
             // ── Download outer ZIP from nightly.link ──────────────────────────
-            progress?.Report(("Downloading PD-Upscaler REFramework...", 10));
+            progress?.Report((L("Status.DownloadingPdUpscalerReframework"), 10));
             CrashReporter.Log($"[REFrameworkService.InstallPdUpscalerAsync] Downloading {downloadUrl}");
 
             var outerZipPath = Path.Combine(tempDir, $"{artifactName}_outer.zip");
@@ -280,7 +330,7 @@ public class REFrameworkService : IREFrameworkService
                 await response.Content.CopyToAsync(fs);
             }
 
-            progress?.Report(("Extracting PD-Upscaler REFramework...", 40));
+            progress?.Report((L("Status.ExtractingPdUpscalerReframework"), 40));
 
             // ── Extract outer ZIP → inner {artifactName}.zip ──────────────────
             var outerExtractDir = Path.Combine(tempDir, "outer");
@@ -304,7 +354,7 @@ public class REFrameworkService : IREFrameworkService
                 throw new FileNotFoundException(
                     $"{DllFileName} not found inside pd-upscaler inner ZIP for {artifactName}");
 
-            progress?.Report(("Backing up standard REFramework...", 60));
+            progress?.Report((L("Status.BackingUpStandardReframework"), 60));
 
             // ── Back up existing standard dinput8.dll ─────────────────────────
             if (File.Exists(destDll) && !File.Exists(backupPath))
@@ -314,7 +364,7 @@ public class REFrameworkService : IREFrameworkService
             }
 
             // ── Copy pd-upscaler DLL to game folder ──────────────────────────
-            progress?.Report(("Installing PD-Upscaler REFramework...", 80));
+            progress?.Report((L("Status.InstallingPdUpscalerReframework"), 80));
             File.Copy(extractedDll, destDll, overwrite: true);
 
             // ── Update install record with PD-Upscaler version ───────────────
@@ -343,7 +393,7 @@ public class REFrameworkService : IREFrameworkService
                 }
             }
 
-            progress?.Report(("PD-Upscaler REFramework installed!", 100));
+            progress?.Report((L("Status.PdUpscalerReframeworkInstalled"), 100));
             CrashReporter.Log($"[REFrameworkService.InstallPdUpscalerAsync] PD-Upscaler installed for '{gameName}'");
         }
         catch (Exception ex)
@@ -443,6 +493,27 @@ public class REFrameworkService : IREFrameworkService
         catch (Exception ex)
         {
             CrashReporter.Log($"[REFrameworkService.SyncInstalledVersion] Failed — {ex.Message}");
+        }
+    }
+
+    /// <inheritdoc/>
+    public int RepointRecords(string gameName, string oldPath, string newPath)
+    {
+        lock (SafeJsonFile.LockFor(DbPath))
+        {
+            var db = LoadRecords();
+            int changed = 0;
+            foreach (var r in db.Where(r => r.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)
+                                         && r.InstallPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase)
+                                         ).ToList())
+            {
+                bool newExists = db.Any(o => o != r && o.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) && o.InstallPath.Equals(newPath, StringComparison.OrdinalIgnoreCase));
+                if (newExists) db.Remove(r); else r.InstallPath = newPath;
+                changed++;
+                CrashReporter.Log($"[REFrameworkService.RepointRecords] '{gameName}': {(newExists ? "dropped old record (new folder has one)" : "moved")} '{oldPath}' → '{newPath}'");
+            }
+            if (changed > 0) SaveRecords(db);
+            return changed;
         }
     }
 

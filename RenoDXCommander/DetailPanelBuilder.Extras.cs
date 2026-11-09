@@ -290,16 +290,34 @@ public partial class DetailPanelBuilder
         if (card.IsOsInstalled && !osGreyed)
         {
             var osVariant = _window.ViewModel.GetOsVariant(card.GameName, card.Source ?? "");
-            var osWikiUrl = osVariant == "DlssNr"
+            var osWikiUrl = OsForkService.Get(osVariant)?.RepoUrl is { } forkRepo
+                ? forkRepo + "/releases"
+                : osVariant == "DlssNr"
                 ? "https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass/releases"
                 : osVariant == "F5"
                 ? "https://github.com/janblade/OptiScaler-F5-DLSSNR-Multipass/releases"
                 : osVariant == "Nightly"
                 ? "https://github.com/optiscaler/OptiScaler-nightly/releases"
                 : "https://github.com/optiscaler/OptiScaler/wiki";
-            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.OptiScaler.Releases.Tooltip"));
-            statusBlock.PointerPressed += async (s, e) =>
-                await Windows.System.Launcher.LaunchUriAsync(new Uri(osWikiUrl));
+            if (OsVariants.IsCustom(osVariant) && OsCustomBuildService.Get(osVariant) is { } customOs)
+            {
+                // Custom build: no releases page, open its folder instead
+                var customLabel = customOs.DllVersion != null ? $"{customOs.Label} ({customOs.DllVersion})" : customOs.Label;
+                ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.OptiScaler.CustomBuild.Tooltip", customLabel));
+                var dir = customOs.Dir;
+                statusBlock.PointerPressed += (s, e) =>
+                {
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true }); }
+                    catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+                    { CrashReporter.Log($"[DetailPanelBuilder.Extras] Open custom build folder — {ex.Message}"); }
+                };
+            }
+            else
+            {
+                ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.OptiScaler.Releases.Tooltip"));
+                statusBlock.PointerPressed += async (s, e) =>
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri(osWikiUrl));
+            }
             AttachLinkCursor(statusBlock);
         }
         Grid.SetColumn(statusBlock, 1);
@@ -319,7 +337,12 @@ public partial class DetailPanelBuilder
         };
         ApplyInfoButtonStyle(infoBtn, card, AddonType.OptiScaler);
         var osVariantForInfo = _window.ViewModel.GetOsVariant(card.GameName, card.Source ?? "");
-        if (osVariantForInfo == "DlssNr" || osVariantForInfo == "F5" || osVariantForInfo == "Nightly")
+        if (OsForkService.Get(osVariantForInfo) is { RepoUrl: { } forkPage } forkInfo)
+        {
+            ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.OptiScaler.ForkPage.Tooltip", forkInfo.Label));
+            infoBtn.Click += (s, e) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(forkPage));
+        }
+        else if (osVariantForInfo == "DlssNr" || osVariantForInfo == "F5" || osVariantForInfo == "Nightly")
         {
             var forkUrl = osVariantForInfo == "F5"
                 ? "https://github.com/janblade/OptiScaler-F5-DLSSNR-Multipass"

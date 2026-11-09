@@ -228,22 +228,37 @@ public partial class DialogService
         }
     }
 
+    private const double PatchNotesFontMin = 10, PatchNotesFontMax = 20;
+
     public async Task ShowPatchNotesDialogAsync()
     {
         var (preamble, sections) = MainViewModel.GetPatchNoteSections();
-        const double bodyHeight = 480;
+        // The search box sits in the left column (not a row across the top), so the notes get its height
+        const double bodyHeight = 530;
+        const double cardWidth = 640, navWidth = 160, layoutGap = 14; // strip 30 + gaps + nav + card must fit the dialog's ~870 px
+        var settings = ViewModel.Settings;
 
         var markdown = new CommunityToolkit.WinUI.Controls.MarkdownTextBlock
         {
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            Foreground = TabsTheme.B(TabsTheme.TextSecondary),
-            FontSize = 12,
+            Foreground = TabsTheme.B(TabsTheme.TextControl),
+            FontSize = Math.Clamp(settings.PatchNotesFontSize, PatchNotesFontMin, PatchNotesFontMax),
             UseEmphasisExtras = true,
             UseListExtras = true,
             UseTaskLists = true,
         };
 
-        // Wrap in a Grid with explicit dark theme to force heading colors
+        TabsTheme.StyleMarkdown(markdown);
+        // Heading sizes follow the text size (+ / - buttons); the defaults are for 12 px text
+        var themes = markdown.Config.Themes;
+        double[] baseHeadings = { themes.H1FontSize, themes.H2FontSize, themes.H3FontSize, themes.H4FontSize, themes.H5FontSize, themes.H6FontSize };
+        void ScaleHeadings(double size)
+        {
+            double f = size / 12.0;
+            themes.H1FontSize = baseHeadings[0] * f; themes.H2FontSize = baseHeadings[1] * f; themes.H3FontSize = baseHeadings[2] * f;
+            themes.H4FontSize = baseHeadings[3] * f; themes.H5FontSize = baseHeadings[4] * f; themes.H6FontSize = baseHeadings[5] * f;
+        }
+        ScaleHeadings(markdown.FontSize);
         var markdownContainer = new Grid { RequestedTheme = ElementTheme.Dark };
         markdownContainer.Children.Add(markdown);
 
@@ -256,13 +271,13 @@ public partial class DialogService
         };
         var card = TabsTheme.MakeCard(scrollViewer, 0);
         card.Padding = new Thickness(20, 16, 4, 16);
-        card.Width = 680;
+        card.Width = cardWidth;
 
         // Version list down the left: click one to show its notes. One version at a time keeps
         // the Markdown small (the file has dozens of versions). The search box above narrows the
         // list to versions that mention the text and shows every matching line on the right.
         var navList = new StackPanel { Spacing = 2 };
-        var navItems = new List<(Border Item, TextBlock Label, TextBlock Count)>();
+        var navItems = new List<(Border Item, TextBlock Label, TextBlock Count, Button Button)>();
         int selected = -1;
 
         void Highlight(int index)
@@ -271,6 +286,8 @@ public partial class DialogService
             for (int i = 0; i < navItems.Count; i++)
             {
                 bool on = i == index;
+                // A controller starts on the selected version when the window opens (MainWindow.Controller.Popups)
+                navItems[i].Button.Tag = on ? "PadStart" : null;
                 navItems[i].Item.Background = on ? TabsTheme.B("#1A2336") : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
                 navItems[i].Item.BorderBrush = on ? TabsTheme.B("#2A3D63") : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
                 navItems[i].Label.Foreground = TabsTheme.B(on ? "#A9C6FF" : TabsTheme.TextSecondary);
@@ -312,7 +329,7 @@ public partial class DialogService
             query = query.Trim();
             if (query.Length == 0)
             {
-                foreach (var n in navItems) { n.Item.Visibility = Visibility.Visible; n.Count.Text = ""; }
+                foreach (var n in navItems) { n.Button.Visibility = Visibility.Visible; n.Count.Text = ""; }
                 ShowVersion(selected >= 0 ? selected : 0);
                 return;
             }
@@ -322,7 +339,7 @@ public partial class DialogService
             for (int i = 0; i < sections.Count; i++)
             {
                 var lines = MatchingLines(sections[i].Body, query);
-                navItems[i].Item.Visibility = lines.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                navItems[i].Button.Visibility = lines.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
                 int hits = lines.Count(l => l.StartsWith("- "));
                 navItems[i].Count.Text = hits > 0 ? hits.ToString() : "";
                 if (lines.Count == 0) continue;
@@ -374,30 +391,35 @@ public partial class DialogService
             TabsTheme.UseHandCursor(item);
             item.PointerEntered += (s, e) => { if (idx != selected) item.Background = TabsTheme.B(TabsTheme.RowHover); };
             item.PointerExited += (s, e) => { if (idx != selected) item.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); };
-            item.Tapped += (s, e) => { if (idx != selected) ShowVersion(idx); };
-            navItems.Add((item, label, count));
-            navList.Children.Add(item);
+            // A see-through Button around the row so a controller (or the keyboard) can focus it;
+            // moving onto a version with either shows it, a click shows it as before
+            var button = new Button
+            {
+                Content = item,
+                Padding = new Thickness(0),
+                BorderThickness = new Thickness(0),
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                CornerRadius = item.CornerRadius,
+            };
+            var clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            foreach (var key in new[] { "ButtonBackgroundPointerOver", "ButtonBackgroundPressed",
+                                        "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed" })
+                TabsTheme.SetResource(button.Resources, key, clear);
+            button.Click += (s, e) => { if (idx != selected) ShowVersion(idx); };
+            button.GotFocus += (s, e) =>
+            {
+                if (button.FocusState == FocusState.Keyboard && idx != selected) ShowVersion(idx);
+            };
+            navItems.Add((item, label, count, button));
+            navList.Children.Add(button);
         }
 
-        var navHeading = TabsTheme.SectionHeading(Loc.GetString("Dialog.PatchNotes.Versions"));
-        navHeading.FontSize = 11;
-        navHeading.Margin = new Thickness(12, 2, 0, 8);
-        var navPanel = new Grid { Width = 150, Height = bodyHeight + 34 };
-        navPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        navPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        navPanel.Children.Add(navHeading);
-        var navScroll = new ScrollViewer
-        {
-            Content = navList,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Padding = new Thickness(0, 0, 10, 0),
-        };
-        Grid.SetRow(navScroll, 1);
-        navPanel.Children.Add(navScroll);
-
-        // Search box over both columns: 250 ms after typing stops, Esc clears
-        var search = new TextBox { PlaceholderText = Loc.GetString("Dialog.PatchNotes.SearchPlaceholder") };
+        // Search box (compact, top of the left column): 250 ms after typing stops, Esc clears
+        var search = new TextBox { PlaceholderText = Loc.GetString("Dialog.PatchNotes.SearchPlaceholder"), Margin = new Thickness(0, 0, 10, 10) };
         TabsTheme.StyleInput(search);
+        ToolTipService.SetToolTip(search, Loc.GetString("Dialog.PatchNotes.SearchTooltip"));
         var searchTimer = search.DispatcherQueue.CreateTimer();
         searchTimer.Interval = TimeSpan.FromMilliseconds(250);
         searchTimer.IsRepeating = false;
@@ -418,18 +440,86 @@ public partial class DialogService
             }
         };
 
-        var layout = new Grid { ColumnSpacing = 14, RowSpacing = 12 };
+        var navHeading = TabsTheme.SectionHeading(Loc.GetString("Dialog.PatchNotes.Versions"));
+        navHeading.FontSize = 11;
+        navHeading.Margin = new Thickness(12, 2, 0, 8);
+        var navPanel = new Grid { Width = navWidth, Height = bodyHeight + 32 };
+        navPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        navPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        navPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        navPanel.Children.Add(search);
+        Grid.SetRow(navHeading, 1);
+        navPanel.Children.Add(navHeading);
+        var navScroll = new ScrollViewer
+        {
+            Content = navList,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Padding = new Thickness(0, 0, 10, 0),
+        };
+        Grid.SetRow(navScroll, 2);
+        navPanel.Children.Add(navScroll);
+
+        // Thin strip on the far left: hide / show the versions + search, and the text size (all saved)
+        Button StripButton(object content, string tip)
+        {
+            var b = new Button { Width = 30, Padding = new Thickness(0), Content = content };
+            TabsTheme.Apply(b, TabsTheme.IconButton, height: 30, fontSize: 15);
+            ToolTipService.SetToolTip(b, tip);
+            return b;
+        }
+        var toggleIcon = new FontIcon { Glyph = "", FontSize = 12 };
+        var toggleNav = StripButton(toggleIcon, Loc.GetString("Dialog.PatchNotes.HideNav"));
+        var bigger = StripButton("+", Loc.GetString("Dialog.PatchNotes.BiggerText"));
+        var smaller = StripButton("−", Loc.GetString("Dialog.PatchNotes.SmallerText"));
+        var strip = new StackPanel { Spacing = 6 };
+        strip.Children.Add(toggleNav);
+        strip.Children.Add(bigger);
+        strip.Children.Add(smaller);
+
+        void ApplyNavHidden(bool hidden)
+        {
+            navPanel.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+            card.Width = hidden ? cardWidth + navWidth + layoutGap : cardWidth;
+            toggleIcon.Glyph = hidden ? "" : "";
+            ToolTipService.SetToolTip(toggleNav, hidden ? Loc.GetString("Dialog.PatchNotes.ShowNav") : Loc.GetString("Dialog.PatchNotes.HideNav"));
+        }
+        toggleNav.Click += (s, e) =>
+        {
+            settings.PatchNotesNavHidden = !settings.PatchNotesNavHidden;
+            ApplyNavHidden(settings.PatchNotesNavHidden);
+            ViewModel.SaveSettingsPublic();
+        };
+
+        void SetTextSize(double size)
+        {
+            size = Math.Clamp(size, PatchNotesFontMin, PatchNotesFontMax);
+            bigger.IsEnabled = size < PatchNotesFontMax;
+            smaller.IsEnabled = size > PatchNotesFontMin;
+            if (Math.Abs(size - markdown.FontSize) < 0.01) return;
+            markdown.FontSize = size;
+            ScaleHeadings(size);
+            // The Markdown is rendered when its text is set, so set it again to apply the new size
+            var text = markdown.Text;
+            markdown.Text = "";
+            markdown.Text = text;
+            settings.PatchNotesFontSize = size;
+            ViewModel.SaveSettingsPublic();
+        }
+        bigger.Click += (s, e) => SetTextSize(markdown.FontSize + 1);
+        smaller.Click += (s, e) => SetTextSize(markdown.FontSize - 1);
+        bigger.IsEnabled = markdown.FontSize < PatchNotesFontMax;
+        smaller.IsEnabled = markdown.FontSize > PatchNotesFontMin;
+
+        var layout = new Grid { ColumnSpacing = layoutGap };
         layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        layout.Children.Add(search);
-        Grid.SetColumnSpan(search, 2);
-        Grid.SetRow(navPanel, 1);
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        layout.Children.Add(strip);
+        Grid.SetColumn(navPanel, 1);
         layout.Children.Add(navPanel);
-        Grid.SetRow(card, 1);
-        Grid.SetColumn(card, 1);
+        Grid.SetColumn(card, 2);
         layout.Children.Add(card);
+        ApplyNavHidden(settings.PatchNotesNavHidden);
 
         if (sections.Count > 0) ShowVersion(0);
         else markdown.Text = Loc.GetString("Dialog.PatchNotes.Empty");
@@ -503,6 +593,7 @@ public partial class DialogService
             UseAutoLinks = true,
         };
         markdown.Foreground = TabsTheme.B(TabsTheme.TextControl);
+        TabsTheme.StyleMarkdown(markdown);
         var markdownContainer = new Grid { RequestedTheme = ElementTheme.Dark };
         markdownContainer.Children.Add(markdown);
 

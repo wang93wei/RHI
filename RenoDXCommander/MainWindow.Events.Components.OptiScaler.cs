@@ -42,6 +42,7 @@ public sealed partial class MainWindow
         public ComboBox? FpsLimitCombo;
         public ComboBox? ApiCombo;
         public ComboBox? ApiUpscalerCombo;
+        public ComboBox? DxgiCombo;
         // Frame Generation (Nightly / DLSS NR / F5 only)
         public ComboBox? FgEnabledCombo;
         public ComboBox? CombinedCombo;
@@ -338,12 +339,18 @@ public sealed partial class MainWindow
                     ? Loc.GetString("Dialog.OptiScaler.NotInstalledWarningNightly")
                     : Loc.GetString("Dialog.OptiScaler.NotInstalledWarning")));
 
+            // ── Installed vs latest, Check now, Update (issue #163) ──────────
+            cog.AddContent(BuildOsVersionLine(ctx, variant, isInstalled));
+
             // ── Presets (all versions) ───────────────────────────────────────
             cog.AddContent(BuildOsPresetsPanel(ctx));
 
             // ── Version ──────────────────────────────────────────────────────
-            var variantItems = new[] { "Stable", "Nightly", "DLSS NR", "F5 DLSSNR" };
-            var variantDisplay = variant switch { "DlssNr" => "DLSS NR", "F5" => "F5 DLSSNR", _ => variant };
+            // Built-ins, then custom builds (Settings › Components › OptiScaler › Custom builds)
+            var variantList = OsVariants.All();
+            if (!variantList.Any(v => v.Value == variant)) variantList.Add((variant, OsVariants.Label(variant))); // removed custom build
+            var variantItems = variantList.Select(v => v.Label).ToArray();
+            var variantDisplay = OsVariants.Label(variant);
             var variantCombo = CogDialog.MakeCombo(variantItems, OsIndexOf(variantItems, variantDisplay));
             ctx.VariantCombo = variantCombo;
             var variantCell = new OsCell(Loc.GetString("Dialog.OptiScaler.Version"),
@@ -351,9 +358,11 @@ public sealed partial class MainWindow
                 variantCombo, Ungated: true);
             variantCombo.SelectionChanged += (s, ev) =>
             {
-                var selected = variantCombo.SelectedItem as string ?? "Stable";
-                // Map display name to internal value
-                var internalValue = selected switch { "DLSS NR" => "DlssNr", "F5 DLSSNR" => "F5", _ => selected };
+                int idx = variantCombo.SelectedIndex;
+                var internalValue = idx >= 0 && idx < variantList.Count ? variantList[idx].Value : OsVariants.Stable;
+                if (internalValue == variant) return;
+                // A pinned build / release belongs to the old version
+                ViewModel.SetOsNightlyBuild(card.GameName, null, store);
                 ViewModel.SetOsVariant(card.GameName, internalValue, store);
                 if (card.IsOsInstalled && !string.IsNullOrEmpty(card.InstallPath))
                 {
@@ -382,6 +391,19 @@ public sealed partial class MainWindow
                     }
                 });
             ctx.FpsLimitCombo = fpsCell.Combo;
+
+            // ── DXGI spoofing — [Spoofing] Dxgi ──────────────────────────────
+            var dxgiItems = new[] { "Auto (Default)", "True", "False" };
+            var dxgiCurrent = ReadOsIniSectionValue(card.InstallPath, "Spoofing", "Dxgi", "auto");
+            var dxgiCell = OsComboCell(cog, Loc.GetString("Dialog.OptiScaler.DxgiSpoofing"),
+                Loc.GetString("Dialog.OptiScaler.DxgiSpoofingTooltip"),
+                dxgiItems, dxgiCurrent.ToLowerInvariant() switch { "true" => 1, "false" => 2, _ => 0 },
+                i =>
+                {
+                    if (!card.IsOsInstalled || string.IsNullOrEmpty(card.InstallPath)) return;
+                    OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "Spoofing", "Dxgi", i switch { 1 => "true", 2 => "false", _ => "auto" });
+                });
+            ctx.DxgiCombo = dxgiCell.Combo;
 
             // ── Upscaler: API selector + upscaler for that API ───────────────
             // Default the API combo to the game's detected graphics API
@@ -418,9 +440,11 @@ public sealed partial class MainWindow
 
             // Nightly: version and build share a row (both usable before installing), framerate limit goes last.
             if (isNightly)
-                AddOsGrid(ctx, variantCell, BuildOsNightlyBuildCell(ctx, isInstalled), apiCell, upscalerCell, fpsCell, null);
+                AddOsGrid(ctx, variantCell, BuildOsNightlyBuildCell(ctx, isInstalled), apiCell, upscalerCell, fpsCell, dxgiCell);
+            else if (OsReleaseService.SupportsPinning(variant))
+                AddOsGrid(ctx, variantCell, BuildOsReleaseCell(ctx, variant, isInstalled), apiCell, upscalerCell, fpsCell, dxgiCell);
             else
-                AddOsGrid(ctx, variantCell, fpsCell, apiCell, upscalerCell);
+                AddOsGrid(ctx, variantCell, fpsCell, apiCell, upscalerCell, dxgiCell, null);
 
             apiCombo.SelectionChanged += (s, ev) => RefreshUpscalerCombo(apiCombo.SelectedItem as string ?? "DX11");
             apiUpscalerCombo.SelectionChanged += (s, ev) =>
@@ -440,14 +464,14 @@ public sealed partial class MainWindow
             };
 
             // ── Variant-specific sections ────────────────────────────────────
-            bool hasAdvanced = isNightly || isDlssNr || isF5;
+            bool hasAdvanced = OsVariants.IsOs10(variant);
             if (hasAdvanced)
             {
                 BuildOsFrameGenSection(ctx);
                 BuildOsAdditionalSection(ctx);
                 if (card.EngineHint?.Contains("Unreal", StringComparison.OrdinalIgnoreCase) == true)
                     BuildOsEngineIniSection(ctx);
-                if (isDlssNr || isF5)
+                if (OsVariants.NeedsNrDll(variant))
                     BuildOsNeuralRenderingSection(ctx);
             }
 

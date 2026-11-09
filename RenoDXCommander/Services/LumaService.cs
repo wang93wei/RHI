@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 using HtmlAgilityPack;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander;
 
@@ -13,6 +14,9 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class LumaService : ILumaService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
     private const string WikiUrl = "https://github.com/Filoppi/Luma-Framework/wiki";
 
     private static readonly string DbPath = Path.Combine(
@@ -39,8 +43,8 @@ public class LumaService : ILumaService
     /// </summary>
     public async Task<List<LumaMod>> FetchCompletedModsAsync(IProgress<string>? progress = null)
     {
-        progress?.Report("Fetching Luma wiki...");
-        var html = await _http.GetStringAsync(WikiUrl);
+        progress?.Report(L("Luma.Progress.FetchingWiki"));
+        var html = await PageFetch.GetStringAsync(_http, WikiUrl);
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
@@ -173,7 +177,7 @@ public class LumaService : ILumaService
                 mods[i].FeatureNotes = ExtractAnchorSection(doc, anchor, allAnchors);
         }
 
-        progress?.Report($"Found {mods.Count} Luma mods");
+        progress?.Report(L("Luma.Progress.FoundMods", mods.Count));
         return mods;
     }
 
@@ -184,13 +188,13 @@ public class LumaService : ILumaService
     /// </summary>
     public async Task<Dictionary<string, LumaGenericGameEntry>> FetchGenericUeTableAsync(IProgress<string>? progress = null)
     {
-        progress?.Report("Fetching Luma UE wiki...");
+        progress?.Report(L("Luma.Progress.FetchingUeWiki"));
         var result = new Dictionary<string, LumaGenericGameEntry>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
             // The UE table is on the main Luma wiki page (same page as completed mods)
-            var html = await _http.GetStringAsync(WikiUrl);
+            var html = await PageFetch.GetStringAsync(_http, WikiUrl);
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
@@ -563,12 +567,12 @@ public class LumaService : ILumaService
         string? store = null)
     {
         if (mod.DownloadUrl == null)
-            throw new InvalidOperationException($"{mod.Name} has no download URL.");
+            throw new InvalidOperationException(L("Luma.Error.NoDownloadUrl", mod.Name));
 
         // Only allow downloads from Filoppi's GitHub to prevent untrusted sources.
         if (!mod.DownloadUrl.StartsWith("https://github.com/Filoppi/", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
-                $"Blocked Luma download for {mod.Name}: URL does not originate from https://github.com/Filoppi/");
+                L("Luma.Error.BlockedSource", mod.Name));
 
         Directory.CreateDirectory(DownloadPaths.Luma);
 
@@ -603,7 +607,7 @@ public class LumaService : ILumaService
         // Download
         if (needsDownload)
         {
-        progress?.Report(("Downloading Luma mod...", 0));
+        progress?.Report((L("Luma.Progress.DownloadingMod"), 0));
         HttpResponseMessage? response = null;
         try
         {
@@ -624,7 +628,7 @@ public class LumaService : ILumaService
                     await cacheFile.WriteAsync(buffer.AsMemory(0, read));
                     downloaded += read;
                     if (total > 0)
-                        progress?.Report(($"Downloading... {downloaded / 1024} KB",
+                        progress?.Report((L("Status.DownloadingProgressWithKb", downloaded / 1024),
                                           (double)downloaded / total * 100));
                 }
                 cacheFile.Flush();
@@ -639,7 +643,7 @@ public class LumaService : ILumaService
         }
         catch (Exception ex)
         {
-            throw new HttpRequestException($"Failed to download Luma mod: {ex.Message}");
+            throw new HttpRequestException(L("Luma.Error.DownloadFailed", ex.Message));
         }
         finally
         {
@@ -648,13 +652,13 @@ public class LumaService : ILumaService
         } // end if (needsDownload)
 
         // Extract zip to game folder, tracking all extracted file names
-        progress?.Report(("Extracting Luma files...", 80));
+        progress?.Report((L("Luma.Progress.Extracting"), 80));
         var installedFiles = new List<string>();
 
         // ── Deploy reshade.ini FIRST ──────────────────────────────────────────────
         // Must happen before zip extraction so that the AddonPath setting in
         // reshade.ini is available when resolving where .addon files should go.
-        progress?.Report(("Deploying ReShade config...", 75));
+        progress?.Report((L("Luma.Progress.DeployingReshadeConfig"), 75));
         try
         {
             _auxFileService.EnsureInisDir();
@@ -667,7 +671,7 @@ public class LumaService : ILumaService
         catch (Exception ex) { CrashReporter.Log($"[LumaService.Install] reshade.ini deploy failed — {ex.Message}"); }
 
         // ── Extract zip ───────────────────────────────────────────────────────────
-        progress?.Report(("Extracting Luma files...", 80));
+        progress?.Report((L("Luma.Progress.Extracting"), 80));
 
         if (cachePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
@@ -727,7 +731,7 @@ public class LumaService : ILumaService
         }
 
         // ── Deploy shaders (same as normal ReShade — respects global/per-game selection) ──
-        progress?.Report(("Deploying shaders...", 95));
+        progress?.Report((L("Luma.Progress.DeployingShaders"), 95));
         try
         {
             var exclLuma1 = selectedShaderPacks == null ? null : await Task.Run(() =>
@@ -762,7 +766,7 @@ public class LumaService : ILumaService
             InstalledBuildNumber = await GetLatestBuildNumberAsync().ConfigureAwait(false),
         };
         SaveRecord(record);
-        progress?.Report(("Luma installed!", 100));
+        progress?.Report((L("Luma.Status.LumaInstalled"), 100));
         return record;
     }
 
@@ -960,6 +964,30 @@ public class LumaService : ILumaService
             records.RemoveAll(r => r.GameName == gameName
                                 && r.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase));
             SaveAllRecords(records);
+        }
+    }
+
+    /// <summary>Every Luma install record (install folder migration looks for a game's old folders).</summary>
+    public static List<LumaInstalledRecord> GetAllRecords() => LoadAllRecords();
+
+    /// <inheritdoc/>
+    public int RepointRecords(string gameName, string oldPath, string newPath)
+    {
+        lock (SafeJsonFile.LockFor(DbPath))
+        {
+            var db = LoadAllRecords();
+            int changed = 0;
+            foreach (var r in db.Where(r => r.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)
+                                         && r.InstallPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase)
+                                         ).ToList())
+            {
+                bool newExists = db.Any(o => o != r && o.InstallPath.Equals(newPath, StringComparison.OrdinalIgnoreCase));
+                if (newExists) db.Remove(r); else r.InstallPath = newPath;
+                changed++;
+                CrashReporter.Log($"[LumaService.RepointRecords] '{gameName}': {(newExists ? "dropped old record (new folder has one)" : "moved")} '{oldPath}' → '{newPath}'");
+            }
+            if (changed > 0) SaveAllRecords(db);
+            return changed;
         }
     }
 

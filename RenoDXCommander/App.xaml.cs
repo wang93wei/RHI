@@ -18,6 +18,7 @@ public partial class App : Application
 
     public App()
     {
+        Program.XamlStarted = true; // WinUI loaded: later startup failures aren't a missing runtime
         InitializeComponent();
         // Register crash/error reporting before anything else runs.
         // This catches AppDomain, TaskScheduler, and WinUI exceptions.
@@ -89,6 +90,7 @@ public partial class App : Application
         services.AddSingleton<INexusUpdateService, NexusUpdateService>();
         services.AddSingleton<ISteamAppIdResolver, SteamAppIdResolver>();
         services.AddSingleton<IPcgwService, PcgwService>();
+        services.AddSingleton<ICustomFolderScanService, CustomFolderScanService>();
         services.AddSingleton<IUltrawideFixService, UltrawideFixService>();
         services.AddSingleton<IUltraPlusService, UltraPlusService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
@@ -107,6 +109,7 @@ public partial class App : Application
         services.AddSingleton<IOptiScalerWikiService, OptiScalerWikiService>();
         services.AddSingleton<IHdrDatabaseService, HdrDatabaseService>();
         services.AddSingleton<IDxvkService, DxvkService>();
+        services.AddSingleton<IInstallFolderMigrationService, InstallFolderMigrationService>();
         // Lazy<IDxvkService> breaks the circular dependency between OptiScalerService ↔ DxvkService
         services.AddSingleton<Lazy<IDxvkService>>(sp => new Lazy<IDxvkService>(() => sp.GetRequiredService<IDxvkService>()));
         services.AddSingleton<IDlssStreamlineService, DlssStreamlineService>();
@@ -132,6 +135,7 @@ public partial class App : Application
         services.AddSingleton<IDldsrService, DldsrService>();
         services.AddSingleton<IAutoHdrService, AutoHdrService>();
         services.AddSingleton<RtxEncoreService>();
+        services.AddSingleton<UpliftService>();
         // Lazy<IDlssStreamlineService> breaks the circular dependency between OptiScalerService ↔ DlssStreamlineService
         services.AddSingleton<Lazy<IDlssStreamlineService>>(sp => new Lazy<IDlssStreamlineService>(() => sp.GetRequiredService<IDlssStreamlineService>()));
 
@@ -141,6 +145,10 @@ public partial class App : Application
         services.AddTransient<MainWindow>();
 
         Services = services.BuildServiceProvider();
+
+        // GITC Uplift's shaders stay in a game's reshade-shaders folder while it's installed there
+        var uplift = Services.GetRequiredService<UpliftService>();
+        ShaderPackService.ExtraGameFiles = uplift.ShaderFilesFor;
 
         // Expose localization service as XAML resource for Binding {Source={StaticResource Loc}}
         try

@@ -292,6 +292,11 @@ public partial class SettingsHandler
         EnsureSettingsPageHooks();
         EnsureNvAppLimitsPanel();
         EnsureRemovedGamesButton();
+        EnsureCustomFoldersCard();
+        EnsureOsCustomBuildsCard();
+        EnsureControllerSetting();
+        EnsureAchievementsSection(); // before the nav, so it gets a jump button
+        EnsureRhiOverlaySection();   // same; lands after Achievements (both go just before Tools)
         EnsureSettingsNavigation();
         StartUpdateCountdown();
         if (wasAlreadyOpen || _settingsScroll == null) return; // keep the current position
@@ -350,6 +355,8 @@ public partial class SettingsHandler
             }
             catch (Exception ex) { CrashReporter.Log($"[SettingsHandler.OnSettingsPagePopulated] {ex.Message}"); }
         });
+        // After the restore above: opened with the controller (⚙ or Menu), start on the section's button
+        _window.DispatcherQueue?.TryEnqueue(DispatcherQueuePriority.Low, () => _window.PadFocusSettingsStart());
     }
 
     private void ScheduleRestoreScroll(int attempt)
@@ -484,6 +491,32 @@ public partial class SettingsHandler
         }
         catch (ArgumentException) { return null; }
         catch (System.Runtime.InteropServices.COMException) { return null; }
+    }
+
+    /// <summary>
+    /// Where the controller starts on Settings: the left-hand button of the section being shown
+    /// (General unless Settings was left elsewhere). Null before the navigation is built.
+    /// </summary>
+    internal Button? PadStartButton()
+    {
+        var visible = _sections.Where(s => s.Panel.Visibility == Visibility.Visible).ToList();
+        var section = visible.FirstOrDefault(s => string.Equals(s.Key, _highlightedSectionKey, StringComparison.Ordinal))
+                      ?? visible.FirstOrDefault();
+        return section?.Button is { Visibility: Visibility.Visible, IsLoaded: true } b ? b : null;
+    }
+
+    /// <summary>
+    /// Controller LB / RB: jumps to the previous / next section (no animation, so focusing its first
+    /// control afterwards doesn't fight the scroll). Returns the section's panel, or null.
+    /// </summary>
+    internal FrameworkElement? PadJumpSection(int delta)
+    {
+        var visible = _sections.Where(s => s.Panel.Visibility == Visibility.Visible).ToList();
+        if (visible.Count == 0) return null;
+        int index = visible.FindIndex(s => string.Equals(s.Key, _highlightedSectionKey, StringComparison.Ordinal));
+        int next = Math.Clamp(index < 0 ? 0 : index + delta, 0, visible.Count - 1);
+        JumpToSection(visible[next].Key, animate: false, saveAsLast: true);
+        return visible[next].Panel;
     }
 
     private void JumpToSection(string key, bool animate, bool saveAsLast)

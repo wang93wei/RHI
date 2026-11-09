@@ -10,15 +10,8 @@ public partial class SettingsHandler
 {
     private const string OsDefaultVariantRowTag = "OsDefaultVariantRow";
 
-    // Display label key ↔ internal value (same names as the OptiScaler ⚙'s version dropdown).
-    // The forks' labels stay in English in every catalog: they are product names.
-    private static readonly (string LabelKey, string Value)[] OsDefaultVariants =
-    {
-        ("Option.Stable", "Stable"),
-        ("Option.Nightly", "Nightly"),
-        ("Option.DLSS NR", "DlssNr"),
-        ("Option.F5 DLSSNR", "F5"),
-    };
+    // The dropdown's internal values, in order (built-ins, then custom builds: OsVariants.All)
+    private List<string> _osDefaultVariantValues = new();
 
     private ComboBox? _osDefaultVariantCombo;
 
@@ -52,7 +45,8 @@ public partial class SettingsHandler
                 var combo = new ComboBox();
                 if (Application.Current.Resources.TryGetValue("SettingsComboStyle", out var cs) && cs is Style comboStyle)
                     combo.Style = comboStyle;
-                foreach (var (labelKey, _) in OsDefaultVariants) combo.Items.Add(Loc.GetString(labelKey));
+                _osDefaultVariantCombo = combo;
+                FillOsDefaultVariants();
                 ToolTipService.SetToolTip(combo, Loc.GetString("Settings.OsDefaultVariant.Tooltip"));
                 Grid.SetColumn(combo, 1);
                 row.Children.Add(combo);
@@ -60,9 +54,18 @@ public partial class SettingsHandler
                 _osDefaultVariantCombo = combo;
                 SelectOsDefaultVariant();
                 combo.SelectionChanged += OsDefaultVariantCombo_SelectionChanged;
+                // Custom builds added / removed: refresh the list (the event can come from any thread)
+                OsCustomBuildService.Changed += () => _window.DispatcherQueue.TryEnqueue(() =>
+                {
+                    FillOsDefaultVariants();
+                    SelectOsDefaultVariant();
+                });
+                list.Children.Insert(list.Children.IndexOf(gpuRow), MakeOsNightlyCleanupRow());
                 return;
             }
+            FillOsDefaultVariants();
             SelectOsDefaultVariant();
+            if (_osNightlyCleanupCombo != null) _osNightlyCleanupCombo.SelectedIndex = ViewModel.Settings.OsNightlyCleanup ? 1 : 0;
         }
         catch (Exception ex)
         {
@@ -88,13 +91,69 @@ public partial class SettingsHandler
         return null;
     }
 
+    private ComboBox? _osNightlyCleanupCombo;
+
+    /// <summary>"Remove old Nightly builds" Off / On, under Default version.</summary>
+    private Grid MakeOsNightlyCleanupRow()
+    {
+        var row = new Grid { ColumnSpacing = 10 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
+        row.Children.Add(new TextBlock { Text = Loc.GetString("Settings.OsNightlyCleanup.Label"), Style = FindStyle("SettingsLabelStyle") });
+        var combo = new ComboBox { Style = FindStyle("SettingsComboStyle") };
+        combo.Items.Add("Off");
+        combo.Items.Add("On");
+        combo.SelectedIndex = ViewModel.Settings.OsNightlyCleanup ? 1 : 0;
+        ToolTipService.SetToolTip(combo, Loc.GetString("Settings.OsNightlyCleanup.Tooltip"));
+        combo.SelectionChanged += (s, e) =>
+        {
+            if (combo.SelectedIndex < 0) return;
+            bool on = combo.SelectedIndex == 1;
+            if (on == ViewModel.Settings.OsNightlyCleanup) return;
+            ViewModel.Settings.OsNightlyCleanup = on;
+            ViewModel.SaveSettingsPublic();
+            CrashReporter.Log($"[SettingsHandler.OsNightlyCleanup] {(on ? "On" : "Off")}");
+            if (!on) return;
+            // Clear the builds that have piled up so far
+            _ = Task.Run(() =>
+            {
+                var (removed, bytes) = ViewModel.CleanUpOldNightlyBuilds();
+                if (removed == 0) return;
+                var size = bytes >= 1024L * 1024 * 1024
+                    ? $"{bytes / (1024.0 * 1024 * 1024):0.0} GB"
+                    : $"{bytes / (1024 * 1024)} MB";
+                var message = removed == 1
+                    ? Loc.GetString("Settings.OsNightlyCleanup.Removed.One", size)
+                    : Loc.GetString("Settings.OsNightlyCleanup.Removed.Many", removed, size);
+                _window.DispatcherQueue.TryEnqueue(() => _window.ShowStatusBarMessage(
+                    message,
+                    TimeSpan.FromSeconds(8)));
+            });
+        };
+        Grid.SetColumn(combo, 1);
+        row.Children.Add(combo);
+        _osNightlyCleanupCombo = combo;
+        return row;
+    }
+
+    private void FillOsDefaultVariants()
+    {
+        if (_osDefaultVariantCombo == null) return;
+        _osDefaultVariantSelecting = true;
+        var all = OsVariants.All();
+        _osDefaultVariantValues = all.Select(v => v.Value).ToList();
+        _osDefaultVariantCombo.Items.Clear();
+        foreach (var (_, label) in all) _osDefaultVariantCombo.Items.Add(label);
+        _osDefaultVariantSelecting = false;
+    }
+
     private bool _osDefaultVariantSelecting;
 
     private void SelectOsDefaultVariant()
     {
         if (_osDefaultVariantCombo == null) return;
         _osDefaultVariantSelecting = true;
-        int idx = Array.FindIndex(OsDefaultVariants, v => v.Value == ViewModel.Settings.OsDefaultVariant);
+        int idx = _osDefaultVariantValues.IndexOf(ViewModel.Settings.OsDefaultVariant);
         _osDefaultVariantCombo.SelectedIndex = idx >= 0 ? idx : 0;
         _osDefaultVariantSelecting = false;
     }
@@ -105,8 +164,8 @@ public partial class SettingsHandler
         try
         {
             int idx = _osDefaultVariantCombo.SelectedIndex;
-            if (idx < 0 || idx >= OsDefaultVariants.Length) return;
-            ViewModel.SetOsDefaultVariant(OsDefaultVariants[idx].Value);
+            if (idx < 0 || idx >= _osDefaultVariantValues.Count) return;
+            ViewModel.SetOsDefaultVariant(_osDefaultVariantValues[idx]);
         }
         catch (Exception ex)
         {

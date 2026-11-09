@@ -259,7 +259,8 @@
     "METAL GEAR SOLID: Peace Walker - Master Collection Version": "mgspw",
     "The Witcher 3: Wild Hunt - Complete Edition": "bin\\x64_dx12",
     "Outlast": "Binaries\\Win64",
-    "Portal": "bin"
+    "Portal": "bin",
+    "Watch_Dogs": "bin"
   },
   "splitGames": {
     "Diablo": [
@@ -563,7 +564,8 @@
     "FINAL FANTASY RESONANCE": "Unreal Engine 5.6",
     "Kaku Ancient Seal": "Unreal Engine 4.27",
     "The Witcher 3: Wild Hunt — Remastered": "REDengine 3",
-    "Lords of the Fallen": "Unreal Engine 5.1.1"
+    "Lords of the Fallen": "Unreal Engine 5.1.1",
+    "Wuthering Waves": "Unreal Engine 4.26.2"
   },
   "engineIniPathOverrides": {
     "Clive Barker's Hellraiser: Revival Demo": "Hellraiser_Demo",
@@ -603,7 +605,8 @@
     "Assassin\u0027s Creed\u00AE Origins": "DX11",
     "Assassin\u0027s Creed Odyssey": "DX11",
     "Assassin\u0027s Creed\u00AE Odyssey": "DX11",
-    "Baldur\u0027s Gate 3": "DX12, VLK",
+    "Baldur\u0027s Gate 3": "VLK",
+    "Baldurs Gate 3": "VLK",
     "Burnout Paradise Remastered": "DX11",
     "Far Cry 3": "DX11",
     "BurnoutPR": "DX11",
@@ -677,7 +680,8 @@
     "Watch_Dogs 2",
     "Watch_Dogs\u00AE 2",
     "Silly Polly Beast",
-    "Lords of the Fallen"
+    "Lords of the Fallen",
+    "Phoenix Point"
   ],
   "dlssSkipGames": [
     "Dragon Age Inquisition",
@@ -933,6 +937,10 @@
     "The Town of Light": {
       "reshade": "d3d11.dll",
       "dc": ""
+    },
+    "Phoenix Point": {
+      "reshade": "d3d11.dll",
+      "dc": ""
     }
   },
   "gacSymlinkGames": {
@@ -1182,6 +1190,12 @@
     }
   },
   "reshadeGameInfo": {
+    "Baldur's Gate 3": {
+      "notes": "bg3.exe, the game's default exe, uses Vulkan, so RHI installs ReShade as the Vulkan layer for this game. If you play with bg3_dx11.exe instead, set the graphics API to DX11 in Game Overrides and reinstall ReShade. If an older RHI install left dxgi.dll in the bin folder, uninstall ReShade and install it again."
+    },
+    "Baldurs Gate 3": {
+      "notes": "bg3.exe, the game's default exe, uses Vulkan, so RHI installs ReShade as the Vulkan layer for this game. If you play with bg3_dx11.exe instead, set the graphics API to DX11 in Game Overrides and reinstall ReShade. If an older RHI install left dxgi.dll in the bin folder, uninstall ReShade and install it again."
+    },
     "Max Payne 3": {
       "notes": "\u26A0\uFE0F ReShade 6.4.1 is required for RenoDX compatibility with this game. This has been automatically set in Overrides (RS Channel).\n\nIf you want to use a newer ReShade version, change the RS Channel in the Overrides panel \u2014 but RenoDX may not work correctly."
     },
@@ -1210,16 +1224,6 @@
       "notes": "Recommended to use Luma for this game for best HDR results.\nYou must switch the game to DX11 with launch argument -dx11\n\nAdditional information available on Nexus below:",
       "notesUrl": "https://www.nexusmods.com/finalfantasy7remake/mods/1974",
       "notesUrlLabel": "Final Fantasy VII Remake Nexus"
-    },
-    "Metro 2033 Redux": {
-      "notes": "\u26A0 Must either set windowed mode in the config file, or use the borderless windowed mod (recommended).\n\nDownload the borderless windowed mod for Metro 2033 Redux from the link below:",
-      "notesUrl": "https://discord.com/channels/142072549537349632/1335626023412174908/1495615263289376889",
-      "notesUrlLabel": "Borderless mod for Metro 2033 Redux"
-    },
-    "Metro: Last Light Redux": {
-      "notes": "\u26A0 Must either set windowed mode in the config file, or use the borderless windowed mod (recommended).\n\nDownload the borderless windowed mod for Metro Last Light Redux from the link below:",
-      "notesUrl": "https://discord.com/channels/142072549537349632/1446291444242321620/1495631664125313128",
-      "notesUrlLabel": "Borderless mod for Metro Last Light Redux"
     }
   },
   "_comment_dxvk": "=== DXVK ===\ndxvkBlacklist prevents the DXVK toggle from being enabled (greyed out with anti-cheat warning).\ndxvkGameNotes adds game-specific notes to the DXVK info dialog.\ndxvkApiOverrides flags a game as having a known API for DXVK toggle unlock purposes (value string not currently used).",
@@ -1257,19 +1261,31 @@
     "HDR Den": "https://ko-fi.com/hdrden",
     "Izueh": "https://ko-fi.com/izueh",
     "Jon": "https://ko-fi.com/kickfister",
+    "Kronir": "https://ko-fi.com/kronir",
+    "Lazorr": "https://ko-fi.com/lazorr",
     "Lego Liam Neeson": "https://ko-fi.com/legoliamneeson",
     "Lilium": "https://ko-fi.com/endlesslyflowering",
+    "Lyall": "https://ko-fi.com/lyall",
+    "mmike0913": "https://ko-fi.com/mmike0913",
     "Musa": "https://ko-fi.com/musaqh",
     "Nukem": "https://ko-fi.com/nukem9",
+    "p1xel8ted": "https://ko-fi.com/p1xel8ted",
     "Pumbo": "https://ko-fi.com/realpumbo",
     "RankFTW": "https://ko-fi.com/rankftw",
     "Ritsu": "https://ko-fi.com/ritsucecil",
+    "RoseTheFlower": "https://www.patreon.com/rozzi",
+    "SammiLucia": "https://ko-fi.com/sammilucia",
     "ShortFuse": "https://ko-fi.com/shortfuse",
     "speedlemur": "https://ko-fi.com/speedlemur87816",
     "souperman9": "https://ko-fi.com/souperman9",
     "spiwar": "https://ko-fi.com/spiwar",
+    "Vaxis": "https://ko-fi.com/vaxistaa",
     "vietnick": "https://ko-fi.com/vietnick",
     "Voosh": "https://ko-fi.com/notvoosh"
+  },
+  "patreonUrls": {
+    "Lazorr": "https://patreon.com/Lazorr",
+    "SammiLucia": "https://www.patreon.com/SammiLucia"
   },
   "authorRoles": {
     "Bit Viper": "RenoDX mods",
@@ -1279,17 +1295,25 @@
     "HDR Den": "The HDR Den",
     "Izueh": "Luma mods",
     "Jon": "RenoDX mods, Luma mods",
+    "Kronir": "Ultra+",
+    "Lazorr": "Ultra+",
     "Lego Liam Neeson": "RenoDX mods",
     "Lilium": "Lilium HDR Shaders",
+    "Lyall": "Ultrawide fixes",
+    "mmike0913": "Ultra+",
     "Musa": "RenoDX mods, Luma mods",
     "Nukem": "OptiScaler",
+    "p1xel8ted": "Ultrawide fixes",
     "Pumbo": "Luma Framework, Luma mods, PumboAutoHDR",
     "RankFTW": "RHI, RenoDX mods",
     "Ritsu": "RenoDX mods",
+    "RoseTheFlower": "Ultrawide fixes",
+    "SammiLucia": "Ultra+",
     "ShortFuse": "RenoDX, RenoDX mods",
     "speedlemur": "RenoDX mods",
     "souperman9": "Switch emulator RenoDX mods",
     "spiwar": "RenoDX mods",
+    "Vaxis": "Ultra+",
     "vietnick": "RenoDX mods",
     "Voosh": "RenoDX mods"
   },
@@ -1532,7 +1556,7 @@
     },
     "mfgunlock": {
       "packageName": "MFG Ada Unlock",
-      "description": "Unlocks DLSS Multi Frame Generation (3x/4x and above) on RTX 40-series cards, which NVIDIA ships gated to RTX 50-series only. Corrects frame interpolation so generated frames carry new motion. In-memory only \u2014 no files on disk are modified. Requires a game with DLSS frame generation via Streamline and a modern nvngx_dlssg.dll (310.x).",
+      "description": "DLSS Multi Frame Generation beyond RTX 50: unlocks 3x/4x/6x on RTX 40, brings DLSS-G and XMX frame generation to RTX 20/30 (experimental), and XeMFG on RTX 20, 30, 40 and 50 cards.",
       "releaseApiUrl": "https://api.github.com/repos/mavismmg/MFGAdaUnlock-RenoDx/releases?per_page=1",
       "repositoryUrl": "https://github.com/mavismmg/MFGAdaUnlock-RenoDx"
     },
@@ -1560,10 +1584,35 @@
       "description": "Updated fork of REST: applies ReShade effects at a chosen point in the frame (for example under the HUD) using groups of game shaders. Adds auto scene colour for DLSS and dynamic resolution games, Vulkan shader hunting, technique routing, HUD suppression and controller shortcuts. Requires ReShade 6.8 or newer. Choose this or the original REST by 4lex4nder, not both.",
       "releaseApiUrl": "https://api.github.com/repos/BadassBaboon/ReshadeEffectShaderToggler/releases/latest",
       "repositoryUrl": "https://github.com/BadassBaboon/ReshadeEffectShaderToggler"
+    },
+    "bfi-presenter": {
+      "packageName": "BFI Presenter",
+      "description": "Black frame insertion without the usual brightness loss, for clearer motion on fixed-refresh displays (built and tested on a 120 Hz OLED; higher refresh rates work too). Variable MPRT mode (default) keeps full brightness at Gain 1.0; classic BFI and a CRT-style rolling scan are also included. SDR and HDR (scRGB / HDR10). Settings are in the BFI Presenter tab of the ReShade overlay and in BFIPresenter.ini, created next to the addon on first launch. Ctrl+Shift+B turns the strobe off. For DX9 (ReShade 6.8+), DX11, DX12 and OpenGL (NVIDIA only) games; Vulkan games need the author's separate Vulkan layer. Needs a fixed refresh rate: turn G-Sync / VRR off for the game, don't set NVIDIA VSync to Force off or Fast Sync, and don't use a frame limiter (NVIDIA FPS limit, ReLimiter, Display Commander). Aim for a steady frame rate that matches the refresh rate. Works with DLSS, FSR and XeSS frame generation, not with Lossless Scaling. Not compatible with Special K HDR. Flickers by design: not for people sensitive to flicker. See the repository for the full setup guide.",
+      "releaseApiUrl": "https://api.github.com/repos/artzox/BFI-Presenter/releases/latest",
+      "repositoryUrl": "https://github.com/artzox/BFI-Presenter"
     }
   },
   "renodxExtraSettings": [
   ],
+  "_comment_os_forks": "Recommended OptiScaler forks: each shows as an OptiScaler version and updates from its GitHub releases. Keys are ids (lower-case, digits, dashes; never rename one games use). Fields: label, repo (owner/name), assetPattern (optional regex), includePrereleases (default true), needsNrDll (adds nvngx_dlssnr.dll), description, disabled.",
+  "osForks": {
+    "venom": {
+      "label": "Venom",
+      "repo": "LorenzoKy/Optiscaler-Venom",
+      "description": "Daily OptiScaler 10 builds by LorenzoKy with extra fixes on top of the official nightly."
+    },
+    "nr-presr-mfg": {
+      "label": "NR PreSR MFG",
+      "repo": "ShyVortex/OptiScaler-NR-PreSR-MFG",
+      "needsNrDll": true,
+      "description": "ShyVortex's Neural Rendering fork with pre-upscale NR, multi frame generation and an RTX 30 DLSS-FG backend."
+    },
+    "opennr": {
+      "label": "OpenNR",
+      "repo": "MatheusFerreiraS/OpenNR-OptiScaler",
+      "description": "Neural Rendering fork by MatheusFerreiraS that ships its own NR runtime."
+    }
+  },
   "dlssPresetsDev": {
     "sr": [
       {

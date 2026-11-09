@@ -75,7 +75,7 @@ public partial class SettingsHandler
             };
             ToolTipService.SetToolTip(panel, Loc.GetString("Settings.UpdateCountdown.Tooltip"));
 
-            // Above the "RHI checks every 4 hours" note when it sits right before the button
+            // Above the "RHI checks every hour..." note when it sits right before the button
             int index = column.Children.IndexOf(button);
             if (index > 0 && column.Children[index - 1] is TextBlock) index--;
             column.Children.Insert(index, panel);

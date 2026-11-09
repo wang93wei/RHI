@@ -423,6 +423,7 @@ public partial class MainViewModel
         // Apply manifest DLSS preset overrides from cache so dropdowns are correct during Phase 1
         DlssPresetService.ApplyManifestPresets(cachedManifest);
         FeatureFlags.ApplyManifest(cachedManifest?.FeatureFlags);
+        OsForkService.SetDefinitions(cachedManifest?.OsForks); // recommended OptiScaler forks
 
         // Apply install path overrides from cached manifest so Phase 1 uses the correct subfolder
         // (e.g. Witcher 2 → bin\, Cyberpunk → bin\x64). Without this, games added to the manifest
@@ -430,6 +431,10 @@ public partial class MainViewModel
         if (cachedManifest?.InstallPathOverrides != null)
             foreach (var (key, value) in cachedManifest.InstallPathOverrides)
                 _installPathOverrides.TryAdd(key, value);
+        if (cachedManifest?.InstallPathMigrations != null)
+            foreach (var (key, value) in cachedManifest.InstallPathMigrations)
+                _installPathOverrides[key] = value; // migrations win over installPathOverrides
+        NoteInstallPathMigrations(cachedManifest?.InstallPathMigrations);
 
         // 8. Load installed records and aux records from disk (fast local reads)
         var records    = _installer.LoadAll();
@@ -481,6 +486,8 @@ public partial class MainViewModel
                 }
                 // Trust first candidate if none exist on disk (Phase 2 will verify)
                 installPath = resolvedOverride ?? Path.Combine(game.InstallPath, candidates[0].Trim());
+                if (resolvedOverride != null && _installPathMigrationGames.Contains(game.Name))
+                    DlssStreamlineService.RegisterMovedInstallRoot(installPath, game.InstallPath);
             }
 
             // Resolve engine from cache
@@ -492,6 +499,10 @@ public partial class MainViewModel
             var engineOverrideLabel = ResolveEngineOverride(game.Name, out var engineOverride);
             if (engineOverrideLabel != null)
                 engine = engineOverride;
+            // Same as BuildCards: scan said Unknown/UE3 but the RHI DB / manifest says UE4/UE5.
+            else if ((engine == EngineType.Unknown || engine == EngineType.UnrealLegacy)
+                     && KnownUnrealFromData(game.Name, cachedManifest))
+                engine = EngineType.Unreal;
 
             // Resolve bitness from cache
             var resolvedKey = installPath.ToLowerInvariant();
@@ -671,6 +682,9 @@ public partial class MainViewModel
                             ? osRec.OsNightlyBuild
                             : _optiScalerService.StagedVersionNightly,
                         "DlssNr"  => _optiScalerService.StagedVersionDlssNr,
+                        "F5"      => _optiScalerService.StagedVersionF5,
+                        _ when OsVariants.IsCustom(osRec.OsVariant) => OsCustomBuildService.Get(osRec.OsVariant)?.Name ?? "Custom build",
+                        _ when OsVariants.IsFork(osRec.OsVariant) => OsForkService.Get(osRec.OsVariant)?.StagedTag ?? "Fork",
                         _         => _optiScalerService.StagedVersion
                     };
             }

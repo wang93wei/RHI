@@ -641,6 +641,7 @@ internal sealed partial class DetailLayoutHost
         "DLSS5 Tool"               => Loc.GetString("Detail.NrMethodDesc.Dlss5Tool"),
         "DLSS5 Tool + DX11 Bridge" => Loc.GetString("Detail.NrMethodDesc.Bridge"),
         "DLSS5 Feeder"             => Loc.GetString("Detail.NrMethodDesc.Feeder"),
+        "GITC Uplift"              => Loc.GetString("Detail.NrMethodDesc.GitcUplift"),
         _                          => "",
     };
 

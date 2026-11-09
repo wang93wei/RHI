@@ -255,6 +255,9 @@ public sealed partial class MainWindow : Window
             CheckForAppUpdateAsync().SafeFireAndForget("MainWindow.PeriodicAppUpdate");
         ViewModel.PropertyChanged += OnViewModelChanged;
         ViewModel.ManualGameAdded += OpenAddedGame;
+        ViewModel.FolderMigrated += OnFolderMigrated;
+        HookAntivirusNotice();
+        HookCustomGamesNotice();
         StartStatusBarTimer();
         GameList.ItemsSource = ViewModel.DisplayedGames;
         // When the filtered game list changes, preserve selection if the selected game is still visible
@@ -273,11 +276,14 @@ public sealed partial class MainWindow : Window
         UpdatePageVisibility();
         // Interface size (Settings › General › Windows)
         if (ViewModel.Settings.UiScale != 100) ApplyUiScale(ViewModel.Settings.UiScale);
+        HookUiScaleWheel();
         // Show version in status bar
         StatusBarVersionText.Content = $"v{Services.CrashReporter.AppVersion}";
         // Always show the ✕ clear button on search box
         SearchBox.Loaded += (_, _) => VisualStateManager.GoToState(SearchBox, "ButtonVisible", false);
         ViewModel.InitializeAsync().SafeFireAndForget("MainWindow.Init");
+        // Old single-file extraction folders in %TEMP%\.net\RHI (background, after startup)
+        ExtractionCacheCleaner.RunAsync(LifetimeToken).SafeFireAndForget("MainWindow.ExtractionCacheCleaner");
         // Rebuild custom filter chips when the collection changes
         ViewModel.Filter.CustomFilters.CollectionChanged += (_, _) =>
             DispatcherQueue.TryEnqueue(RebuildCustomFilterChips);
@@ -355,6 +361,9 @@ public sealed partial class MainWindow : Window
             CheckDevScreenshotRequest();
         };
         _shutdownSignalTimer.Start();
+
+        // RHI overlay hotkey (works in the tray too)
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, InitRhiOverlay);
 
         // Tabs layout: mockup top bar, sidebar and footer (no-op in Classic)
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, ApplyTabsChrome);
@@ -455,6 +464,7 @@ public sealed partial class MainWindow : Window
         }
 
         _foregroundTarget?.Dispose();
+        DisposeRhiOverlay();
         _lifetime.Cancel();
         _shutdownSignalTimer?.Stop();
         _launchTimer?.Stop();

@@ -488,13 +488,13 @@ public class AddonPackService : IAddonPackService
             if (entry.SectionId.Equals("renodx-dlss5", StringComparison.OrdinalIgnoreCase)
                 || entry.PackageName.Equals("DLSS5 Tool", StringComparison.OrdinalIgnoreCase))
             {
-                progress?.Report(("Downloading RenoDX DLSS5 addon...", 10));
+                progress?.Report((Loc.GetString("Addon.Progress.DownloadingDlss5"), 10));
                 var rdx5Service = App.Services.GetRequiredService<Renodx5AddonService>();
                 await rdx5Service.EnsureStagingAsync(progress).ConfigureAwait(false);
                 if (!rdx5Service.IsStagingReady)
                 {
                     CrashReporter.Log("[AddonPackService.DownloadAddonAsync] RenoDX DLSS5 staging not ready after EnsureStaging");
-                    progress?.Report(("RenoDX DLSS5 download failed", 0));
+                    progress?.Report((Loc.GetString("Addon.Progress.Dlss5DownloadFailed"), 0));
                 }
                 return;
             }
@@ -502,13 +502,13 @@ public class AddonPackService : IAddonPackService
             // SF variant — route to Renodx5AddonService.EnsureSfStagingAsync
             if (entry.SectionId.Equals("renodx-dlss-sf", StringComparison.OrdinalIgnoreCase))
             {
-                progress?.Report(("Downloading DLSS Tool (ShortFuse)...", 10));
+                progress?.Report((Loc.GetString("Addon.Progress.DownloadingDlssToolSf"), 10));
                 var rdx5Service = App.Services.GetRequiredService<Renodx5AddonService>();
                 await rdx5Service.EnsureSfStagingAsync(progress).ConfigureAwait(false);
                 if (!rdx5Service.IsSfStagingReady)
                 {
                     CrashReporter.Log("[AddonPackService.DownloadAddonAsync] SF staging not ready after EnsureStaging");
-                    progress?.Report(("DLSS Tool (ShortFuse) download failed", 0));
+                    progress?.Report((Loc.GetString("Addon.Progress.DlssToolSfDownloadFailed"), 0));
                 }
                 return;
             }
@@ -523,7 +523,7 @@ public class AddonPackService : IAddonPackService
                 if (resolvedUrl64 == null && resolvedUrl32 == null)
                 {
                     CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Could not resolve asset URL from API for '{entry.PackageName}'");
-                    progress?.Report(($"❌ Failed to resolve download URL for {entry.PackageName}", 0));
+                    progress?.Report((Loc.GetString("Addon.Error.ResolveUrlFailed", entry.PackageName), 0));
                     return;
                 }
                 versionOverride ??= resolvedTag;
@@ -567,7 +567,7 @@ public class AddonPackService : IAddonPackService
                 var pctBase = (double)i / downloads.Count * 100;
                 var pctRange = 100.0 / downloads.Count;
 
-                progress?.Report(($"Downloading {entry.PackageName}...", pctBase));
+                progress?.Report((Loc.GetString("Addon.Progress.Downloading", entry.PackageName), pctBase));
                 CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Downloading '{entry.PackageName}' from {url}");
 
                 try
@@ -611,7 +611,7 @@ public class AddonPackService : IAddonPackService
 
             if (!anySucceeded)
             {
-                progress?.Report(($"❌ Download failed for {entry.PackageName}", 0));
+                progress?.Report((Loc.GetString("Addon.Error.DownloadFailedFor", entry.PackageName), 0));
                 return;
             }
 
@@ -619,13 +619,13 @@ public class AddonPackService : IAddonPackService
             versionToken ??= "unknown";
             SaveAddonVersion(entry.PackageName, versionToken, safeName);
 
-            progress?.Report(($"{entry.PackageName} downloaded.", 100));
+            progress?.Report((Loc.GetString("Addon.Progress.Downloaded", entry.PackageName), 100));
             CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] '{entry.PackageName}' download complete. Version = {versionToken}");
         }
         catch (Exception ex)
         {
             CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Failed for '{entry.PackageName}' — {ex.Message}");
-            progress?.Report(($"❌ Download failed: {ex.Message}", 0));
+            progress?.Report((Loc.GetString("Addon.Error.DownloadFailed", ex.Message), 0));
         }
     }
 
@@ -1187,7 +1187,7 @@ public class AddonPackService : IAddonPackService
                     if (total > 0)
                     {
                         var filePct = pctBase + (double)received / total * pctRange;
-                        progress?.Report(($"Downloading {displayName}... {received / 1024} KB / {total / 1024} KB", filePct));
+                        progress?.Report((Loc.GetString("Addon.Progress.DownloadingKb", displayName, received / 1024, total / 1024), filePct));
                     }
                 }
             }
@@ -1214,7 +1214,7 @@ public class AddonPackService : IAddonPackService
         {
             await DownloadFileAsync(url, tempZip, safeName, progress, pctBase, pctRange * 0.8);
 
-            progress?.Report(($"Extracting {safeName}...", pctBase + pctRange * 0.8));
+            progress?.Report((Loc.GetString("Addon.Progress.Extracting", safeName), pctBase + pctRange * 0.8));
 
             using var archive = ArchiveFactory.Open(tempZip);
             foreach (var archiveEntry in archive.Entries)
@@ -1276,7 +1276,7 @@ public class AddonPackService : IAddonPackService
                 CrashReporter.Log($"[AddonPackService.DownloadAndExtractZipAsync] Extracted '{fileName}' → '{destPath}' (originalName={originalName})");
             }
 
-            progress?.Report(($"Extracted {safeName}.", pctBase + pctRange));
+            progress?.Report((Loc.GetString("Addon.Progress.Extracted", safeName), pctBase + pctRange));
         }
         finally
         {
@@ -1550,6 +1550,52 @@ public class AddonPackService : IAddonPackService
             }
         }
         if (rootTracked.Count == 0) deployments.Remove(installPath);
+    }
+
+    /// <summary>Addon file names the tracker lists for a folder (trailing-slash differences ignored).</summary>
+    public static List<string> GetTrackedAddons(string folder)
+    {
+        var key = folder.Replace('/', '\\').TrimEnd('\\');
+        return LoadDeployments()
+            .Where(kv => kv.Key.Replace('/', '\\').TrimEnd('\\').Equals(key, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(kv => kv.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Install folder migration: moves the tracked addon names for <paramref name="oldFolder"/> to
+    /// <paramref name="newFolder"/> (merged with any already tracked there). Only call once the files moved.
+    /// </summary>
+    public static void RepointDeployments(string oldFolder, string newFolder)
+    {
+        try
+        {
+            lock (_deploymentsLock)
+            {
+                var deployments = LoadDeployments();
+                var oldKey = oldFolder.Replace('/', '\\').TrimEnd('\\');
+                var keys = deployments.Keys
+                    .Where(k => k.Replace('/', '\\').TrimEnd('\\').Equals(oldKey, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (keys.Count == 0) return;
+                var newKey = newFolder.Replace('/', '\\').TrimEnd('\\');
+                if (!deployments.TryGetValue(newKey, out var target))
+                    deployments[newKey] = target = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var k in keys)
+                {
+                    if (k.Equals(newKey, StringComparison.OrdinalIgnoreCase)) continue;
+                    target.UnionWith(deployments[k]);
+                    deployments.Remove(k);
+                }
+                SaveDeployments(deployments);
+                CrashReporter.Log($"[AddonPackService.RepointDeployments] '{oldFolder}' → '{newFolder}' ({target.Count} addons tracked)");
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            CrashReporter.Log($"[AddonPackService.RepointDeployments] Failed — {ex.Message}");
+        }
     }
 
     public static void TrackAddonDeployment(string installPath, string addonFileName)

@@ -20,6 +20,9 @@ namespace RenoDXCommander;
 
 public sealed partial class MainWindow
 {
+    /// <summary>Settings › Achievements changed: show or hide the hero's achievements strip.</summary>
+    internal void AchievementsSettingChanged() => _detailPanelBuilder.Layout.AchievementsSettingChanged();
+
     private bool _spotlightOn;
     private ListView? _shelf;
     private bool _shelfSyncing;
@@ -30,7 +33,7 @@ public sealed partial class MainWindow
     private readonly Dictionary<string, BitmapImage> _coverCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int?> _appIdCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private const double TileWidth = 120, CoverHeight = 180;
+    // Tile size: TileWidth / CoverHeight in MainWindow.SpotlightCoverSize.cs (resizable)
 
     private sealed class ShelfTile
     {
@@ -118,19 +121,29 @@ public sealed partial class MainWindow
                     _searchRowStack.HorizontalAlignment = HorizontalAlignment.Left;
                 }
                 if (_segmentHost != null) _segmentHost.Width = 340;
-                _searchRow.Padding = new Thickness(24, 14, 24, 6);
-                Grid.SetRow(_countsRow, 0);
+                PlaceFiltersButton(spotlight: true);
                 _countsRow.HorizontalAlignment = HorizontalAlignment.Right;
                 _countsRow.VerticalAlignment = VerticalAlignment.Center;
-                _countsRow.Padding = new Thickness(0, 8, 24, 0);
 
                 GameList.Visibility = Visibility.Collapsed;
                 EnsureShelf(list);
                 _shelf!.Visibility = Visibility.Visible;
+                if (_coverGrip != null) _coverGrip.Visibility = Visibility.Visible;
+                // Above or below the page (rows, borders, paddings)
+                ApplySpotlightShelfPosition();
                 SyncShelfFromList();
             }
             else
             {
+                // Back to the normal sidebar: undo the bottom placement
+                if (gv.RowDefinitions.Count == 2)
+                {
+                    gv.RowDefinitions[0].Height = GridLength.Auto;
+                    gv.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
+                }
+                Grid.SetRow(_searchRow, 0);
+                if (_chipsRow != null) Grid.SetRow(_chipsRow, 1);
+                if (_shelfPositionBtn != null) _shelfPositionBtn.Visibility = Visibility.Collapsed;
                 Grid.SetRow(_sidebar, 0); Grid.SetRowSpan(_sidebar, 2); Grid.SetColumn(_sidebar, 0); Grid.SetColumnSpan(_sidebar, 1);
                 Grid.SetRow(_contentColumn, 0); Grid.SetRowSpan(_contentColumn, 2); Grid.SetColumn(_contentColumn, 1); Grid.SetColumnSpan(_contentColumn, 1);
                 _sidebar.BorderThickness = new Thickness(0, 0, 1, 0);
@@ -142,20 +155,130 @@ public sealed partial class MainWindow
                     _searchRowStack.HorizontalAlignment = HorizontalAlignment.Stretch;
                 }
                 if (_segmentHost != null) _segmentHost.Width = double.NaN;
+                PlaceFiltersButton(spotlight: false);
                 Grid.SetRow(_countsRow, 2);
                 _countsRow.HorizontalAlignment = HorizontalAlignment.Stretch;
                 _countsRow.VerticalAlignment = VerticalAlignment.Stretch;
-                // Re-apply the sidebar paddings of the current layout
-                ShowTabsSidebar(_tabsChromeOn);
-                if (_tabsChromeOn) RefreshSidebar();
+                // Re-apply the sidebar paddings
+                ShowTabsSidebar();
+                RefreshSidebar();
                 GameList.Visibility = Visibility.Visible;
                 if (_shelf != null) _shelf.Visibility = Visibility.Collapsed;
+                if (_coverGrip != null) _coverGrip.Visibility = Visibility.Collapsed;
+                PlaceCollectionsHost();
                 if (GameList.SelectedItem != null) GameList.ScrollIntoView(GameList.SelectedItem);
             }
         }
         catch (Exception ex)
         {
             CrashReporter.Log($"[MainWindow.ApplySpotlightChrome] Failed — {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Spotlight: the Filters button is an icon just left of the All / Installed / Favourites switch.
+    /// Other layouts: the labelled button by the counts, as before.
+    /// </summary>
+    private void PlaceFiltersButton(bool spotlight)
+    {
+        if (_filtersBtn == null || _searchRowStack == null || _countsGrid == null || _segmentHost == null) return;
+        if (VisualTreeHelper.GetParent(_filtersBtn) is Panel current) current.Children.Remove(_filtersBtn);
+        _searchRowStack.Children.Remove(_filtersBtn);
+        _countsGrid.Children.Remove(_filtersBtn);
+        if (spotlight)
+        {
+            int at = Math.Max(0, _searchRowStack.Children.IndexOf(_segmentHost));
+            _searchRowStack.Children.Insert(at, _filtersBtn);
+            _filtersBtn.Height = double.NaN;               // as tall as the switch next to it
+            _filtersBtn.VerticalAlignment = VerticalAlignment.Stretch;
+            _filtersBtn.MinWidth = 40;
+            _filtersBtn.Padding = new Thickness(10, 0, 10, 0);
+            _filtersBtn.CornerRadius = new CornerRadius(10);
+        }
+        else
+        {
+            // Column 0, or 1 while the Spotlight collections column is still there (removed and shifted later)
+            Grid.SetColumn(_filtersBtn, _countsHasCollectionsColumn ? 1 : 0);
+            _countsGrid.Children.Add(_filtersBtn);
+            _filtersBtn.Height = 30;
+            _filtersBtn.VerticalAlignment = VerticalAlignment.Center;
+            _filtersBtn.MinWidth = 0;
+            _filtersBtn.CornerRadius = new CornerRadius(6);
+        }
+        RefreshSidebar();
+    }
+
+    // ── Shelf above / below the page ──────────────────────────────────────────
+
+    /// <summary>
+    /// Spotlight: puts the strip (search, filters, covers) above the game page, or below it when
+    /// <c>SpotlightShelfAtBottom</c> is on. At the bottom the strip is mirrored: covers next to the
+    /// page, search and filters on the outside, so controller Up / Down still go page → covers →
+    /// filters in one direction.
+    /// </summary>
+    private void ApplySpotlightShelfPosition()
+    {
+        if (!_spotlightOn || _sidebar == null || _searchRow == null || _countsRow == null || _contentColumn == null) return;
+        bool bottom = ViewModel.Settings.SpotlightShelfAtBottom;
+        var gv = GameViewPanel;
+        if (gv.RowDefinitions.Count == 2)
+        {
+            gv.RowDefinitions[0].Height = bottom ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+            gv.RowDefinitions[1].Height = bottom ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        }
+        Grid.SetRow(_sidebar, bottom ? 1 : 0);
+        Grid.SetRow(_contentColumn, bottom ? 0 : 1);
+        _sidebar.BorderThickness = bottom ? new Thickness(0, 1, 0, 0) : new Thickness(0, 0, 0, 1);
+
+        // Strip rows (the list grid: 0 search, 1 filter chips, 2 counts, 3 covers). On top: search + counts 0,
+        // filter chips 1, covers 3; at the bottom: covers 0, search + counts 2, chips 3. The collection chips sit
+        // in the counts grid, left of the Filters button (PlaceCollectionsHost)
+        int searchRow = bottom ? 2 : 0;
+        Grid.SetRow(_searchRow, searchRow);
+        Grid.SetRow(_countsRow, searchRow); // Filters + counts sit at the right of the search row
+        if (_chipsRow != null) Grid.SetRow(_chipsRow, searchRow + 1);
+        PlaceCollectionsHost();
+        if (_shelf != null)
+        {
+            Grid.SetRow(_shelf, bottom ? 0 : 3);
+            // Keep the side padding (UpdateShelfCentering widens it to centre a short Favourites row)
+            _shelf.Padding = bottom ? new Thickness(_shelf.Padding.Left, 12, _shelf.Padding.Right, 2)
+                                    : new Thickness(_shelf.Padding.Left, 4, _shelf.Padding.Right, 10);
+            PlaceCoverGrip(bottom);
+        }
+        _searchRow.Padding = bottom ? new Thickness(24, 6, 24, 14) : new Thickness(24, 14, 24, 6);
+        _countsRow.Padding = bottom ? new Thickness(0, 0, 24, 8) : new Thickness(0, 8, 24, 0);
+
+        if (_shelfPositionBtn != null)
+        {
+            _shelfPositionBtn.Visibility = Visibility.Visible;
+            _shelfPositionBtn.Content = bottom ? Loc.GetString("MainWindow.Shelf.CoversAtTop") : Loc.GetString("MainWindow.Shelf.CoversAtBottom");
+            ToolTipService.SetToolTip(_shelfPositionBtn, bottom
+                ? Loc.GetString("MainWindow.Shelf.MoveToTopTooltip")
+                : Loc.GetString("MainWindow.Shelf.MoveToBottomTooltip"));
+        }
+    }
+
+    private void ShelfPositionBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ViewModel.Settings.SpotlightShelfAtBottom = !ViewModel.Settings.SpotlightShelfAtBottom;
+            ViewModel.SaveSettingsPublic();
+            CrashReporter.Log($"[MainWindow.ShelfPosition] Covers {(ViewModel.Settings.SpotlightShelfAtBottom ? "at bottom" : "at top")}");
+            ApplySpotlightShelfPosition();
+            UpdateShelfCentering();
+            // Keep the button focused (it moved) so a controller or keyboard user stays on it
+            AfterLayout(() =>
+            {
+                if (_shelfPositionBtn == null) return;
+                if (_padHints?.Visibility == Visibility.Visible) PadFocus(_shelfPositionBtn);
+                else _shelfPositionBtn.Focus(FocusState.Programmatic);
+            });
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[MainWindow.ShelfPositionBtn_Click] Failed — {ex.Message}");
         }
     }
 
@@ -178,6 +301,8 @@ public sealed partial class MainWindow
                 $"<Style {XamlNs} TargetType='ListViewItem'>" +
                 "<Setter Property='Padding' Value='0'/><Setter Property='Margin' Value='4,0,4,0'/>" +
                 "<Setter Property='MinWidth' Value='0'/><Setter Property='MinHeight' Value='0'/>" +
+                // No white focus box: the tile's blue selection ring already marks it (focus is always on the selected cover)
+                "<Setter Property='UseSystemFocusVisuals' Value='False'/>" +
                 "<Setter Property='VerticalContentAlignment' Value='Top'/></Style>"),
         };
         ScrollViewer.SetHorizontalScrollMode(_shelf, ScrollMode.Enabled);
@@ -210,10 +335,13 @@ public sealed partial class MainWindow
 
         Grid.SetRow(_shelf, 3);
         parent.Children.Add(_shelf);
+        EnsureCoverGrip(parent);
+        HookShelfDrag();
+        PlaceCoverGrip(ViewModel.Settings.SpotlightShelfAtBottom);
     }
 
     /// <summary>
-    /// With the Favourites filter on, centres the covers when they all fit on screen (extra side
+    /// With the Favourites filter or a collection on, centres the covers when they all fit on screen (extra side
     /// padding); otherwise they start at the left as usual.
     /// </summary>
     private void UpdateShelfCentering()
@@ -223,13 +351,13 @@ public sealed partial class MainWindow
         {
             double side = 20;
             double width = _shelf.ActualWidth;
-            if (width > 0 && ViewModel.ActiveFilters.Contains("Favourites"))
+            if (width > 0 && (ViewModel.ActiveFilters.Contains("Favourites") || ViewModel.ActiveCollectionName != null))
             {
                 double items = ViewModel.DisplayedGames.Count * (TileWidth + 8); // tile + item margin 4,0,4,0
                 if (items > 0 && items + 40 <= width) side = Math.Floor((width - items) / 2);
             }
             if (Math.Abs(_shelf.Padding.Left - side) > 0.5)
-                _shelf.Padding = new Thickness(side, 4, side, 10);
+                _shelf.Padding = new Thickness(side, _shelf.Padding.Top, side, _shelf.Padding.Bottom);
         }
         catch (Exception ex)
         {
@@ -270,7 +398,8 @@ public sealed partial class MainWindow
         _shelfSyncing = true;
         try { _shelf.SelectedItem = GameList.SelectedItem; }
         finally { _shelfSyncing = false; }
-        if (GameList.SelectedItem != null) _shelf.ScrollIntoView(GameList.SelectedItem);
+        // The controller centres the cover itself (CenterShelf)
+        if (GameList.SelectedItem != null && !_padStepping) _shelf.ScrollIntoView(GameList.SelectedItem);
         UpdateShelfHighlight();
     }
 
@@ -438,7 +567,8 @@ public sealed partial class MainWindow
     {
         if (_coverCache.TryGetValue(path, out var img)) return img;
         // Decoded at tile size: a full 600x900 cover per tile would waste memory
-        img = new BitmapImage { DecodePixelWidth = (int)(TileWidth * 2), UriSource = new Uri(path) };
+        _coverDecodeWidth = CoverDecodeWidth;
+        img = new BitmapImage { DecodePixelWidth = _coverDecodeWidth, UriSource = new Uri(path) };
         _coverCache[path] = img;
         return img;
     }

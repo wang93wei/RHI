@@ -2,7 +2,7 @@
 // footer. Built in C# beside the XAML ones (XAML constraint); the XAML controls stay in the window,
 // hidden or restyled, and every new control calls the existing handlers. Classic is untouched:
 // switching back hides the Tabs chrome and restores the original looks.
-// The top bar is used in every layout (Classic too); the sidebar and footer restyle only in Tabs / Spotlight.
+// The top bar and the game list sidebar are used in every layout (Classic too); the footer restyles only in Tabs / Spotlight.
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -41,8 +41,8 @@ public sealed partial class MainWindow
     private Border? _segmentHost;
     private Grid? _countsGrid;
     private Button? _filtersBtn;
+    private Button? _shelfPositionBtn;
     private bool _filtersOpen;
-    private readonly Dictionary<FrameworkElement, (Brush? Bg, Brush? Border, Thickness Pad, Thickness Thick)> _sidebarClassic = new();
 
     // Footer
     private Border? _footer;
@@ -56,11 +56,12 @@ public sealed partial class MainWindow
     {
         ApplyTabsChromeCore();
         ApplySpotlightChrome();
+        UpdateControllerTimer(); // controller support is Spotlight only
     }
 
     private void ApplyTabsChromeCore()
     {
-        // The top bar is the same in every layout; the sidebar and footer restyle only in Tabs / Spotlight
+        // The top bar and sidebar are the same in every layout; the footer restyles only in Tabs / Spotlight
         bool tabs = _detailPanelBuilder?.Layout.IsTabs == true;
         if (_tabsChromeBuilt && tabs == _tabsChromeOn) return;
         try
@@ -70,11 +71,11 @@ public sealed partial class MainWindow
                 BuildTabsChrome();
                 if (!_tabsChromeBuilt) return;
                 ShowTabsTopBar(true);
+                ShowTabsSidebar();
                 _checkedTimer ??= CreateCheckedTimer();
                 _checkedTimer.Start();
             }
             _tabsChromeOn = tabs;
-            ShowTabsSidebar(tabs);
             ShowTabsFooter(tabs);
             RefreshTabsChrome();
         }
@@ -148,30 +149,37 @@ public sealed partial class MainWindow
         TabsTheme.Apply(_filtersBtn, TabsTheme.IconButton, height: 30, fontSize: 12);
         _filtersBtn.CornerRadius = new CornerRadius(6);
         _filtersBtn.Click += (s, e) => { _filtersOpen = !_filtersOpen; RefreshTabsChrome(); };
-        ToolTipService.SetToolTip(_filtersBtn, Loc.GetString("MainWindow.Tabs.Filters.Tooltip"));
         _countsGrid.Children.Add(_filtersBtn);
+        // Spotlight only: puts the search / filters / cover shelf above or below the game page
+        _countsGrid.ColumnDefinitions.Insert(1, new ColumnDefinition { Width = GridLength.Auto });
+        _shelfPositionBtn = new Button { Padding = new Thickness(10, 0, 10, 0), Visibility = Visibility.Collapsed };
+        TabsTheme.Apply(_shelfPositionBtn, TabsTheme.IconButton, height: 30, fontSize: 12);
+        _shelfPositionBtn.CornerRadius = new CornerRadius(6);
+        _shelfPositionBtn.Click += ShelfPositionBtn_Click;
+        Grid.SetColumn(_shelfPositionBtn, 1);
+        _countsGrid.Children.Add(_shelfPositionBtn);
         if (countsContent != null)
         {
             countsContent.HorizontalAlignment = HorizontalAlignment.Left;
-            Grid.SetColumn(countsContent, 1);
+            Grid.SetColumn(countsContent, 2);
             _countsGrid.Children.Add(countsContent);
         }
         _countsRow.Child = _countsGrid;
 
-        foreach (var el in new FrameworkElement?[] { _sidebar, _searchRow, _chipsRow, _countsRow })
-            if (el is Border b) _sidebarClassic[b] = (b.Background, b.BorderBrush, b.Padding, b.BorderThickness);
         _footerClassic = (_footer.Background, _footer.BorderBrush);
 
         // Only the properties the chrome shows (the update count checks game folders, so not on every change)
         ViewModel.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName is null or nameof(ViewModel.AnyUpdateAvailable) or nameof(ViewModel.CurrentPage)
-                or nameof(ViewModel.FilterMode) or nameof(ViewModel.NewWikiModsButtonVisibility))
+                or nameof(ViewModel.FilterMode) or nameof(ViewModel.NewWikiModsButtonVisibility)
+                or nameof(ViewModel.ActiveCollectionName))
             {
                 if (e.PropertyName is null or nameof(ViewModel.AnyUpdateAvailable)) _updateCountDirty = true;
                 RefreshTabsChromeSoon();
             }
         };
+        EnsureCollectionsRow();
         _tabsChromeBuilt = true;
     }
 
@@ -210,14 +218,14 @@ public sealed partial class MainWindow
             Child = new TextBlock { Text = Loc.GetString("MainWindow.Tabs.NewBadge"), FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.Bold, Foreground = TabsTheme.B("#7FE0A0") },
             Visibility = Visibility.Collapsed,
         };
-        var mods = MakeNavItem(Loc.GetString("MainWindow.Tabs.AvailableMods"), _navModsNew, (s, e) =>
+        var mods = MakeNavItem(Loc.GetString("MainWindow.Tabs.AvailableMods"), _navModsNew, e =>
         {
             if (NewModsBtn.Visibility == Visibility.Visible) NewModsButton_Click(NewModsBtn, e);
             else HdrModsListBtn_Click(HdrModsListBtn, e);
         });
-        TabsTheme.SetHandTip(mods, ToolTipService.GetToolTip(HdrModsListBtn) as string ?? Loc.GetString("Xaml.AvailableHdrMods.Tooltip"));
-        var shaders = MakeNavItem(Loc.GetString("MainWindow.Tabs.ShadersAddons"), null, null);
-        shaders.Tapped += (s, e) =>
+        TabsTheme.SetHandTip(mods, ToolTipService.GetToolTip(HdrModsListBtn) as string ?? Loc.GetString("MainWindow.Tabs.AvailableMods.Tooltip"));
+        Button shaders = null!;
+        shaders = MakeNavItem(Loc.GetString("MainWindow.Tabs.ShadersAddons"), null, e =>
         {
             var menu = new MenuFlyout();
             var a = new MenuFlyoutItem { Text = Loc.GetString("Menu.GlobalShaders") };
@@ -227,7 +235,7 @@ public sealed partial class MainWindow
             menu.Items.Add(a);
             menu.Items.Add(b);
             menu.ShowAt(shaders, new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
-        };
+        });
         nav.Children.Add(mods);
         nav.Children.Add(shaders);
 
@@ -279,7 +287,8 @@ public sealed partial class MainWindow
         return bar;
     }
 
-    private Border MakeNavItem(string text, UIElement? extra, TappedEventHandler? onTap)
+    /// <summary>A top bar page link. A see-through Button around the look, so a controller (or Tab) can focus it.</summary>
+    private Button MakeNavItem(string text, UIElement? extra, Action<RoutedEventArgs> onClick)
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         sp.Children.Add(new TextBlock { Text = text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
@@ -298,8 +307,20 @@ public sealed partial class MainWindow
             if (item.Tag is not true) item.Background = TabsTheme.B("#1E2738");
         };
         item.PointerExited += (s, e) => { if (item.Tag is not true) item.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); };
-        if (onTap != null) item.Tapped += onTap;
-        return item;
+        var button = new Button
+        {
+            Content = item,
+            Padding = new Thickness(0),
+            BorderThickness = new Thickness(0),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            CornerRadius = item.CornerRadius,
+        };
+        var clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        foreach (var key in new[] { "ButtonBackgroundPointerOver", "ButtonBackgroundPressed",
+                                    "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed" })
+            TabsTheme.SetResource(button.Resources, key, clear);
+        button.Click += (s, e) => onClick(e);
+        return button;
     }
 
     private static void SetNavSelected(Border item, bool selected)
@@ -403,26 +424,37 @@ public sealed partial class MainWindow
         _            => FilterDetected,
     };
 
-    private void ShowTabsSidebar(bool tabs)
+    /// <summary>The Tabs game list (segmented main filter, Filters button by the counts) in every layout.</summary>
+    private void ShowTabsSidebar()
     {
         if (_searchRow == null || _chipsRow == null || _countsRow == null) return;
-        if (_mainFilterChips != null) _mainFilterChips.Visibility = tabs ? Visibility.Collapsed : Visibility.Visible;
-        if (_segmentHost != null) _segmentHost.Visibility = tabs ? Visibility.Visible : Visibility.Collapsed;
-        if (_filtersBtn != null) _filtersBtn.Visibility = tabs ? Visibility.Visible : Visibility.Collapsed;
-        if (!tabs)
-        {
-            // Classic+: keeps its own layout (chips always shown, its paddings), only the colours follow Tabs
-            _chipsRow.Visibility = Visibility.Visible;
-            foreach (var (el, c) in _sidebarClassic)
-                if (el is Border b) { b.Background = c.Bg; b.BorderBrush = c.Border; b.Padding = c.Pad; b.BorderThickness = c.Thick; }
-        }
+        if (_mainFilterChips != null) _mainFilterChips.Visibility = Visibility.Collapsed;
+        WrapEngineModChips();
+        if (_segmentHost != null) _segmentHost.Visibility = Visibility.Visible;
+        if (_filtersBtn != null) _filtersBtn.Visibility = Visibility.Visible;
         ApplySidebarColours();
-        if (!tabs) return;
 
         _searchRow.Padding = new Thickness(16, 16, 16, 6);
         _chipsRow.BorderThickness = new Thickness(0);
         _chipsRow.Padding = new Thickness(16, 6, 16, 6);
         _countsRow.Padding = new Thickness(16, 6, 16, 8);
+    }
+
+    /// <summary>
+    /// The engine / mod chips (Unreal … Luma) are a single XAML row, so on a narrow game list the
+    /// last chip was cut off. Moves them into a WrapPanel (once) so they flow onto a second line.
+    /// </summary>
+    private void WrapEngineModChips()
+    {
+        if (FilterUnreal.Parent is not StackPanel row || row.Parent is not Panel outer) return;
+        int idx = outer.Children.IndexOf(row);
+        if (idx < 0) return;
+        var chips = row.Children.ToList();
+        row.Children.Clear(); // a control can only have one parent
+        var wrap = new Controls.WrapPanel { HorizontalSpacing = 4, VerticalSpacing = 4 };
+        foreach (var chip in chips) wrap.Children.Add(chip);
+        outer.Children.RemoveAt(idx);
+        outer.Children.Insert(idx, wrap);
     }
 
     /// <summary>The game list's Tabs colours, used in every layout.</summary>
@@ -456,6 +488,8 @@ public sealed partial class MainWindow
         var active = ViewModel.ActiveFilters;
         int sel = Array.FindIndex(MainFilters, f => active.Contains(f.Tag));
         if (sel < 0) sel = 0;
+        // A collection replaces the main filter: no segment is selected while one is shown
+        if (ViewModel.ActiveCollectionName != null) sel = -1;
         var key = string.Join(",", active.OrderBy(x => x)) + "|" + sel;
         if (_segmentHost.Tag as string != key)
         {
@@ -465,19 +499,24 @@ public sealed partial class MainWindow
                 track: TabsTheme.Card);
         }
         int extra = active.Count(f => !MainFilters.Any(m => m.Tag == f));
-        _filtersBtn.Content = MakeFiltersLabel(extra);
+        _filtersBtn.Content = MakeFiltersLabel(extra, iconOnly: _spotlightOn);
+        ToolTipService.SetToolTip(_filtersBtn, extra > 0
+            ? Loc.GetString("MainWindow.Tabs.Filters.TooltipWithCount", extra)
+            : Loc.GetString("MainWindow.Tabs.Filters.Tooltip"));
         _chipsRow.Visibility = _filtersOpen ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private StackPanel MakeFiltersLabel(int extra)
+    /// <summary>Filter icon + "Filters"; Spotlight shows the icon only (and the count when filters are on).</summary>
+    private StackPanel MakeFiltersLabel(int extra, bool iconOnly)
     {
-        var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        sp.Children.Add(TabsTheme.Icon("", 12)); // filter
-        sp.Children.Add(new TextBlock
-        {
-            Text = extra > 0 ? Loc.GetString("MainWindow.Tabs.FiltersWithCount", extra) : Loc.GetString("MainWindow.Tabs.Filters"),
-            VerticalAlignment = VerticalAlignment.Center
-        });
+        var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+        sp.Children.Add(TabsTheme.Icon("", iconOnly ? 14 : 12)); // filter
+        if (!iconOnly || extra > 0)
+            sp.Children.Add(new TextBlock
+            {
+                Text = iconOnly ? extra.ToString() : extra > 0 ? Loc.GetString("MainWindow.Tabs.FiltersWithCount", extra) : Loc.GetString("MainWindow.Tabs.Filters"),
+                VerticalAlignment = VerticalAlignment.Center,
+            });
         return sp;
     }
 
@@ -551,7 +590,7 @@ public sealed partial class MainWindow
                 _updateAllHost.Children.Add(MakeUpdateAllButton(count));
                 _lastUpdateCount = count; // only once it's shown, so a failure retries next time
             }
-            if (_tabsChromeOn) RefreshSidebar();
+            RefreshSidebar();
         }
         catch (Exception ex)
         {

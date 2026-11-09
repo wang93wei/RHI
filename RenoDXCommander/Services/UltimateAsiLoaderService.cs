@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using RenoDXCommander.Models;
 using RenoDXCommander.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -17,6 +18,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class UltimateAsiLoaderService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     public const string AddonType       = "UltimateAsiLoader";
     public const string DefaultDllName  = "dinput8.dll";
     public const string GitHubApiUrl    = "https://api.github.com/repos/ThirteenAG/Ultimate-ASI-Loader/releases/latest";
@@ -134,7 +139,7 @@ public class UltimateAsiLoaderService
         }
 
         Directory.CreateDirectory(stagingDir);
-        progress?.Report(("Downloading ASI Loader...", 10));
+        progress?.Report((L("Status.DownloadingAsiLoader"), 10));
 
         var (version, assets, body) = await FetchLatestReleaseInfoAsync().ConfigureAwait(false);
         if (string.IsNullOrEmpty(version) || assets == null || !assets.TryGetValue(assetName, out var downloadUrl))
@@ -143,12 +148,12 @@ public class UltimateAsiLoaderService
             return;
         }
 
-        progress?.Report(("Downloading ASI Loader...", 30));
+        progress?.Report((L("Status.DownloadingAsiLoader"), 30));
 
         try
         {
             var zipBytes = await _http.GetByteArrayAsync(downloadUrl).ConfigureAwait(false);
-            progress?.Report(("Extracting...", 70));
+            progress?.Report((L("Status.Extracting"), 70));
 
             // Extract dinput8.dll from the zip
             using var ms  = new MemoryStream(zipBytes);
@@ -176,7 +181,7 @@ public class UltimateAsiLoaderService
             _crashReporter.Log($"[UltimateAsiLoaderService.EnsureStagingAsync] Failed — {ex.Message}");
         }
 
-        progress?.Report(("ASI Loader ready", 100));
+        progress?.Report((L("Status.AsiLoaderReady"), 100));
     }
 
     // ── Install / Uninstall ───────────────────────────────────────────────────
@@ -231,17 +236,24 @@ public class UltimateAsiLoaderService
         }
 
         // Hooked chaining — if the target DLL exists and is NOT ours, rename it first
+        // (a reinstall under the same name replaces ASI Loader's own file, it isn't chained)
         string? hookedOriginal = null;
-        if (File.Exists(destPath) && !IsRhiManagedFile(card, dllName))
+        bool reinstallSameName = existingRecord != null
+            && existingRecord.InstalledAs.Equals(dllName, StringComparison.OrdinalIgnoreCase);
+        if (File.Exists(destPath) && !reinstallSameName && !IsRhiManagedFile(card, dllName))
         {
-            var ext        = Path.GetExtension(dllName);           // ".dll"
-            var nameNoExt  = Path.GetFileNameWithoutExtension(dllName); // "version"
-            var hookedName = $"{nameNoExt}Hooked{ext}";            // "versionHooked.dll"
+            var hookedName = HookedDllNames.ToHooked(dllName);     // "versionHooked.dll"
             var hookedPath = Path.Combine(card.InstallPath, hookedName);
+            if (File.Exists(hookedPath))
+            {
+                // Never overwrite a file already chained there (the game's own DLL or an RHI extra)
+                _crashReporter.Log($"[UltimateAsiLoaderService.InstallAsync] '{dllName}' and '{hookedName}' both exist in '{card.InstallPath}' — not installing over them");
+                return (false, null);
+            }
 
             try
             {
-                File.Move(destPath, hookedPath, overwrite: true);
+                File.Move(destPath, hookedPath, overwrite: false);
                 hookedOriginal = hookedName;
                 _crashReporter.Log($"[UltimateAsiLoaderService.InstallAsync] Chained '{dllName}' → '{hookedName}' for '{card.GameName}'");
             }
@@ -252,7 +264,7 @@ public class UltimateAsiLoaderService
             }
         }
 
-        progress?.Report(("Deploying ASI Loader...", 80));
+        progress?.Report((L("Status.DeployingAsiLoader"), 80));
 
         try
         {
@@ -284,7 +296,7 @@ public class UltimateAsiLoaderService
         };
         _auxInstaller.SaveAuxRecord(record);
 
-        progress?.Report(("ASI Loader installed!", 100));
+        progress?.Report((L("Status.AsiLoaderInstalled"), 100));
         return (true, hookedOriginal);
     }
 

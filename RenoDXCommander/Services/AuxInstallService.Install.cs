@@ -1,11 +1,16 @@
 // AuxInstallService.Install.cs — ReShade install/uninstall, update detection, and DB persistence
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 
 namespace RenoDXCommander.Services;
 
 public partial class AuxInstallService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     // ── Install — ReShade ─────────────────────────────────────────────────────────
 
     public async Task<AuxInstalledRecord> InstallReShadeAsync(
@@ -72,7 +77,7 @@ public partial class AuxInstallService
         }
 
         // ── Ensure staged DLLs exist (downloaded from reshade.me) ────────────────
-        progress?.Report(("Preparing ReShade files...", 10));
+        progress?.Report((L("Status.PreparingReshadeFiles"), 10));
         EnsureReShadeStaging();
 
         var effectiveChannel = channel ?? ChannelStable;
@@ -96,7 +101,7 @@ public partial class AuxInstallService
         // If this is a legacy version and not cached, download it on-demand
         if (!File.Exists(rsStagedPath) && !useNormalReShade && IsLegacyVersion(effectiveChannel))
         {
-            progress?.Report(($"Downloading ReShade {effectiveChannel}...", 15));
+            progress?.Report((L("Status.DownloadingReshadeChannel", effectiveChannel), 15));
             var downloaded = await DownloadLegacyReShadeAsync(effectiveChannel, _http, progress);
             if (downloaded)
                 rsStagedPath = GetStagedPathForChannel(effectiveChannel, use32Bit);
@@ -121,14 +126,14 @@ public partial class AuxInstallService
         BackupForeignDll(destPath);
 
         // ── Copy staged DLL to game folder ────────────────────────────────────────
-        progress?.Report(("Installing ReShade...", 80));
+        progress?.Report((L("Status.InstallingReshade"), 80));
         File.Copy(rsStagedPath, destPath, overwrite: true);
 
         // Deploy reshade.ini alongside the DLL (skip if caller has locked ini updates for this game).
         if (mergeIni && File.Exists(RsIniPath))
             MergeRsIni(installPath, screenshotSavePath, overlayHotkey, screenshotHotkey, gameName);
 
-        progress?.Report(("ReShade installed!", 100));
+        progress?.Report((L("Status.ReshadeInstalled"), 100));
 
         // ── Shader deployment ─────────────────────────────────────────────────────
         // Build exclusions off the calling thread to avoid blocking the UI thread
@@ -461,6 +466,27 @@ public partial class AuxInstallService
                 r.InstallPath.Equals(record.InstallPath, StringComparison.OrdinalIgnoreCase) &&
                 r.AddonType.Equals(record.AddonType, StringComparison.OrdinalIgnoreCase));
             SaveDb(db);
+        }
+    }
+
+    /// <inheritdoc/>
+    public int RepointRecords(string gameName, string oldPath, string newPath, Func<AuxInstalledRecord, bool>? include = null)
+    {
+        lock (SafeJsonFile.LockFor(DbPath))
+        {
+            var db = LoadDb();
+            int changed = 0;
+            foreach (var r in db.Where(r => r.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)
+                                         && r.InstallPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase)
+                                         && (include == null || include(r))).ToList())
+            {
+                bool newExists = db.Any(o => o != r && o.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) && o.InstallPath.Equals(newPath, StringComparison.OrdinalIgnoreCase) && o.AddonType.Equals(r.AddonType, StringComparison.OrdinalIgnoreCase));
+                if (newExists) db.Remove(r); else r.InstallPath = newPath;
+                changed++;
+                CrashReporter.Log($"[AuxInstallService.RepointRecords] '{gameName}': {(newExists ? "dropped old record (new folder has one)" : "moved")} '{oldPath}' → '{newPath}'");
+            }
+            if (changed > 0) SaveDb(db);
+            return changed;
         }
     }
 

@@ -1,10 +1,15 @@
 using HtmlAgilityPack;
 using RenoDXCommander.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
 public class WikiService : IWikiService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     private readonly HttpClient _http;
     private readonly IGameDetectionService _gameDetection;
 
@@ -26,8 +31,8 @@ public class WikiService : IWikiService
     public async Task<(List<GameMod> Mods, Dictionary<string, string> GenericNotes)>
         FetchAllAsync(IProgress<string>? progress = null)
     {
-        progress?.Report("Fetching wiki...");
-        var html = await _http.GetStringAsync(WikiUrl).ConfigureAwait(false);
+        progress?.Report(L("Wiki.Progress.Fetching"));
+        var html = await PageFetch.GetStringAsync(_http, WikiUrl).ConfigureAwait(false);
         var doc  = new HtmlDocument();
         doc.LoadHtml(html);
 
@@ -119,7 +124,7 @@ public class WikiService : IWikiService
             CrashReporter.Log($"[WikiService.FetchAllAsync] Normalized names ({allNorms.Count}): [{string.Join(", ", allNorms)}]");
         }
 
-        progress?.Report($"Found {mods.Count} mods, {genericNotes.Count} generic game notes");
+        progress?.Report(L("Wiki.Progress.FoundMods", mods.Count, genericNotes.Count));
         return (mods, genericNotes);
     }
 

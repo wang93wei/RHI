@@ -107,11 +107,28 @@ public partial class GameCardViewModel
     public string RdxStatusText => IsInstalling ? Tr("Status.InstallingShort")
         : Status == GameStatus.UpdateAvailable ? (RdxInstalledVersion ?? Tr("Status.UpdateShort"))
         : Status == GameStatus.Installed       ? (RdxInstalledVersion ?? Tr("Status.Installed"))
+        : HdrToggleName != null                ? Tr("Status.HdrToggleOn", HdrToggleName)
         : Mod?.SnapshotUrl != null             ? Tr("Status.Ready") : "—";
     public string RdxStatusColor => IsInstalling ? "#D4A856"
         : Status == GameStatus.UpdateAvailable ? "#B898E8"
         : Status == GameStatus.Installed       ? "#5ECB7D"
+        : HdrToggleName != null                ? "#5ECB7D"
         : Mod?.SnapshotUrl != null             ? "#A0AABB" : "#404858";
+
+    /// <summary>
+    /// "RTX HDR" / "Auto HDR" when one of them gives this game its HDR instead of a RenoDX mod
+    /// (both are set on the RenoDX row), else null. A mod installed alongside still shows the mod.
+    /// </summary>
+    public string? HdrToggleName => IsRtxHdrEnabled ? "RTX HDR" : IsAutoHdrEnabled ? "Auto HDR" : null;
+
+    partial void OnIsRtxHdrEnabledChanged(bool value) => NotifyHdrToggle();
+    partial void OnIsAutoHdrEnabledChanged(bool value) => NotifyHdrToggle();
+    private void NotifyHdrToggle()
+    {
+        OnPropertyChanged(nameof(HdrToggleName));
+        OnPropertyChanged(nameof(RdxStatusText));
+        OnPropertyChanged(nameof(RdxStatusColor));
+    }
     public string RdxShortAction => IsInstalling ? "…"
         : Status == GameStatus.UpdateAvailable ? Tr("Action.UpdateShort")
         : Status == GameStatus.Installed       ? Tr("Action.ReinstallShort")

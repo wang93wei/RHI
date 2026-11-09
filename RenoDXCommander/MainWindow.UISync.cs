@@ -186,7 +186,7 @@ public sealed partial class MainWindow
             b.Background  = new SolidColorBrush(isActive ? active   : inactive);
             b.Foreground  = new SolidColorBrush(isActive ? activeFg : inactiveFg);
         }
-        if (_tabsChromeOn) RefreshTabsChromeSoon(); // Tabs: segmented filter + Filters count
+        if (_tabsChromeBuilt) RefreshTabsChromeSoon(); // segmented filter + Filters count
     }
 
     private void TryRestoreSelection()
@@ -350,7 +350,7 @@ public sealed partial class MainWindow
         _ => null
     };
 
-    private async Task<string?> PickFolderAsync(string? suggestedPath = null)
+    internal async Task<string?> PickFolderAsync(string? suggestedPath = null)
     {
         // WinUI 3 unpackaged FolderPicker ignores SuggestedStartLocation for arbitrary paths.
         // Use IFileOpenDialog via COM directly so we can call SetFolder() with the game directory.

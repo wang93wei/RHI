@@ -20,10 +20,19 @@ internal sealed partial class DetailLayoutHost
 {
     // Hero
     private Border? _hero;
-    private Image? _heroImage;
+    // The artwork is an ImageBrush on a Border, not an Image: an Image that crops (UniformToFill) keeps its
+    // left side when the banner is tall, while the brush can be centred (AlignmentX).
+    private Border? _heroImage;
+    private ImageBrush? _heroBrush;
     private Border? _heroContent;
     private string? _heroGame;
     private const double HeroMinHeight = 340;
+    // The banner keeps roughly the shape of Steam hero art (3840x1240) as it widens, so wide windows
+    // (ultrawide, low interface scaling) don't crop the art to a thin zoomed-in strip.
+    private const double HeroArtAspect = 3840.0 / 1240.0;
+    private const double HeroMaxHeight = 500;
+    // Range for a height set by dragging the banner's bottom edge (it never gets shorter than its text and buttons)
+    private const double HeroDragMin = 200, HeroDragMax = 900;
 
     // Page body
     private StackPanel? _spotBody;
@@ -78,15 +87,17 @@ internal sealed partial class DetailLayoutHost
             _hTitle.FontWeight = spotlight ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Bold;
         }
         if (spotlight) RefreshSpotlight();
+        else RefreshAchievements(); // hides the strip outside Spotlight
     }
 
     private void EnsureSpotlightParts()
     {
         if (_hero != null) return;
 
-        _heroImage = new Image
+        _heroBrush = new ImageBrush { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Top };
+        _heroImage = new Border
         {
-            Stretch = Stretch.UniformToFill,
+            Background = _heroBrush,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Top,
             Height = HeroMinHeight,
@@ -98,13 +109,55 @@ internal sealed partial class DetailLayoutHost
         var sideFade = new Border { Background = Fade(vertical: false, ("#B30B0F17", 0), ("#400B0F17", 0.65), ("#000B0F17", 1)) };
         _heroContent = new Border { Padding = new Thickness(28), VerticalAlignment = VerticalAlignment.Bottom };
         // The artwork fills the banner and is cropped to it; it never sets the banner's height
-        _heroContent.SizeChanged += (s, e) => _heroImage.Height = Math.Max(HeroMinHeight, e.NewSize.Height);
-
         var layers = new Grid { MinHeight = HeroMinHeight };
+        var settings = _window.ViewModel.Settings;
+        void FitImage() => _heroImage!.Height = Math.Max(layers.MinHeight, _heroContent!.ActualHeight);
+        // Height: the user's (dragged) height, else it follows the width (art shape) between the minimum and
+        // HeroMaxHeight. Depends on width only, so no layout loop.
+        void ApplyHeight(double width)
+        {
+            double wanted = settings.SpotlightHeroHeight > 0
+                ? Math.Clamp(settings.SpotlightHeroHeight, HeroDragMin, HeroDragMax)
+                : Math.Clamp(Math.Round(width / HeroArtAspect), HeroMinHeight, HeroMaxHeight);
+            if (Math.Abs(layers.MinHeight - wanted) < 1) return;
+            layers.MinHeight = wanted;
+            FitImage();
+        }
+        _heroContent.SizeChanged += (s, e) => FitImage();
+        layers.SizeChanged += (s, e) =>
+        {
+            if (e.NewSize.Width == e.PreviousSize.Width) return;
+            ApplyHeight(e.NewSize.Width);
+        };
+
+        // Drag the bottom edge to set the height (saved); double-click goes back to automatic
+        var grip = new Controls.ResizeGrip { VerticalAlignment = VerticalAlignment.Bottom, Reference = () => _window.LayoutRoot };
+        ToolTipService.SetToolTip(grip, Loc.GetString("Detail.Spotlight.Resize.Tooltip"));
+        double dragStart = 0;
+        grip.DragStarted += () => dragStart = layers.ActualHeight;
+        grip.DragDelta += dy =>
+        {
+            settings.SpotlightHeroHeight = Math.Round(Math.Clamp(dragStart + dy, HeroDragMin, HeroDragMax));
+            ApplyHeight(layers.ActualWidth);
+        };
+        grip.DragCompleted += () =>
+        {
+            _window.ViewModel.SaveSettingsPublic();
+            CrashReporter.Log($"[Spotlight.Hero] Banner height set to {settings.SpotlightHeroHeight:0}");
+        };
+        grip.Reset += () =>
+        {
+            settings.SpotlightHeroHeight = 0;
+            ApplyHeight(layers.ActualWidth);
+            _window.ViewModel.SaveSettingsPublic();
+            CrashReporter.Log("[Spotlight.Hero] Banner height back to automatic");
+        };
+
         layers.Children.Add(_heroImage);
         layers.Children.Add(bottomFade);
         layers.Children.Add(sideFade);
         layers.Children.Add(_heroContent);
+        layers.Children.Add(grip);
         _hero = new Border
         {
             CornerRadius = new CornerRadius(16),
@@ -143,6 +196,7 @@ internal sealed partial class DetailLayoutHost
         manage.MinHeight = 60;
         manage.CornerRadius = new CornerRadius(12);
         manage.Click += (s, e) => OpenPanel(OverviewKey);
+        _manageBtn = manage;
         ToolTipService.SetToolTip(manage, Loc.GetString("Detail.ManageComponentsDesc"));
         _statusGrid.Children.Add(manage);
 
@@ -213,7 +267,7 @@ internal sealed partial class DetailLayoutHost
         if (string.Equals(name, _heroGame, StringComparison.OrdinalIgnoreCase)) return;
         _heroGame = name;
         _heroImage.Opacity = 0;
-        _heroImage.Source = null;
+        _heroBrush!.ImageSource = null;
         if (card == null) return;
 
         if (SteamArtworkService.TryGetCustom(MainWindow.ArtKey(card), SteamArtworkService.Kind.Hero) is { } custom)
@@ -252,7 +306,7 @@ internal sealed partial class DetailLayoutHost
         if (_heroImage == null) return;
         try
         {
-            _heroImage.Source = new BitmapImage(new Uri(path)) { DecodePixelWidth = 1920 };
+            _heroBrush!.ImageSource = new BitmapImage(new Uri(path)) { DecodePixelWidth = 1920 };
             _heroImage.Opacity = 1;
         }
         catch (UriFormatException ex) { CrashReporter.Log($"[DetailLayoutHost.SetHero] {ex.Message}"); }
@@ -328,7 +382,9 @@ internal sealed partial class DetailLayoutHost
         ReturnPanelContent();
 
         FrameworkElement? content;
-        if (key == OverviewKey)
+        if (key == AchievementsKey)
+            content = BuildAchievementsPanel();
+        else if (key == OverviewKey)
         {
             if (_overview == null) BuildOverview();
             if (_overviewGlance != null) _overviewGlance.Visibility = Visibility.Collapsed;
@@ -345,7 +401,7 @@ internal sealed partial class DetailLayoutHost
         _panelHost!.Children.Add(content);
         content.Visibility = Visibility.Visible;
         _panelKey = key;
-        _panelTitle!.Text = key == OverviewKey ? Loc.GetString("Detail.Components") : GetTitle(key);
+        _panelTitle!.Text = key == OverviewKey ? Loc.GetString("Detail.Components") : key == AchievementsKey ? Loc.GetString("Detail.Achievements") : GetTitle(key);
         if (key == OverviewKey) RefreshOverviewCards();
 
         // Re-adding the sheet replays its slide-in transition
@@ -372,6 +428,11 @@ internal sealed partial class DetailLayoutHost
         var key = _panelKey;
         _panelKey = null;
         _panelHost.Children.Clear();
+        if (key == AchievementsKey)
+        {
+            ReturnAchievementsPanel();
+            return;
+        }
         if (key == OverviewKey)
         {
             if (_overviewGlance != null) _overviewGlance.Visibility = Visibility.Visible;
@@ -410,7 +471,8 @@ internal sealed partial class DetailLayoutHost
         private readonly TextBlock _name;
         private readonly TextBlock _status;
 
-        internal Border Root { get; }
+        /// <summary>A button around the card, so a controller or the keyboard can select it.</summary>
+        internal Button Root { get; }
 
         internal StatusTile(DetailLayoutHost host, ComponentRowRef[] rows)
         {
@@ -440,7 +502,7 @@ internal sealed partial class DetailLayoutHost
             Grid.SetColumn(text, 1);
             grid.Children.Add(text);
 
-            Root = new Border
+            var card = new Border
             {
                 Background = TabsTheme.B(TabsTheme.Card),
                 BorderBrush = TabsTheme.B(TabsTheme.CardBorder),
@@ -448,13 +510,11 @@ internal sealed partial class DetailLayoutHost
                 CornerRadius = new CornerRadius(12),
                 Padding = new Thickness(16, 14, 16, 14),
                 Child = grid,
-                Visibility = Visibility.Collapsed,
             };
-            TabsTheme.UseHandCursor(Root);
-            TabsTheme.SetHandTip(Root, Loc.GetString("Detail.ManageComponents"));
-            Root.PointerEntered += (s, e) => Root.Background = TabsTheme.B(TabsTheme.RowHover);
-            Root.PointerExited += (s, e) => Root.Background = TabsTheme.B(TabsTheme.Card);
-            Root.Tapped += (s, e) => _host.OpenPanel(OverviewKey);
+            TabsTheme.UseHandCursor(card);
+            TabsTheme.SetHandTip(card, Loc.GetString("Detail.ManageComponents"));
+            Root = TabsTheme.WrapTile(card, () => _host.OpenPanel(OverviewKey));
+            Root.Visibility = Visibility.Collapsed;
         }
 
         internal void Update()
@@ -475,7 +535,8 @@ internal sealed partial class DetailLayoutHost
             _name.Text = Name(r);
             var status = (r.Status.Text ?? "").Replace("\r", "").Replace('\n', ' ').Trim();
             var tone = TabsTheme.ToneOf(r.Status.Foreground);
-            bool notInstalled = status.Length == 0 || string.Equals(status, Loc.GetString("Dialog.Ready"), StringComparison.OrdinalIgnoreCase);
+            bool notInstalled = status.Length == 0 || status == "—"
+                || string.Equals(status, Loc.GetString("Dialog.Ready"), StringComparison.OrdinalIgnoreCase);
             _status.Text = notInstalled ? Loc.GetString("Status.NotInstalled")
                 : tone != TabsTheme.Tone.Purple ? status
                 : status.StartsWith(Loc.GetString("Status.UpdateShort"), StringComparison.OrdinalIgnoreCase) ? Loc.GetString("Status.UpdateAvailable")

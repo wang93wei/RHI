@@ -8,7 +8,7 @@ namespace RenoDXCommander.Services;
 /// Owns name mappings, game renames, wiki exclusions, and settings persistence.
 /// Extracted from MainViewModel per Requirement 1.5.
 /// </summary>
-public class GameNameService : IGameNameService
+public partial class GameNameService : IGameNameService
 {
     private readonly IGameDetectionService _gameDetectionService;
     private readonly IModInstallService _installer;
@@ -652,9 +652,12 @@ public class GameNameService : IGameNameService
             Load<List<string>>("RemovedGames", _removedGames?.ToList() ?? new()),
             StringComparer.OrdinalIgnoreCase);
 
+        LoadCustomGameFolders(key => Load<List<string>>(key, new()));
+
         _favouriteGames = new HashSet<string>(
             Load<List<string>>("FavouriteGames", _favouriteGames?.ToList() ?? new()),
             StringComparer.OrdinalIgnoreCase);
+        LoadGameCollections(s);
 
         _rtxHdrGames = new HashSet<string>(
             Load<List<string>>("RtxHdrGames", _rtxHdrGames?.ToList() ?? new()), StringComparer.OrdinalIgnoreCase);
@@ -900,7 +903,9 @@ public class GameNameService : IGameNameService
                 s["CustomReShadeSelection"] = JsonSerializer.Serialize(_customReShadeSelection);
                 s["HiddenGames"]         = JsonSerializer.Serialize(_hiddenGames?.ToList() ?? new List<string>());
                 s["FavouriteGames"]      = JsonSerializer.Serialize(_favouriteGames?.ToList() ?? new List<string>());
+                SaveGameCollections(s);
                 s["RemovedGames"]        = JsonSerializer.Serialize(_removedGames?.ToList() ?? new List<string>());
+                SaveCustomGameFolders(s);
                 s["RtxHdrGames"]         = JsonSerializer.Serialize(_rtxHdrGames?.ToList() ?? new List<string>());
                 s["AutoHdrGames"]        = JsonSerializer.Serialize(_autoHdrGames?.ToList() ?? new List<string>());
                 if (_autoHdrStrengths.Count > 0)
@@ -1057,6 +1062,8 @@ public class GameNameService : IGameNameService
         // Migrate composite-keyed HashSets (independent per store)
         MigrateCompositeHashSet(_hiddenGames, oldName, newName);
         MigrateCompositeHashSet(_favouriteGames, oldName, newName);
+        _collections.MigrateGameRename(oldName, newName);
+        GameJournalStore.MigrateGameRename(oldName, newName); // overlay notes and playtime
         MigrateCompositeHashSet(_removedGames, oldName, newName);
         MigrateCompositeHashSet(_updateAllExcludedReShade, oldName, newName);
         MigrateCompositeHashSet(_updateAllExcludedRenoDx, oldName, newName);

@@ -79,11 +79,16 @@ public partial class DxvkService
             if (IsStagingReady && !HasUpdate)
             {
                 CrashReporter.Log("[DxvkService.EnsureStagingAsync] Staging already valid — skipping download");
-                progress?.Report(("DXVK staging ready", 100));
+                progress?.Report((L("Dxvk.Progress.StagingReady"), 100));
                 return;
             }
 
-            progress?.Report(("Checking DXVK release...", 5));
+            progress?.Report((L("Dxvk.Progress.CheckingRelease"), 5));
+
+            // Remember the version file's time: a new one means a download completed,
+            // which is then checked for files an antivirus removed straight away.
+            var versionFile = GetVersionFileForVariant(_selectedVariant);
+            DateTime? versionBefore = File.Exists(versionFile) ? File.GetLastWriteTimeUtc(versionFile) : null;
 
             // ── 2. Route based on variant ────────────────────────────────────
             if (_selectedVariant == DxvkVariant.LiliumHdr)
@@ -98,6 +103,10 @@ public partial class DxvkService
             {
                 await EnsureStagingGitHubAsync(progress).ConfigureAwait(false);
             }
+
+            if (File.Exists(versionFile) && File.GetLastWriteTimeUtc(versionFile) != versionBefore)
+                await AntivirusGuard.VerifyStagedAsync(AntivirusComponentName, StagedVersion,
+                    GetExpectedStagedFiles(_selectedVariant)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -128,12 +137,12 @@ public partial class DxvkService
             && IsStagingReady)
         {
             CrashReporter.Log($"[DxvkService.EnsureStagingNightlyAsync] Already up to date ({versionTag})");
-            progress?.Report(("DXVK up to date", 100));
+            progress?.Report((L("Dxvk.Progress.UpToDate"), 100));
             return;
         }
 
         var assetName = $"dxvk-master-{versionTag}.zip";
-        progress?.Report(($"Downloading DXVK nightly ({assetName})...", 10));
+        progress?.Report((L("Dxvk.Progress.DownloadingNightly", assetName), 10));
         CrashReporter.Log($"[DxvkService.EnsureStagingNightlyAsync] Downloading {assetName} from {downloadUrl}");
 
         // ── Download the .zip archive to a temp file ─────────────────────
@@ -153,7 +162,7 @@ public partial class DxvkService
         }
 
         // ── Extract the .zip archive (single pass) ──────────────────────
-        progress?.Report(("Extracting DXVK...", 75));
+        progress?.Report((L("Dxvk.Progress.Extracting"), 75));
         try
         {
             if (!await ExtractZipToStagingAsync(tempArchive).ConfigureAwait(false))
@@ -167,7 +176,7 @@ public partial class DxvkService
         // ── Write version tag ────────────────────────────────────────────
         WriteVersionTag(versionTag);
 
-        progress?.Report(("DXVK staging ready", 100));
+        progress?.Report((L("Dxvk.Progress.StagingReady"), 100));
         CrashReporter.Log("[DxvkService.EnsureStagingNightlyAsync] Staging complete");
     }
 
@@ -240,11 +249,11 @@ public partial class DxvkService
             && IsStagingReady)
         {
             CrashReporter.Log($"[DxvkService.EnsureStagingGitHubAsync] Already up to date ({tagName})");
-            progress?.Report(("DXVK up to date", 100));
+            progress?.Report((L("Dxvk.Progress.UpToDate"), 100));
             return;
         }
 
-        progress?.Report(($"Downloading DXVK ({assetName})...", 10));
+        progress?.Report((L("Dxvk.Progress.DownloadingStable", assetName), 10));
         CrashReporter.Log($"[DxvkService.EnsureStagingGitHubAsync] Downloading {assetName} from {downloadUrl}");
 
         // ── Download the .tar.gz archive to a temp file ──────────────────
@@ -267,7 +276,7 @@ public partial class DxvkService
         // 7-Zip requires two passes for .tar.gz:
         //   Pass 1: 7z x archive.tar.gz → produces archive.tar
         //   Pass 2: 7z x archive.tar    → produces the directory tree
-        progress?.Report(("Extracting DXVK...", 75));
+        progress?.Report((L("Dxvk.Progress.Extracting"), 75));
         try
         {
             if (!await ExtractTarGzToStagingAsync(tempArchive).ConfigureAwait(false))
@@ -281,7 +290,7 @@ public partial class DxvkService
         // ── Write version tag to version.txt ─────────────────────────────
         WriteVersionTag(tagName ?? "unknown");
 
-        progress?.Report(("DXVK staging ready", 100));
+        progress?.Report((L("Dxvk.Progress.StagingReady"), 100));
         CrashReporter.Log("[DxvkService.EnsureStagingGitHubAsync] Staging complete");
     }
 
@@ -356,11 +365,11 @@ public partial class DxvkService
             && IsStagingReadyForVariant(DxvkVariant.LiliumHdr))
         {
             CrashReporter.Log($"[DxvkService.EnsureStagingLiliumAsync] Already up to date ({tagName})");
-            progress?.Report(("DXVK Lilium HDR up to date", 100));
+            progress?.Report((L("Dxvk.Progress.LiliumUpToDate"), 100));
             return;
         }
 
-        progress?.Report(($"Downloading DXVK Lilium HDR ({assetName})...", 10));
+        progress?.Report((L("Dxvk.Progress.DownloadingLilium", assetName), 10));
         CrashReporter.Log($"[DxvkService.EnsureStagingLiliumAsync] Downloading {assetName} from {downloadUrl}");
 
         // ── Download the .7z archive to a temp file ──────────────────────
@@ -383,7 +392,7 @@ public partial class DxvkService
         // ── Extract the .7z archive ──────────────────────────────────────
         // Lilium's archive has structure: normal/x64/*.dll and normal/x32/*.dll
         // We need to extract and remap to x64/ and x32/ in the staging dir.
-        progress?.Report(("Extracting DXVK Lilium HDR...", 75));
+        progress?.Report((L("Dxvk.Progress.ExtractingLilium"), 75));
         try
         {
             if (!await ExtractLilium7zToStagingAsync(tempArchive, liliumDir).ConfigureAwait(false))
@@ -400,7 +409,7 @@ public partial class DxvkService
         WriteVersionTag(tagName ?? "unknown");
         _selectedVariant = savedVariant;
 
-        progress?.Report(("DXVK Lilium HDR staging ready", 100));
+        progress?.Report((L("Dxvk.Progress.LiliumStagingReady"), 100));
         CrashReporter.Log("[DxvkService.EnsureStagingLiliumAsync] Staging complete");
     }
 
@@ -497,6 +506,7 @@ public partial class DxvkService
         catch (Exception ex)
         {
             CrashReporter.Log($"[DxvkService.ExtractLilium7zToStagingAsync] Failed — {ex.Message}");
+            if (AntivirusGuard.IsVirusError(ex)) AntivirusGuard.Report(AntivirusComponentName, null, destDir);
             return false;
         }
     }
@@ -536,7 +546,7 @@ public partial class DxvkService
                 if (total > 0)
                 {
                     var pct = pctStart + (double)downloaded / total * (pctEnd - pctStart);
-                    progress?.Report(($"Downloading DXVK... {downloaded / 1024} KB / {total / 1024} KB", pct));
+                    progress?.Report((L("Dxvk.Progress.DownloadingKb", downloaded / 1024, total / 1024), pct));
                 }
             }
         }
@@ -578,6 +588,7 @@ public partial class DxvkService
         catch (Exception ex)
         {
             CrashReporter.Log($"[DxvkService.ExtractZipToStagingAsync] Extraction failed — {ex.Message}");
+            if (AntivirusGuard.IsVirusError(ex)) AntivirusGuard.Report(AntivirusComponentName, null, StagingDir);
             return false;
         }
         finally
@@ -645,6 +656,7 @@ public partial class DxvkService
         catch (Exception ex)
         {
             CrashReporter.Log($"[DxvkService.ExtractTarGzToStagingAsync] Extraction failed — {ex.Message}");
+            if (AntivirusGuard.IsVirusError(ex)) AntivirusGuard.Report(AntivirusComponentName, null, StagingDir);
             return false;
         }
         finally

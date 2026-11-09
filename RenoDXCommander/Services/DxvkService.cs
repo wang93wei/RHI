@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.Models;
 using RenoDXCommander.ViewModels;
 
@@ -13,6 +14,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public partial class DxvkService : IDxvkService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     // ── Constants ──────────────────────────────────────────────────────
 
     // Separate staging directories for each variant (coexist simultaneously)
@@ -192,8 +197,26 @@ public partial class DxvkService : IDxvkService
         var dir = GetStagingDirForVariant(variant);
         var vf = GetVersionFileForVariant(variant);
         var dllCheck = Path.Combine(dir, "x64", "d3d9.dll");
-        return CheckStagingReady(dir, vf, dllCheck);
+        // Every DLL in both architectures: antivirus often deletes only the 32-bit ones,
+        // which used to leave staging "ready" and installs failing later.
+        return CheckStagingReady(dir, vf, dllCheck)
+            && GetExpectedStagedFiles(variant).All(File.Exists);
     }
+
+    /// <summary>DLLs every DXVK variant ships for both x64 and x32.</summary>
+    internal static readonly string[] StagedDllNames = { "d3d8.dll", "d3d9.dll", "d3d10core.dll", "d3d11.dll", "dxgi.dll" };
+
+    /// <summary>Full paths of the DLLs a complete staging folder for <paramref name="variant"/> holds.</summary>
+    internal static IEnumerable<string> GetExpectedStagedFiles(DxvkVariant variant)
+    {
+        var dir = GetStagingDirForVariant(variant);
+        foreach (var arch in new[] { "x64", "x32" })
+            foreach (var dll in StagedDllNames)
+                yield return Path.Combine(dir, arch, dll);
+    }
+
+    /// <summary>Name used for DXVK in <see cref="AntivirusGuard"/>.</summary>
+    internal const string AntivirusComponentName = "DXVK";
 
     /// <summary>
     /// Lilium HDR DX9 dxvk.conf presets — 6 tiers from safest to experimental.

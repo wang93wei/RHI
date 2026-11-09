@@ -14,8 +14,14 @@ public sealed partial class MainWindow
     private FrameworkElement? _uiScaledRoot;
     private double _uiScale = 1.0;
 
-    /// <summary>Interface sizes offered in Settings, in percent.</summary>
-    internal static readonly int[] UiScaleOptions = { 50, 60, 67, 75, 80, 90, 100, 110, 125, 150 };
+    /// <summary>The window's root Grid (inside the interface scaling): drag distances measured against it are in layout units.</summary>
+    internal UIElement? LayoutRoot => _uiScaledRoot ?? Content;
+
+    /// <summary>
+    /// Interface sizes offered in Settings and stepped through by Ctrl + mouse wheel, in percent:
+    /// every 5% from 50 to 200 (the range <see cref="ApplyUiScale"/> accepts).
+    /// </summary>
+    internal static readonly int[] UiScaleOptions = Enumerable.Range(0, 31).Select(i => 50 + i * 5).ToArray();
 
     /// <summary>
     /// Sizes the whole window content to <paramref name="percent"/> of normal (on top of Windows
@@ -51,6 +57,46 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             _crashReporter.Log($"[MainWindow.ApplyUiScale] {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Ctrl + mouse wheel steps the interface size through <see cref="UiScaleOptions"/>, like browser zoom.
+    /// Hooked on the original root (it stays in the tree when the scale host wraps it), with handled
+    /// events included so scroll areas under the pointer don't swallow it.
+    /// </summary>
+    private void HookUiScaleWheel()
+    {
+        if (Content is not UIElement root) return;
+        root.AddHandler(UIElement.PointerWheelChangedEvent,
+            new Microsoft.UI.Xaml.Input.PointerEventHandler(UiScaleWheel_Changed), handledEventsToo: true);
+    }
+
+    private void UiScaleWheel_Changed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        try
+        {
+            if (!e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) return;
+            int delta = e.GetCurrentPoint(null).Properties.MouseWheelDelta;
+            if (delta == 0) return;
+            e.Handled = true;
+
+            // The next size up or down from the current one (which may be off the list, e.g. an old 67%)
+            int current = ViewModel.Settings.UiScale;
+            int percent = delta > 0
+                ? UiScaleOptions.FirstOrDefault(p => p > current, UiScaleOptions[^1])
+                : UiScaleOptions.LastOrDefault(p => p < current, UiScaleOptions[0]);
+            if (percent == current) return;
+
+            ViewModel.Settings.UiScale = percent;
+            ViewModel.SaveSettingsPublic(); // debounced, so a fast scroll writes once
+            ApplyUiScale(percent);
+            _settingsHandler.SelectUiScale();
+            ShowStatusBarMessage(Loc.GetString("Status.UiScale", percent), TimeSpan.FromSeconds(2));
+        }
+        catch (Exception ex)
+        {
+            _crashReporter.Log($"[MainWindow.UiScaleWheel_Changed] {ex.Message}");
         }
     }
 

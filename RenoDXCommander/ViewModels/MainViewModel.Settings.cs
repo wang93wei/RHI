@@ -193,7 +193,8 @@ public partial class MainViewModel
     // ── OptiScaler Variant Override ───────────────────────────────────────────
 
     /// <summary>
-    /// Returns the OptiScaler variant for a game: "Stable", "Nightly", "DlssNr" or "F5". A game
+    /// Returns the OptiScaler variant for a game: "Stable", "Nightly", "DlssNr", "F5" or a custom
+    /// build ("Custom:&lt;slug&gt;", see <see cref="OsVariants"/>). A game
     /// without its own choice uses the Settings default (<see cref="SettingsViewModel.OsDefaultVariant"/>).
     /// </summary>
     public string GetOsVariant(string gameName, string store = "")
@@ -202,7 +203,9 @@ public partial class MainViewModel
         if (_gameNameService.OsVariantOverrides.TryGetValue(key, out var v)) return v;
         // name-only fallback for legacy
         if (_gameNameService.OsVariantOverrides.TryGetValue(gameName, out var v2)) return v2;
-        return string.IsNullOrEmpty(Settings.OsDefaultVariant) ? "Stable" : Settings.OsDefaultVariant;
+        // A default that points at a custom build the user has since removed falls back to Stable
+        return string.IsNullOrEmpty(Settings.OsDefaultVariant) || !OsVariants.IsKnown(Settings.OsDefaultVariant)
+            ? "Stable" : Settings.OsDefaultVariant;
     }
 
     /// <summary>Sets the OptiScaler variant for a game ("Stable" is kept as an explicit choice). Null removes it, so the game follows the Settings default.</summary>
@@ -223,7 +226,7 @@ public partial class MainViewModel
     /// </summary>
     public void SetOsDefaultVariant(string value)
     {
-        if (value is not ("Stable" or "Nightly" or "DlssNr" or "F5") || value == Settings.OsDefaultVariant) return;
+        if (!OsVariants.IsKnown(value) || value == Settings.OsDefaultVariant) return;
         int pinned = 0;
         foreach (var card in _allCards.ToList())
         {
@@ -239,6 +242,39 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
+    // ── OptiScaler Nightly cleanup ────────────────────────────────────────────
+
+    /// <summary>
+    /// The nightly builds to keep when old ones are removed: every build a game is pinned to (its
+    /// OptiScaler ⚙, Control's UE fix). Null when Settings › Remove old Nightly builds is off.
+    /// </summary>
+    internal IReadOnlyCollection<string>? NightlyBuildsToKeep()
+    {
+        if (!Settings.OsNightlyCleanup) return null;
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                return _gameNameService.OsNightlyBuild.Values
+                    .Where(v => !string.IsNullOrEmpty(v))
+                    .ToHashSet(StringComparer.Ordinal);
+            }
+            catch (InvalidOperationException) { } // the pins changed while copying: try again
+        }
+        CrashReporter.Log("[MainViewModel.NightlyBuildsToKeep] Pins kept changing — skipping cleanup");
+        return null;
+    }
+
+    /// <summary>
+    /// Removes old nightly builds now when the setting is on (background thread). Returns what was
+    /// removed, or (0, 0).
+    /// </summary>
+    internal (int Removed, long Bytes) CleanUpOldNightlyBuilds()
+    {
+        if (NightlyBuildsToKeep() is not { } keep) return (0, 0);
+        return _optiScalerService.RemoveOldNightlyBuilds(keep);
+    }
+
     // ── OptiScaler Nightly Build ──────────────────────────────────────────────
 
     /// <summary>Returns the pinned nightly build date for a game. Empty string = "Latest" (auto-update).</summary>
@@ -248,6 +284,19 @@ public partial class MainViewModel
         if (_gameNameService.OsNightlyBuild.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v)) return v;
         if (_gameNameService.OsNightlyBuild.TryGetValue(gameName, out var v2) && !string.IsNullOrEmpty(v2)) return v2;
         return ""; // absent = Latest
+    }
+
+    /// <summary>
+    /// The release a game is pinned to for a Stable / DLSS NR / F5 / fork install (OptiScaler ⚙ › Release),
+    /// or null. Shares the per-game pin value with Nightly; an 8-digit nightly date isn't a release pin.
+    /// </summary>
+    public string? GetOsPinnedRelease(string gameName, string store = "")
+    {
+        var variant = GetOsVariant(gameName, store);
+        if (!OsReleaseService.SupportsPinning(variant)) return null;
+        var pin = GetOsNightlyBuild(gameName, store);
+        if (string.IsNullOrEmpty(pin) || (pin.Length == 8 && pin.All(char.IsDigit))) return null;
+        return pin;
     }
 
     /// <summary>Sets the pinned nightly build date for a game. Null or empty = Latest (removes pin and auto-update exemption).</summary>
@@ -1050,6 +1099,7 @@ public partial class MainViewModel
                     if (success)
                     {
                         SetUalInstalledAs(gameName, chosenName, store);
+                        if (hookedOriginal != null) OnUalChainedFile(card, chosenName, hookedOriginal);
                         _crashReporter.Log($"[SfAutoConfig] Installed UAL as '{chosenName}' for '{gameName}'" +
                             (hookedOriginal != null ? $" (chained '{hookedOriginal}')" : ""));
                     }
@@ -1128,6 +1178,7 @@ public partial class MainViewModel
             var ualSvc = App.Services.GetRequiredService<UltimateAsiLoaderService>();
             ualSvc.Uninstall(card);
             SetUalInstalledAs(gameName, null, store);
+            OnUalReleasedName(card, ualInstalled);
             _crashReporter.Log($"[SfAutoConfig.Revert] Removed UAL ('{ualInstalled}') for '{gameName}'");
         }
 
@@ -1174,7 +1225,12 @@ public partial class MainViewModel
     /// <summary>Per-game install folder overrides. Key = game name, Value = "overridePath|originalPath".</summary>
     private Dictionary<string, string> _folderOverrides => _gameNameService.FolderOverrides;
 
-    public void SetFolderOverride(string gameName, string folderPath, string store = "")
+    /// <param name="originalPath">
+    /// The folder RHI detected, captured by the caller before it changed the card (used on the first
+    /// override). Without it the card's current folder is used, which is wrong once the card points at
+    /// the picked folder: Reset install folder then went back to the picked folder.
+    /// </param>
+    public void SetFolderOverride(string gameName, string folderPath, string store = "", string? originalPath = null)
     {
         var key = GameKey.From(gameName, store).ToKey();
         // Preserve the original path if this is the first override
@@ -1183,6 +1239,10 @@ public partial class MainViewModel
         {
             var parts = existing.Split('|');
             original = parts.Length > 1 ? parts[1] : parts[0];
+        }
+        else if (!string.IsNullOrEmpty(originalPath))
+        {
+            original = originalPath;
         }
         else
         {
@@ -1193,6 +1253,8 @@ public partial class MainViewModel
             original = card?.DetectedGame?.InstallPath ?? card?.InstallPath ?? "";
         }
         _folderOverrides[key] = $"{folderPath}|{original}";
+        // Scans of the old folder mustn't keep the game on the DLSS skip list.
+        _dlssStreamlineService.RecordDlssFound(gameName);
         SaveNameMappings();
         SaveLibrary();
     }
@@ -1200,13 +1262,14 @@ public partial class MainViewModel
     /// <summary>
     /// Resets the folder for an auto-detected game back to its original detected path.
     /// For manual games, removes the game entirely.
+    /// Returns the detected game folder it went back to (null when none was stored).
     /// </summary>
-    public void ResetFolderOverride(GameCardViewModel card)
+    public string? ResetFolderOverride(GameCardViewModel card)
     {
         if (card.IsManuallyAdded)
         {
             RemoveManualGameCommand.Execute(card);
-            return;
+            return null;
         }
 
         var key = GameKey.FromCard(card.GameName, card.Source).ToKey();
@@ -1219,6 +1282,7 @@ public partial class MainViewModel
         }
 
         _folderOverrides.Remove(key);
+        _dlssStreamlineService.RecordDlssFound(card.GameName);
 
         if (!string.IsNullOrEmpty(originalPath))
         {
@@ -1230,6 +1294,7 @@ public partial class MainViewModel
         SaveNameMappings();
         SaveLibrary();
         card.NotifyAll();
+        return string.IsNullOrEmpty(originalPath) ? null : originalPath;
     }
 
     public bool HasDllOverride(string gameName) => _dllOverrideService.HasDllOverride(gameName);
@@ -1839,6 +1904,7 @@ public partial class MainViewModel
                     foreach (var f in filters)
                         _filterViewModel.CustomFilters.Add(f);
                 });
+            RestoreActiveCollection();
             _crashReporter.Log("[MainViewModel.LoadNameMappings] Delegated to GameNameService");
         }
         finally

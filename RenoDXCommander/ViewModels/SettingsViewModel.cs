@@ -30,6 +30,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _osGpuType = "NVIDIA";
     /// <summary>OptiScaler version for games that don't have one chosen: "Stable", "Nightly", "DlssNr" or "F5".</summary>
     [ObservableProperty] private string _osDefaultVariant = "Stable";
+    /// <summary>Delete old OptiScaler Nightly builds when a new one is downloaded (keeps the newest and pinned builds).</summary>
+    [ObservableProperty] private bool _osNightlyCleanup;
     /// <summary>RHI's own interface size in percent (on top of Windows scaling). 100 = normal.</summary>
     [ObservableProperty] private int _uiScale = 100;
     [ObservableProperty] private bool _osDlssInputs = true;
@@ -89,6 +91,30 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Controls which data source feeds mod info. Values: "WikiOnly", "DbOnly", "Hybrid".</summary>
     [ObservableProperty] private string _renoDxDbSource = "DbOnly";
     [ObservableProperty] private bool _dropHelperEnabled = true;
+    /// <summary>Controller support in the Spotlight layout (MainWindow.Controller.cs).</summary>
+    [ObservableProperty] private bool _controllerSupport = true;
+    /// <summary>Spotlight: show the selected Steam game's achievements (opt-in, Settings › Achievements).</summary>
+    [ObservableProperty] private bool _steamAchievements;
+    /// <summary>Spotlight: show the selected Xbox game's achievements (opt-in, Settings › Achievements).</summary>
+    [ObservableProperty] private bool _xboxAchievements;
+    /// <summary>RHI overlay: a full-screen RHI page over the game, opened with a hotkey (Settings › RHI overlay).</summary>
+    [ObservableProperty] private bool _rhiOverlayEnabled = true;
+    /// <summary>RHI overlay hotkey in ReShade's "vk,ctrl,shift,alt" format. Default Alt + ` (VK_OEM_3).</summary>
+    [ObservableProperty] private string _rhiOverlayHotkey = DefaultRhiOverlayHotkey;
+    public const string DefaultRhiOverlayHotkey = "192,0,0,1";
+    /// <summary>RHI overlay: hold View + Menu on a controller to open / close it.</summary>
+    [ObservableProperty] private bool _rhiOverlayController = true;
+    /// <summary>RHI overlay: freeze the game's process while the overlay is open (off by default; for testing).</summary>
+    [ObservableProperty] private bool _rhiOverlayPauseGame;
+    /// <summary>Spotlight: search, filters and the cover shelf below the game page instead of above it.</summary>
+    [ObservableProperty] private bool _spotlightShelfAtBottom;
+    /// <summary>Spotlight banner height set by dragging its bottom edge; 0 = automatic (follows the window width).</summary>
+    [ObservableProperty] private double _spotlightHeroHeight;
+    /// <summary>Spotlight cover size set by dragging the cover strip's edge (1 = 120 x 180).</summary>
+    [ObservableProperty] private double _spotlightCoverScale = 1.0;
+    /// <summary>What's New: text size (+ / - buttons) and whether the version list + search are hidden.</summary>
+    [ObservableProperty] private double _patchNotesFontSize = 12;
+    [ObservableProperty] private bool _patchNotesNavHidden;
     [ObservableProperty] private bool _closeToTray;
     [ObservableProperty] private bool _recentGamesMenu;
     [ObservableProperty] private bool _startWithWindows;
@@ -285,8 +311,11 @@ public partial class SettingsViewModel : ObservableObject
 
         if (s.TryGetValue("OsGpuType", out var ogtVal))
             OsGpuType = ogtVal ?? "NVIDIA";
-        if (s.TryGetValue("OsDefaultVariant", out var odvVal) && odvVal is "Stable" or "Nightly" or "DlssNr" or "F5")
+        // Forks are only known once the manifest loads: keep the saved value (GetOsVariant falls back if it's gone)
+        if (s.TryGetValue("OsDefaultVariant", out var odvVal)
+            && (OsVariants.IsKnown(odvVal) || OsVariants.IsFork(odvVal) || OsVariants.IsCustom(odvVal)))
             OsDefaultVariant = odvVal;
+        if (s.TryGetValue("OsNightlyCleanup", out var oncVal)) OsNightlyCleanup = oncVal == "true"; // default false
         if (s.TryGetValue("UiScale", out var uisVal) && int.TryParse(uisVal, out var uis))
             UiScale = Math.Clamp(uis, 50, 200);
 
@@ -394,6 +423,18 @@ public partial class SettingsViewModel : ObservableObject
             // SaveSettingsFile will persist the marker and the new source on the next save
         }
         if (s.TryGetValue("DropHelperEnabled", out var dheVal)) DropHelperEnabled = dheVal != "false"; // default true
+        if (s.TryGetValue("ControllerSupport", out var csVal)) ControllerSupport = csVal != "false"; // default true
+        if (s.TryGetValue("SteamAchievements", out var saVal)) SteamAchievements = saVal == "true"; // default false (opt-in)
+        if (s.TryGetValue("XboxAchievements", out var xaVal)) XboxAchievements = xaVal == "true"; // default false (opt-in)
+        if (s.TryGetValue("RhiOverlayEnabled", out var roeVal)) RhiOverlayEnabled = roeVal != "false"; // default true
+        if (s.TryGetValue("RhiOverlayHotkey", out var rohVal) && !string.IsNullOrWhiteSpace(rohVal)) RhiOverlayHotkey = rohVal;
+        if (s.TryGetValue("RhiOverlayController", out var rocVal)) RhiOverlayController = rocVal != "false"; // default true
+        if (s.TryGetValue("RhiOverlayPauseGame", out var ropVal)) RhiOverlayPauseGame = ropVal == "true"; // default false
+        if (s.TryGetValue("SpotlightShelfAtBottom", out var ssbVal)) SpotlightShelfAtBottom = ssbVal == "true"; // default false (top)
+        if (s.TryGetValue("SpotlightHeroHeight", out var shhVal) && double.TryParse(shhVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var shh)) SpotlightHeroHeight = shh;
+        if (s.TryGetValue("PatchNotesFontSize", out var pnfVal) && double.TryParse(pnfVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pnf) && pnf > 0) PatchNotesFontSize = pnf;
+        if (s.TryGetValue("PatchNotesNavHidden", out var pnhVal)) PatchNotesNavHidden = pnhVal == "true";
+        if (s.TryGetValue("SpotlightCoverScale", out var scsVal) && double.TryParse(scsVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scs) && scs > 0) SpotlightCoverScale = scs;
         if (s.TryGetValue("CloseToTray", out var cttVal)) CloseToTray = cttVal == "true";
         if (s.TryGetValue("RecentGamesMenu", out var rgmVal)) RecentGamesMenu = rgmVal == "true";
         if (s.TryGetValue("StartWithWindows", out var swwVal)) StartWithWindows = swwVal == "true";
@@ -516,6 +557,7 @@ public partial class SettingsViewModel : ObservableObject
         s["OsHotkey"] = OsHotkey;
         s["OsGpuType"] = OsGpuType;
         s["OsDefaultVariant"] = OsDefaultVariant;
+        s["OsNightlyCleanup"] = OsNightlyCleanup ? "true" : "false";
         s["UiScale"] = UiScale.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["OsDlssInputs"] = OsDlssInputs ? "true" : "false";
         s["OsFirstTimeWarningDismissed"] = OsFirstTimeWarningDismissed ? "true" : "false";
@@ -564,6 +606,18 @@ public partial class SettingsViewModel : ObservableObject
         s["DbSourceMigrated"] = "1"; // persists the one-time migration marker
         if (!DropHelperEnabled) s["DropHelperEnabled"] = "false";
         else s["DropHelperEnabled"] = "true";
+        s["ControllerSupport"] = ControllerSupport ? "true" : "false";
+        s["SteamAchievements"] = SteamAchievements ? "true" : "false";
+        s["XboxAchievements"] = XboxAchievements ? "true" : "false";
+        s["RhiOverlayEnabled"] = RhiOverlayEnabled ? "true" : "false";
+        s["RhiOverlayHotkey"] = RhiOverlayHotkey;
+        s["RhiOverlayController"] = RhiOverlayController ? "true" : "false";
+        s["RhiOverlayPauseGame"] = RhiOverlayPauseGame ? "true" : "false";
+        s["SpotlightShelfAtBottom"] = SpotlightShelfAtBottom ? "true" : "false";
+        s["SpotlightHeroHeight"] = SpotlightHeroHeight.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+        s["PatchNotesFontSize"] = PatchNotesFontSize.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+        s["PatchNotesNavHidden"] = PatchNotesNavHidden ? "true" : "false";
+        s["SpotlightCoverScale"] = SpotlightCoverScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
         s["CloseToTray"] = CloseToTray ? "true" : "false";
         s["RecentGamesMenu"] = RecentGamesMenu ? "true" : "false";
         s["StartWithWindows"] = StartWithWindows ? "true" : "false";

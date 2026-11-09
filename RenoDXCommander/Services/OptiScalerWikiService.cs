@@ -1,5 +1,6 @@
 using HtmlAgilityPack;
 using RenoDXCommander.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -15,6 +16,10 @@ public interface IOptiScalerWikiService
 
 public class OptiScalerWikiService : IOptiScalerWikiService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     private readonly HttpClient _http;
 
     /// <summary>Session-cached wiki data. Populated after the first successful fetch.</summary>
@@ -41,7 +46,7 @@ public class OptiScalerWikiService : IOptiScalerWikiService
         if (CachedData != null)
             return CachedData;
 
-        progress?.Report("Fetching OptiScaler wiki...");
+        progress?.Report(L("OptiScaler.Wiki.Progress.Fetching"));
 
         var standardCompat = new Dictionary<string, OptiScalerCompatEntry>(StringComparer.OrdinalIgnoreCase);
         var fsr4Compat = new Dictionary<string, OptiScalerCompatEntry>(StringComparer.OrdinalIgnoreCase);
@@ -90,7 +95,7 @@ public class OptiScalerWikiService : IOptiScalerWikiService
         };
 
         CachedData = data;
-        progress?.Report($"OptiScaler wiki: {standardCompat.Count} standard + {fsr4Compat.Count} FSR4 entries");
+        progress?.Report(L("OptiScaler.Wiki.Progress.Fetched", standardCompat.Count, fsr4Compat.Count));
         return data;
     }
 
@@ -101,7 +106,7 @@ public class OptiScalerWikiService : IOptiScalerWikiService
     {
         try
         {
-            return await _http.GetStringAsync(url).ConfigureAwait(false);
+            return await PageFetch.GetStringAsync(_http, url).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

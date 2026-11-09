@@ -28,11 +28,13 @@ fileMatchPattern: "*manifest*,*Manifest*,*RemoteManifest*"
 | `forceExternalOnly` | Redirects install to external URL (Nexus, Discord) |
 | `authorOverrides` | Forces mod author display name |
 | `donationUrls` | Maps author names → Ko-fi links |
+| `patreonUrls` | Maps author names → Patreon links (Donate dialog shows Ko-fi and Patreon buttons). Never put a list into `donationUrls`: older versions would fail to read the manifest |
 | `pcgwUrlOverrides` | Game name → direct PCGW wiki URL |
 | `componentUrls` | Base URL overrides (`ueExtended`, `ueDofFix`) |
 | `dlssPresets` | SR/RR/FG preset arrays for manifest-driven presets |
 | `shaderPacks` | Dict keyed by pack ID — add/override/disable packs |
 | `addonPacks` | Dict keyed by SectionId — add/override/disable addons |
+| `osForks` | Dict keyed by fork id — recommended OptiScaler forks shown as versions, updated from GitHub releases (`OsForkService`); never rename an id games use |
 
 ## Per-Game Fields
 
@@ -81,6 +83,11 @@ All resolved via `AddonInfoResolver.cs` — routes by `AddonType` enum to the co
 - Supports `..` for navigating UP from a wrongly-detected subfolder (e.g. Game Pass games where `ResolveXboxGameRoot` picks the wrong inner folder)
 - Example: `"Hades II": "Ship|.."` — Steam uses `Ship` subfolder; Game Pass detection lands in `Content\Audio`, `..` navigates back up to `Content\`
 - `ResolveXboxGameRoot` logic: checks `Content\` subfolder, picks `innerDirs[0]` (alphabetical). If a game puts its exe directly in `Content\` alongside subfolders (no inner project folder), detection picks the wrong subfolder (e.g. `Audio`). Fix via `..` in the override rather than changing detection code.
+
+## installPathMigrations
+- Same format as `installPathOverrides` (game → subpath, `|` candidates). Wins over `installPathOverrides` for the same game (indexer merge in `ApplyManifest` + `CacheLoad`).
+- Means "this game's mod folder moved": on the next launch / Refresh RHI moves the game's installs from the old folder (install records elsewhere inside the game root, or the folder detection picked before the override) to the new one, then shows a status bar notice. See "Install folder migration" in `rhi-knowledge.md`.
+- Use it instead of `installPathOverrides` whenever users may already have installs in the old folder: old app versions ignore this field, so they don't switch folders without moving anything. Only add an entry once a version with the mover has shipped.
 
 ## splitGames
 - Structure: `{ "Detected Name": [ { "name": "Sub-Game", "subPath": "relative\\path" } ] }`

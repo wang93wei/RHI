@@ -352,13 +352,17 @@ public partial class MainViewModel : ObservableObject
     /// Deploys shaders for a single game card (by name).
     /// Called when saving a per-game shader mode override so changes take effect immediately.
     /// </summary>
-    public void DeployShadersForCard(string gameName)
+    public void DeployShadersForCard(string gameName) => _ = DeployShadersForCardAsync(gameName);
+
+    /// <summary>Same as <see cref="DeployShadersForCard"/>, but awaitable so callers can refresh
+    /// their status once the files are in place.</summary>
+    public Task DeployShadersForCardAsync(string gameName)
     {
         var card = _allCards.FirstOrDefault(c =>
             c.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase));
-        if (card == null || string.IsNullOrEmpty(card.InstallPath)) return;
+        if (card == null || string.IsNullOrEmpty(card.InstallPath)) return Task.CompletedTask;
 
-        _ = Task.Run(async () =>
+        return Task.Run(async () =>
         {
             try
             {
@@ -837,6 +841,10 @@ public partial class MainViewModel : ObservableObject
         _uwFixService = uwFixService;
         _ultraPlusService = ultraPlusService;
         _optiScalerService = optiScalerService;
+        // Old nightly builds are removed after a new one downloads when the setting is on
+        _optiScalerService.NightlyCleanupKeepProvider = NightlyBuildsToKeep;
+        // OptiScaler installs / updates deploy the NR runtime picked in the game's ⚙
+        OptiScalerService.NrRuntimeProvider = c => GetOsNrRuntime(c.GameName, c.Source ?? "");
         _dxvkService = dxvkService;
         _optiScalerWikiService = optiScalerWikiService;
         _hdrDatabaseService = hdrDatabaseService;
@@ -866,6 +874,7 @@ public partial class MainViewModel : ObservableObject
         _filterViewModel.CustomFiltersChanged = () => SaveNameMappings();
         // Initialize FilterViewModel with the DisplayedGames collection
         _filterViewModel.Initialize(DisplayedGames);
+        InitCollections();
         // Forward FilterViewModel property changes so UI bindings on MainViewModel still work
         _filterViewModel.PropertyChanged += (s, e) =>
         {

@@ -18,6 +18,7 @@ Ideas, technical debt, and planned improvements. Categorised for easy reference.
 ### Features
 - **Custom ReShade auto-redeploy** — `CustomReShadeHashService` hashes the DLLs in the Custom folder (`custom_reshade_hashes.json`) and redeploys changed ones to every game on the Custom channel (Vulkan via the elevated global layer copy). Runs on launch, Refresh and the 4-hour background check.
 - **Selectable layouts (v2.9.0)** — Classic / Classic+ / Tabs / Spotlight, switched from the top bar. Spotlight uses Steam artwork, with custom artwork per game. Plan and decisions: [layouts-plan-2.9.0.md](layouts-plan-2.9.0.md).
+- **Steam achievements in Spotlight (v2.9.2)**: opt-in (Settings › Achievements). Read from Steam's local cache (`appcache\stats\UserGameStatsSchema_<appid>.bin` + `UserGameStats_<account>_<appid>.bin`, binary KeyValues) by `SteamAchievementService`; rarity from the keyless `GetGlobalAchievementPercentagesForApp` (cached a day); icons cached in `artwork\{appid}\ach\`. Hero strip under Launch / HDR / Resolution, full list in the side panel. Rejected: Steam Web API (per-user key), community XML (needs a public profile, fragile). **Xbox** (same version): own toggle; read from the Xbox app's `AsyncCache.db` (SQLite, via Windows' `winsqlite3.dll`, no package) by `XboxAchievementService`; card → PFN (from the AUMID) → Store product id → title id, name match as fallback; rarity, Gamerscore and progress come with the list. Next: Ubisoft (local cache), then GOG / Epic / EA (need sign-in); see `reports/Achievements beyond Steam.md`.
 
 ---
 
@@ -74,7 +75,7 @@ Items that improve maintainability, performance, or reliability. No user-facing 
   3. `tools/check-manifest.py`: also check each part, and fail if `manifest.json` doesn't match the parts. Add `manifest/**` to `.github/workflows/manifest-check.yml` paths.
   4. Manifest Editor (`tools/RHI-ManifestEditor`, `Json/JsonDoc.cs`): open one `JsonDoc` per part and route each field's edits to the part that holds it; saving stays text-preserving.
   5. Docs: "Push manifest" workflow in CLAUDE.md (edit part → build → push `manifest/` + `manifest.json` together), `.claude/rules/rhi-manifest.md` + `.kiro` copy, `docs/manifest-field-reference.md`.
-- `game-db/seed_from_manifest.py` reads `manifest.json` and keeps working unchanged.
+- `tools/game-db/seed_from_manifest.py` reads `manifest.json` and keeps working unchanged.
 - **Optional cleanup:** `_engineOverrides` (~5 KB) is switched-off data ("engine names now sourced from pcgw_data.json") and could be removed.
 - **Rejected:** one file per game (hundreds of files; edits happen by topic), and having the app fetch the parts itself (more API calls, older versions still need `manifest.json`).
 
@@ -101,31 +102,15 @@ Show the user's complete Steam catalog (owned, family shared, not just installed
 
 **Source:** Discord user request. Similar to SteamDB/SteamDD.
 
-### Steam Achievements in Spotlight
-Show the selected Steam game's achievements on the Spotlight page: progress, recent unlocks, and the full list in the side panel. No API key, sign-in or public profile needed, because the data comes from Steam's local cache.
+### One-click updates (Velopack)
+Update like SCSKiller: download in the background, click **Restart to update**, done in seconds with no installer window or UAC prompt. Uses Velopack (per-user install in `%LocalAppData%\RHI.App\`, `Update.exe` swaps the app folder and restarts).
 
-**Data sources (verified on a real install):**
-- Achievement list: `<SteamPath>\appcache\stats\UserGameStatsSchema_<appid>.bin`. Binary KeyValues: `stats` → `<block>` → `bits` → `<bit>` → `name`, `display` → `name`/`desc` (per language), `hidden`, `icon`, `icon_gray`.
-- Unlock state: `<SteamPath>\appcache\stats\UserGameStats_<accountid>_<appid>.bin`. `cache` → `<block>` → `data` (unlocked bitfield) + `AchievementTimes` → `<bit>`: unix time.
-- Account id = SteamID64 − 76561197960265728, SteamID64 from `<SteamPath>\config\loginusers.vdf` (`MostRecent` user). SteamPath from `HKCU\Software\Valve\Steam\SteamPath`.
-- Binary KeyValues types: 0 subtree, 1 string, 2/4/6 int32, 3 float, 7 uint64, 8/11 end.
-- Icons: `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/{appid}/{hash}.jpg`.
-- Optional rarity: `ISteamUserStats/GetGlobalAchievementPercentagesForApp` (no key), cached for a day.
+- Full plan: `docs/velopack-updates-plan.md` (install location, channels, release steps, migration from the Inno install, testing).
+- **Decide first:** Admin Mode would run a user-writable exe elevated; plan option (a) is a small admin-owned launcher that checks RHI is genuine.
+- **Pitfall:** the old Inno uninstaller deletes `%LocalAppData%\RHI` (user data), so the migration must not run it as-is.
+- Pairs well with the .NET 10 move (on hold).
 
-**What needs building:**
-- `SteamAchievementService`: KeyValues binary reader, account lookup, maps block + bit to unlocked/time, picks the Steam display language with English fallback, caches results and re-reads only when a file changes.
-- Icons downloaded in the background into the artwork cache (`artwork\{appid}\ach\`), only while Spotlight is on, like covers.
-- Spotlight: an Achievements tile under "Tune this game" ("31 / 78 · 40%", progress bar, last few unlocked icons); clicking it opens the side panel with the full list (unlocked newest first, then locked greyed out; hidden locked ones masked as "Hidden achievement").
-- Refresh when the game exits (running-game tracking) and on selection.
-- AppID via `DetailPanelBuilder.ResolveCommunityAppId`; Steam games only.
-
-**Limitations:** only covers games run on this PC (or whose achievements were opened in Steam); undocumented format (hide the tile if a file doesn't parse); updates only when Steam writes the cache.
-
-**Rejected:** Steam Web API `GetPlayerAchievements` (needs a per-user key and a public game-details profile); scraping community XML (fragile); Steamworks SDK (not viable).
-
-**Open questions:** Spotlight only, or also an At a glance tile in Tabs? Include rarity? Mask hidden achievements until unlocked?
-
-**Size:** medium, about 600–800 lines, no new libraries.
+**Source:** user request, Nov 2026.
 
 ### Store-Qualified installPathOverrides
 Games on both Steam and Xbox with different subfolder structures (`Win64` vs `WinGDK`).
@@ -157,6 +142,20 @@ Confirmed bugs or UX problems with a known root cause.
 
 ---
 
+### GitHub issues investigated (Nov 2026), not yet fixed
+Root causes found; each is a small change unless noted.
+
+- **#147 RHI doesn't open (process runs, no window).** If the first instance hangs during startup, every later launch hands off to it over the single-instance pipe and exits silently (`SingleInstanceService.SendToRunningInstance` swallows failures; the listener only starts after `Activate()`, App.xaml.cs ~391; the second instance deletes its own log). Fixes: start the pipe listener right after `TryAcquire`; on failed hand-off, keep the log and offer "RHI is already running but not responding — end it?"; startup watchdog that logs a stack if the window isn't up after ~20 s; re-add the tray icon on `TaskbarCreated`; check the Admin Mode task's `/TR` path still matches the exe.
+- **#133 DLSS5 Tool NR DLL recorded but not copied.** `DeployNrDllSentinel` (DetailPanelBuilder.NeuralRendering.cs ~154) returns when `nvngx_dlssnr.dll.original` exists without checking the DLL is there; the shared-file owner is added anyway. Fix: use `DeployWithSentinel` like SR/RR/FG (also applies the chosen NR version) and only record the owner once the file exists. Same pattern in the Feeder deploy.
+- **#138 Engine.ini written to the other store's folder.** `AuxInstallService.FindPlatformConfigDir` always prefers `WinGDK` over `Windows`, ignoring the store. Fix: Xbox prefers WinGDK, other stores Windows; for pipe-separated overrides pick the store-matching candidate. Update the "Platform priority" line in rhi-install.md.
+- **#62 Uninstalled games stay listed.** Both merge paths (BackgroundScan.cs ~344, Init.cs ~661) keep every cached game the scan didn't find (meant for offline drives). Fix: keep only when the drive root is missing; drop when the drive is there but the folder is gone. Skip UNC paths (slow when unreachable).
+- **#105 Installed filter is ReShade-only.** FilterViewModel.cs ~330. Fix: `IsAnyComponentInstalled` (ReShade, RenoDX, Luma, OptiScaler, ReLimiter/DC, RE Framework, DXVK, DOF Fix); keep the "N ReShade" counter as a separate count.
+- **#159 Phantom Blade Zero.** The real exe is `platform\steam\PBZ.exe`; OptiScaler loads ReShade64.dll from the exe folder, but RHI installs to `ProjectPBZ\Binaries\Win64`. Fix (manifest): `installPathOverrides` "Phantom Blade Zero": `"platform\steam|ProjectPBZ\Binaries\Win64"`; check the Engine.ini project name still resolves; existing installs need a reinstall.
+- **#139 Euro Truck Simulator 2.** RTX Encore needs to be installed as `winmm.dll` there (rtx-encore v1.0.0-rc.3). Check for a manifest field for the default RTX Encore DLL name, else add one.
+- **#137 / #85 antivirus, remaining work.** Download only the needed bitness of DXVK; apply the "only when used" startup rule to DOF Fix, NR Cost Scaler and 20/30 FG Unlock too. **Smart App Control** blocking RHI.exe can only be fixed by Authenticode-signing RHI.exe and the installer (needs a certificate).
+
+---
+
 ### Slow first launch after install/update (Windows Defender scanning)
 **Symptom:** App takes 1–2 minutes to show the window on first launch after a fresh install or update. Black window, then eventually loads. Subsequent launches are instant.
 
@@ -177,3 +176,4 @@ Low priority items with no current demand.
 - **Accessibility audit** — Screen reader support for code-behind UI elements.
 - **Plugin system** — Third-party components register without app changes.
 - **Telemetry** — Usage analytics. Privacy-sensitive, opt-in only.
+- **Controller: Steam Input doubling (maybe)** — with Steam running, Steam Input's desktop layout can turn a PlayStation pad (or an Xbox pad with Steam Input on) into mouse + keyboard, so RHI may get each press twice (XInput + Steam's fake Enter / mouse). Test with Steam open; if it doubles, note it in the Controller support tooltip or ignore keyboard / mouse input while the controller is in use.

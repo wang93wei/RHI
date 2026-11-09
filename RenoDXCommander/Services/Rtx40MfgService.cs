@@ -99,6 +99,9 @@ public partial class Rtx40MfgService
     /// <summary>Returns true when RTXMFG.dll is present in the staging directory.</summary>
     public bool IsStagingReady => File.Exists(Path.Combine(_stagingDir, StagedDllName));
 
+    /// <summary>Name used for this mod in <see cref="AntivirusGuard"/>.</summary>
+    internal const string AntivirusComponentName = "Universal MFG Unlocker";
+
     public bool HasUpdate        { get; private set; }
     public string? LatestVersion { get; private set; }
 
@@ -176,9 +179,12 @@ public partial class Rtx40MfgService
         try
         {
             string? preferred = File.Exists(marker) ? File.ReadAllText(marker).Trim() : null;
-            if (string.IsNullOrEmpty(preferred) || !KnownProxyNames.Contains(preferred, StringComparer.OrdinalIgnoreCase))
-                preferred = "version.dll";
-            var name = new[] { preferred, "version.dll", "winmm.dll", "dinput8.dll" }
+            // A hooked name (versionHooked.dll) is only right while ASI Loader still holds its base name
+            bool preferredOk = !string.IsNullOrEmpty(preferred)
+                && KnownProxyNames.Contains(HookedDllNames.BaseOf(preferred), StringComparer.OrdinalIgnoreCase)
+                && (!HookedDllNames.TryGetBase(preferred, out var hookedBase) || File.Exists(Path.Combine(installPath, hookedBase)));
+            string first = preferredOk ? preferred! : "version.dll";
+            var name = new[] { first, "version.dll", "winmm.dll", "dinput8.dll" }
                 .Concat(KnownProxyNames)
                 .FirstOrDefault(n => !File.Exists(Path.Combine(installPath, n)));
             if (name == null)
@@ -581,10 +587,16 @@ public partial class Rtx40MfgService
             File.WriteAllText(Path.Combine(_stagingDir, StagingFormatFile), StagingFormat);
             HasUpdate = false;
             _crashReporter.Log($"[Rtx40MfgService.EnsureStaging] Staged {version} from '{dllEntry.FullName}'");
+
+            // Antivirus often deletes this DLL straight away (false positive): notice and stop
+            // re-downloading it automatically.
+            await AntivirusGuard.VerifyStagedAsync(AntivirusComponentName, version, new[] { dest }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _crashReporter.Log($"[Rtx40MfgService.EnsureStaging] Download failed — {ex.Message}");
+            if (AntivirusGuard.IsVirusError(ex))
+                AntivirusGuard.Report(AntivirusComponentName, version, Path.Combine(_stagingDir, StagedDllName));
         }
     }
 

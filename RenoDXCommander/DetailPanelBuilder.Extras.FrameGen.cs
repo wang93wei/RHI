@@ -263,11 +263,6 @@ public partial class DetailPanelBuilder
     {
         if (string.IsNullOrEmpty(card.InstallPath)) return null;
 
-        var rhiOwned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrEmpty(card.RsInstalledFile))  rhiOwned.Add(card.RsInstalledFile);
-        if (!string.IsNullOrEmpty(card.OsInstalledFile))  rhiOwned.Add(card.OsInstalledFile);
-        if (!string.IsNullOrEmpty(card.DcInstalledFile))  rhiOwned.Add(card.DcInstalledFile);
-
         string? chosen = null;
 
         var listPanel    = new StackPanel { Spacing = 4 };
@@ -278,11 +273,12 @@ public partial class DetailPanelBuilder
             Content   = listPanel,
         };
 
-        foreach (var name in Dlssg20_30Service.ProxyNames)
+        foreach (var option in GetExtraDllOptions(card, Dlssg20_30Service.ProxyNames, currentDllName))
         {
-            bool isRecommended  = string.Equals(name, "version.dll", StringComparison.OrdinalIgnoreCase);
-            bool isRhiOwned     = rhiOwned.Contains(name);
-            bool isCurrent      = string.Equals(name, currentDllName, StringComparison.OrdinalIgnoreCase);
+            var name            = option.Name;
+            bool isRecommended  = option.IsRecommended;
+            bool isRhiOwned     = option.BlockedBy != null;
+            bool isCurrent      = option.IsCurrent;
 
             var btn = new Button
             {
@@ -309,14 +305,11 @@ public partial class DetailPanelBuilder
             });
             if (isRecommended)
                 contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
-            if (isRhiOwned)
-                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.UsedByRhi"), "#2A1818", "#CC6666", "#5A2828"));
+            AddExtraDllBadges(contentRow, btn, option, Loc.GetString("Extras.Dlssg2030"));
             if (isCurrent)
                 contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
 
             btn.Content = contentRow;
-            if (isRhiOwned)
-                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.DllName.RhiOwnedShort.Tooltip"));
 
             btn.Tag    = name;
             btn.Click += (s, ev) =>
@@ -638,11 +631,6 @@ public partial class DetailPanelBuilder
     {
         if (string.IsNullOrEmpty(card.InstallPath)) return null;
 
-        var rhiOwned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrEmpty(card.RsInstalledFile))  rhiOwned.Add(card.RsInstalledFile);
-        if (!string.IsNullOrEmpty(card.OsInstalledFile))  rhiOwned.Add(card.OsInstalledFile);
-        if (!string.IsNullOrEmpty(card.DcInstalledFile))  rhiOwned.Add(card.DcInstalledFile);
-
         string? chosen = null;
 
         var listPanel    = new StackPanel { Spacing = 4 };
@@ -653,13 +641,14 @@ public partial class DetailPanelBuilder
             Content   = listPanel,
         };
 
-        foreach (var name in MfgDllNames)
+        foreach (var option in GetExtraDllOptions(card, MfgDllNames, currentDllName))
         {
-            bool isRecommended  = string.Equals(name, "version.dll", StringComparison.OrdinalIgnoreCase);
-            bool isRhiOwned     = rhiOwned.Contains(name);
+            var name            = option.Name;
+            bool isRecommended  = option.IsRecommended;
+            bool isRhiOwned     = option.BlockedBy != null;
             bool isDxgiConflict = string.Equals(name, "dxgi.dll", StringComparison.OrdinalIgnoreCase)
                                && !string.IsNullOrEmpty(card.RsInstalledFile);
-            bool isCurrent      = string.Equals(name, currentDllName, StringComparison.OrdinalIgnoreCase);
+            bool isCurrent      = option.IsCurrent;
 
             var btn = new Button
             {
@@ -686,18 +675,15 @@ public partial class DetailPanelBuilder
             });
             if (isRecommended)
                 contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
-            if (isRhiOwned)
-                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.UsedByRhi"), "#2A1818", "#CC6666", "#5A2828"));
-            else if (isDxgiConflict)
+            AddExtraDllBadges(contentRow, btn, option, Loc.GetString("Extras.Rtx40Mfg.FullName"));
+            if (!isRhiOwned && isDxgiConflict)
                 contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.MayConflict"), "#2A1A10", "#CC9955", "#5A3A18"));
             if (isCurrent)
                 contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
 
             btn.Content = contentRow;
 
-            if (isRhiOwned)
-                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.DllName.RhiOwnedShort.Tooltip"));
-            else if (isDxgiConflict)
+            if (!isRhiOwned && isDxgiConflict)
                 ToolTipService.SetToolTip(btn, Loc.GetString("Extras.DllName.DxgiConflict.Tooltip"));
 
             btn.Tag    = name;

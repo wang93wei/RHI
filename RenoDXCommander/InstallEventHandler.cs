@@ -255,7 +255,7 @@ public class InstallEventHandler
                     useDlssInputs,
                     ViewModel.Settings.OsHotkey,
                     osVariant,
-                    nightlyBuildHint: osVariant == "Nightly" ? (ViewModel.GetOsNightlyBuild(card.GameName, card.Source ?? "") is { Length: > 0 } b ? b : null) : null);
+                    nightlyBuildHint: osVariant == "Nightly" || OsReleaseService.SupportsPinning(osVariant) ? (ViewModel.GetOsNightlyBuild(card.GameName, card.Source ?? "") is { Length: > 0 } b ? b : null) : null);
 
                 if (osRecord == null)
                 {
@@ -301,7 +301,7 @@ public class InstallEventHandler
                 _dlssStreamlineService.RecordDlssFound(card.GameName);
 
                 // ── Post-install: Deploy Streamline and DLSS Enabler if pre-enabled ──
-                if ((osVariant == "Nightly" || osVariant == "DlssNr") && !string.IsNullOrEmpty(card.InstallPath))
+                if (OsVariants.IsOs10(osVariant) && !string.IsNullOrEmpty(card.InstallPath))
                 {
                     if (ViewModel.GetOsDeployStreamline(card.GameName, card.Source ?? ""))
                     {

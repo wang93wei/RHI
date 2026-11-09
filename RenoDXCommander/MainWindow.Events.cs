@@ -82,8 +82,16 @@ public sealed partial class MainWindow
                 ViewModel.ForceNextUpdateCheck();
 
                 // Trigger a Refresh (which fetches manifests + wiki + runs update checks)
-                DispatcherQueue?.TryEnqueue(() => progressText.Text = Loc.GetString("Dialog.CheckingComponents"));
-                await ViewModel.RefreshAsync();
+                // A Refresh waits for a scan that's already running (e.g. the startup scan): say so
+                // instead of showing "Checking components..." with nothing happening.
+                if (ViewModel.IsLibraryOperationRunning)
+                {
+                    progressText.Text = Loc.GetString("Dialog.WaitingForScan");
+                    _crashReporter.Log("[MainWindow.CheckForUpdatesButton_Click] A scan is running — waiting for it to finish");
+                }
+                else progressText.Text = Loc.GetString("Dialog.CheckingComponents");
+                await ViewModel.RefreshAsync(() =>
+                    DispatcherQueue?.TryEnqueue(() => progressText.Text = Loc.GetString("Dialog.CheckingComponents")));
 
                 // A manual check restarts the 4-hour background countdown (shown on the Settings page)
                 ViewModel.RestartPeriodicUpdateCheckTimer();
@@ -260,11 +268,18 @@ public sealed partial class MainWindow
 
     // ── Donate dialog ─────────────────────────────────────────────────────────
 
+    /// <summary>Button text for a donation link: Ko-fi, Patreon, or Donate for any other page.</summary>
+    private string DonationLinkLabel(string url) =>
+        url.Contains("ko-fi.com", StringComparison.OrdinalIgnoreCase) ? "Ko-fi"
+        : url.Contains("patreon.com", StringComparison.OrdinalIgnoreCase) ? "Patreon"
+        : Loc.GetString("Xaml.Donate");
+
     private async void DonateButton_Click(object sender, RoutedEventArgs e)
     {
         try
         {
             var donationUrls = GameCardViewModel.GetAllDonationUrls();
+            var patreonUrls = GameCardViewModel.GetAllPatreonUrls();
             // Always prefer live manifest roles (most up to date after a fetch).
             // Fall back to the merged static dict if manifest hasn't loaded yet.
             var manifestRoles = ViewModel.Manifest?.AuthorRoles;
@@ -272,7 +287,8 @@ public sealed partial class MainWindow
                 ? (IReadOnlyDictionary<string, string>)manifestRoles
                 : GameCardViewModel.AuthorRoles;
 
-            var entries = donationUrls.Keys
+            var entries = donationUrls.Keys.Concat(patreonUrls.Keys)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -322,40 +338,23 @@ public sealed partial class MainWindow
 
             // One small card per author, two across
             var grid = new Controls.AutoFitGrid { MinColumnWidth = 300, MaxColumns = 2, ColumnSpacing = 10, RowSpacing = 10 };
-            string[] avatarTints = { "#6FA8FF", "#7FE0A0", "#D9C8FF", "#F0C35A", "#FF9AA8", "#7FD6E0" };
-            int index = 0;
 
             foreach (var name in entries)
             {
-                if (!donationUrls.TryGetValue(name, out var url)) continue;
+                // Ko-fi (donationUrls; may hold a Patreon link for older entries) and Patreon (patreonUrls)
+                var links = new List<(string Label, string Url)>();
+                if (donationUrls.TryGetValue(name, out var url) && !string.IsNullOrWhiteSpace(url))
+                    links.Add((DonationLinkLabel(url), url));
+                if (patreonUrls.TryGetValue(name, out var patreonUrl) && !string.IsNullOrWhiteSpace(patreonUrl)
+                    && !links.Any(l => l.Label == "Patreon"))
+                    links.Add(("Patreon", patreonUrl));
+                if (links.Count == 0) continue;
                 roles.TryGetValue(name, out var role);
-                var tint = avatarTints[index++ % avatarTints.Length];
 
-                // [Avatar] [Name / role] [Ko-fi]
+                // [Name / role] [Ko-fi] [Patreon]
                 var row = new Grid { ColumnSpacing = 12 };
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                var avatar = new Border
-                {
-                    Width = 34, Height = 34,
-                    CornerRadius = new CornerRadius(17),
-                    Background = TabsTheme.B("#151C29"),
-                    BorderBrush = TabsTheme.B(tint),
-                    BorderThickness = new Thickness(1),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Child = new TextBlock
-                    {
-                        Text = name.Length > 0 ? char.ToUpperInvariant(name[0]).ToString() : "?",
-                        FontSize = 14,
-                        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                        Foreground = TabsTheme.B(tint),
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center,
-                    },
-                };
-                row.Children.Add(avatar);
 
                 var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
                 text.Children.Add(new TextBlock
@@ -378,21 +377,21 @@ public sealed partial class MainWindow
                     ToolTipService.SetToolTip(roleBlock, role);
                     text.Children.Add(roleBlock);
                 }
-                Grid.SetColumn(text, 1);
                 row.Children.Add(text);
 
-                var kofiBtn = new Button
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+                foreach (var (label, linkUrl) in links)
                 {
-                    Content = Loc.GetString("Common.Donate"),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                TabsTheme.Apply(kofiBtn, new TabsTheme.Look("#2A1418", "#5A2A30", "#FF8A88", "#351A1F", true), height: 32, fontSize: 12);
-                kofiBtn.Padding = new Thickness(12, 0, 12, 0);
-                var capturedUrl = url;
-                kofiBtn.Click += (s, ev) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(capturedUrl));
-                ToolTipService.SetToolTip(kofiBtn, capturedUrl);
-                Grid.SetColumn(kofiBtn, 2);
-                row.Children.Add(kofiBtn);
+                    if (!Uri.TryCreate(linkUrl, UriKind.Absolute, out var uri)) continue;
+                    var linkBtn = new Button { Content = label, VerticalAlignment = VerticalAlignment.Center };
+                    TabsTheme.Apply(linkBtn, new TabsTheme.Look("#2A1418", "#5A2A30", "#FF8A88", "#351A1F", true), height: 32, fontSize: 12);
+                    linkBtn.Padding = new Thickness(12, 0, 12, 0);
+                    linkBtn.Click += (s, ev) => _ = Windows.System.Launcher.LaunchUriAsync(uri);
+                    ToolTipService.SetToolTip(linkBtn, linkUrl);
+                    buttons.Children.Add(linkBtn);
+                }
+                Grid.SetColumn(buttons, 1);
+                row.Children.Add(buttons);
 
                 var card = TabsTheme.MakeCard(row, 0);
                 card.Padding = new Thickness(12, 10, 10, 10);
@@ -691,6 +690,14 @@ public sealed partial class MainWindow
         };
         hideItem.Click += (s, ev) => ViewModel.ToggleHideGameCommand.Execute(card);
         menu.Items.Add(hideItem);
+
+        // ── Add to collection (tick per collection, New collection…) ──
+        menu.Items.Add(BuildCollectionsMenu(card));
+
+        // ── Game notes (also on the RHI overlay's Info and links page) ──
+        var gameNotesItem = new MenuFlyoutItem { Text = Loc.GetString("CardMenu.GameNotes"), Tag = card };
+        gameNotesItem.Click += async (s, ev) => await EditGameNotesAsync(card);
+        menu.Items.Add(gameNotesItem);
 
         // ── Artwork (Spotlight: custom cover and banner) ──
         if (_detailPanelBuilder.Layout.IsSpotlight)

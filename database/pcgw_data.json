@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "game_count": 55971,
-  "generated": "2026-11-04T08:49:55Z",
+  "game_count": 56016,
+  "generated": "2026-11-08T21:13:58Z",
   "name_overrides": {
     "ACE COMBAT 8: WINGS OF THEVE": "Ace Combat 8: Wings of Theve",
     "AFOP": "Avatar: Frontiers of Pandora",
@@ -37,7 +37,7 @@
     "STAR WARS: Galactic Racer™": "Star Wars: Galactic Racer",
     "Stellar BladeÔäó": "Stellar Blade",
     "The Sinking City Remastered": "The Sinking City Remastered",
-    "The Witcher 3: Wild Hunt ÔÇö Remastered": "The Witcher 3: Wild Hunt",
+    "The Witcher 3: Wild Hunt — Remastered": "The Witcher 3: Wild Hunt",
     "Tomb Raider": "Tomb Raider (2013)",
     "Vampire Crawlers": "Vampire Crawlers: The Turbo Wildcard from Vampire Survivors"
   },
@@ -3049,6 +3049,7 @@
     "ABC Coloring Town": {
       "steam_appid": 478010
     },
+    "ABC Monday Night Football": {},
     "ABD: A Beautiful Day": {
       "steam_appid": 384920
     },
@@ -6871,6 +6872,7 @@
     },
     "Alien Syndrome": {},
     "Alien Tequila": {},
+    "Alien Terminator": {},
     "Alien Trilogy": {},
     "Alien Virus": {},
     "Alien vs Predator Jaguar Remake": {
@@ -8049,6 +8051,7 @@
     "American Railroads - Summit River & Pine Valley": {
       "steam_appid": 787930
     },
+    "American Rodeo: Bull Rider 2000": {},
     "American Theft 80s": {
       "steam_appid": 1321450,
       "config_path": "HKEY_CURRENT_USER\\Software\\Noble Muffins\\American Theft 80s\\",
@@ -9113,6 +9116,12 @@
     },
     "Ankh Guardian - Treasure of the Demon's Temple/Òé┤ÒââÒâëÒâ╗Òé¬ÒâûÒâ╗ÒéªÒé®Òâ╝Òâ½ Ú¡öÕ««Òü«þºÿÕ«Ø": {
       "steam_appid": 975160
+    },
+    "Ankh: Anniversary Edition": {
+      "steam_appid": 353980,
+      "dx9": true,
+      "config_path": "<path-to-game>\\media\\Ankh.ini, <path-to-game>\\media\\keybinds.ini",
+      "engine": "Ogre"
     },
     "Ankh: Battle of the Gods": {
       "steam_appid": 12450,
@@ -13218,6 +13227,7 @@
     "ATROFIL: THE KEY": {
       "steam_appid": 1196350
     },
+    "Atrox": {},
     "Attached": {
       "steam_appid": 1076730,
       "engine": "Unreal Engine 4"
@@ -15624,7 +15634,8 @@
       "steam_appid": 456170
     },
     "Bannermen": {
-      "steam_appid": 699740
+      "steam_appid": 699740,
+      "engine": "Unreal Engine 4"
     },
     "Banners of Ruin": {
       "steam_appid": 1075740,
@@ -18289,6 +18300,11 @@
       "dx11": true,
       "config_path": "<path-to-game>\\Besiege_Data\\Config.txt",
       "engine": "Unity"
+    },
+    "Besieger": {},
+    "Bessie's Milk Delivery": {
+      "steam_appid": 3367320,
+      "engine": "RPGMaker"
     },
     "Best Buds vs Bad Guys": {
       "steam_appid": 486130
@@ -21268,6 +21284,9 @@
       "dx11": true,
       "engine": "Unity"
     },
+    "Blood of the Lead Moon": {
+      "steam_appid": 4407900
+    },
     "Blood of the Werewolf": {
       "steam_appid": 260250,
       "config_path": "HKEY_CURRENT_USER\\Software\\Scientifically Proven Entertainment\\Blood of the Werewolf\\Settings\\",
@@ -24187,6 +24206,7 @@
       "steam_appid": 1196160,
       "engine": "Unity"
     },
+    "British Open Championship Golf": {},
     "Britney's Dance Beat": {
       "opengl": true
     },
@@ -25433,6 +25453,9 @@
       "config_path": "%LOCALAPPDATA%\\Criterion Games\\Burnout Paradise Remastered\\*.ini",
       "engine": "RenderWare"
     },
+    "Burnout: Championship Drag Racing": {
+      "engine": "XnGine"
+    },
     "Burnouts: The Igne Mori": {
       "steam_appid": 970820
     },
@@ -26278,6 +26301,8 @@
     },
     "Call of Duty: Modern Warfare 4": {
       "steam_appid": 4435490,
+      "dx12": true,
+      "config_path": "%APPDATA%\\Local\\Activision\\Call of Duty\\players",
       "engine": "IW engine"
     },
     "Call of Duty: Modern Warfare II": {
@@ -26534,7 +26559,8 @@
       "config_path": "<path-to-game>\\Options_c2.dat"
     },
     "Can 'Em All": {
-      "steam_appid": 5133900
+      "steam_appid": 5133900,
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\LuisDev\\Can 'Em All\\settings.sav, HKEY_CURRENT_USER\\Software\\LuisDev\\Can 'Em All\\"
     },
     "Can of Wormholes": {
       "steam_appid": 1295320
@@ -30763,6 +30789,9 @@
     },
     "Chrono Project": {
       "steam_appid": 893810
+    },
+    "Chrono Punk": {
+      "steam_appid": 5081550
     },
     "Chrono Trigger": {
       "steam_appid": 613830,
@@ -37098,9 +37127,11 @@
     },
     "Crusader: Adventure Out of Time": {},
     "Crusader: No Regret": {
+      "steam_appid": 3066900,
       "engine": "Pagan engine"
     },
     "Crusader: No Remorse": {
+      "steam_appid": 3066890,
       "engine": "Pagan engine"
     },
     "Crusaders of Light": {
@@ -38666,6 +38697,7 @@
     "CYCOM: Cybernet Combat": {
       "steam_appid": 713440
     },
+    "Cydonia: Mars - The First Manned Mission": {},
     "Cygni: All Guns Blazing": {
       "steam_appid": 1248080,
       "dx11": true,
@@ -45475,6 +45507,9 @@
       "steam_appid": 4249140,
       "config_path": "<path-to-game>\\dino2.cfg"
     },
+    "Dino Crisis 3": {
+      "config_path": "<path-to-game>\\dc3.cfg"
+    },
     "Dino D-Day": {
       "steam_appid": 70000,
       "dx9": true,
@@ -45686,7 +45721,7 @@
     "Directive 8020": {
       "steam_appid": 2255370,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\Directive8020\\Saved\\SaveGames\\",
+      "config_path": "%LOCALAPPDATA%/Directive8020/Saved/SaveGames/Option*.sav",
       "engine": "Unreal Engine 5"
     },
     "Director of Football": {
@@ -46142,6 +46177,7 @@
       "steam_appid": 2439220,
       "engine": "Unity"
     },
+    "Disney's Activity Center: Aladdin": {},
     "Disney's Activity Center: Toy Story": {},
     "Disney's Adventures in Typing with Timon and Pumbaa": {},
     "Disney's Aladdin": {
@@ -50916,7 +50952,7 @@
     "Dungeons & Dragons: Dark Alliance": {
       "steam_appid": 623280,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\CotH\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\CotH\\Saved\\Config\\WindowsNoEditor",
       "config_path_xbox": "%LOCALAPPDATA%\\Packages\\WizardsoftheCoastLLC.DarkAlliance_egzvkhb86xsmw\\LocalCache\\Local\\CotH\\Saved\\Config\\WinGDK\\",
       "engine": "Unreal Engine 4"
     },
@@ -51551,6 +51587,9 @@
     },
     "Dystoria": {
       "steam_appid": 516580
+    },
+    "Dōkyūsei: Bangin' Summer": {
+      "steam_appid": 1689910
     },
     "D├®j├á Vu": {
       "steam_appid": 843710
@@ -60571,6 +60610,7 @@
     "Fighter of Evil": {
       "steam_appid": 628840
     },
+    "Fighter Pilot": {},
     "Fighter Royale - Last Ace Flying": {
       "steam_appid": 803350
     },
@@ -64070,6 +64110,7 @@
     },
     "Foxy Dumplings": {
       "steam_appid": 4184130,
+      "dx11": true,
       "engine": "Unity"
     },
     "FoxyLand": {
@@ -67671,6 +67712,10 @@
     "Genome Guardian": {
       "steam_appid": 2891310,
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Alpherior\\Genome Guardian\\"
+    },
+    "Genotype": {
+      "steam_appid": 2667980,
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\BolverkGames\\GenotypeGame\\GameSettings.data"
     },
     "Genshin Impact": {
       "dx11": true,
@@ -77784,6 +77829,8 @@
     "High Fidelity": {
       "steam_appid": 390540
     },
+    "High Heat Baseball 2000": {},
+    "High Heat Major League Baseball 2002": {},
     "High Heat Major League Baseball 2003": {
       "config_path": "<path-to-game>\\exPrefs.bin, <path-to-game>\\gfxopts.bin"
     },
@@ -83137,7 +83184,7 @@
     },
     "Indigo Park: Chapter 1": {
       "steam_appid": 2504480,
-      "config_path": "%LOCALAPPDATA%\\RaccoonCh1\\Saved\\Config\\",
+      "config_path": "%LOCALAPPDATA%\\RaccoonCh1\\Saved\\Config",
       "engine": "Unreal Engine 5"
     },
     "Indika": {
@@ -83926,6 +83973,7 @@
     "Ino": {
       "steam_appid": 398140
     },
+    "Inordinate Desire": {},
     "Inori's House": {
       "steam_appid": 1073370
     },
@@ -88534,6 +88582,7 @@
       "steam_appid": 347040,
       "engine": "Unity"
     },
+    "Keef the Thief: A Boy and His Lockpick": {},
     "KEEK": {
       "steam_appid": 2088080,
       "engine": "Unity"
@@ -88887,6 +88936,9 @@
       "dx12": true,
       "config_path": "%LOCALAPPDATA%\\Kiborg\\Saved\\Config\\Windows\\",
       "engine": "Unreal Engine 5"
+    },
+    "Kick": {
+      "steam_appid": 3760370
     },
     "Kick Ass Commandos": {
       "steam_appid": 359140,
@@ -92553,7 +92605,7 @@
     "Layers of Fear (2023)": {
       "steam_appid": 1946700,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\Local\\Cron\\Saved\\Config\\Windows\\",
+      "config_path": "%LOCALAPPDATA%\\Cron\\Saved\\Config\\Windows\\",
       "engine": "Unreal Engine 5"
     },
     "Layers of Fear 2": {
@@ -95553,6 +95605,11 @@
     },
     "Living with Jaguars": {
       "steam_appid": 874090
+    },
+    "Living With Sister: Monochrome Fantasy": {
+      "steam_appid": 2429860,
+      "config_path": "<path-to-game>\\Game.ini",
+      "engine": "WOLF RPG Editor"
     },
     "Living World Racing": {
       "dx9": true,
@@ -105874,6 +105931,10 @@
     "MOLOCH (Zero)": {
       "steam_appid": 944630
     },
+    "Molokaust": {
+      "steam_appid": 4503570,
+      "engine": "Unity"
+    },
     "Molten Armor": {
       "steam_appid": 693670
     },
@@ -108045,6 +108106,9 @@
       "steam_appid": 1198310,
       "engine": "Unity"
     },
+    "Mr.Mine": {
+      "steam_appid": 1397920
+    },
     "Mr.President Prologue Episode": {
       "steam_appid": 530540
     },
@@ -109396,6 +109460,10 @@
     },
     "My Sweet Waifu": {
       "steam_appid": 793760
+    },
+    "My Sweet Waifu Konko": {
+      "steam_appid": 3099780,
+      "engine": "TyranoScript"
     },
     "My Therapist is a Futanari": {
       "steam_appid": 1831260,
@@ -112998,6 +113066,7 @@
       "config_path": "%LOCALAPPDATA%\\Roguelite\\Saved\\Config\\WindowsNoEditor\\",
       "engine": "Unreal Engine 4"
     },
+    "Nigel Mansell's World Championship Racing": {},
     "Nigel: The Minuscule Adventure": {
       "steam_appid": 1089520
     },
@@ -121138,6 +121207,7 @@
     "Pax Nova": {
       "steam_appid": 804850
     },
+    "Pax Romana": {},
     "Pax Romana: Romulus": {
       "steam_appid": 1034810
     },
@@ -123770,6 +123840,7 @@
     "PixZomb": {
       "steam_appid": 884930
     },
+    "Pizza Commander": {},
     "Pizza Connection 3": {
       "steam_appid": 588160,
       "dx11": true,
@@ -125366,6 +125437,7 @@
     },
     "Pool of Radiance: Ruins of Myth Drannor": {
       "steam_appid": 4834760,
+      "dx11": true,
       "config_path": "<path-to-game>"
     },
     "Pool Panic": {
@@ -126803,6 +126875,10 @@
     "Prison Forever": {
       "steam_appid": 1219580
     },
+    "Prison of Husks": {
+      "steam_appid": 2975260,
+      "engine": "Unity"
+    },
     "PRISON OF SON": {
       "steam_appid": 1201730
     },
@@ -126869,6 +126945,7 @@
     },
     "Private Eye": {},
     "Privateer 2: The Darkening": {
+      "steam_appid": 3067130,
       "config_path": "<path-to-game>\\DARK.CFG",
       "engine": "Blazing Renderer"
     },
@@ -134393,7 +134470,7 @@
     },
     "Retro Rewind": {
       "steam_appid": 3552140,
-      "config_path": "%LOCALAPPDATA%\\RetroRewind\\Saved\\Config\\",
+      "config_path": "%LOCALAPPDATA%\\RetroRewind\\Saved\\Config",
       "engine": "Unreal Engine 5"
     },
     "Retro Rocket Robot": {
@@ -135213,6 +135290,9 @@
       "dx9": true,
       "config_path": "%APPDATA%\\YuzuSoft\\RiddleJoker",
       "engine": "KiriKiri"
+    },
+    "Riddle of the Sphinx: An Egyptian Adventure": {
+      "engine": "Director"
     },
     "Riddle of the Sphinx: The Awakening (Enhanced Edition)": {
       "steam_appid": 1521870,
@@ -136290,6 +136370,7 @@
       "steam_appid": 884610
     },
     "Road Rash": {
+      "steam_appid": 2448570,
       "config_path": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Electronic Arts\\RoadRash 95\\",
       "engine": "Papy3D"
     },
@@ -137082,7 +137163,7 @@
     "Rockman's Gold Empire": {},
     "Rocko's Quest": {
       "steam_appid": 297620,
-      "config_path": "<path-to-game>\\Options.cfg"
+      "config_path": "<path-to-game>\\Options.cfg, <path-to-game>\\RData\\Misc\\strujen.opt"
     },
     "Rockochet": {
       "steam_appid": 761990
@@ -140172,6 +140253,7 @@
     "Samhain World": {
       "steam_appid": 618840
     },
+    "Sammy Sosa High Heat Baseball 2001": {},
     "Sammy the Suricate in Lion Land": {
       "engine": "Gamestudio"
     },
@@ -140266,7 +140348,7 @@
     "Samurai Jack: Battle through Time": {
       "steam_appid": 1150590,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\SJGAME\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\SJGAME\\Saved\\Config\\WindowsNoEditor\\*.ini, %LOCALAPPDATA%\\SJGAME\\Saved\\SaveGames\\SettingData.sav",
       "engine": "Unreal Engine 4"
     },
     "Samurai Jazz": {
@@ -144568,7 +144650,7 @@
     "Shenmue III": {
       "steam_appid": 878670,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\Shenmue3\\Saved\\SaveGames\\",
+      "config_path": "%LOCALAPPDATA%\\Shenmue3\\Saved\\SaveGames\\Systemaa<user-id>.sav, %LOCALAPPDATA%\\Shenmue3\\Saved\\Config\\WindowsNoEditor\\",
       "engine": "Unreal Engine 4"
     },
     "Shenmue III Enhanced": {
@@ -154039,6 +154121,7 @@
       "config_path": "In-game settings:<br><path-to-game>\\default.sav<br>Decomp settings:<br><path-to-game>\\starship.cfg.json",
       "engine": "libultraship"
     },
+    "Star Fox Adventures": {},
     "Star Garden": {
       "steam_appid": 3370970,
       "engine": "Unity"
@@ -155797,7 +155880,10 @@
     "Steel Ocean": {
       "steam_appid": 390670
     },
+    "Steel Panthers": {},
+    "Steel Panthers II: Modern Battles": {},
     "Steel Panthers III: Brigade Command": {},
+    "Steel Panthers: World at War": {},
     "Steel Punk Ball": {
       "steam_appid": 679510
     },
@@ -157240,6 +157326,7 @@
       "steam_appid": 906020
     },
     "Strike Commander": {
+      "steam_appid": 3067110,
       "engine": "RealSpace"
     },
     "Strike Force Remastered": {
@@ -162038,6 +162125,9 @@
     "Tale of Wuxia: The Pre-Sequel": {
       "steam_appid": 650760
     },
+    "Tale Sweeper": {
+      "steam_appid": 4764420
+    },
     "Talent Not Included": {
       "steam_appid": 485260
     },
@@ -162374,7 +162464,7 @@
     "Tandem: A Tale of Shadows": {
       "steam_appid": 1436920,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\Shadows\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\Shadows\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini",
       "engine": "Unreal Engine 4"
     },
     "Tandis": {
@@ -164603,7 +164693,9 @@
     "The Adventures of Kusoge": {
       "steam_appid": 787140
     },
-    "The Adventures of Lomax": {},
+    "The Adventures of Lomax": {
+      "config_path": "HKEY_CURRENT_USER\\Software\\Psygnosis\\Lomax"
+    },
     "The Adventures of Looppy": {
       "steam_appid": 1152330
     },
@@ -165694,6 +165786,9 @@
       "dx12": true,
       "config_path": "%LOCALAPPDATA%\\CallistoProtocol\\Saved\\Config\\WindowsNoEditor",
       "engine": "Unreal Engine 4"
+    },
+    "The Cameron Files: Pharaoh's Curse": {
+      "engine": "Phoenix VR"
     },
     "The Cameron Files: The Secret at Loch Ness": {
       "steam_appid": 302170,
@@ -170207,6 +170302,9 @@
       "vulkan": true,
       "config_path": "%LOCALAPPDATA%\\Zelda64Recompiled\\mod_config\\*.json, %LOCALAPPDATA%\\Zelda64Recompiled\\*.json"
     },
+    "The Legend of Zelda: Ocarina of Time (Hookshot)": {
+      "vulkan": true
+    },
     "The Legend of Zelda: Ocarina of Time (Ship of Harkinian)": {
       "dx11": true,
       "opengl": true,
@@ -171250,6 +171348,7 @@
       "config_path": "HKEY_CURRENT_USER\\SOFTWARE\\House of Tales\\Mystery of the Druids\\Config",
       "engine": "Cougar Engine"
     },
+    "The Mystery of the Nautilus": {},
     "The Mystery of Woolley Mountain": {
       "steam_appid": 521560,
       "config_path": "HKEY_CURRENT_USER\\Software\\Lightfoot Bros Games\\The Mystery Of Woolley Mountain",
@@ -171455,7 +171554,7 @@
     "The Occultist": {
       "steam_appid": 2092840,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\The_Occultist\\Saved\\SaveGames\\",
+      "config_path": "%LOCALAPPDATA%/The_Occultist/Saved/SaveGames/",
       "engine": "Unreal Engine 5"
     },
     "The Occupant": {
@@ -171510,6 +171609,9 @@
     },
     "The Olivia Saga": {
       "steam_appid": 967160
+    },
+    "The Omega Stone: Riddle of the Sphinx II": {
+      "engine": "Phoenix VR"
     },
     "The Omega Syndrome": {},
     "The One We Found": {
@@ -171623,7 +171725,7 @@
     "The Outer Worlds 2": {
       "steam_appid": 1449110,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\Arkansas\\Saved\\Config\\Windows\\",
+      "config_path": "%LOCALAPPDATA%/Arkansas/Saved/Config/Windows/",
       "engine": "Unreal Engine 5"
     },
     "The Outer Worlds: Spacer's Choice Edition": {
@@ -175191,6 +175293,7 @@
       "engine": "Z-Engine"
     },
     "Theme Hospital": {
+      "steam_appid": 2229820,
       "config_path": "<path-to-game>\\HOSPITAL.CFG"
     },
     "Theme Park": {},
@@ -179962,6 +180065,9 @@
       "steam_appid": 470170,
       "engine": "Unity"
     },
+    "Traitors Gate": {
+      "engine": "Director"
+    },
     "Traitors Gate 2: Cypher": {
       "config_path": "<path-to-game>\\script\\Config.py",
       "engine": "Gamebryo"
@@ -182863,26 +182969,47 @@
     "Ultima Defesa": {
       "steam_appid": 1146590
     },
-    "Ultima I: The First Age of Darkness": {},
-    "Ultima II: The Revenge of the Enchantress": {},
-    "Ultima III: Exodus": {},
-    "Ultima IV: Quest of the Avatar": {},
+    "Ultima I: The First Age of Darkness": {
+      "steam_appid": 3067480
+    },
+    "Ultima II: The Revenge of the Enchantress": {
+      "steam_appid": 3067490
+    },
+    "Ultima III: Exodus": {
+      "steam_appid": 3067500
+    },
+    "Ultima IV: Quest of the Avatar": {
+      "steam_appid": 3067510
+    },
     "Ultima IX: Ascension": {
+      "steam_appid": 3067560,
       "dx9": true,
       "config_path": "<path-to-game>\\Options.ini"
     },
     "Ultima Online": {},
     "Ultima Underworld II: Labyrinth of Worlds": {
+      "steam_appid": 3067590,
       "engine": "Underworld engine"
     },
     "Ultima Underworld: The Stygian Abyss": {
+      "steam_appid": 3067580,
       "engine": "Underworld engine"
     },
-    "Ultima V: Warriors of Destiny": {},
-    "Ultima VI: The False Prophet": {},
-    "Ultima VII Part Two: Serpent Isle": {},
-    "Ultima VII: The Black Gate": {},
-    "Ultima VIII: Pagan": {},
+    "Ultima V: Warriors of Destiny": {
+      "steam_appid": 3067520
+    },
+    "Ultima VI: The False Prophet": {
+      "steam_appid": 3067530
+    },
+    "Ultima VII Part Two: Serpent Isle": {
+      "steam_appid": 3067540
+    },
+    "Ultima VII: The Black Gate": {
+      "steam_appid": 3067540
+    },
+    "Ultima VIII: Pagan": {
+      "steam_appid": 3067550
+    },
     "Ultima Worlds of Adventure 2: Martian Dreams": {},
     "Ultimagus": {
       "steam_appid": 575360
@@ -184392,6 +184519,7 @@
     },
     "Unreal Tournament": {
       "steam_appid": 13240,
+      "vulkan": true,
       "opengl": true,
       "config_path": "<path-to-game>\\System\\User.ini, <path-to-game>\\System\\UnrealTournament.ini",
       "engine": "Unreal Engine 1"
@@ -186861,6 +186989,7 @@
     "Virtual Debating Chamber": {
       "steam_appid": 1103940
     },
+    "Virtual Deep Sea Fishing": {},
     "Virtual Earth Online": {
       "steam_appid": 910180
     },
@@ -187814,6 +187943,11 @@
     "VR Baseball": {
       "steam_appid": 458370
     },
+    "VR Baseball 2000": {
+      "opengl": true,
+      "engine": "Messiah (Shiny Entertainment)"
+    },
+    "VR Baseball: Hardware Accelerated": {},
     "VR Batting": {
       "steam_appid": 606850
     },
@@ -192371,19 +192505,34 @@
     "Wing Breakers": {
       "steam_appid": 308080
     },
-    "Wing Commander": {},
-    "Wing Commander II: Vengeance of the Kilrathi": {},
-    "Wing Commander III: Heart of the Tiger": {},
+    "Wing Commander": {
+      "steam_appid": 1996640
+    },
+    "Wing Commander II: Vengeance of the Kilrathi": {
+      "steam_appid": 2008730
+    },
+    "Wing Commander III: Heart of the Tiger": {
+      "steam_appid": 2008740
+    },
     "Wing Commander IV: The Price of Freedom": {
+      "steam_appid": 2008750,
       "config_path": "<path-to-game>\\WC4.CFG"
     },
-    "Wing Commander: Academy": {},
-    "Wing Commander: Armada": {},
-    "Wing Commander: Privateer": {},
+    "Wing Commander: Academy": {
+      "steam_appid": 3067090
+    },
+    "Wing Commander: Armada": {
+      "steam_appid": 3067100
+    },
+    "Wing Commander: Privateer": {
+      "steam_appid": 2008760
+    },
     "Wing Commander: Prophecy": {
+      "steam_appid": 3067120,
       "engine": "VISION (Origin Systems)"
     },
     "Wing Commander: Secret Ops": {
+      "steam_appid": 3067120,
       "engine": "VISION (Origin Systems)"
     },
     "Wing Nuts: Battle in the Sky": {},
@@ -196333,6 +196482,7 @@
     },
     "Z.A.R.": {
       "steam_appid": 351820,
+      "opengl": true,
       "engine": "HiRend"
     },
     "Z.A.T.O. // I Love the World and Everything In It": {
@@ -197098,7 +197248,6 @@
     },
     "Zombie Assault: Resurgence": {
       "steam_appid": 2747660,
-      "dx11": true,
       "dx12": true,
       "config_path": "HKEY_CURRENT_USER\\Software\\Ninja Kiwi\\Zombie Assault",
       "engine": "Unity"

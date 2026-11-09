@@ -1536,6 +1536,18 @@ public sealed partial class MainWindow
         _colorDisplayComboInit = false;
     }
 
+    /// <summary>Explains why the driver refused the colour settings, from its NVAPI status.</summary>
+    private string ColorApplyFailureText(string displayName, string depth, string range, int status) => status switch
+    {
+        NvColorService.NVAPI_NOT_SUPPORTED or NvColorService.NVAPI_INVALID_ARGUMENT =>
+            Loc.GetString("Dialog.ColorSettings.Unsupported", displayName, depth, range),
+        NvColorService.NVAPI_INVALID_USER_PRIVILEGE =>
+            Loc.GetString("Dialog.ColorSettings.NeedsAdmin", displayName),
+        NvColorService.StatusNotAvailable =>
+            Loc.GetString("Dialog.ColorSettings.InterfaceUnavailable", displayName),
+        _ => Loc.GetString("Dialog.ColorSettings.FailedDetail", depth, range, displayName, status),
+    };
+
     private async void ColorApplyBtn_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -1553,14 +1565,18 @@ public sealed partial class MainWindow
             byte bpc = NvColorService.LabelToBpc(depthValue);
             byte dr  = NvColorService.LabelToDynamicRange(rangeValue);
 
-            bool ok = await Task.Run(() => NvColorService.SetColorData(display.DisplayId, bpc, dr));
+            var (ok, status) = await Task.Run(() =>
+            {
+                bool applied = NvColorService.SetColorData(display.DisplayId, bpc, dr, out int s);
+                return (applied, s);
+            });
 
             var dialog = new ContentDialog
             {
                 Title   = Loc.GetString("Xaml.OutputColourSettings"),
                 Content = ok
                     ? Loc.GetString("Dialog.ColorSettings.Applied", display.Name, depthLabel, rangeLabel)
-                    : Loc.GetString("Dialog.ColorSettings.Failed", display.Name),
+                    : ColorApplyFailureText(display.Name, depthLabel, rangeLabel, status),
                 CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot        = Content.XamlRoot,
                 RequestedTheme  = ElementTheme.Dark,

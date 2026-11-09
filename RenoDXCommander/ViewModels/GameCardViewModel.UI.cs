@@ -456,6 +456,10 @@ public partial class GameCardViewModel
         ["Bit Viper"] = "https://ko-fi.com/bitviper",
     };
 
+    /// <summary>Patreon page URLs keyed by display name (manifest "patreonUrls").</summary>
+    private static readonly Dictionary<string, string> AuthorPatreonUrls =
+        new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>What each author is known for, keyed by display name. Shown in the Donate dialog.</summary>
     internal static readonly Dictionary<string, string> AuthorRoles =
         new(StringComparer.OrdinalIgnoreCase);
@@ -466,10 +470,17 @@ public partial class GameCardViewModel
         // Strip the localized "RenoDX: " / "Luma: " label prefix before lookup.
         // Handles both ASCII ':' and full-width '：' so translated catalogs still resolve.
         var name = displayName;
+        // Full-width '：' too, so translated "RenoDX："/"Luma：" labels still resolve
         var colonIdx = displayName.IndexOfAny(new[] { ':', '：' });
         if (colonIdx >= 0) name = displayName.Substring(colonIdx + 1).TrimStart();
-        return AuthorDonationUrls.TryGetValue(name, out var url) ? url : null;
+        // Ko-fi first; an author with only a Patreon gets that
+        if (AuthorDonationUrls.TryGetValue(name, out var url)) return url;
+        return AuthorPatreonUrls.TryGetValue(name, out var patreon) ? patreon : null;
     }
+
+    /// <summary>Returns all known author → Patreon URL pairs (manifest-merged).</summary>
+    public static IReadOnlyDictionary<string, string> GetAllPatreonUrls()
+        => AuthorPatreonUrls;
 
     /// <summary>Returns a snapshot of all known author → donation URL pairs (manifest-merged).</summary>
     public static IReadOnlyDictionary<string, string> GetAllDonationUrls()
@@ -482,8 +493,13 @@ public partial class GameCardViewModel
     public static void MergeManifestAuthorData(
         Dictionary<string, string>? donationUrls,
         Dictionary<string, string>? displayNames,
-        Dictionary<string, string>? authorRoles)
+        Dictionary<string, string>? authorRoles,
+        Dictionary<string, string>? patreonUrls = null)
     {
+        if (patreonUrls != null)
+            foreach (var (key, value) in patreonUrls)
+                AuthorPatreonUrls[key] = value;
+
         if (displayNames != null)
             foreach (var (key, value) in displayNames)
                 AuthorDisplayNames[key] = value;

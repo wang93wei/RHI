@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using RenoDXCommander.ViewModels;
 
 namespace RenoDXCommander.Services;
@@ -9,6 +10,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public partial class OptiScalerService : IOptiScalerService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     // ── Constants ─────────────────────────────────────────────────────────────
     public const string DefaultDllName = "dxgi.dll";
     public const string IniFileName = "OptiScaler.ini";
@@ -83,14 +88,22 @@ public partial class OptiScalerService : IOptiScalerService
     /// <summary>
     /// Returns the user-editable INI path in the inis folder for the given GPU type, DLSS setting, and variant.
     /// </summary>
+    /// <summary>
+    /// INI template suffix for a version. Custom builds use the Nightly templates when they have the
+    /// OptiScaler 10 layout, else Stable's.
+    /// </summary>
+    internal static string IniSuffix(string? variant) => variant switch
+    {
+        "Nightly" => "_nightly",
+        "DlssNr"  => "_dlssnr",
+        "F5"      => "_f5",
+        _ when OsVariants.IsCustom(variant) || OsVariants.IsFork(variant) => OsVariants.IsOs10(variant) ? "_nightly" : "",
+        _         => ""
+    };
+
     public static string GetUserIniPath(string gpuType, bool dlssInputs, string variant = "Stable")
     {
-        var suffix = variant switch {
-            "Nightly" => "_nightly",
-            "DlssNr"  => "_dlssnr",
-            "F5"      => "_f5",
-            _         => ""
-        };
+        var suffix = IniSuffix(variant);
         var fileName = gpuType.Equals("NVIDIA", StringComparison.OrdinalIgnoreCase)
             ? $"OptiScaler{suffix}.nvidia.ini"
             : dlssInputs

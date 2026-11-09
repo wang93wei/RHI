@@ -16,7 +16,7 @@ public partial class DetailPanelBuilder
         GameCardViewModel card,
         bool dlss5Installed, bool sfInstalled,
         bool nrDllPresent, bool nrDllOwnedByRhi, string? nrDllVersion,
-        bool bridgePresent, bool feederPresent,
+        bool bridgePresent, bool feederPresent, bool upliftPresent,
         double containerWidth = 0)
     {
         // Guard: if the user navigated away before the background scan finished, bail out
@@ -42,7 +42,9 @@ public partial class DetailPanelBuilder
         bool _sfInstalled     = sfInstalled;
         bool _bridgePresent   = bridgePresent;
         bool _feederPresent   = feederPresent;
+        bool _upliftPresent   = upliftPresent;
         bool _nrDllOwnedByRhi = nrDllOwnedByRhi;
+        var upliftSvc = App.Services.GetRequiredService<UpliftService>();
         bool isDx11   = card.GraphicsApi == GraphicsApiType.DirectX11;
         bool isVulkan = card.GraphicsApi == GraphicsApiType.Vulkan;
         bool isDx9    = card.GraphicsApi == GraphicsApiType.DirectX9;
@@ -62,13 +64,18 @@ public partial class DetailPanelBuilder
                 storedMethod = NrMethodDlss5Tool;
             else if (feederPresent)
                 storedMethod = NrMethodFeeder;
+            else if (upliftPresent)
+                storedMethod = NrMethodUplift;
         }
 
         // ── Auto-select best method if nothing stored/inferred ────────────────
+        // GITC Uplift replaces the DLSS5 Feeder default where all of Uplift works (64-bit DX11 / DX12 /
+        // Vulkan games without DLSS). DLSS games keep ShortFuse / the DX11 Bridge; 32-bit and OpenGL keep Feeder.
+        bool upliftApplicable = !is32Bit && (isDx11 || isDx12 || isVulkan);
         string effectiveMethod = storedMethod ?? (
             is32Bit                                          ? NrMethodFeeder :
             card.GraphicsApi == GraphicsApiType.OpenGL       ? NrMethodFeeder :
-            !hasDlss                                         ? NrMethodFeeder :
+            !hasDlss                                         ? (upliftApplicable ? NrMethodUplift : NrMethodFeeder) :
             (isDx11 || isVulkan)                             ? NrMethodDlss5ToolBridge :
                                                                NrMethodShortFuse);
 
@@ -79,7 +86,9 @@ public partial class DetailPanelBuilder
             new { Name = Loc.GetString("NeuralRendering.Method.Dlss5Tool"),                 Key = NrMethodDlss5Tool,       Enabled = hasDlss && !is32Bit },
             new { Name = Loc.GetString("NeuralRendering.Method.Dlss5ToolBridge"),   Key = NrMethodDlss5ToolBridge, Enabled = hasDlss && (isDx11 || isVulkan) && !is32Bit },
             new { Name = Loc.GetString("NeuralRendering.Method.Feeder"),               Key = NrMethodFeeder,          Enabled = true },
+            new { Name = Loc.GetString("NeuralRendering.Method.GitcUplift"),                Key = NrMethodUplift,          Enabled = true },
         };
+        bool upliftSelectedAtBuild = effectiveMethod == NrMethodUplift;
 
         // ── Header ────────────────────────────────────────────────────────────
         const string nrSectionKey = "NeuralRendering";
@@ -123,7 +132,7 @@ public partial class DetailPanelBuilder
         nrHeaderRow.PointerExited  += (s, e) => nrCursorProp?.SetValue(nrHeaderRow, nrArrowCursor);
 
         // ── Collapsed summary ─────────────────────────────────────────────────
-        bool nrAnyInstalled = dlss5Installed || sfInstalled || feederPresent || bridgePresent;
+        bool nrAnyInstalled = dlss5Installed || sfInstalled || feederPresent || bridgePresent || upliftPresent;
         TextBlock? nrSummary = null;
         if (nrAnyInstalled || nrDllPresent)
         {
@@ -134,6 +143,7 @@ public partial class DetailPanelBuilder
                 NrMethodDlss5Tool       => "DLSS5 Tool",
                 NrMethodDlss5ToolBridge => "DLSS5 Tool + Bridge",
                 NrMethodFeeder          => "Feeder",
+                NrMethodUplift          => Loc.GetString("NeuralRendering.Method.GitcUplift"),
                 _                       => effectiveMethod,
             };
             if (nrAnyInstalled)
@@ -398,6 +408,7 @@ public partial class DetailPanelBuilder
         // DLSS5 Tool / SF version combo (col 2)
         var addonVersionLabel = new TextBlock { FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) };
         addonVersionLabel.Text = effectiveMethod == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel")
+                                : effectiveMethod == NrMethodUplift    ? Loc.GetString("NeuralRendering.AddonVersion.UpliftLabel")
                                 : effectiveMethod == NrMethodFeeder    ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label")
                                 : effectiveMethod == NrMethodDlss5ToolBridge ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label")
                                 : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
@@ -414,14 +425,18 @@ public partial class DetailPanelBuilder
 
         // Swap-in-progress guard — declared above near PackVersionCombo (shared across both handlers)
 
-        // Helper: populate addonVersionCombo for the given addonType ("dlss5tool" or "dlsstool")
+        // Helper: populate addonVersionCombo for the given addonType ("dlss5tool", "dlsstool" or "uplift")
         void PopulateAddonVersionCombo(string addonType)
         {
             bool addonComboInit = true;
             addonVersionCombo.Items.Clear();
-            var latestAddonVer = rdx5Svc.GetLatestAvailableVersion(addonType);
+            bool isUplift = addonType == UpliftAddonType;
+            var upliftVersions = isUplift ? upliftSvc.AvailableVersions : Array.Empty<string>();
+            var latestAddonVer = isUplift
+                ? upliftVersions.FirstOrDefault() ?? upliftSvc.LatestVersion ?? upliftSvc.StagedVersion
+                : rdx5Svc.GetLatestAvailableVersion(addonType);
             addonVersionCombo.Items.Add(string.IsNullOrEmpty(latestAddonVer) ? NrLatestLabel : Loc.GetString("NeuralRendering.LatestVersionFormat", latestAddonVer));
-            foreach (var v in rdx5Svc.GetAvailableVersions(addonType))
+            foreach (var v in isUplift ? upliftVersions : rdx5Svc.GetAvailableVersions(addonType))
                 addonVersionCombo.Items.Add(v);
 
             // Pre-select persisted version
@@ -455,6 +470,26 @@ public partial class DetailPanelBuilder
 
                     // If installed, swap the addon file in-place — no full uninstall needed
                     var selKey = (methodCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? effectiveMethod;
+
+                    // GITC Uplift: swap addon + helper + shaders to the picked version (Latest = auto-update)
+                    if (selKey == NrMethodUplift)
+                    {
+                        if (!_upliftPresent) return;
+                        addonSwapInProgress = true;
+                        var prevUp = installBtn.Content;
+                        installBtn.IsEnabled = false;
+                        installBtn.Content   = Loc.GetString("NeuralRendering.Status.SwappingUplift");
+                        try { await SwapUpliftVersionAsync(card, useLatest ? null : sel, upliftSvc).ConfigureAwait(false); }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+                        { CrashReporter.Log($"[NeuralRendering.AddonSwap] Uplift swap failed — {ex.Message}"); }
+                        finally
+                        {
+                            addonSwapInProgress = false;
+                            _window.DispatcherQueue?.TryEnqueue(() => { installBtn.IsEnabled = true; installBtn.Content = prevUp; });
+                            RefreshStatus();
+                        }
+                        return;
+                    }
                     bool currentlyInstalled = selKey switch
                     {
                         NrMethodDlss5Tool       => rdx5Svc.IsInstalledIn(installPath),
@@ -557,7 +592,7 @@ public partial class DetailPanelBuilder
         }
 
         // Determine initial addonType from effectiveMethod
-        var initialAddonType = effectiveMethod == NrMethodShortFuse ? "dlsstool" : "dlss5tool";
+        var initialAddonType = AddonTypeFor(effectiveMethod);
         PopulateAddonVersionCombo(initialAddonType);
 
         ToolTipService.SetToolTip(addonVersionCombo,
@@ -626,6 +661,34 @@ public partial class DetailPanelBuilder
 
                 // Persist selection
                 _window.ViewModel.SetNrDllVersion(gameName, useLatest ? null : sel, store);
+
+                // GITC Uplift keeps its NR DLL in GITC-Uplift\ beside its addon
+                var nrSelKey = (methodCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? effectiveMethod;
+                if (nrSelKey == NrMethodUplift)
+                {
+                    if (!_upliftPresent) return;
+                    addonSwapInProgress = true;
+                    var prevUp = installBtn.Content;
+                    installBtn.IsEnabled = false;
+                    installBtn.Content   = Loc.GetString("NeuralRendering.Status.SwappingNrDll");
+                    try
+                    {
+                        var src = await ResolveNrDllSourceAsync(sel, dlssSvc).ConfigureAwait(false);
+                        bool swapped = src != null && await Task.Run(() => upliftSvc.SwapNrDll(installPath, src)).ConfigureAwait(false);
+                        CrashReporter.Log(swapped
+                            ? $"[NeuralRendering.NrDllSwap] Uplift NR DLL → v{(useLatest ? "latest" : sel)} for '{gameName}'"
+                            : $"[NeuralRendering.NrDllSwap] Uplift NR DLL not swapped for '{gameName}' (not available, or the user's own copy)");
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    { CrashReporter.Log($"[NeuralRendering.NrDllSwap] Uplift swap failed — {ex.Message}"); }
+                    finally
+                    {
+                        addonSwapInProgress = false;
+                        _window.DispatcherQueue?.TryEnqueue(() => { installBtn.IsEnabled = true; installBtn.Content = prevUp; });
+                        RefreshStatus();
+                    }
+                    return;
+                }
 
                 // Check if NR DLL is currently installed
                 bool nrInstalled = File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll"));
@@ -719,6 +782,8 @@ public partial class DetailPanelBuilder
                 string? nrv = null, dlssv = null, dlssdv = null, dlssgv = null;
                 string? srv = null, rrv = null, fgv = null, nrv2 = null;
                 string? ualName = null;
+                bool upi = false, upHelper = false, upDll = false, upFx = false;
+                string? upDllV = null, upVer = null, upPin = null;
                 bool scanSucceeded = false;
                 try
                 {
@@ -776,6 +841,15 @@ public partial class DetailPanelBuilder
                 // not just present in DetectedApis (UE4 games have a legacy DX9 shim in DetectedApis).
                 isDx9Feeder = card.GraphicsApi == GraphicsApiType.DirectX9;
                 dgVoodooOk = isDx9Feeder && App.Services.GetRequiredService<DgVoodooService>().IsDeployed(installPath);
+
+                // GITC Uplift: addon + helper in the addon folder, NR DLL in GITC-Uplift\, shaders
+                var upDir = UpliftService.AddonDir(installPath);
+                upi      = UpliftService.IsInstalledIn(installPath, card.Is32Bit);
+                upHelper = File.Exists(Path.Combine(upDir, UpliftService.HelperExe));
+                upDll    = File.Exists(UpliftService.NrDllPath(installPath));
+                upDllV   = upDll ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(UpliftService.NrDllPath(installPath))) : null;
+                upFx     = UpliftService.ShaderFiles.All(f => File.Exists(Path.Combine(shadersDir, f)));
+                (upVer, upPin) = upi ? UpliftService.ReadMarker(installPath) : (null, null);
                 scanSucceeded = true;
                 }
                 finally
@@ -796,7 +870,8 @@ public partial class DetailPanelBuilder
                     CrashReporter.Log($"[NeuralRendering.RefreshStatus] Updating status for '{card.GameName}'");
                     RefreshStatusWithData(d5i, sfi, nri, bri, fei, rsi, dlssi, dlssdi, dlssgi, nrv, dlssv, dlssdv, dlssgv, hostExeOk,
                         srOk, rrOk, fgOk, nrOk, srv, rrv, fgv, nrv2,
-                        ualName, ualOk, feedFxPresent, lumeniteFxPresent, isDx9Feeder, dgVoodooOk);
+                        ualName, ualOk, feedFxPresent, lumeniteFxPresent, isDx9Feeder, dgVoodooOk,
+                        (upi, upHelper, upDll, upDllV, upFx, upVer, upPin != null));
                 });
             });  // end Task.Run
         }  // end RefreshStatus
@@ -810,7 +885,8 @@ public partial class DetailPanelBuilder
             string? srv, string? rrv, string? fgv, string? nrv2,
             string? ualName, bool ualOk,
             bool feedFxPresent, bool lumeniteFxPresent,
-            bool isDx9Feeder, bool dgVoodooOk)
+            bool isDx9Feeder, bool dgVoodooOk,
+            (bool Addon, bool Helper, bool Dll, string? DllVersion, bool Shaders, string? Version, bool Pinned) uplift)
         {
             statusPanel.Children.Clear();
             _window.ViewModel.SetLastUiAction($"NeuralRendering.RefreshStatusWithData:Building({card.GameName})");
@@ -886,6 +962,16 @@ public partial class DetailPanelBuilder
                     if (isDx9Feeder)
                         Tag(dgVoodooOk ? Loc.GetString("NeuralRendering.Tag.DgVoodoo2") : Loc.GetString("NeuralRendering.Tag.DgVoodoo2.Missing"), dgVoodooOk);
                     break;
+                case NrMethodUplift:
+                    Tag(uplift.Addon
+                        ? (uplift.Version != null
+                            ? (uplift.Pinned ? Loc.GetString("NeuralRendering.Tag.GitcUplift.VersionPinned", uplift.Version) : Loc.GetString("NeuralRendering.Tag.GitcUplift.Version", uplift.Version))
+                            : Loc.GetString("NeuralRendering.Tag.GitcUplift"))
+                        : Loc.GetString("NeuralRendering.Tag.GitcUplift.Missing"), uplift.Addon);
+                    Tag(uplift.Helper  ? Loc.GetString("NeuralRendering.Tag.UpliftHelper") : Loc.GetString("NeuralRendering.Tag.UpliftHelper.Missing"), uplift.Helper);
+                    Tag(uplift.Dll     ? Loc.GetString("NeuralRendering.Tag.NrDll", uplift.DllVersion) : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"), uplift.Dll);
+                    Tag(uplift.Shaders ? Loc.GetString("NeuralRendering.Tag.UpliftFx") : Loc.GetString("NeuralRendering.Tag.UpliftFx.Missing"), uplift.Shaders);
+                    break;
                 default:
                     Tag(Loc.GetString("Status.NotInstalled"), false);
                     break;
@@ -948,6 +1034,15 @@ public partial class DetailPanelBuilder
                         : Loc.GetString("NeuralRendering.Description.Feeder");
                     descLink.Content = Loc.GetString("NeuralRendering.Link.FeederGuide");
                     descLink.NavigateUri = new Uri("https://github.com/jlrouzies-fr/DLSS5-Feeder");
+                    break;
+                case NrMethodUplift:
+                    descText.Text = (is32Bit || isDx9 || card.GraphicsApi == GraphicsApiType.DirectX10 || card.GraphicsApi == GraphicsApiType.OpenGL
+                            ? Loc.GetString("NeuralRendering.Description.UpliftNote")
+                            : "")
+                        + Loc.GetString("NeuralRendering.Description.Uplift")
+                        + (isVulkan || card.GraphicsApi == GraphicsApiType.OpenGL ? Loc.GetString("NeuralRendering.Description.UpliftVulkanNote") : "");
+                    descLink.Content = Loc.GetString("NeuralRendering.Link.UpliftGuide");
+                    descLink.NavigateUri = new Uri(UpliftService.ReleasesPage);
                     break;
             }
         }
@@ -1039,6 +1134,7 @@ public partial class DetailPanelBuilder
                 NrMethodDlss5ToolBridge => _dlss5Installed || _bridgePresent,
                 NrMethodShortFuse       => _sfInstalled,
                 NrMethodFeeder          => _feederPresent,
+                NrMethodUplift          => _upliftPresent,
                 _                       => false,
             };
 
@@ -1069,7 +1165,7 @@ public partial class DetailPanelBuilder
 
             // NR version combo only relevant for DLSS5 Tool / Bridge / Feeder (not ShortFuse)
             // Greyed when already installed — can't change without uninstalling
-            bool nrVersionRelevant = selKey == NrMethodDlss5Tool || selKey == NrMethodDlss5ToolBridge || selKey == NrMethodFeeder || selKey == NrMethodShortFuse;
+            bool nrVersionRelevant = selKey == NrMethodDlss5Tool || selKey == NrMethodDlss5ToolBridge || selKey == NrMethodFeeder || selKey == NrMethodShortFuse || selKey == NrMethodUplift;
             nrVersionStack.Opacity   = nrVersionRelevant ? 1.0 : 0.4;
             nrVersionCombo.IsEnabled = nrVersionRelevant;
 
@@ -1086,13 +1182,17 @@ public partial class DetailPanelBuilder
                         : Loc.GetString("NeuralRendering.PackVersion.Tooltip.Bridge"));
             }
 
-            // DLSS5 Tool / SF version label
-            addonVersionLabel.Text = selKey == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel") : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
+            // DLSS5 Tool / SF / Uplift version label
+            addonVersionLabel.Text = selKey == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel")
+                                   : selKey == NrMethodUplift    ? Loc.GetString("NeuralRendering.AddonVersion.UpliftLabel")
+                                   : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
 
             // Addon version combo — enabled always (swap-in-place supported while installed)
             addonVersionStack.Opacity   = 1.0;
             addonVersionCombo.IsEnabled = true;
-            ToolTipService.SetToolTip(addonVersionStack, selKey == NrMethodFeeder
+            ToolTipService.SetToolTip(addonVersionStack, selKey == NrMethodUplift
+                ? Loc.GetString("NeuralRendering.AddonVersion.Tooltip.Installed.Uplift")
+                : selKey == NrMethodFeeder
                 ? Loc.GetString("NeuralRendering.AddonVersion.Tooltip.Installed.Feeder")
                 : selKey == NrMethodShortFuse
                     ? Loc.GetString("NeuralRendering.AddonVersion.Tooltip.Installed.Sf")
@@ -1129,7 +1229,7 @@ public partial class DetailPanelBuilder
                 // Same method — just persist and refresh UI
                 _window.ViewModel.SetNrMethodOverride(gameName, selKey, store);
                 // Repopulate addon version combo in case it wasn't populated yet
-                PopulateAddonVersionCombo(selKey == NrMethodShortFuse ? "dlsstool" : "dlss5tool");
+                PopulateAddonVersionCombo(AddonTypeFor(selKey));
                 PopulateNrVersionCombo();
                 UpdateInstallBtnAppearance();
                 UpdateDescription(selKey);
@@ -1138,7 +1238,7 @@ public partial class DetailPanelBuilder
             }
 
             // Repopulate addon version combo for the new method's addon type
-            PopulateAddonVersionCombo(selKey == NrMethodShortFuse ? "dlsstool" : "dlss5tool");
+            PopulateAddonVersionCombo(AddonTypeFor(selKey));
             PopulateNrVersionCombo();
 
             // Different method selected — check installed state off the UI thread (File.Exists on
@@ -1159,6 +1259,7 @@ public partial class DetailPanelBuilder
                         NrMethodDlss5ToolBridge => rdx5Svc.IsInstalledIn(installPath) || File.Exists(Path.Combine(installPath, BridgeDeployFile)),
                         NrMethodShortFuse       => rdx5Svc.IsSfInstalledIn(installPath),
                         NrMethodFeeder          => File.Exists(Path.Combine(installPath, card.Is32Bit ? FeederDeployFile32 : FeederDeployFile64)),
+                        NrMethodUplift          => UpliftService.IsRhiInstalled(installPath),
                         _                       => false,
                     };
 
@@ -1218,6 +1319,11 @@ public partial class DetailPanelBuilder
                             Models.RhiInstallManifest.RemoveComponent(installPath, "Feeder");
                             break;
                         }
+
+                        case NrMethodUplift:
+                            upliftSvc.Uninstall(installPath);
+                            _window.DispatcherQueue?.TryEnqueue(() => _window.ViewModel.DeployShadersForCard(gameName)); // drops its shaders
+                            break;
                     }
                     CrashReporter.Log($"[NeuralRendering.MethodSwitch] Removed '{previousKey}', switching to '{selKey}' for '{gameName}'");
                 });
@@ -1325,10 +1431,15 @@ public partial class DetailPanelBuilder
                     case NrMethodFeeder:
                         await InstallFeederAddonAsync(card, installBtn, addonSvc, dlssSvc, nrVersionCombo, addonVersionCombo, packVersionCombo);
                         break;
+
+                    case NrMethodUplift:
+                        await InstallUpliftAsync(card, installBtn, addonVersionCombo, nrVersionCombo, dlssSvc, upliftSvc);
+                        break;
                 }
 
-                // If Cost Scaler preference is On, deploy it now (NR DLL is freshly placed)
-                if (_window.ViewModel.GetNrCostScalerEnabled(gameName, store))
+                // If Cost Scaler preference is On, deploy it now (NR DLL is freshly placed).
+                // Not for GITC Uplift: its NR DLL isn't beside the game exe, where the Cost Scaler works.
+                if (selKey != NrMethodUplift && _window.ViewModel.GetNrCostScalerEnabled(gameName, store))
                 {
                     var csSvc = App.Services.GetRequiredService<DlssNrCostScalerService>();
                     if (csSvc.IsStagingReady)
@@ -1379,6 +1490,7 @@ public partial class DetailPanelBuilder
                     _sfInstalled    = rdx5Svc.IsSfInstalledIn(installPath);
                     _bridgePresent  = File.Exists(Path.Combine(installPath, BridgeDeployFile));
                     _feederPresent  = File.Exists(Path.Combine(installPath, card.Is32Bit ? FeederDeployFile32 : FeederDeployFile64));
+                    _upliftPresent  = UpliftService.IsInstalledIn(installPath, card.Is32Bit);
                     _nrDllOwnedByRhi = File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll.original"));
                     UpdateInstallBtnAppearance();
                     RefreshStatus();
@@ -1477,6 +1589,11 @@ public partial class DetailPanelBuilder
                             Models.RhiInstallManifest.RemoveComponent(installPath, "Feeder");
                             break;
                         }
+
+                        case NrMethodUplift:
+                            upliftSvc.Uninstall(installPath);
+                            _window.DispatcherQueue?.TryEnqueue(() => _window.ViewModel.DeployShadersForCard(gameName)); // drops its shaders
+                            break;
                     }
 
                     _window.ViewModel.SetNrMethodOverride(gameName, null, store);
@@ -1510,6 +1627,7 @@ public partial class DetailPanelBuilder
                     _sfInstalled    = rdx5Svc.IsSfInstalledIn(installPath);
                     _bridgePresent  = File.Exists(Path.Combine(installPath, BridgeDeployFile));
                     _feederPresent  = File.Exists(Path.Combine(installPath, card.Is32Bit ? FeederDeployFile32 : FeederDeployFile64));
+                    _upliftPresent  = UpliftService.IsInstalledIn(installPath, card.Is32Bit);
                     _nrDllOwnedByRhi = File.Exists(Path.Combine(installPath, "nvngx_dlssnr.dll.original"));
                     UpdateInstallBtnAppearance();
                     RefreshStatus();
@@ -1541,7 +1659,7 @@ public partial class DetailPanelBuilder
         // ── NR Cost Scaler preference toggle ─────────────────────────────────
         var costScalerSvc = App.Services.GetRequiredService<DlssNrCostScalerService>();
         bool costScalerPref = _window.ViewModel.GetNrCostScalerEnabled(gameName, store);
-        bool nrMethodInstalled = dlss5Installed || sfInstalled || feederPresent || bridgePresent;
+        bool nrMethodInstalled = dlss5Installed || sfInstalled || feederPresent || bridgePresent || upliftPresent;
         // Toggle is disabled when NR is already installed (must be set before install) or staging not ready
         bool costScalerToggleEnabled = costScalerSvc.IsStagingReady && !nrMethodInstalled;
 
@@ -1595,6 +1713,9 @@ public partial class DetailPanelBuilder
         costScalerRow.Children.Add(costScalerLabel);
         costScalerRow.Children.Add(costScalerToggle);
         costScalerRow.Children.Add(costScalerStatus);
+        // GITC Uplift has its own Resolution / Pass count settings, and the Cost Scaler can't reach
+        // its NR DLL (in GITC-Uplift\), so the row isn't shown for it
+        if (upliftSelectedAtBuild) costScalerRow.Visibility = Visibility.Collapsed;
         nrBody.Children.Add(costScalerRow);
         _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:CostScalerRow({card.GameName})");
 

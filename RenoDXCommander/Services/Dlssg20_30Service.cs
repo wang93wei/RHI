@@ -27,6 +27,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class Dlssg20_30Service
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     // ── Constants ─────────────────────────────────────────────────────────────
 
     private const string RepoOwner     = "sdli1995";
@@ -94,8 +98,9 @@ public class Dlssg20_30Service
         => !string.IsNullOrEmpty(installPath) && !string.IsNullOrEmpty(installedAs)
         && File.Exists(Path.Combine(installPath, installedAs));
 
+    /// <summary>A proxy name, or its &lt;name&gt;Hooked.dll form (loaded by ASI Loader installed as that name).</summary>
     public static bool IsSupportedProxyName(string? name)
-        => !string.IsNullOrEmpty(name) && ProxyNames.Contains(name, StringComparer.OrdinalIgnoreCase);
+        => !string.IsNullOrEmpty(name) && ProxyNames.Contains(HookedDllNames.BaseOf(name), StringComparer.OrdinalIgnoreCase);
 
     // ── Staging ───────────────────────────────────────────────────────────────
 
@@ -135,7 +140,7 @@ public class Dlssg20_30Service
         var newPkg   = Path.Combine(_stagingDir, "pkg.new");
         try
         {
-            progress?.Report(("Downloading 20/30 FG Unlock...", 10));
+            progress?.Report((L("Status.DownloadingDlssg2030"), 10));
             using (var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
             {
                 if (!response.IsSuccessStatusCode)
@@ -149,7 +154,7 @@ public class Dlssg20_30Service
                 await net.CopyToAsync(file).ConfigureAwait(false);
             }
 
-            progress?.Report(("Extracting 20/30 FG Unlock...", 70));
+            progress?.Report((L("Status.ExtractingDlssg2030"), 70));
             if (Directory.Exists(newPkg)) Directory.Delete(newPkg, recursive: true);
             Directory.CreateDirectory(newPkg);
             int extracted = 0;
@@ -189,7 +194,7 @@ public class Dlssg20_30Service
             LatestVersion = tag;
             HasUpdate = false;
             _crashReporter.Log($"[Dlssg20_30Service.EnsureStaging] Staged {tag} ({extracted} files)");
-            progress?.Report(("20/30 FG Unlock ready", 100));
+            progress?.Report((L("Status.Dlssg2030Ready"), 100));
 
             try
             {
@@ -246,10 +251,17 @@ public class Dlssg20_30Service
         }
     }
 
-    private string? StagedProxyPath(string dllName)
-        => dllName.Equals("version.dll", StringComparison.OrdinalIgnoreCase)
-            ? Path.Combine(_pkgDir, "version.dll")
-            : Path.Combine(_pkgDir, "alternatives", dllName);
+    private string? StagedProxyPath(string dllName) => StagedProxyRelPath(dllName) is { } rel ? Path.Combine(_pkgDir, rel) : null;
+
+    /// <summary>Package-relative build for a proxy name. A hooked name uses its base name's build (versionHooked.dll → version.dll).</summary>
+    public static string? StagedProxyRelPath(string dllName)
+    {
+        if (!IsSupportedProxyName(dllName)) return null;
+        var baseName = HookedDllNames.BaseOf(dllName);
+        return baseName.Equals("version.dll", StringComparison.OrdinalIgnoreCase)
+            ? "version.dll"
+            : Path.Combine("alternatives", baseName);
+    }
 
     // ── Install / Update ──────────────────────────────────────────────────────
 

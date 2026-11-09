@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using RenoDXCommander.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -17,6 +18,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class ModInstallService : IModInstallService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     public event Action<InstalledModRecord>? InstallCompleted;
 
     private static readonly string DbPath = Path.Combine(
@@ -130,10 +135,10 @@ public class ModInstallService : IModInstallService
             CrashReporter.Log($"[ModInstallService.InstallAsync] Cache check for '{fileName}': cacheSize={cacheSize}, remoteSize={remoteSize?.ToString() ?? "null"}, sizeOk={sizeOk}, sizeExplicitMismatch={sizeExplicitMismatch}, isPE={HasPeSignature(cachePath)}");
             if (!sizeExplicitMismatch && HasPeSignature(cachePath))
             {
-                progress?.Report(("Installing from cache...", 50));
+                progress?.Report((L("Status.InstallingFromCache"), 50));
                 File.Copy(cachePath, destPath, overwrite: true);
                 usedCache = true;
-                progress?.Report(("✅ Installed from cache!", 100));
+                progress?.Report((L("Status.InstalledFromCache"), 100));
             }
             else if (!HasPeSignature(cachePath))
             {
@@ -146,7 +151,7 @@ public class ModInstallService : IModInstallService
         // ── Step 3: fresh download if no usable cache ─────────────────────────────
         if (!usedCache)
         {
-            progress?.Report(("Downloading...", 0));
+            progress?.Report((L("Status.Downloading"), 0));
             HttpResponseMessage? response = null;
             var tried      = new List<string>();
             var candidates = new List<string> { resolvedUrl };
@@ -228,7 +233,7 @@ public class ModInstallService : IModInstallService
                     await cacheFile.WriteAsync(buffer.AsMemory(0, read));
                     downloaded += read;
                     if (total > 0)
-                        progress?.Report(($"Downloading... {downloaded / 1024} KB",
+                        progress?.Report((L("Status.DownloadingProgressWithKb", downloaded / 1024),
                                           (double)downloaded / total * 100));
                 }
                 cacheFile.Flush();
@@ -269,7 +274,7 @@ public class ModInstallService : IModInstallService
         };
         SaveRecord(record);
         try { InstallCompleted?.Invoke(record); } catch (Exception ex) { CrashReporter.Log($"[ModInstallService.InstallAsync] InstallCompleted event handler failed — {ex.Message}"); }
-        progress?.Report(("Installed!", 100));
+        progress?.Report((L("Status.InstalledOk"), 100));
         return record;
     }
 
@@ -629,6 +634,27 @@ public class ModInstallService : IModInstallService
                 r.InstallPath.Equals(record.InstallPath, StringComparison.OrdinalIgnoreCase));
             if (i >= 0) db[i] = record; else db.Add(record);
             SaveDb(db);
+        }
+    }
+
+    /// <inheritdoc/>
+    public int RepointRecords(string gameName, string oldPath, string newPath)
+    {
+        lock (SafeJsonFile.LockFor(DbPath))
+        {
+            var db = LoadDb();
+            int changed = 0;
+            foreach (var r in db.Where(r => r.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)
+                                         && r.InstallPath.Equals(oldPath, StringComparison.OrdinalIgnoreCase)
+                                         ).ToList())
+            {
+                bool newExists = db.Any(o => o != r && o.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) && o.InstallPath.Equals(newPath, StringComparison.OrdinalIgnoreCase));
+                if (newExists) db.Remove(r); else r.InstallPath = newPath;
+                changed++;
+                CrashReporter.Log($"[ModInstallService.RepointRecords] '{gameName}': {(newExists ? "dropped old record (new folder has one)" : "moved")} '{oldPath}' → '{newPath}'");
+            }
+            if (changed > 0) SaveDb(db);
+            return changed;
         }
     }
 

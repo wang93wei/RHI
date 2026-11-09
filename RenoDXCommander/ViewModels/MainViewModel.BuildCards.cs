@@ -48,6 +48,7 @@ public partial class MainViewModel
                                 Source = game.Source,
                                 SteamAppId = game.SteamAppId,
                                 EpicCatalogNamespace = game.EpicCatalogNamespace,
+                                EpicCatalogItemId = game.EpicCatalogItemId,
                                 EpicAppName = game.EpicAppName,
                             });
                         }
@@ -162,6 +163,17 @@ public partial class MainViewModel
                 if (stamp != null) newEngineFolderStamps[rootKey] = stamp;
             }
 
+            // Scan said Unknown or UE3 but the RHI DB / manifest says UE4/UE5 → treat as Unreal.
+            // (A stray .u/.upk file makes a UE5 game look like UE3.) Applied after caching so
+            // the saved scan result is left as it was.
+            if ((engine == EngineType.Unknown || engine == EngineType.UnrealLegacy)
+                && engineOverrideLabel == null
+                && KnownUnrealFromData(game.Name, _manifest))
+            {
+                _crashReporter.Log($"[BuildCards] '{game.Name}': engine scan said {engine} — using Unreal from RHI DB/manifest");
+                engine = EngineType.Unreal;
+            }
+
             // Apply per-game install path overrides (e.g. Cyberpunk 2077 → bin\x64)
             // Supports pipe-separated paths (try each, use first that exists)
             if (_installPathOverrides.TryGetValue(game.Name, out var subPath))
@@ -177,6 +189,9 @@ public partial class MainViewModel
                         break;
                     }
                 }
+                // Moved install folders search for DLSS files from the game's root
+                if (_installPathMigrationGames.Contains(game.Name))
+                    DlssStreamlineService.RegisterMovedInstallRoot(installPath, game.InstallPath);
             }
 
             // Detect bitness: use cached value if available, otherwise run PE detection.
@@ -281,7 +296,8 @@ public partial class MainViewModel
             // When the record's GameName matches but InstallPath differs, try to
             // migrate the addon file to the new path so the mod stays detected.
             if (record != null
-                && !record.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase))
+                && !record.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase)
+                && !ShouldDeferPathReconciliation(game.Name, game.Source, record.InstallPath))
             {
                 var oldPath = record.InstallPath;
 
@@ -579,7 +595,8 @@ public partial class MainViewModel
             // ── Path reconciliation for ReShade aux records ───────────────────────
             // Same Xbox/Microsoft Store path-change issue as RenoDX mod records above.
             if (rsRec != null
-                && !rsRec.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase))
+                && !rsRec.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase)
+                && !ShouldDeferPathReconciliation(game.Name, game.Source, rsRec.InstallPath))
             {
                 var oldRsPath = rsRec.InstallPath;
                 var rsFile = rsRec.InstalledAs;
@@ -1053,7 +1070,8 @@ public partial class MainViewModel
 
                         // ── Path reconciliation for DC aux records ────────────────────
                         if (dcRec != null
-                            && !dcRec.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase))
+                            && !dcRec.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase)
+                            && !ShouldDeferPathReconciliation(game.Name, game.Source, dcRec.InstallPath))
                         {
                             var oldDcPath = dcRec.InstallPath;
                             var dcFile = dcRec.InstalledAs;
@@ -1120,7 +1138,8 @@ public partial class MainViewModel
 
                 // ── Path reconciliation for OptiScaler aux records ────────────────
                 if (osRec != null
-                    && !osRec.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase))
+                    && !osRec.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase)
+                    && !ShouldDeferPathReconciliation(game.Name, game.Source, osRec.InstallPath))
                 {
                     var oldOsPath = osRec.InstallPath;
                     var osFile = osRec.InstalledAs;
@@ -1168,6 +1187,9 @@ public partial class MainViewModel
                                 ? osRec.OsNightlyBuild
                                 : _optiScalerService.StagedVersionNightly,
                             "DlssNr"  => _optiScalerService.StagedVersionDlssNr,
+                            "F5"      => _optiScalerService.StagedVersionF5,
+                            _ when OsVariants.IsCustom(osRec.OsVariant) => OsCustomBuildService.Get(osRec.OsVariant)?.Name ?? "Custom build",
+                            _ when OsVariants.IsFork(osRec.OsVariant) => OsForkService.Get(osRec.OsVariant)?.StagedTag ?? "Fork",
                             _         => _optiScalerService.StagedVersion
                         };
                 }
@@ -1409,6 +1431,25 @@ public partial class MainViewModel
             LogPhase("DofFix+CardInit");
             bool dlssSkipped = _manifest?.DlssSkipGames?.Contains(game.Name, StringComparer.OrdinalIgnoreCase) == true
                 || _dlssStreamlineService.ShouldSkipScan(game.Name);
+            // A game can be on the skip list from scans of an old install folder while its saved DLSS
+            // paths are still valid (PBZ after moving to platform\steam). The saved paths cost ~1 ms.
+            if (dlssSkipped && !string.IsNullOrEmpty(installPath) && Directory.Exists(installPath))
+            {
+                try
+                {
+                    var trusted = _dlssStreamlineService.TryFastDetect(game.Name, installPath, anyConfirmCount: true);
+                    if (trusted != null && trusted.HasAny)
+                    {
+                        newCard.ApplyDlssDetection(trusted);
+                        _dlssStreamlineService.RecordDlssFound(game.Name);
+                        _crashReporter.Log($"[BuildCards] '{game.Name}' was on the DLSS skip list but its saved DLSS paths are valid — using them");
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _crashReporter.Log($"[BuildCards] Saved DLSS paths check failed for '{game.Name}' — {ex.Message}");
+                }
+            }
             if (!dlssSkipped && !string.IsNullOrEmpty(installPath) && Directory.Exists(installPath))
             {
                 try

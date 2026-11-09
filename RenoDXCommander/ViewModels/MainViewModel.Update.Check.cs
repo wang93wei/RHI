@@ -11,7 +11,8 @@ public partial class MainViewModel
     private async Task CheckForUpdatesAsync(List<GameCardViewModel> cards, List<InstalledModRecord> records, List<AuxInstalledRecord> auxRecords, bool userInitiated = false)
     {
         // ── Cooldown: skip update checks if last check was recent ──────────────
-        const int CooldownHours = 4;
+        // Same as the periodic interval: 1h with a GitHub token, 4h without
+        var cooldown = PeriodicUpdateCheckInterval;
         var forceCheck = _forceUpdateCheck;
         _forceUpdateCheck = false;
 
@@ -20,7 +21,7 @@ public partial class MainViewModel
             System.Globalization.DateTimeStyles.RoundtripKind, out var lastCheck))
         {
             var elapsed = DateTime.UtcNow - lastCheck;
-            if (elapsed < TimeSpan.FromHours(CooldownHours))
+            if (elapsed < cooldown)
             {
                 _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] Cooldown active — last check was {elapsed.TotalMinutes:F0}m ago, skipping API calls");
                 return;
@@ -219,6 +220,14 @@ public partial class MainViewModel
                 _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] OS F5 DLSSNR update result: {_optiScalerService.HasUpdateF5}");
             }
 
+            // Recommended forks (manifest osForks) that an installed game uses
+            foreach (var forkVariant in cards.Where(c => c.OsStatus == GameStatus.Installed)
+                         .Select(c => GetOsVariant(c.GameName, c.Source ?? "")).Where(OsVariants.IsFork).Distinct().ToList())
+            {
+                var forkUpdate = await OsForkService.CheckForUpdateAsync(forkVariant).ConfigureAwait(false);
+                _crashReporter.Log($"[MainViewModel.CheckForUpdatesAsync] OS fork {forkVariant} update result: {forkUpdate}");
+            }
+
             DispatcherQueue?.TryEnqueue(() =>
             {
                 foreach (var card in cards.Where(c => c.OsStatus == GameStatus.Installed))
@@ -228,8 +237,12 @@ public partial class MainViewModel
                         "Nightly" => _optiScalerService.HasUpdateNightly,
                         "DlssNr"  => _optiScalerService.HasUpdateDlssNr,
                         "F5"      => _optiScalerService.HasUpdateF5,
+                        _ when OsVariants.IsCustom(osVariant) => false, // custom builds are never updated
+                        _ when OsVariants.IsFork(osVariant)   => OsForkService.HasUpdate(osVariant),
                         _         => _optiScalerService.HasUpdate
                     };
+                    // A game pinned to a release stays on it
+                    if (osHasUpdate && GetOsPinnedRelease(card.GameName, card.Source ?? "") != null) osHasUpdate = false;
                     if (osHasUpdate) card.OsStatus = GameStatus.UpdateAvailable;
                 }
 

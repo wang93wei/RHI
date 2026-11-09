@@ -708,10 +708,21 @@ public sealed partial class MainWindow
                 }
             }
 
+            // Epic games launched from their exe need the Epic launcher running first
+            bool isEpicGame = string.Equals(card.Source, "Epic", StringComparison.OrdinalIgnoreCase)
+                || !string.IsNullOrEmpty(card.DetectedGame?.EpicAppName);
+            async Task EnsureEpicLauncherAsync()
+            {
+                if (!isEpicGame || await Task.Run(EpicLauncherHelper.IsRunning)) return;
+                ShowStatusBarMessage(Loc.GetString("Status.StartingEpicLauncher"), TimeSpan.FromSeconds(30));
+                await EpicLauncherHelper.EnsureRunningAsync(LifetimeToken);
+            }
+
             // 1. User override (absolute path)
             if (_gameNameService.LaunchExeOverrides.TryGetValue(gameName, out var userExe)
                 && !string.IsNullOrEmpty(userExe) && File.Exists(userExe))
             {
+                await EnsureEpicLauncherAsync();
                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via user override: {userExe} {launchArgs}");
                 var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(userExe)
                 {
@@ -731,6 +742,7 @@ public sealed partial class MainWindow
                 var fullPath = Path.Combine(card.InstallPath, manifestExe);
                 if (File.Exists(fullPath))
                 {
+                    await EnsureEpicLauncherAsync();
                     _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via manifest override: {fullPath} {launchArgs}");
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(fullPath)
                     {
@@ -779,7 +791,8 @@ public sealed partial class MainWindow
             // 4. Epic Games Store protocol (skip if args set — protocol doesn't support game args)
             if (!string.IsNullOrEmpty(card.DetectedGame?.EpicAppName) && string.IsNullOrEmpty(launchArgs))
             {
-                var epicUri = $"com.epicgames.launcher://apps/{card.DetectedGame.EpicAppName}?action=launch&silent=true";
+                var dg = card.DetectedGame;
+                var epicUri = Services.GameDetectionService.EpicLaunchUri(dg.EpicCatalogNamespace, dg.EpicCatalogItemId, dg.EpicAppName!);
                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via Epic protocol: {epicUri}");
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(epicUri) { UseShellExecute = true });
                 MonitorProcessForHdr(null, shouldToggleHdr, hdrWasAlreadyOn, gameName, card.Source, card.InstallPath, hdrTargets, shouldToggleRes, resolutionToRestore);
@@ -817,6 +830,7 @@ public sealed partial class MainWindow
 
                 if (gameExe != null)
                 {
+                    await EnsureEpicLauncherAsync();
                     _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via auto-detected exe: {gameExe} {launchArgs}");
                     var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(gameExe)
                     {
@@ -866,6 +880,7 @@ public sealed partial class MainWindow
         {
             // Direct exe launch — monitor the process directly
             DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = true; });
+            ViewModel.NoteGameRunning(true);
             _ = Task.Run(async () =>
             {
                 try
@@ -877,45 +892,32 @@ public sealed partial class MainWindow
                     // from the same install folder before disabling HDR.
                     if (!string.IsNullOrEmpty(installPath))
                     {
-                        var normalizedPath = Path.GetFullPath(installPath).TrimEnd('\\').ToLowerInvariant();
-                        System.Diagnostics.Process? survivingProc = null;
+                        var roots = GameProcessSearchRoots(installPath);
+                        List<System.Diagnostics.Process> surviving = new();
 
                         // Give the spawned game process a moment to start (wrappers exit almost instantly)
                         for (int attempt = 0; attempt < 5; attempt++)
                         {
                             await Task.Delay(1000);
-                            try
-                            {
-                                survivingProc = System.Diagnostics.Process.GetProcesses()
-                                    .FirstOrDefault(p =>
-                                    {
-                                        try
-                                        {
-                                            var mainMod = p.MainModule?.FileName;
-                                            return mainMod != null
-                                                && Path.GetFullPath(mainMod).ToLowerInvariant().StartsWith(normalizedPath);
-                                        }
-                                        catch { return false; }
-                                    });
-                            }
+                            try { surviving = FindGameProcesses(roots); }
                             catch (Exception) { /* Safe to ignore: process enumeration can fail transiently; the polling loop simply retries on its next pass. */ }
 
-                            if (survivingProc != null) break;
+                            if (surviving.Count > 0) break;
                         }
 
-                        if (survivingProc != null)
+                        if (surviving.Count > 0)
                         {
                             // A game process is still running — this was a wrapper launch.
-                            // Monitor the real game process instead.
-                            _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' wrapper exited, found surviving process '{survivingProc.ProcessName}' (PID {survivingProc.Id})");
-                            await survivingProc.WaitForExitAsync();
+                            // Monitor the real game processes instead.
+                            _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' wrapper exited, found surviving process(es) {DescribeProcesses(surviving)}");
+                            await WaitForGameExitAsync(roots, surviving);
                         }
                     }
 
                     if (shouldToggle) HdrToggleService.DisableHdr(hdrTargets);
                     if (shouldToggleRes && resolutionToRestore != null) ResolutionToggleService.SetResolution(resolutionToRestore);
                     else if (shouldToggleRes) ResolutionToggleService.RestoreResolution();
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; });
+                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; RefocusAfterGameExit(gameName); });
                     _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' exited{(shouldToggle ? " — HDR disabled" : "")}{(shouldToggleRes ? " — resolution restored" : "")}");
                 }
                 catch (Exception ex)
@@ -923,6 +925,7 @@ public sealed partial class MainWindow
                     DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; });
                     _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' monitoring failed — {ex.Message}");
                 }
+                finally { ViewModel.NoteGameRunning(false); }
             });
         }
         else if (!string.IsNullOrEmpty(installPath))
@@ -930,48 +933,38 @@ public sealed partial class MainWindow
             // Protocol launch (Steam/Epic) — poll for any new process running from the install path
             _ = Task.Run(async () =>
             {
+                bool counted = false;
                 try
                 {
-                    var normalizedPath = Path.GetFullPath(installPath).TrimEnd('\\').ToLowerInvariant();
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] Polling for game process in '{normalizedPath}'...");
+                    var roots = GameProcessSearchRoots(installPath);
+                    _crashReporter.Log($"[MainWindow.MonitorProcess] Polling for game process in {string.Join(", ", roots.Select(r => $"'{r}'"))}...");
 
-                    // Wait up to 60 seconds for the game process to appear
-                    System.Diagnostics.Process? gameProc = null;
-                    for (int i = 0; i < 60; i++)
+                    // Wait up to 2 minutes for the game process to appear (big games can take a while)
+                    List<System.Diagnostics.Process> gameProcs = new();
+                    for (int i = 0; i < 120; i++)
                     {
                         await Task.Delay(1000);
-                        try
-                        {
-                            gameProc = System.Diagnostics.Process.GetProcesses()
-                                .FirstOrDefault(p =>
-                                {
-                                    try
-                                    {
-                                        var mainMod = p.MainModule?.FileName;
-                                        return mainMod != null
-                                            && Path.GetFullPath(mainMod).ToLowerInvariant().StartsWith(normalizedPath);
-                                    }
-                                    catch { return false; }
-                                });
-                        }
+                        try { gameProcs = FindGameProcesses(roots); }
                         catch (Exception) { /* Safe to ignore: process enumeration can fail transiently; the polling loop simply retries on its next pass. */ }
 
-                        if (gameProc != null) break;
+                        if (gameProcs.Count > 0) break;
                     }
 
-                    if (gameProc == null)
+                    if (gameProcs.Count == 0)
                     {
-                        _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' — game process not found after 60s");
+                        _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' — game process not found after 120s");
                         return;
                     }
 
                     DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = true; });
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' — found process '{gameProc.ProcessName}' (PID {gameProc.Id}), waiting for exit...");
-                    await gameProc.WaitForExitAsync();
+                    ViewModel.NoteGameRunning(true);
+                    counted = true;
+                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' — found {DescribeProcesses(gameProcs)}, waiting for exit...");
+                    await WaitForGameExitAsync(roots, gameProcs);
                     if (shouldToggle) HdrToggleService.DisableHdr(hdrTargets);
                     if (shouldToggleRes && resolutionToRestore != null) ResolutionToggleService.SetResolution(resolutionToRestore);
                     else if (shouldToggleRes) ResolutionToggleService.RestoreResolution();
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; });
+                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; RefocusAfterGameExit(gameName); });
                     _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' exited{(shouldToggle ? " — HDR disabled" : "")}{(shouldToggleRes ? " — resolution restored" : "")}");
                 }
                 catch (Exception ex)
@@ -979,6 +972,7 @@ public sealed partial class MainWindow
                     DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; });
                     _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' poll monitoring failed — {ex.Message}");
                 }
+                finally { if (counted) ViewModel.NoteGameRunning(false); }
             });
         }
     }
@@ -998,31 +992,6 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) { CrashReporter.Log($"[MainWindow.GetSteamExePath] Failed to read Steam install path from registry — {ex.Message}"); }
         return null;
-    }
-
-    internal async void BrowseFolder_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var card = GetCardFromSender(sender);
-            if (card == null) return;
-            var suggestedPath = card.InstallPath is { Length: > 0 } p && Directory.Exists(p) ? p
-                              : card.DetectedGame?.InstallPath is { Length: > 0 } dp && Directory.Exists(dp) ? dp
-                              : null;
-            var folder = await PickFolderAsync(suggestedPath);
-            if (folder != null)
-            {
-                card.InstallPath = folder;
-                if (card.DetectedGame != null)
-                    card.DetectedGame.InstallPath = folder;
-                // Persist the override so it survives Refresh / app restart
-                ViewModel.SetFolderOverride(card.GameName, folder, card.Source);
-            }
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[MainWindow.BrowseFolder_Click] Unhandled error — {ex.Message}\n{ex.StackTrace}");
-        }
     }
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
@@ -1059,21 +1028,6 @@ public sealed partial class MainWindow
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(appDataDir) { UseShellExecute = true });
                 return;
             }
-        }
-    }
-
-    /// <summary>Management › Reset install folder: back to the auto-detected folder (detected games only).</summary>
-    internal void ResetInstallFolder_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var card = GetCardFromSender(sender);
-            if (card == null || card.IsManuallyAdded) return;
-            ViewModel.ResetFolderOverride(card);
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[MainWindow.ResetInstallFolder_Click] Unhandled error — {ex.Message}\n{ex.StackTrace}");
         }
     }
 

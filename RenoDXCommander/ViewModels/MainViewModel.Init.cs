@@ -103,6 +103,12 @@ public partial class MainViewModel
 
     public Task RefreshAsync() => RunLibraryOperationAsync(RefreshCoreAsync);
 
+    /// <summary>True while a scan (startup, Refresh, Full Refresh) holds the library gate; a Refresh started now waits for it.</summary>
+    public bool IsLibraryOperationRunning => _libraryOperationGate.CurrentCount == 0;
+
+    /// <summary>Refresh; <paramref name="onStarted"/> runs once the gate is acquired (after any scan already running).</summary>
+    public Task RefreshAsync(Action onStarted) => RunLibraryOperationAsync(() => { onStarted(); return RefreshCoreAsync(); });
+
     private async Task RefreshCoreAsync()
     {
         // Re-check games in the DLSS skip cache before rebuilding cards.
@@ -145,7 +151,7 @@ public partial class MainViewModel
     private async Task FullRefreshCoreAsync(IProgress<string>? progress)
     {
         // Clear all caches so every game is re-scanned from disk.
-        progress?.Report("Clearing caches...");
+        progress?.Report(Loc.GetString("Dialog.ClearingCaches"));
         _engineTypeCache.Clear();
         _resolvedPathCache.Clear();
         _addonFileCache.Clear();
@@ -154,7 +160,7 @@ public partial class MainViewModel
         _dlssStreamlineService.ClearScanCaches();
 
         // Validate installed.json — remove records where the addon file no longer exists on disk
-        progress?.Report("Validating install records...");
+        progress?.Report(Loc.GetString("Dialog.ValidatingInstallRecords"));
         try
         {
             var records = _installer.LoadAll();
@@ -444,6 +450,8 @@ public partial class MainViewModel
                     // Only download nightly staging if at least one game uses nightly variant
                     if (_allCards.Any(c => GetOsVariant(c.GameName, c.Source ?? "") == "Nightly"))
                         await _optiScalerService.EnsureNightlyStagingAsync();
+                    // Settings › OptiScaler › Remove old Nightly builds (no-op when off)
+                    CleanUpOldNightlyBuilds();
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] OptiScaler nightly staging task failed — {ex.Message}"); }
             });
@@ -454,6 +462,15 @@ public partial class MainViewModel
                         await _optiScalerService.EnsureDlssNrStagingAsync();
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] OptiScaler DLSS NR staging task failed — {ex.Message}"); }
+            });
+            // F5 DLSSNR: stage it at startup too when a game uses it (was only staged on demand)
+            var osF5Task = Task.Run(async () => {
+                try
+                {
+                    if (_allCards.Any(c => GetOsVariant(c.GameName, c.Source ?? "") == "F5"))
+                        await _optiScalerService.EnsureF5StagingAsync();
+                }
+                catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] OptiScaler F5 staging task failed — {ex.Message}"); }
             });
             dlssTask         = Task.Run(async () => {
                 try { await _optiScalerService.EnsureDlssStagingAsync(); }
@@ -482,9 +499,10 @@ public partial class MainViewModel
                     // Migrate legacy shared staging folder to variant-specific folders
                     MigrateDxvkStagingFolder();
 
-                    // Only download the globally selected variant at startup.
-                    // Other variants are downloaded on-demand when a per-game override needs them.
-                    await _dxvkService.EnsureStagingAsync();
+                    // Only download the globally selected variant at startup, and only when a
+                    // game uses DXVK. Other variants, and first installs, download on demand.
+                    if (ShouldAutoStageDxvk("InitializeAsync"))
+                        await _dxvkService.EnsureStagingAsync();
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] DXVK staging task failed — {ex.Message}"); }
             });
@@ -500,6 +518,8 @@ public partial class MainViewModel
                 {
                     var rdx5Svc = App.Services.GetRequiredService<Renodx5AddonService>();
                     await rdx5Svc.FetchAndCacheAvailableVersionsAsync(forceRefresh: forceRescan).ConfigureAwait(false);
+                    // GITC Uplift's version list for the same picker (1-hour cooldown too)
+                    await App.Services.GetRequiredService<UpliftService>().FetchAvailableVersionsAsync(forceRefresh: forceRescan).ConfigureAwait(false);
                     // If the version list shows a newer version than what's staged, download it.
                     // This handles the case where the user has "Latest" selected but hasn't run
                     // the update check yet (4-hour cooldown) — the version list fetch is independent.
@@ -510,7 +530,7 @@ public partial class MainViewModel
             });
 
             // 3. Await detection first — this never needs network
-            progress?.Report("Detecting games...");
+            progress?.Report(Loc.GetString("Dialog.DetectingGames"));
             var freshGames = await detectTask;
 
             // 4. Await network tasks individually so failures don't block game display
@@ -551,6 +571,7 @@ public partial class MainViewModel
             DlssPresetService.ApplyManifestPresets(_manifest);
             _dlssPresetService.ApplyManifestProfileConfig(_manifest);
             FeatureFlags.ApplyManifest(_manifest?.FeatureFlags);
+            OsForkService.SetDefinitions(_manifest?.OsForks); // recommended OptiScaler forks
             _dofFixService.SetSkipGames(_manifest?.DofFixSkipGames);
             _dofFixService.SetForceGames(_manifest?.DofFixForceGames);
             if (_manifest?.ComponentUrls?.TryGetValue("ueDofFix", out var dofFixUrl) == true)
@@ -713,7 +734,7 @@ public partial class MainViewModel
 
             // Merge manifest-provided author donation URLs and display names
             if (_manifest != null)
-                GameCardViewModel.MergeManifestAuthorData(_manifest.DonationUrls, _manifest.AuthorDisplayNames, _manifest.AuthorRoles);
+                GameCardViewModel.MergeManifestAuthorData(_manifest.DonationUrls, _manifest.AuthorDisplayNames, _manifest.AuthorRoles, _manifest.PatreonUrls);
 
             // Apply manifest-driven wiki status overrides to mod list
             ApplyManifestStatusOverrides();
@@ -722,6 +743,9 @@ public partial class MainViewModel
             if (_manifestBlacklist.Count > 0 || _manifestBlacklistPrefixes.Count > 0)
                 allGames = allGames.Where(g => !_manifestBlacklist.Contains(g.Name)
                     && !_manifestBlacklistPrefixes.Any(p => g.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase))).ToList();
+
+            // Move installs whose folder the manifest changed, before records are read (so they match)
+            await RunManifestFolderMigrationsAsync(allGames);
 
             var records    = _installer.LoadAll();
             var auxRecords = _auxInstaller.LoadAll();
@@ -741,11 +765,12 @@ public partial class MainViewModel
             await ultraPlusInitTask;
 
             _crashReporter.Log($"[MainViewModel.InitializeAsync] Building cards for {allGames.Count} games...");
-            progress?.Report($"Building cards for {allGames.Count} games...");
+            progress?.Report(Loc.GetString("Dialog.BuildingCards", allGames.Count));
             _allCards = await Task.Run(() => BuildCards(allGames, records, auxRecords, addonCache, _genericNotes));
             _allCards = WithoutRemovedGames(_allCards);
             PropagateDispatcherToCards();
             _crashReporter.Log($"[MainViewModel.InitializeAsync] BuildCards complete: {_allCards.Count} cards");
+            PublishFolderMigrationNotices();
             GraphicsApiDetector.SaveCache();
             SaveGameApiCache();
 
@@ -950,6 +975,9 @@ public partial class MainViewModel
                     DispatcherQueue?.TryEnqueue(() => { SubStatusText = ""; });
                 }
             });
+
+            // Custom game folders: offer games the store scan didn't find (background, only with folders set)
+            StartCustomFolderScan("InitializeAsync");
 
             var offlineMode = wikiFetchFailed;
             StatusText    = offlineMode

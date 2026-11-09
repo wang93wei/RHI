@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using RenoDXCommander.Models;
 using RenoDXCommander.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -10,6 +11,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class GameInitializationService : IGameInitializationService
 {
+    // Safe in unit tests too: with no DI container the key is returned instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     private readonly IGameDetectionService _gameDetectionService;
 
     public GameInitializationService(
@@ -213,6 +218,12 @@ public class GameInitializationService : IGameInitializationService
             foreach (var (key, value) in manifest.InstallPathOverrides)
                 installPathOverrides.TryAdd(key, value);
 
+        // installPathMigrations wins over installPathOverrides for the same game (indexer, not
+        // TryAdd, so the order the two fields are applied in doesn't matter).
+        if (manifest.InstallPathMigrations != null)
+            foreach (var (key, value) in manifest.InstallPathMigrations)
+                installPathOverrides[key] = value;
+
         if (manifest.WikiUnlinks != null)
             foreach (var game in manifest.WikiUnlinks)
                 manifestWikiUnlinks.Add(game);
@@ -241,6 +252,7 @@ public class GameInitializationService : IGameInitializationService
             $"+{manifest.SixtyFourBitGames?.Count ?? 0} 64-bit, " +
             $"+{manifest.Blacklist?.Count ?? 0} blacklisted, " +
             $"+{manifest.InstallPathOverrides?.Count ?? 0} path overrides, " +
+            $"+{manifest.InstallPathMigrations?.Count ?? 0} path migrations, " +
             $"+{manifest.WikiStatusOverrides?.Count ?? 0} status overrides, " +
             $"+{manifest.SnapshotOverrides?.Count ?? 0} snapshot overrides, " +
             $"+{manifest.WikiUnlinks?.Count ?? 0} wiki unlinks, " +
@@ -359,9 +371,7 @@ public class GameInitializationService : IGameInitializationService
         var overrides = new Dictionary<string, CardOverride>(StringComparer.OrdinalIgnoreCase)
         {
             ["Dishonored"] = new CardOverride(
-                Notes: "ℹ️ This game has both 32-bit and 64-bit RenoDX builds.\n\n" +
-                       "• 64-bit (default) — for the Microsoft Store and Epic Games Store versions.\n" +
-                       "• 32-bit — for the Steam version. Enable 32-bit mode in 🎯 Overrides to use this.",
+                Notes: L("Card.Notes.DishonoredDualBitness"),
                 DiscordUrl: null, ForceDiscord: false),
         };
 

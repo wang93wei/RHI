@@ -26,8 +26,26 @@ public interface IGameNameService
     /// <summary>Games marked as favourites.</summary>
     HashSet<string> FavouriteGames { get; }
 
+    /// <summary>The user's game collections ("GameName|Store" keys) and the active one.</summary>
+    GameCollectionStore Collections { get; }
+
     /// <summary>Games removed from RHI ("GameName|Store"); left out of the game list until restored.</summary>
     HashSet<string> RemovedGames { get; }
+
+    /// <summary>Custom game folders scanned for non-store games (absolute, normalized paths). Global, not per game.</summary>
+    IReadOnlyList<string> CustomGameFolders { get; }
+
+    /// <summary>Candidate folders from the custom folder scan the user chose to ignore (normalized, case-insensitive).</summary>
+    IReadOnlySet<string> IgnoredCustomGameFolders { get; }
+
+    /// <summary>Replaces the custom game folder list. Call SaveNameMappings afterwards.</summary>
+    void SetCustomGameFolders(IEnumerable<string> folders);
+
+    /// <summary>Adds candidate folders to the ignored set. Call SaveNameMappings afterwards.</summary>
+    void AddIgnoredCustomGameFolders(IEnumerable<string> folders);
+
+    /// <summary>Forgets every ignored candidate folder. Call SaveNameMappings afterwards.</summary>
+    void ClearIgnoredCustomGameFolders();
 
     /// <summary>Games with UE extended mode enabled.</summary>
     HashSet<string> UeExtendedGames { get; }

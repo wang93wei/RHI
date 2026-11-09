@@ -35,7 +35,9 @@ public partial class DetailPanelBuilder
         // Consistency guard: if the dict says installed but FindRecord finds no record,
         // the aux record was lost (e.g. Game Pass path version change). Clear the stale dict entry
         // so the collapsed header doesn't show "ASI Loader winmm.dll" when nothing is actually installed.
-        if (!isInstalled && !string.IsNullOrEmpty(_window.ViewModel.GetUalInstalledAs(gameName, store)))
+        // Not while an install folder move is waiting: the record still points at the old folder.
+        if (!isInstalled && !string.IsNullOrEmpty(_window.ViewModel.GetUalInstalledAs(gameName, store))
+            && !_window.ViewModel.IsFolderMigrationPending(card))
         {
             CrashReporter.Log($"[BuildUalRow] Clearing stale UalInstalledAs entry for '{gameName}' — dict said installed but no aux record found");
             _window.ViewModel.SetUalInstalledAs(gameName, null, store);
@@ -152,16 +154,23 @@ public partial class DetailPanelBuilder
             installBtn.Content = Loc.GetString("Status.Installing");
             try
             {
+                var previousName = ualRecord?.InstalledAs;
                 var (success, hookedOriginal) = await ualSvc.InstallAsync(card, chosen);
                 if (success)
                 {
                     _window.ViewModel.SetUalInstalledAs(gameName, chosen, store);
+                    // Moving to a new name put the old name's XHooked.dll back; an extra there follows it
+                    if (!string.IsNullOrEmpty(previousName) && !previousName.Equals(chosen, StringComparison.OrdinalIgnoreCase))
+                        _window.ViewModel.OnUalReleasedName(card, previousName);
                     if (hookedOriginal != null)
                     {
+                        var chainedExtra = _window.ViewModel.OnUalChainedFile(card, chosen, hookedOriginal);
                         _ = DialogService.ShowSafeAsync(new ContentDialog
                         {
-                            Title = Loc.GetString("Extras.OriginalDllChained.Title"),
-                            Content = Loc.GetString("Extras.OriginalDllChained.Content", chosen, hookedOriginal),
+                            Title = chainedExtra != null ? Loc.GetString("Extras.OriginalDllChained.ExtraRenamedTitle") : Loc.GetString("Extras.OriginalDllChained.Title"),
+                            Content = chainedExtra != null
+                                ? Loc.GetString("Extras.OriginalDllChained.ExtraRenamedContent", chainedExtra, hookedOriginal)
+                                : Loc.GetString("Extras.OriginalDllChained.Content", chosen, hookedOriginal),
                             CloseButtonText = Loc.GetString("Dialog.Ok"),
                             XamlRoot = _window.Content.XamlRoot,
                         });
@@ -216,8 +225,10 @@ public partial class DetailPanelBuilder
         removeBtn.Click += (s, e) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
+            var removedName = ualRecord?.InstalledAs ?? _window.ViewModel.GetUalInstalledAs(gameName, store);
             ualSvc.Uninstall(card);
             _window.ViewModel.SetUalInstalledAs(gameName, null, store);
+            _window.ViewModel.OnUalReleasedName(card, removedName);
             RequestExtrasRebuild(card);
         };
         Grid.SetColumn(removeBtn, 5);
@@ -486,17 +497,11 @@ public partial class DetailPanelBuilder
     private async Task<string?> ShowRtxEncoreDllPickerAsync(GameCardViewModel card, string? currentDllName)
     {
         if (string.IsNullOrEmpty(card.InstallPath)) return null;
-        var rhiConflicts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrEmpty(card.RsInstalledFile)) rhiConflicts[card.RsInstalledFile] = Loc.GetString("Detail.ReShade");
-        if (!string.IsNullOrEmpty(card.OsInstalledFile)) rhiConflicts[card.OsInstalledFile] = Loc.GetString("Detail.OptiScaler");
-        if (!string.IsNullOrEmpty(card.DcInstalledFile)) rhiConflicts[card.DcInstalledFile] = Loc.GetString("Detail.DisplayCommander");
-        var ualName = _window.ViewModel.GetUalInstalledAs(card.GameName, card.Source ?? "");
-        if (!string.IsNullOrEmpty(ualName)) rhiConflicts[ualName] = Loc.GetString("Extras.AsiLoader");
-        var mfgName = _window.ViewModel.GetRtx40MfgInstalledAs(card.GameName, card.Source ?? "");
-        if (!string.IsNullOrEmpty(mfgName)) rhiConflicts[mfgName] = Loc.GetString("Extras.Rtx40Mfg.FullName");
-        var fgName = _window.ViewModel.GetDlssg2030InstalledAs(card.GameName, card.Source ?? "");
-        if (!string.IsNullOrEmpty(fgName)) rhiConflicts[fgName] = Loc.GetString("Extras.Dlssg2030");
-        if (!string.IsNullOrEmpty(currentDllName)) rhiConflicts.Remove(currentDllName);
+        // Bink names already keep the game's own Bink DLL as <name>Hooked.dll, so they get no hooked option
+        var options = GetExtraDllOptions(card, RtxEncoreService.KnownProxyNames, currentDllName,
+            noHooked: n => n.StartsWith("bink", StringComparison.OrdinalIgnoreCase));
+        var rhiConflicts = options.Where(o => o.BlockedBy != null)
+            .ToDictionary(o => o.Name, o => o.BlockedBy!, StringComparer.OrdinalIgnoreCase);
 
         var onDiskConflicts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (Directory.Exists(card.InstallPath))
@@ -520,11 +525,12 @@ public partial class DetailPanelBuilder
         var listPanel = new StackPanel { Spacing = 4 };
         var scrollViewer = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 480, Content = listPanel };
 
-        foreach (var name in RtxEncoreService.KnownProxyNames)
+        foreach (var option in options)
         {
-            bool isRecommended = string.Equals(name, "version.dll", StringComparison.OrdinalIgnoreCase);
+            var name           = option.Name;
+            bool isRecommended = option.IsRecommended;
             bool isAsi         = name.EndsWith(".asi", StringComparison.OrdinalIgnoreCase);
-            bool isCurrent     = string.Equals(name, currentDllName, StringComparison.OrdinalIgnoreCase);
+            bool isCurrent     = option.IsCurrent;
             bool isRhiOwned    = rhiConflicts.ContainsKey(name);
             bool isOnDisk      = onDiskConflicts.ContainsKey(name);
             var btn = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1), IsEnabled = !isRhiOwned, Opacity = isRhiOwned ? 0.4 : 1.0, Background = isCurrent ? UIFactory.Brush(ResourceKeys.AccentBlueBgBrush) : UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush), BorderBrush = isCurrent ? UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush) : UIFactory.Brush(ResourceKeys.BorderDefaultBrush) };
@@ -532,15 +538,14 @@ public partial class DetailPanelBuilder
             contentRow.Children.Add(new TextBlock { Text = name, FontSize = 12, Foreground = isRhiOwned ? UIFactory.Brush(ResourceKeys.TextTertiaryBrush) : UIFactory.Brush(ResourceKeys.TextPrimaryBrush), VerticalAlignment = VerticalAlignment.Center });
             if (isRecommended) contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
             if (isAsi)         contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.AsiPlugin"), "#1A2A3A", "#7AACDD", "#2A4A6A"));
-            if (isRhiOwned)    contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.InUseBy", rhiConflicts[name]), "#2A1818", "#CC6666", "#5A2828"));
-            else if (isOnDisk) contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.OnDisk", onDiskConflicts[name]), "#2A1A10", "#CC9955", "#5A3A18"));
+            AddExtraDllBadges(contentRow, btn, option, Loc.GetString("Extras.RtxEncore.Label"));
+            if (!isRhiOwned && isOnDisk) contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.RtxEncore.Badge.OnDisk", onDiskConflicts[name]), "#2A1A10", "#CC9955", "#5A3A18"));
             if (isCurrent)     contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
             btn.Content = contentRow;
-            if (isRhiOwned)    ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllInUse.Tooltip", rhiConflicts[name]));
-            else if (isOnDisk && name.StartsWith("bink", StringComparison.OrdinalIgnoreCase))
-                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllBink.Tooltip",
-                    name, onDiskConflicts[name], System.IO.Path.GetFileNameWithoutExtension(name) + "Hooked.dll"));
-            else if (isOnDisk) ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllOnDisk.Tooltip", name, onDiskConflicts[name]));
+            // Blocked names got their tooltip from AddExtraDllBadges
+            if (!isRhiOwned && isOnDisk && name.StartsWith("bink", StringComparison.OrdinalIgnoreCase))
+                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllBink.Tooltip", name, onDiskConflicts[name], System.IO.Path.GetFileNameWithoutExtension(name) + "Hooked.dll"));
+            else if (!isRhiOwned && isOnDisk) ToolTipService.SetToolTip(btn, Loc.GetString("Extras.RtxEncore.DllOnDisk.Tooltip", name, onDiskConflicts[name]));
             btn.Tag = name;
             btn.Click += (s, ev) => { chosen = (s as Button)?.Tag as string; if (s is FrameworkElement fe) FindParentContentDialog(fe)?.Hide(); };
             listPanel.Children.Add(btn);

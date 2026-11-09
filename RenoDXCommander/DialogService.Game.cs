@@ -702,6 +702,7 @@ public partial class DialogService
                 UseTaskLists      = true,
             };
 
+            TabsTheme.StyleMarkdown(markdown);
             var markdownContainer = new Grid { RequestedTheme = ElementTheme.Dark };
             markdownContainer.Children.Add(markdown);
             panel.Children.Add(markdownContainer);

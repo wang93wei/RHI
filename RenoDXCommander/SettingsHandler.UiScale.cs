@@ -53,12 +53,16 @@ public partial class SettingsHandler
         }
     }
 
-    private void SelectUiScale()
+    /// <summary>Selects the saved size in the combo (also called after Ctrl + mouse wheel changes it).</summary>
+    internal void SelectUiScale()
     {
         if (_uiScaleCombo == null) return;
         _uiScaleSelecting = true;
-        int idx = Array.IndexOf(MainWindow.UiScaleOptions, ViewModel.Settings.UiScale);
-        _uiScaleCombo.SelectedIndex = idx >= 0 ? idx : Array.IndexOf(MainWindow.UiScaleOptions, 100);
+        // A size saved by an older version that isn't in the list (67%) shows as the nearest one
+        var opts = MainWindow.UiScaleOptions;
+        int saved = ViewModel.Settings.UiScale;
+        int idx = Array.IndexOf(opts, opts.OrderBy(p => Math.Abs(p - saved)).First());
+        _uiScaleCombo.SelectedIndex = idx;
         _uiScaleSelecting = false;
     }
 
