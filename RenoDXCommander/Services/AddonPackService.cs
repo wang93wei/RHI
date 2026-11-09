@@ -37,13 +37,16 @@ public class AddonPackService : IAddonPackService
     private List<AddonEntry> _packs = new();
     private readonly SemaphoreSlim _downloadLock = new(1, 1);
 
-    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+    // Safe in unit tests / static-field initializers too: with no DI container the key is
+    // returned instead of throwing (a static ctor would fail with GetRequiredService).
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
 
     // RenoDX DevKit addon — injected alongside Addons.ini entries
     private static readonly AddonEntry RenoDxDevKitEntry = new(
         SectionId: "renodx-devkit",
         PackageName: "RenoDX DevKit",
-        PackageDescription: Loc.GetString("Addon.Description.RenoDxDevKit"),
+        PackageDescription: L("Addon.Description.RenoDxDevKit"),
         DownloadUrl: null,
         DownloadUrl32: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-devkit.addon32",
         DownloadUrl64: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-devkit.addon64",
@@ -54,7 +57,7 @@ public class AddonPackService : IAddonPackService
     private static readonly AddonEntry Renodx5Entry = new(
         SectionId: "renodx-dlss5",
         PackageName: "DLSS5 Tool",
-        PackageDescription: Loc.GetString("Addon.Description.Dlss5Tool"),
+        PackageDescription: L("Addon.Description.Dlss5Tool"),
         DownloadUrl: null,
         DownloadUrl32: null,
         DownloadUrl64: null,
@@ -67,7 +70,7 @@ public class AddonPackService : IAddonPackService
     private static readonly AddonEntry Renodx5SfEntry = new(
         SectionId: "renodx-dlss-sf",
         PackageName: "DLSS Tool (ShortFuse)",
-        PackageDescription: Loc.GetString("Addon.Description.DlssToolShortFuse"),
+        PackageDescription: L("Addon.Description.DlssToolShortFuse"),
         DownloadUrl: null,
         DownloadUrl32: null,
         DownloadUrl64: null,
@@ -80,7 +83,7 @@ public class AddonPackService : IAddonPackService
     private static readonly AddonEntry DlssFixEntry = new(
         SectionId: "renodx-dlssfix",
         PackageName: "DLSS Fix",
-        PackageDescription: Loc.GetString("Addon.Description.DlssFix"),
+        PackageDescription: L("Addon.Description.DlssFix"),
         DownloadUrl: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-dlssfix.addon64",
         DownloadUrl32: null,
         DownloadUrl64: "https://github.com/clshortfuse/renodx/releases/download/snapshot/renodx-dlssfix.addon64",
@@ -488,13 +491,13 @@ public class AddonPackService : IAddonPackService
             if (entry.SectionId.Equals("renodx-dlss5", StringComparison.OrdinalIgnoreCase)
                 || entry.PackageName.Equals("DLSS5 Tool", StringComparison.OrdinalIgnoreCase))
             {
-                progress?.Report((Loc.GetString("Addon.Progress.DownloadingDlss5"), 10));
+                progress?.Report((L("Addon.Progress.DownloadingDlss5"), 10));
                 var rdx5Service = App.Services.GetRequiredService<Renodx5AddonService>();
                 await rdx5Service.EnsureStagingAsync(progress).ConfigureAwait(false);
                 if (!rdx5Service.IsStagingReady)
                 {
                     CrashReporter.Log("[AddonPackService.DownloadAddonAsync] RenoDX DLSS5 staging not ready after EnsureStaging");
-                    progress?.Report((Loc.GetString("Addon.Progress.Dlss5DownloadFailed"), 0));
+                    progress?.Report((L("Addon.Progress.Dlss5DownloadFailed"), 0));
                 }
                 return;
             }
@@ -502,13 +505,13 @@ public class AddonPackService : IAddonPackService
             // SF variant — route to Renodx5AddonService.EnsureSfStagingAsync
             if (entry.SectionId.Equals("renodx-dlss-sf", StringComparison.OrdinalIgnoreCase))
             {
-                progress?.Report((Loc.GetString("Addon.Progress.DownloadingDlssToolSf"), 10));
+                progress?.Report((L("Addon.Progress.DownloadingDlssToolSf"), 10));
                 var rdx5Service = App.Services.GetRequiredService<Renodx5AddonService>();
                 await rdx5Service.EnsureSfStagingAsync(progress).ConfigureAwait(false);
                 if (!rdx5Service.IsSfStagingReady)
                 {
                     CrashReporter.Log("[AddonPackService.DownloadAddonAsync] SF staging not ready after EnsureStaging");
-                    progress?.Report((Loc.GetString("Addon.Progress.DlssToolSfDownloadFailed"), 0));
+                    progress?.Report((L("Addon.Progress.DlssToolSfDownloadFailed"), 0));
                 }
                 return;
             }
@@ -523,7 +526,7 @@ public class AddonPackService : IAddonPackService
                 if (resolvedUrl64 == null && resolvedUrl32 == null)
                 {
                     CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Could not resolve asset URL from API for '{entry.PackageName}'");
-                    progress?.Report((Loc.GetString("Addon.Error.ResolveUrlFailed", entry.PackageName), 0));
+                    progress?.Report((L("Addon.Error.ResolveUrlFailed", entry.PackageName), 0));
                     return;
                 }
                 versionOverride ??= resolvedTag;
@@ -567,7 +570,7 @@ public class AddonPackService : IAddonPackService
                 var pctBase = (double)i / downloads.Count * 100;
                 var pctRange = 100.0 / downloads.Count;
 
-                progress?.Report((Loc.GetString("Addon.Progress.Downloading", entry.PackageName), pctBase));
+                progress?.Report((L("Addon.Progress.Downloading", entry.PackageName), pctBase));
                 CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Downloading '{entry.PackageName}' from {url}");
 
                 try
@@ -611,7 +614,7 @@ public class AddonPackService : IAddonPackService
 
             if (!anySucceeded)
             {
-                progress?.Report((Loc.GetString("Addon.Error.DownloadFailedFor", entry.PackageName), 0));
+                progress?.Report((L("Addon.Error.DownloadFailedFor", entry.PackageName), 0));
                 return;
             }
 
@@ -619,13 +622,13 @@ public class AddonPackService : IAddonPackService
             versionToken ??= "unknown";
             SaveAddonVersion(entry.PackageName, versionToken, safeName);
 
-            progress?.Report((Loc.GetString("Addon.Progress.Downloaded", entry.PackageName), 100));
+            progress?.Report((L("Addon.Progress.Downloaded", entry.PackageName), 100));
             CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] '{entry.PackageName}' download complete. Version = {versionToken}");
         }
         catch (Exception ex)
         {
             CrashReporter.Log($"[AddonPackService.DownloadAddonAsync] Failed for '{entry.PackageName}' — {ex.Message}");
-            progress?.Report((Loc.GetString("Addon.Error.DownloadFailed", ex.Message), 0));
+            progress?.Report((L("Addon.Error.DownloadFailed", ex.Message), 0));
         }
     }
 
@@ -1139,7 +1142,7 @@ public class AddonPackService : IAddonPackService
             results.Add(new AddonEntry(
                 SectionId: $"custom-{baseName}",
                 PackageName: baseName,
-                PackageDescription: Loc.GetString("Addon.Description.CustomAddon"),
+                PackageDescription: L("Addon.Description.CustomAddon"),
                 DownloadUrl: null,
                 DownloadUrl32: null,
                 DownloadUrl64: null,
@@ -1187,7 +1190,7 @@ public class AddonPackService : IAddonPackService
                     if (total > 0)
                     {
                         var filePct = pctBase + (double)received / total * pctRange;
-                        progress?.Report((Loc.GetString("Addon.Progress.DownloadingKb", displayName, received / 1024, total / 1024), filePct));
+                        progress?.Report((L("Addon.Progress.DownloadingKb", displayName, received / 1024, total / 1024), filePct));
                     }
                 }
             }
@@ -1214,7 +1217,7 @@ public class AddonPackService : IAddonPackService
         {
             await DownloadFileAsync(url, tempZip, safeName, progress, pctBase, pctRange * 0.8);
 
-            progress?.Report((Loc.GetString("Addon.Progress.Extracting", safeName), pctBase + pctRange * 0.8));
+            progress?.Report((L("Addon.Progress.Extracting", safeName), pctBase + pctRange * 0.8));
 
             using var archive = ArchiveFactory.Open(tempZip);
             foreach (var archiveEntry in archive.Entries)
@@ -1276,7 +1279,7 @@ public class AddonPackService : IAddonPackService
                 CrashReporter.Log($"[AddonPackService.DownloadAndExtractZipAsync] Extracted '{fileName}' → '{destPath}' (originalName={originalName})");
             }
 
-            progress?.Report((Loc.GetString("Addon.Progress.Extracted", safeName), pctBase + pctRange));
+            progress?.Report((L("Addon.Progress.Extracted", safeName), pctBase + pctRange));
         }
         finally
         {
