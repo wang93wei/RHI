@@ -1473,6 +1473,7 @@ public sealed partial class MainWindow
     private void HdrToggle_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not GameCardViewModel card) return;
+        if (ToggleHdrForDisplayMode(card)) return; // its display mode sets HDR: flip it for the current mode
 
         var overrides = _gameNameService.HdrToggleOverrides;
         var current = overrides.TryGetValue(card.GameName, out var v) ? v : null;
@@ -1660,6 +1661,7 @@ public sealed partial class MainWindow
     private void ResToggle_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not GameCardViewModel card) return;
+        if (ToggleResForDisplayMode(card)) return;
 
         var overrides = _gameNameService.ResToggleOverrides;
         var current = overrides.TryGetValue(card.GameName, out var v) ? v : null;

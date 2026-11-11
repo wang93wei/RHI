@@ -68,7 +68,8 @@ public partial class MainViewModel
             },
             skipRdx: _settingsViewModel.GlobalSkipRdxUpdates,
             skipRs: _settingsViewModel.GlobalSkipRsUpdates,
-            skipRef: _settingsViewModel.GlobalSkipRefUpdates);
+            skipRef: _settingsViewModel.GlobalSkipRefUpdates,
+            vulkanChannelResolver: (gameName, store) => GetReShadeChannelOverride(gameName, store ?? ""));
 
         // ── Rate-limit guard: if earlier checks triggered 403, skip remaining API calls ──
         // Note: Nexus check uses a different API (GraphQL, not GitHub) so it runs regardless
@@ -327,6 +328,7 @@ public partial class MainViewModel
                     await rdx5Service.EnsureStagingAsync().ConfigureAwait(false);
                 // Also refresh the available versions cache (used by the NR section addon version picker)
                 await rdx5Service.FetchAndCacheAvailableVersionsAsync().ConfigureAwait(false);
+                await rdx5Service.UpdateFoveatedGamesAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {

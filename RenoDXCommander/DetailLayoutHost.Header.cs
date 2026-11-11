@@ -19,6 +19,8 @@ internal sealed partial class DetailLayoutHost
     private Button? _hFav;
     private FontIcon? _hFavIcon;
     private Button? _hHide;
+    private Button? _hShots;
+    private Button? _hGameSettings;
     private WrapPanel? _hChips;
     private TextBlock? _hPath;
     private HyperlinkButton? _hConfig;
@@ -26,6 +28,8 @@ internal sealed partial class DetailLayoutHost
     private TextBlock? _hLaunchText;    private Button? _hHdr;
     private Button? _hRes;
     private Grid? _hToggles;
+    private Border? _hModes;      // Display modes switch (MainWindow.BuildTabsDisplayModeSwitch), under the toggles
+    private string? _hModesSig;
     private bool _hFavOn, _hHdrOn, _hResOn;
 
     /// <summary>Shows the Classic header rows (DetailPanel children 0 and 1) or hides them for Tabs.</summary>
@@ -59,10 +63,26 @@ internal sealed partial class DetailLayoutHost
         TabsTheme.Apply(_hHide, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36, fontSize: 12);
         _hHide.Click += (s, e) => { w.HeaderHide(e); RefreshHeaderSoon(); };
 
+        // Screenshots (Spotlight only): opens the game's screenshots in the side panel
+        _hShots = new Button { Width = 36, Padding = new Thickness(0), Content = TabsTheme.Icon("", 16) }; // photo
+        TabsTheme.Apply(_hShots, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36);
+        ToolTipService.SetToolTip(_hShots, "Screenshots");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hShots, "Screenshots");
+        _hShots.Click += (s, e) => OpenPanel(ScreenshotsKey);
+
+        // Game settings (Spotlight only): per-game versions of Settings-page options, in the side panel
+        _hGameSettings = new Button { Width = 36, Padding = new Thickness(0), Content = TabsTheme.Icon("", 16) }; // cog
+        TabsTheme.Apply(_hGameSettings, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36);
+        ToolTipService.SetToolTip(_hGameSettings, "Game settings");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hGameSettings, "Game settings");
+        _hGameSettings.Click += (s, e) => OpenPanel(GameSettingsKey);
+
         var titleRow = new WrapPanel { HorizontalSpacing = 12, VerticalSpacing = 8 };
         titleRow.Children.Add(_hTitle);
         titleRow.Children.Add(_hFav);
         titleRow.Children.Add(_hHide);
+        titleRow.Children.Add(_hShots);
+        titleRow.Children.Add(_hGameSettings);
 
         _hChips = new WrapPanel { HorizontalSpacing = 6, VerticalSpacing = 6 };
 
@@ -139,6 +159,8 @@ internal sealed partial class DetailLayoutHost
         var right = new StackPanel { Spacing = 10, MinWidth = 260, VerticalAlignment = VerticalAlignment.Top };
         right.Children.Add(splitFrame);
         right.Children.Add(_hToggles);
+        _hModes = new Border { Visibility = Visibility.Collapsed };
+        right.Children.Add(_hModes);
         right.Children.Add(MakeAchievementsSlot(_hToggles)); // Spotlight + Settings › Achievements only
 
         var grid = new Grid { ColumnSpacing = 20 };
@@ -154,7 +176,7 @@ internal sealed partial class DetailLayoutHost
         ? new TabsTheme.Look("#221C10", "#4F4123", "#F0C35A", "#2A2214", false)
         : new TabsTheme.Look("#141A26", "#263042", TabsTheme.TextMuted, "#1E2738", false);
 
-    private static TabsTheme.Look ToggleLook(bool on) => on
+    internal static TabsTheme.Look ToggleLook(bool on) => on
         ? new TabsTheme.Look("#221A40", "#4A3A7A", "#D9C8FF", "#2A2050", true)
         : new TabsTheme.Look("#141A26", "#263042", TabsTheme.TextSecondary, "#1E2738", false);
 
@@ -250,6 +272,8 @@ internal sealed partial class DetailLayoutHost
         var card = w.ViewModel.SelectedGame;
 
         _hTitle!.Text = w.HeaderGameName.Text;
+        _hShots!.Visibility = IsSpotlight ? Visibility.Visible : Visibility.Collapsed; // the side panel is Spotlight's
+        _hGameSettings!.Visibility = _hShots.Visibility;
 
         // Favourite star (amber, filled) / outline
         bool fav = card?.IsFavourite == true;
@@ -335,8 +359,42 @@ internal sealed partial class DetailLayoutHost
         _hRes.Visibility = resShown ? Visibility.Visible : Visibility.Collapsed;
         Grid.SetColumnSpan(_hHdr, resShown ? 1 : 2);
 
+        RefreshHeaderDisplayModes(card);
+
         if (IsSpotlight) RefreshHeroArt();
         RefreshAchievements();
+    }
+
+    /// <summary>Rebuilds the display mode row only when what it shows changed (keeps controller focus otherwise).</summary>
+    private void RefreshHeaderDisplayModes(ViewModels.GameCardViewModel? card)
+    {
+        if (_hModes == null) return;
+        var vm = _window.ViewModel;
+        string sig = "";
+        if (card != null && vm.DisplayModesOn)
+        {
+            var key = ViewModels.MainViewModel.DisplayModeKey(card);
+            sig = key + "|" + vm.ActiveDisplayModeId(card) + "|" + string.Join(",", vm.DisplayModeStore.Modes.Select(m => m.Id + "=" + m.Name))
+                + "|" + string.Join(",", vm.DisplayModeStore.ItemsFor(key));
+        }
+        if (sig == _hModesSig && (_hModes.Child != null) == (sig.Length > 0)) return;
+        _hModesSig = sig;
+
+        // Keep keyboard / controller focus on the same button across the rebuild
+        int focused = -1;
+        FocusState focusState = FocusState.Unfocused;
+        if (_hModes.Child is Grid old)
+            for (int i = 0; i < old.Children.Count; i++)
+                if (old.Children[i] is Button ob && ob.FocusState != FocusState.Unfocused) { focused = i; focusState = ob.FocusState; break; }
+
+        var grid = card == null ? null : _window.BuildTabsDisplayModeSwitch(card, RefreshHeaderSoon);
+        _hModes.Child = grid;
+        _hModes.Visibility = grid == null ? Visibility.Collapsed : Visibility.Visible;
+        if (grid != null && focused >= 0 && focused < grid.Children.Count && grid.Children[focused] is Button nb)
+        {
+            void OnLoaded(object s, RoutedEventArgs e) { nb.Loaded -= OnLoaded; nb.Focus(focusState); }
+            nb.Loaded += OnLoaded;
+        }
     }
 
     /// <summary>Hover colours are read when a button loads, so a toggle that changes look is replaced.</summary>

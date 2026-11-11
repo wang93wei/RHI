@@ -29,6 +29,9 @@ public interface IGameNameService
     /// <summary>The user's game collections ("GameName|Store" keys) and the active one.</summary>
     GameCollectionStore Collections { get; }
 
+    /// <summary>Display modes (Monitor / TV / ...): the modes, the default swap list and each game's state ("GameName|Store").</summary>
+    DisplayModeStore DisplayModes { get; }
+
     /// <summary>Games removed from RHI ("GameName|Store"); left out of the game list until restored.</summary>
     HashSet<string> RemovedGames { get; }
 
@@ -132,6 +135,9 @@ public interface IGameNameService
     /// <summary>Per-game Neural Rendering method override. Key = "GameName|Store", Value = "DLSS5Tool", "DLSS5ToolBridge", "ShortFuse", or "Feeder". Absent = auto-detect.</summary>
     Dictionary<string, string> NrMethodOverrides { get; }
 
+    /// <summary>Per-game GITC Uplift iMMERSE Launchpad choice. Key = "GameName|Store". Absent = default (on in games without DLSS).</summary>
+    Dictionary<string, bool> UpliftLaunchpad { get; }
+
     /// <summary>Per-game NR addon version override. Key = "GameName|Store", Value = version string e.g. "5.2.1". Absent = use latest.</summary>
     Dictionary<string, string> NrAddonVersion { get; }
 
@@ -192,6 +198,12 @@ public interface IGameNameService
     /// <summary>Per-game FG Input override. Key = "GameName|Store", Value = INI string. Absent = "auto".</summary>
     Dictionary<string, string> OsFgInput { get; }
 
+    /// <summary>Per-game OptiScaler.ini edits (All Settings). Key = "GameName|Store", value = "Section|Key" → value.</summary>
+    Dictionary<string, Dictionary<string, string>> OsIniEdits { get; }
+
+    /// <summary>Per-game saved OptiScaler.ini name (OsIniLibrary). Key = "GameName|Store".</summary>
+    Dictionary<string, string> OsIniProfile { get; }
+
     /// <summary>Per-game FG Output override. Key = "GameName|Store", Value = INI string. Absent = "auto".</summary>
     Dictionary<string, string> OsFgOutput { get; }
 
@@ -216,6 +228,10 @@ public interface IGameNameService
     HashSet<string> DlssNrCostScalerEnabled { get; }
     /// <summary>Games where the ShortFuse addon is deployed as zzz_renodx-dlss.addon64. Composite-keyed.</summary>
     HashSet<string> SfZzzMode { get; }
+    /// <summary>Games set to the Foveated build of the DLSS5 Tool. Composite-keyed.</summary>
+    HashSet<string> NrFoveated { get; }
+    /// <summary>Games with the RHI overlay switched off. Composite-keyed.</summary>
+    HashSet<string> OverlayDisabledGames { get; }
     /// <summary>Per-game RTX 40 MFG installed DLL name. Key = "GameName|Store", Value = DLL filename (e.g. "version.dll").</summary>
     Dictionary<string, string> Rtx40MfgInstalledAs { get; }
     /// <summary>Per-game 20/30 FG Unlock installed DLL name. Key = "GameName|Store", Value = DLL filename.</summary>

@@ -63,14 +63,17 @@ public sealed partial class MainWindow
             openBtn.IsEnabled = iniPath != null && File.Exists(iniPath);
         };
 
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var buttons = new Controls.WrapPanel { HorizontalSpacing = 8, VerticalSpacing = 8 };
         buttons.Children.Add(openBtn);
         buttons.Children.Add(replaceBtn);
-        var replaceNote = MakeOsFooterNote(Loc.GetString("Dialog.OptiScaler.FreshCopyNote"));
-        replaceNote.VerticalAlignment = VerticalAlignment.Center;
-        replaceNote.Margin = new Thickness(4, 0, 0, 0);
-        buttons.Children.Add(replaceNote);
+        buttons.Children.Add(BuildOsSaveIniButton(ctx, iniPath, ShowStatus));
+        buttons.Children.Add(BuildOsLoadIniButton(ctx, ShowStatus));
         footer.Children.Add(buttons);
+
+        var profile = ViewModel.GetOsIniProfile(card.GameName, ctx.Store);
+        footer.Children.Add(MakeOsFooterNote(OsIniLibrary.Exists(profile)
+            ? Loc.GetString("Dialog.OptiScaler.SavedIniNote", profile!)
+            : Loc.GetString("Dialog.OptiScaler.FreshCopyNote")));
 
         var tip = MakeOsFooterNote(Loc.GetString("Dialog.OptiScaler.CrashNote"));
         tip.FontSize = 12;
@@ -113,7 +116,11 @@ public sealed partial class MainWindow
             var fgOutput = ViewModel.GetOsFgOutput(card.GameName, store);
             var fgNvngx = ViewModel.GetOsFgNvngxReplacement(card.GameName, store);
             OptiScalerService.ApplyFgSettings(card.InstallPath, fgInput, fgOutput, fgNvngx);
-            showStatus(Loc.GetString("Dialog.OptiScaler.IniCopied"), true);
+            ViewModel.SetOsIniProfile(card.GameName, null, store); // back on RHI's template
+            int kept = OsIniEditor.ApplySaved(card.InstallPath, ViewModel.GetOsIniEdits(card.GameName, store));
+            showStatus(kept > 0
+                ? Loc.GetString("Dialog.OptiScaler.IniCopiedWithEdits", kept)
+                : Loc.GetString("Dialog.OptiScaler.IniCopied"), true);
         }
         catch (Exception ex)
         {

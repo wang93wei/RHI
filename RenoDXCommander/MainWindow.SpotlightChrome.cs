@@ -249,26 +249,48 @@ public sealed partial class MainWindow
         _searchRow.Padding = bottom ? new Thickness(24, 6, 24, 14) : new Thickness(24, 14, 24, 6);
         _countsRow.Padding = bottom ? new Thickness(0, 0, 24, 8) : new Thickness(0, 8, 24, 0);
 
-        if (_shelfPositionBtn != null)
-        {
-            _shelfPositionBtn.Visibility = Visibility.Visible;
-            _shelfPositionBtn.Content = bottom ? Loc.GetString("MainWindow.Shelf.CoversAtTop") : Loc.GetString("MainWindow.Shelf.CoversAtBottom");
-            ToolTipService.SetToolTip(_shelfPositionBtn, bottom
-                ? Loc.GetString("MainWindow.Shelf.MoveToTopTooltip")
-                : Loc.GetString("MainWindow.Shelf.MoveToBottomTooltip"));
-        }
+        if (_shelfPositionBtn != null) _shelfPositionBtn.Visibility = Visibility.Visible;
+        ApplySidebarColours();
     }
 
+    /// <summary>The Spotlight strip's cog: covers above / below the page, and no background (page colour).</summary>
     private void ShelfPositionBtn_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            ViewModel.Settings.SpotlightShelfAtBottom = !ViewModel.Settings.SpotlightShelfAtBottom;
+            var menu = new MenuFlyout();
+            var bottom = new ToggleMenuFlyoutItem { Text = Loc.GetString("MainWindow.Shelf.CoversBelow"), IsChecked = ViewModel.Settings.SpotlightShelfAtBottom };
+            ToolTipService.SetToolTip(bottom, Loc.GetString("MainWindow.Shelf.MoveToBottomTooltip"));
+            bottom.Click += (s, a) => SetShelfAtBottom(bottom.IsChecked);
+            var plain = new ToggleMenuFlyoutItem { Text = Loc.GetString("MainWindow.Shelf.NoBackground"), IsChecked = ViewModel.Settings.SpotlightShelfPlain };
+            ToolTipService.SetToolTip(plain, Loc.GetString("MainWindow.Shelf.NoBackground.Tooltip"));
+            plain.Click += (s, a) =>
+            {
+                ViewModel.Settings.SpotlightShelfPlain = plain.IsChecked;
+                ViewModel.SaveSettingsPublic();
+                CrashReporter.Log($"[MainWindow.ShelfOptions] No background {(plain.IsChecked ? "on" : "off")}");
+                ApplySidebarColours();
+            };
+            menu.Items.Add(bottom);
+            menu.Items.Add(plain);
+            menu.ShowAt(_shelfPositionBtn!, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Auto });
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[MainWindow.ShelfPositionBtn_Click] Failed — {ex.Message}");
+        }
+    }
+
+    private void SetShelfAtBottom(bool atBottom)
+    {
+        try
+        {
+            ViewModel.Settings.SpotlightShelfAtBottom = atBottom;
             ViewModel.SaveSettingsPublic();
-            CrashReporter.Log($"[MainWindow.ShelfPosition] Covers {(ViewModel.Settings.SpotlightShelfAtBottom ? "at bottom" : "at top")}");
+            CrashReporter.Log($"[MainWindow.ShelfPosition] Covers {(atBottom ? "at bottom" : "at top")}");
             ApplySpotlightShelfPosition();
             UpdateShelfCentering();
-            // Keep the button focused (it moved) so a controller or keyboard user stays on it
+            // Keep the cog focused (it moved) so a controller or keyboard user stays on it
             AfterLayout(() =>
             {
                 if (_shelfPositionBtn == null) return;
@@ -278,7 +300,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            CrashReporter.Log($"[MainWindow.ShelfPositionBtn_Click] Failed — {ex.Message}");
+            CrashReporter.Log($"[MainWindow.SetShelfAtBottom] Failed — {ex.Message}");
         }
     }
 
@@ -630,6 +652,29 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             CrashReporter.Log($"[MainWindow.PickCustomArtAsync] {card.GameName}: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Screenshots panel › Set as banner: the screenshot becomes the game's custom banner (same as Artwork ›
+    /// Set custom banner; Use Steam banner puts the old one back).
+    /// </summary>
+    internal async Task SetBannerFromFileAsync(GameCardViewModel card, string file)
+    {
+        try
+        {
+            var saved = await Task.Run(() => SteamArtworkService.SetCustom(ArtKey(card), SteamArtworkService.Kind.Hero, file));
+            if (saved == null)
+            {
+                ShowStatusBarMessage(Loc.GetString("MainWindow.Shelf.BannerSetFailed", card.GameName), TimeSpan.FromSeconds(8));
+                return;
+            }
+            ShowArtChange(card, SteamArtworkService.Kind.Hero);
+            ShowStatusBarMessage(Loc.GetString("MainWindow.Shelf.BannerSet", card.GameName), TimeSpan.FromSeconds(8));
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[MainWindow.SetBannerFromFileAsync] {card.GameName}: {ex.GetType().Name}: {ex.Message}");
         }
     }
 

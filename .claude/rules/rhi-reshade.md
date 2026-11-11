@@ -20,6 +20,9 @@ paths:
 - Share global layer in `C:\ProgramData\ReShade\` — requires `CopyFileWithElevation()`
 - Vulkan ReShade update exclusion is all-or-nothing (shared DLL)
 - `RequiresVulkanInstall` drives Vulkan-specific UI and install paths
+- **One layer, one channel**: `VulkanLayerService.SyncLayerToChannel` copies the staged build over `ReShade64.dll` (and `ReShade32.dll` if present) when the contents differ (SHA-256, never size: Stable and Nightly 6.8.0 are both 5,592,064 bytes). The channel comes from `MainViewModel.ResolveVulkanLayerChannel` / `VulkanLayerService.ResolveLayerChannel` (first non-Stable override among Vulkan games). Every channel change on a Vulkan game (Stable, Nightly, Legacy, Custom) is applied to ALL Vulkan games.
+- Both install paths (`InstallReShadeVulkanAsync`, layer present or not) call `SyncVulkanLayerAsync`: before Nov 2026 the light path only wrote reshade.ini, so the layer kept whatever version was first installed (users stuck on 6.7.3).
+- Update check: `CheckForUpdatesAsync` flags installed Vulkan cards `UpdateAvailable` when the layer differs from staged Stable/Nightly (`IsLayerOutdated`); legacy/Custom are never flagged. Vulkan cards count in `IsUpdateAllCandidate`.
 
 ## Nightly
 - Update detection uses Content-Length comparison (Last-Modified unreliable from nightly.link)
@@ -121,3 +124,4 @@ paths:
 - Global setting in `[renodx-preset*]` sections. Static cache on `AuxInstallService`.
 - Preset filter: only checked preset numbers receive the value.
 - Auto-creates missing `[renodx-preset{N}]` sections for checked presets not in INI.
+- **Key spelling depends on the mod**: Unity / generic RenoDX mods save `toneMapPeakNits` / `toneMapGameNits` / `toneMapUINits`, others (e.g. UE-Extended, Lies of P) `ToneMapPeakNits`. ReShade's ini is case-sensitive. `ApplyPeakNits` (global peak nits) and the RenoDX ⚙ nits row add `ToneMapPeakNits` (capital T) to sections without the key, so a lower-case mod's file ends up with both spellings (AI Limit, Nov 2026) and RHI's value is ignored by that mod. `ParseIni` is case-insensitive and merges them (keeps the first spelling, last value), so any ParseIni/WriteIni pass over reshade.ini can silently change the mod's real value. Display modes (`DisplayModeItems.ReadRdx` / `WriteRdx`) edit line by line instead: read the lower-case spelling first when both exist (RHI only ever wrote capital T), write every spelling present, add both spellings where neither exists.

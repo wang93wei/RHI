@@ -56,18 +56,28 @@ public sealed partial class MainWindow
     {
         if (_overlayHotkey == null) return true;
         UpdateOverlayTimers();
+        _hotkeyPassthrough = false;
+        _passthroughPid = 0;
         if (!ViewModel.Settings.RhiOverlayEnabled)
         {
             _overlayHotkey.Unregister();
+            _overlayHotkeyRefused = false;
             _overlayWindow?.Close(returnToGame: true);
             CrashReporter.Log("[MainWindow.ApplyRhiOverlaySetting] Overlay off");
+            RefreshOverlayPassthrough();
             return true;
         }
-        return _overlayHotkey.Register(ViewModel.Settings.RhiOverlayHotkey);
+        bool registered = _overlayHotkey.Register(ViewModel.Settings.RhiOverlayHotkey);
+        _overlayHotkeyRefused = !registered;
+        RefreshOverlayPassthrough();
+        return registered;
     }
 
-    /// <summary>True when the overlay is on and its hotkey is registered.</summary>
-    internal bool RhiOverlayHotkeyActive => _overlayHotkey?.IsRegistered == true;
+    /// <summary>
+    /// True when the overlay is on and its hotkey is registered (or only let go for now because a game with the
+    /// overlay switched off is in front).
+    /// </summary>
+    internal bool RhiOverlayHotkeyActive => _overlayHotkey?.IsRegistered == true || _hotkeyPassthrough;
 
     private string RhiOverlayHotkeyText() => HotkeyManager.FormatHotkeyDisplay(ViewModel.Settings.RhiOverlayHotkey);
 
@@ -87,8 +97,20 @@ public sealed partial class MainWindow
                 CrashReporter.Log("[MainWindow.ToggleRhiOverlay] RHI (or nothing) in front — not opened");
                 return;
             }
+            // Only over a game in RHI's library, never over other apps (Discord, Explorer, Afterburner...)
+            if (game.Card == null)
+            {
+                CrashReporter.Log($"[MainWindow.ToggleRhiOverlay] '{(game.ExePath != null ? Path.GetFileName(game.ExePath) : $"PID {game.ProcessId}")}' in front isn't a game in RHI's library — not opened");
+                return;
+            }
+            // Switched off for this game (Spotlight › Game settings)
+            if (ViewModel.IsOverlayDisabled(game.Card.GameName, game.Card.Source ?? ""))
+            {
+                CrashReporter.Log($"[MainWindow.ToggleRhiOverlay] Overlay off for '{game.Card.GameName}' — not opened");
+                return;
+            }
             _overlayWindow ??= new OverlayWindow(RhiOverlayHotkeyText, () => ViewModel.Manifest,
-                () => ViewModel.Settings, BuildScreenshotSavePath);
+                () => ViewModel.Settings, ViewModel.SaveSettingsPublic, BuildScreenshotSavePath);
             _overlayWindow.Open(game);
         }
         catch (Exception ex)
@@ -255,6 +277,7 @@ public sealed partial class MainWindow
             _overlayPadTimer?.Stop();
             _playtimeTimer?.Stop();
             GameJournalStore.Save();
+            RemoveForegroundHook();
             _overlayHotkey?.Dispose();
             _overlayHotkey = null;
             _overlayWindow?.Destroy();

@@ -174,7 +174,7 @@ internal sealed partial class DetailLayoutHost
             _window.CardMoreMenu_Click(_hero, e);
         };
 
-        // What's installed: one tile per component, then Loc.GetString("Detail.ManageComponents")
+        // What's installed: one tile per component; each opens the component cards
         _statusGrid = new AutoFitGrid { MinColumnWidth = 200, ColumnSpacing = 10, RowSpacing = 10 };
         var rows = _window.ComponentRows;
         var ul = rows.First(r => r.Key == "Ul");
@@ -186,19 +186,6 @@ internal sealed partial class DetailLayoutHost
             _statusTiles.Add(tile);
             _statusGrid.Children.Add(tile.Root);
         }
-        var manage = new Button
-        {
-            Content = Loc.GetString("Detail.ManageComponents"),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-        };
-        TabsTheme.Apply(manage, TabsTheme.BlueButton, height: double.NaN, fontSize: 14);
-        manage.MinHeight = 60;
-        manage.CornerRadius = new CornerRadius(12);
-        manage.Click += (s, e) => OpenPanel(OverviewKey);
-        _manageBtn = manage;
-        ToolTipService.SetToolTip(manage, Loc.GetString("Detail.ManageComponentsDesc"));
-        _statusGrid.Children.Add(manage);
 
         // Six tiles: three per row (two when narrow), so each summary has room
         _tuneGrid = new AutoFitGrid { MinColumnWidth = 260, MaxColumns = 3, ColumnSpacing = 10, RowSpacing = 10 };
@@ -384,6 +371,10 @@ internal sealed partial class DetailLayoutHost
         FrameworkElement? content;
         if (key == AchievementsKey)
             content = BuildAchievementsPanel();
+        else if (key == ScreenshotsKey)
+            content = BuildScreenshotsPanel();
+        else if (key == GameSettingsKey)
+            content = BuildGameSettingsPanel();
         else if (key == OverviewKey)
         {
             if (_overview == null) BuildOverview();
@@ -401,7 +392,8 @@ internal sealed partial class DetailLayoutHost
         _panelHost!.Children.Add(content);
         content.Visibility = Visibility.Visible;
         _panelKey = key;
-        _panelTitle!.Text = key == OverviewKey ? Loc.GetString("Detail.Components") : key == AchievementsKey ? Loc.GetString("Detail.Achievements") : GetTitle(key);
+        _panelTitle!.Text = key == OverviewKey ? Loc.GetString("Detail.Components") : key == AchievementsKey ? Loc.GetString("Detail.Achievements")
+            : key == ScreenshotsKey ? Loc.GetString("Overlay.Screenshots.Title") : key == GameSettingsKey ? Loc.GetString("Detail.GameSettings") : GetTitle(key);
         if (key == OverviewKey) RefreshOverviewCards();
 
         // Re-adding the sheet replays its slide-in transition
@@ -433,6 +425,12 @@ internal sealed partial class DetailLayoutHost
             ReturnAchievementsPanel();
             return;
         }
+        if (key == ScreenshotsKey)
+        {
+            ReturnScreenshotsPanel();
+            return;
+        }
+        if (key == GameSettingsKey) return; // built panel: nothing to put back
         if (key == OverviewKey)
         {
             if (_overviewGlance != null) _overviewGlance.Visibility = Visibility.Visible;

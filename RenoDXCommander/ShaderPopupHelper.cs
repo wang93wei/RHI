@@ -11,7 +11,7 @@ namespace RenoDXCommander;
 /// Builds and shows the shader selection ContentDialog.
 /// Supports both global (Deploy/Cancel) and per-game (Confirm/Cancel) contexts.
 /// </summary>
-public static class ShaderPopupHelper
+public static partial class ShaderPopupHelper
 {
     public enum PopupContext { Global, PerGame }
 
@@ -124,7 +124,7 @@ public static class ShaderPopupHelper
                 if (sp.Children.Count == 0) continue;
                 sp.Visibility = allExpanded ? Visibility.Visible : Visibility.Collapsed;
                 if (expandButtons.TryGetValue(pid, out var eb))
-                    eb.Content = allExpanded ? "▼" : "▶";
+                    SetExpanded(eb, allExpanded);
             }
             expandAllBtn.Content = allExpanded ? Loc.GetString("Dialog.CollapseAll") : Loc.GetString("Dialog.ExpandAll");
         };
@@ -142,7 +142,7 @@ public static class ShaderPopupHelper
                 {
                     sp.Visibility = Visibility.Collapsed;
                     if (expandButtons.TryGetValue(pid, out var eb))
-                        eb.Content = "▶";
+                        SetExpanded(eb, false);
                 }
                 allExpanded = false;
                 expandAllBtn.Content = Loc.GetString("Dialog.ExpandAll");
@@ -177,6 +177,13 @@ public static class ShaderPopupHelper
         topButtonRow.Children.Add(searchBox);
 
         panel.Children.Add(topButtonRow);
+        var selectionSummary = new TextBlock
+        {
+            FontSize   = 12,
+            Margin     = new Thickness(2, -2, 0, 2),
+            Foreground = Brush(ResourceKeys.TextSecondaryBrush),
+        };
+        panel.Children.Add(selectionSummary);
 
         // ── Search filter action — wired after rows are built ─────────────────
         // packRows tracks (id, displayName, packCb, fileSubPanel) for filtering
@@ -215,6 +222,8 @@ public static class ShaderPopupHelper
                 Margin     = new Thickness(0, checkBoxes.Count > 0 ? 10 : 4, 0, 4),
             });
             // No category header tracking needed — section header is decorative only
+            var customGrid = NewCardGrid();
+            panel.Children.Add(customGrid);
 
             // ── Group files by first-level subfolder (or "General" for root files) ──
             // Files look like "Shaders\VHS\HandHeld.fx" or "Textures\VHS\vhs_osd.png"
@@ -289,34 +298,7 @@ public static class ShaderPopupHelper
                     Margin       = new Thickness(0, 2, 0, 2),
                 };
 
-                var folderNameRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-                folderNameRow.Children.Add(new TextBlock
-                {
-                    Text              = folderName,
-                    FontSize          = 13,
-                    Foreground        = Brush(ResourceKeys.TextPrimaryBrush),
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
-                var folderTick = new TextBlock
-                {
-                    Text              = "✓",
-                    FontSize          = 13,
-                    Foreground        = Brush(ResourceKeys.AccentGreenBrush),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                ToolTipService.SetToolTip(folderTick, Loc.GetString("Shader.Tooltip.LocalFiles"));
-                folderNameRow.Children.Add(folderTick);
-
-                var folderExpandBtn = new Button
-                {
-                    Content           = "▶",
-                    FontSize          = 10,
-                    Padding           = new Thickness(4, 0, 4, 0),
-                    Margin            = new Thickness(4, 0, 0, 0),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Background        = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                    BorderThickness   = new Thickness(0),
-                };
+                var folderExpandBtn = MakeExpandButton(folderFileCbList.Count);
                 ToolTipService.SetToolTip(folderExpandBtn, Loc.GetString("Shader.Tooltip.ExpandFolder"));
                 var capturedFolderSubPanel = folderSubPanel;
                 var capturedExpandBtn = folderExpandBtn;
@@ -324,13 +306,13 @@ public static class ShaderPopupHelper
                 {
                     bool nowExpanded = capturedFolderSubPanel.Visibility == Visibility.Collapsed;
                     capturedFolderSubPanel.Visibility = nowExpanded ? Visibility.Visible : Visibility.Collapsed;
-                    capturedExpandBtn.Content = nowExpanded ? "▼" : "▶";
+                    SetExpanded(capturedExpandBtn, nowExpanded);
                 };
-                folderNameRow.Children.Add(folderExpandBtn);
                 expandButtons[folderId] = folderExpandBtn;
 
-                var folderInnerPanel = new StackPanel { Spacing = 0, MaxWidth = 490 };
-                folderInnerPanel.Children.Add(folderNameRow);
+                var folderInnerPanel = new StackPanel { Spacing = 3 };
+                folderInnerPanel.Children.Add(MakeCardTitle(folderName, Loc.GetString("Shader.Tooltip.LocalFiles"), good: true));
+                folderInnerPanel.Children.Add(folderExpandBtn);
                 folderPackCb.Content = folderInnerPanel;
 
                 bool folderCbInitializing = false;
@@ -379,8 +361,7 @@ public static class ShaderPopupHelper
                 checkBoxes.Add((folderId, folderPackCb));
                 packRows.Add((folderId, folderName, folderPackCb, folderSubPanel));
 
-                panel.Children.Add(folderPackCb);
-                panel.Children.Add(folderSubPanel);
+                customGrid.Children.Add(MakePackCard(folderPackCb, folderSubPanel));
             }
         }
 
@@ -406,6 +387,8 @@ public static class ShaderPopupHelper
                 Margin     = new Thickness(0, checkBoxes.Count > 0 ? 10 : 4, 0, 4),
             };
             panel.Children.Add(headerTextBlock);
+            var categoryGrid = NewCardGrid();
+            panel.Children.Add(categoryGrid);
             var categoryPackIds = new List<string>();
             categoryHeaders.Add((headerText, headerTextBlock, categoryPackIds));
 
@@ -469,44 +452,30 @@ public static class ShaderPopupHelper
                     Margin       = new Thickness(0, 2, 0, 2),
                 };
 
-                var innerPanel = new StackPanel { Spacing = 0, MaxWidth = 490 };
-                var nameRow    = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-                nameRow.Children.Add(new TextBlock
-                {
-                    Text              = displayName,
-                    FontSize          = 13,
-                    Foreground        = Brush(ResourceKeys.TextPrimaryBrush),
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
-                if (isCached)
-                {
-                    var cachedTick = new TextBlock
+                // Card content: name + status, description, what it also selects, then the shader list link
+                var innerPanel = new StackPanel { Spacing = 3 };
+                innerPanel.Children.Add(MakeCardTitle(displayName, isCached ? Loc.GetString("Shader.Tooltip.Downloaded") : Loc.GetString("Shader.Tooltip.DownloadsOnDeploy"), good: isCached));
+                if (!string.IsNullOrEmpty(description))
+                    innerPanel.Children.Add(MakeCardDescription(description));
+                var requiredNames = shaderPackService.GetRequiredPacks(id)
+                    .Select(r => packs.FirstOrDefault(p => p.Id.Equals(r, StringComparison.OrdinalIgnoreCase)).DisplayName ?? r)
+                    .ToList();
+                if (requiredNames.Count > 0)
+                    innerPanel.Children.Add(new TextBlock
                     {
-                        Text              = "✓",
-                        FontSize          = 13,
-                        Foreground        = Brush(ResourceKeys.AccentGreenBrush),
-                        VerticalAlignment = VerticalAlignment.Center,
-                    };
-                    ToolTipService.SetToolTip(cachedTick, Loc.GetString("Shader.Tooltip.Downloaded"));
-                    nameRow.Children.Add(cachedTick);
-                }
+                        Text         = Loc.GetString("Shader.Card.AlsoSelects", string.Join(", ", requiredNames)),
+                        FontSize     = 11,
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground   = Brush(ResourceKeys.TextSecondaryBrush),
+                        Opacity      = 0.8,
+                    });
 
                 if (isCached && fileCbList.Count > 0)
                 {
-                    var expandBtn = new Button
-                    {
-                        Content           = "▶",
-                        FontSize          = 10,
-                        Padding           = new Thickness(4, 0, 4, 0),
-                        Margin            = new Thickness(4, 0, 0, 0),
-                        Visibility        = Visibility.Visible,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        Background        = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                        BorderThickness   = new Thickness(0),
-                    };
+                    var expandBtn = MakeExpandButton(fileCbList.Count);
                     ToolTipService.SetToolTip(expandBtn, Loc.GetString("Shader.Tooltip.ExpandPack"));
                     expandButtons[id] = expandBtn;
-                    nameRow.Children.Add(expandBtn);
+                    innerPanel.Children.Add(expandBtn);
 
                     expandBtn.Click += (s, ev) =>
                     {
@@ -514,23 +483,8 @@ public static class ShaderPopupHelper
                         fileSubPanels[capturedId].Visibility = isExpanded
                             ? Visibility.Collapsed
                             : Visibility.Visible;
-                        expandBtn.Content = isExpanded ? "▶" : "▼";
+                        SetExpanded(expandBtn, !isExpanded);
                     };
-                }
-
-                innerPanel.Children.Add(nameRow);
-
-                if (!string.IsNullOrEmpty(description))
-                {
-                    innerPanel.Children.Add(new TextBlock
-                    {
-                        Text         = description,
-                        FontSize     = 11,
-                        Opacity      = 0.6,
-                        Foreground   = Brush(ResourceKeys.TextPrimaryBrush),
-                        TextWrapping = TextWrapping.Wrap,
-                        Width        = 340,
-                    });
                 }
 
                 packCb.Content = innerPanel;
@@ -571,7 +525,7 @@ public static class ShaderPopupHelper
                         if (fileSubPanels.TryGetValue(capturedId, out var sp))
                         {
                             sp.Visibility = Visibility.Collapsed;
-                            eb.Content    = "▶";
+                            SetExpanded(eb, false);
                         }
                     }
                 };
@@ -579,10 +533,7 @@ public static class ShaderPopupHelper
                 checkBoxes.Add((id, packCb));
                 packRows.Add((id, displayName, packCb, fileSubPanel));
                 categoryPackIds.Add(id);
-                panel.Children.Add(packCb);
-
-                if (fileCbList.Count > 0)
-                    panel.Children.Add(fileSubPanel);
+                categoryGrid.Children.Add(MakePackCard(packCb, fileCbList.Count > 0 ? fileSubPanel : null));
 
                 // ── Wire file checkbox Checked/Unchecked → update pack tri-state
                 if (fileCbList.Count > 0)
@@ -622,12 +573,33 @@ public static class ShaderPopupHelper
         // If no Extra group existed (all packs are Essential/Recommended), inject Custom at the end
         BuildCustomShaderSection();
 
+        // "N selected" on each category heading and at the top, kept up to date
+        void UpdateSelectionCounts()
+        {
+            foreach (var (category, header, ids) in categoryHeaders)
+            {
+                int on = ids.Count(pid => checkBoxes.FirstOrDefault(c => c.Id.Equals(pid, StringComparison.OrdinalIgnoreCase)).Box?.IsChecked != false);
+                header.Text = HeadingText(category, on, ids.Count);
+            }
+            int total = checkBoxes.Count(c => c.Box.IsChecked != false);
+            selectionSummary.Text = total == 0
+                ? Loc.GetString("Shader.Selection.None")
+                : Loc.GetString("Shader.Selection.Count", total);
+        }
+        foreach (var (_, box) in checkBoxes)
+        {
+            box.Checked       += (_, _) => UpdateSelectionCounts();
+            box.Unchecked     += (_, _) => UpdateSelectionCounts();
+            box.Indeterminate += (_, _) => UpdateSelectionCounts();
+        }
+        UpdateSelectionCounts();
+
         var packScrollViewer = new ScrollViewer
         {
             Content                     = panel,
-            MaxHeight                   = 700,
+            MaxHeight                   = Math.Max(420, xamlRoot.Size.Height - 280), // as tall as the window allows
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Padding                     = new Thickness(0, 0, 8, 0),
+            Padding                     = new Thickness(0, 0, 12, 0),
         };
 
         // ── Wire search box filter ────────────────────────────────────────────
@@ -682,7 +654,7 @@ public static class ShaderPopupHelper
                 {
                     sp.Visibility = Visibility.Visible;
                     if (expandButtons.TryGetValue(id, out var eb))
-                        eb.Content = "▼";
+                        SetExpanded(eb, true);
                 }
             }
 
@@ -811,7 +783,7 @@ public static class ShaderPopupHelper
                         if (fileSubPanels.TryGetValue(id, out var sp2))
                             sp2.Visibility = Visibility.Collapsed;
                         if (expandButtons.TryGetValue(id, out var eb2))
-                            eb2.Content = "▶";
+                            SetExpanded(eb2, false);
                     }
                     else
                     {
@@ -1356,9 +1328,11 @@ public static class ShaderPopupHelper
             XamlRoot          = xamlRoot,
             Background        = Brush(ResourceKeys.SurfaceOverlayBrush),
             RequestedTheme    = ElementTheme.Dark,
-            MinWidth          = 920,
+            MinWidth          = Math.Min(1180, Math.Max(600, xamlRoot.Size.Width - 80)),
         };
-        dlg.Resources["ContentDialogMaxWidth"] = 980.0;
+        // Wide and tall enough for two columns of pack cards (ContentDialog caps both unless raised)
+        dlg.Resources["ContentDialogMaxWidth"] = Math.Min(1240.0, Math.Max(640, xamlRoot.Size.Width - 40));
+        dlg.Resources["ContentDialogMaxHeight"] = Math.Max(500, xamlRoot.Size.Height - 40);
 
         var dialogResult = await DialogService.ShowSafeAsync(dlg);
         if (dialogResult != ContentDialogResult.Primary)

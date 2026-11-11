@@ -611,6 +611,41 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
+    // ── OptiScaler.ini edits (cog › All Settings) ─────────────────────────────
+
+    /// <summary>A copy of the game's saved OptiScaler.ini edits ("Section|Key" → value).</summary>
+    public Dictionary<string, string> GetOsIniEdits(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.OsIniEdits.TryGetValue(key, out var v)
+            ? new Dictionary<string, string>(v, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Replaces the game's saved OptiScaler.ini edits. Null or empty clears them.</summary>
+    public void SetOsIniEdits(string gameName, IDictionary<string, string>? edits, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (edits == null || edits.Count == 0) _gameNameService.OsIniEdits.Remove(key);
+        else _gameNameService.OsIniEdits[key] = new Dictionary<string, string>(edits, StringComparer.OrdinalIgnoreCase);
+        SaveNameMappings();
+    }
+
+    /// <summary>The saved OptiScaler.ini (OsIniLibrary name) this game uses, or null for RHI's template.</summary>
+    public string? GetOsIniProfile(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.OsIniProfile.TryGetValue(key, out var v) ? v : null;
+    }
+
+    public void SetOsIniProfile(string gameName, string? name, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (string.IsNullOrEmpty(name)) _gameNameService.OsIniProfile.Remove(key);
+        else _gameNameService.OsIniProfile[key] = name;
+        SaveNameMappings();
+    }
+
     // ── FG Input ──────────────────────────────────────────────────────────────
 
     public string GetOsFgInput(string gameName, string store = "")
@@ -808,6 +843,28 @@ public partial class MainViewModel
         SaveNameMappings();
     }
 
+    // ── GITC Uplift: iMMERSE Launchpad motion ─────────────────────────────────
+
+    /// <summary>
+    /// Whether GITC Uplift gets iMMERSE Launchpad (motion vectors from ReShade) in this game: the
+    /// user's choice, else on in games without DLSS (no motion vectors of their own).
+    /// </summary>
+    public bool GetUpliftLaunchpad(string gameName, bool hasDlss, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (_gameNameService.UpliftLaunchpad.TryGetValue(key, out var v)) return v;
+        if (_gameNameService.UpliftLaunchpad.TryGetValue(gameName, out var v2)) return v2;
+        return !hasDlss;
+    }
+
+    public void SetUpliftLaunchpad(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        _gameNameService.UpliftLaunchpad.Remove(gameName);
+        _gameNameService.UpliftLaunchpad[key] = value;
+        SaveNameMappings();
+    }
+
     // ── ShortFuse ZZZ Mode (load order rename) ────────────────────────────────
 
     /// <summary>Returns true when the ShortFuse addon should be deployed as zzz_renodx-dlss.addon64.</summary>
@@ -828,6 +885,48 @@ public partial class MainViewModel
             _gameNameService.SfZzzMode.Remove(key);
             _gameNameService.SfZzzMode.Remove(gameName);
         }
+        SaveNameMappings();
+    }
+
+    // ── DLSS5 Tool Foveated build ─────────────────────────────────────────────
+
+    /// <summary>True when the DLSS5 Tool methods should use the Foveated build (maximedgoulet/FoveatedDLSS5).</summary>
+    public bool GetNrFoveated(string gameName, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        return _gameNameService.NrFoveated.Contains(key)
+            || _gameNameService.NrFoveated.Contains(gameName);
+    }
+
+    /// <summary>Sets whether the DLSS5 Tool methods use the Foveated build.</summary>
+    public void SetNrFoveated(string gameName, bool value, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        if (value) _gameNameService.NrFoveated.Add(key);
+        else
+        {
+            _gameNameService.NrFoveated.Remove(key);
+            _gameNameService.NrFoveated.Remove(gameName);
+        }
+        SaveNameMappings();
+    }
+
+    // ── RHI overlay per game ──────────────────────────────────────────────────
+
+    /// <summary>True when the RHI overlay is switched off for this game (Spotlight's Game settings panel).</summary>
+    public bool IsOverlayDisabled(string gameName, string store = "") =>
+        _overlayDisabledGames.Contains(GameKey.From(gameName, store).ToKey());
+
+    /// <summary>True when any game has the RHI overlay switched off.</summary>
+    public bool AnyOverlayDisabled => _overlayDisabledGames.Count > 0;
+
+    /// <summary>Switches the RHI overlay off (or back on) for this game.</summary>
+    public void SetOverlayDisabled(string gameName, bool disabled, string store = "")
+    {
+        var key = GameKey.From(gameName, store).ToKey();
+        bool changed = disabled ? _overlayDisabledGames.Add(key) : _overlayDisabledGames.Remove(key);
+        if (!changed) return;
+        CrashReporter.Log($"[MainViewModel.SetOverlayDisabled] RHI overlay {(disabled ? "off" : "on")} for '{key}'");
         SaveNameMappings();
     }
 
@@ -1753,7 +1852,7 @@ public partial class MainViewModel
             && !string.IsNullOrEmpty(c.InstallPath)
             && Directory.Exists(c.InstallPath)
             && ((c.Status   == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllRenoDx && !c.IsExternalOnly) ||
-                (c.RsStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllReShade && !c.RequiresVulkanInstall) ||
+                (c.RsStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllReShade) ||
                 (c.UlStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllUl) ||
                 (c.DcStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllDc) ||
                 (c.OsStatus == GameStatus.UpdateAvailable && !c.ExcludeFromUpdateAllOs) ||

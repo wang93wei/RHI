@@ -405,13 +405,24 @@ public partial class DetailPanelBuilder
         packVersionStack.Children.Add(packVersionCombo);        Grid.SetColumn(packVersionStack, 1);
         row1.Children.Add(packVersionStack);
 
+        // Foveated build of the DLSS5 Tool (per game). Only for the DLSS5 Tool and DLSS5 Tool + Bridge methods.
+        bool foveatedOn = _window.ViewModel.GetNrFoveated(gameName, store);
+        StackPanel? foveatedGroup = null;  // built with the Cost Scaler row below
+        StackPanel? launchpadRow = null;   // GITC Uplift only, built below the Cost Scaler row
+        static bool IsDlss5ToolMethod(string key) => key == NrMethodDlss5Tool || key == NrMethodDlss5ToolBridge;
+        string AddonTypeForSel(string key) =>
+            foveatedOn && IsDlss5ToolMethod(key) ? Renodx5AddonService.FoveatedSubDir : AddonTypeFor(key);
+        string Dlss5VersionLabel(string key) =>
+            foveatedOn && IsDlss5ToolMethod(key)
+                ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5LabelFoveated")
+                : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
+
         // DLSS5 Tool / SF version combo (col 2)
         var addonVersionLabel = new TextBlock { FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) };
         addonVersionLabel.Text = effectiveMethod == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel")
                                 : effectiveMethod == NrMethodUplift    ? Loc.GetString("NeuralRendering.AddonVersion.UpliftLabel")
                                 : effectiveMethod == NrMethodFeeder    ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label")
-                                : effectiveMethod == NrMethodDlss5ToolBridge ? Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label")
-                                : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
+                                : Dlss5VersionLabel(effectiveMethod);
         var addonVersionStack = new StackPanel { Spacing = 2 };
         addonVersionStack.Children.Add(addonVersionLabel);
 
@@ -512,6 +523,12 @@ public partial class DetailPanelBuilder
                     {
                         await Task.Run(async () =>
                         {
+                            if (IsDlss5ToolMethod(selKey))
+                            {
+                                await SwapDlss5AddonAsync(installPath, foveatedOn, useLatest ? null : sel, rdx5Svc).ConfigureAwait(false);
+                                return;
+                            }
+
                             // Resolve source path
                             string? sourcePath = null;
                             if (useLatest)
@@ -592,8 +609,26 @@ public partial class DetailPanelBuilder
         }
 
         // Determine initial addonType from effectiveMethod
-        var initialAddonType = AddonTypeFor(effectiveMethod);
+        var initialAddonType = AddonTypeForSel(effectiveMethod);
         PopulateAddonVersionCombo(initialAddonType);
+
+        // The Foveated list may not be known yet (version fetch on cooldown): fetch it, then refill the combo
+        async Task RefreshFoveatedVersionsIfEmptyAsync()
+        {
+            try
+            {
+                if (!foveatedOn || rdx5Svc.GetAvailableVersions(Renodx5AddonService.FoveatedSubDir).Count > 0) return;
+                await Task.Run(() => rdx5Svc.EnsureFoveatedVersionsAsync());
+                var selKey = (methodCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? effectiveMethod;
+                if (foveatedOn && IsDlss5ToolMethod(selKey) && _window.ViewModel.SelectedGame == card)
+                    PopulateAddonVersionCombo(AddonTypeForSel(selKey));
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[NeuralRendering.RefreshFoveatedVersions] Failed — {ex.Message}");
+            }
+        }
+        if (IsDlss5ToolMethod(effectiveMethod)) _ = RefreshFoveatedVersionsIfEmptyAsync();
 
         ToolTipService.SetToolTip(addonVersionCombo,
             effectiveMethod == NrMethodFeeder
@@ -763,6 +798,7 @@ public partial class DetailPanelBuilder
         nrBody.Children.Add(statusPanel);
         _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:StatusPanel({card.GameName})");
 
+        string d5BuildSuffix = "";  // " (Foveated v0.4.0)" when the Foveated build is installed
         void RefreshStatus()
         {
             // Gather all file I/O on a background thread, then update UI
@@ -783,11 +819,16 @@ public partial class DetailPanelBuilder
                 string? srv = null, rrv = null, fgv = null, nrv2 = null;
                 string? ualName = null;
                 bool upi = false, upHelper = false, upDll = false, upFx = false;
+                bool? upLaunchpad = null; // null = Launchpad switched off for this install
                 string? upDllV = null, upVer = null, upPin = null;
                 bool scanSucceeded = false;
+                string d5Suffix = "";
                 try
                 {
                 var host64Dir = Path.Combine(installPath, "host64");
+                var d5Manifest = Models.RhiInstallManifest.Read(installPath);
+                if (d5Manifest?.IsFoveatedDlss5 == true)
+                    d5Suffix = Loc.GetString("NeuralRendering.Tag.FoveatedSuffix", d5Manifest.Dlss5BuildVersion).Replace(" )", ")");
                 // For 32-bit games: DLSS5 Tool lives in host64\, not game addon folder
                 d5i    = card.Is32Bit
                     ? File.Exists(Path.Combine(host64Dir, "renodx-dlss5.addon64"))
@@ -850,6 +891,8 @@ public partial class DetailPanelBuilder
                 upDllV   = upDll ? DlssStreamlineService.FormatVersion(dlssSvc.GetFileVersion(UpliftService.NrDllPath(installPath))) : null;
                 upFx     = UpliftService.ShaderFiles.All(f => File.Exists(Path.Combine(shadersDir, f)));
                 (upVer, upPin) = upi ? UpliftService.ReadMarker(installPath) : (null, null);
+                if (upi && UpliftService.LaunchpadOn(installPath))
+                    upLaunchpad = File.Exists(Path.Combine(shadersDir, "iMMERSE", "MartysMods_LAUNCHPAD.fx"));
                 scanSucceeded = true;
                 }
                 finally
@@ -868,10 +911,11 @@ public partial class DetailPanelBuilder
                     bool rsi = card.IsRsInstalled;
                     _window.ViewModel.SetLastUiAction($"NeuralRendering.RefreshStatusWithData({card.GameName})");
                     CrashReporter.Log($"[NeuralRendering.RefreshStatus] Updating status for '{card.GameName}'");
+                    d5BuildSuffix = d5Suffix;
                     RefreshStatusWithData(d5i, sfi, nri, bri, fei, rsi, dlssi, dlssdi, dlssgi, nrv, dlssv, dlssdv, dlssgv, hostExeOk,
                         srOk, rrOk, fgOk, nrOk, srv, rrv, fgv, nrv2,
                         ualName, ualOk, feedFxPresent, lumeniteFxPresent, isDx9Feeder, dgVoodooOk,
-                        (upi, upHelper, upDll, upDllV, upFx, upVer, upPin != null));
+                        (upi, upHelper, upDll, upDllV, upFx, upVer, upPin != null, upLaunchpad));
                 });
             });  // end Task.Run
         }  // end RefreshStatus
@@ -886,7 +930,7 @@ public partial class DetailPanelBuilder
             string? ualName, bool ualOk,
             bool feedFxPresent, bool lumeniteFxPresent,
             bool isDx9Feeder, bool dgVoodooOk,
-            (bool Addon, bool Helper, bool Dll, string? DllVersion, bool Shaders, string? Version, bool Pinned) uplift)
+            (bool Addon, bool Helper, bool Dll, string? DllVersion, bool Shaders, string? Version, bool Pinned, bool? Launchpad) uplift)
         {
             statusPanel.Children.Clear();
             _window.ViewModel.SetLastUiAction($"NeuralRendering.RefreshStatusWithData:Building({card.GameName})");
@@ -915,7 +959,7 @@ public partial class DetailPanelBuilder
             switch (selectedKey)
             {
                 case NrMethodDlss5Tool:
-                    Tag(d5i ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool") : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"), d5i);
+                    Tag(d5i ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool") + d5BuildSuffix : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"), d5i);
                     if (card.HasDlss)
                     {
                         Tag(srOk ? Loc.GetString("NeuralRendering.Tag.DlssSr", srv) : Loc.GetString("NeuralRendering.Tag.DlssSr.Missing"), srOk);
@@ -925,7 +969,7 @@ public partial class DetailPanelBuilder
                     Tag(nrOk ? Loc.GetString("NeuralRendering.Tag.NrDll", nrv2) : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"), nrOk);
                     break;
                 case NrMethodDlss5ToolBridge:
-                    Tag(d5i ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool") : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"), d5i);
+                    Tag(d5i ? Loc.GetString("NeuralRendering.Tag.Dlss5Tool") + d5BuildSuffix : Loc.GetString("NeuralRendering.Tag.Dlss5Tool.Missing"), d5i);
                     Tag(bri ? Loc.GetString("NeuralRendering.Tag.Bridge") : Loc.GetString("NeuralRendering.Tag.Bridge.Missing"), bri);
                     if (card.HasDlss)
                     {
@@ -971,6 +1015,8 @@ public partial class DetailPanelBuilder
                     Tag(uplift.Helper  ? Loc.GetString("NeuralRendering.Tag.UpliftHelper") : Loc.GetString("NeuralRendering.Tag.UpliftHelper.Missing"), uplift.Helper);
                     Tag(uplift.Dll     ? Loc.GetString("NeuralRendering.Tag.NrDll", uplift.DllVersion) : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"), uplift.Dll);
                     Tag(uplift.Shaders ? Loc.GetString("NeuralRendering.Tag.UpliftFx") : Loc.GetString("NeuralRendering.Tag.UpliftFx.Missing"), uplift.Shaders);
+                    if (uplift.Launchpad is bool lp)
+                        Tag(lp ? Loc.GetString("NeuralRendering.Tag.Launchpad") : Loc.GetString("NeuralRendering.Tag.Launchpad.Missing"), lp);
                     break;
                 default:
                     Tag(Loc.GetString("Status.NotInstalled"), false);
@@ -1185,7 +1231,11 @@ public partial class DetailPanelBuilder
             // DLSS5 Tool / SF / Uplift version label
             addonVersionLabel.Text = selKey == NrMethodShortFuse ? Loc.GetString("NeuralRendering.AddonVersion.SfLabel")
                                    : selKey == NrMethodUplift    ? Loc.GetString("NeuralRendering.AddonVersion.UpliftLabel")
-                                   : Loc.GetString("NeuralRendering.AddonVersion.Dlss5Label");
+                                   : Dlss5VersionLabel(selKey);
+            if (foveatedGroup != null)
+                foveatedGroup.Visibility = IsDlss5ToolMethod(selKey) ? Visibility.Visible : Visibility.Collapsed;
+            if (launchpadRow != null)
+                launchpadRow.Visibility = selKey == NrMethodUplift ? Visibility.Visible : Visibility.Collapsed;
 
             // Addon version combo — enabled always (swap-in-place supported while installed)
             addonVersionStack.Opacity   = 1.0;
@@ -1229,7 +1279,7 @@ public partial class DetailPanelBuilder
                 // Same method — just persist and refresh UI
                 _window.ViewModel.SetNrMethodOverride(gameName, selKey, store);
                 // Repopulate addon version combo in case it wasn't populated yet
-                PopulateAddonVersionCombo(AddonTypeFor(selKey));
+                PopulateAddonVersionCombo(AddonTypeForSel(selKey));
                 PopulateNrVersionCombo();
                 UpdateInstallBtnAppearance();
                 UpdateDescription(selKey);
@@ -1238,7 +1288,8 @@ public partial class DetailPanelBuilder
             }
 
             // Repopulate addon version combo for the new method's addon type
-            PopulateAddonVersionCombo(AddonTypeFor(selKey));
+            PopulateAddonVersionCombo(AddonTypeForSel(selKey));
+            if (IsDlss5ToolMethod(selKey)) _ = RefreshFoveatedVersionsIfEmptyAsync();
             PopulateNrVersionCombo();
 
             // Different method selected — check installed state off the UI thread (File.Exists on
@@ -1716,8 +1767,146 @@ public partial class DetailPanelBuilder
         // GITC Uplift has its own Resolution / Pass count settings, and the Cost Scaler can't reach
         // its NR DLL (in GITC-Uplift\), so the row isn't shown for it
         if (upliftSelectedAtBuild) costScalerRow.Visibility = Visibility.Collapsed;
+
+        // ── Foveated toggle (DLSS5 Tool / Bridge) — same row as Cost Scaler ──
+        {
+            string foveatedTip = Loc.GetString("NeuralRendering.Foveated.Tooltip");
+            foveatedGroup = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+            foveatedGroup.Children.Add(new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(4, 0, 4, 0) });
+            var foveatedLabel = new TextBlock
+            {
+                Text = Loc.GetString("NeuralRendering.Foveated.Label"),
+                FontSize = 12,
+                Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            ToolTipService.SetToolTip(foveatedLabel, foveatedTip);
+            foveatedGroup.Children.Add(foveatedLabel);
+            var foveatedToggle = new ToggleSwitch
+            {
+                IsOn = foveatedOn,
+                OnContent = Loc.GetString("Extras.RtxEncore.Opt.On"), OffContent = Loc.GetString("Extras.RtxEncore.Opt.Off"),
+                VerticalAlignment = VerticalAlignment.Center,
+                MinWidth = 0,
+            };
+            ToolTipService.SetToolTip(foveatedToggle, foveatedTip);
+            foveatedToggle.Toggled += async (s, ev) =>
+            {
+                try
+                {
+                    bool on = foveatedToggle.IsOn;
+                    if (on == foveatedOn) return;
+                    foveatedOn = on;
+                    _window.ViewModel.SetNrFoveated(gameName, on, store);
+                    // Stock and Foveated have different version lists: start from Latest
+                    _window.ViewModel.SetNrAddonVersion(gameName, null, store);
+
+                    var selKey = (methodCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? effectiveMethod;
+                    PopulateAddonVersionCombo(AddonTypeForSel(selKey));
+                    addonVersionLabel.Text = Dlss5VersionLabel(selKey);
+                    if (!IsDlss5ToolMethod(selKey)) return;
+                    if (on) await RefreshFoveatedVersionsIfEmptyAsync();
+                    if (addonSwapInProgress) return;
+
+                    bool installed = await Task.Run(() => rdx5Svc.IsInstalledIn(installPath));
+                    if (!installed) return;
+
+                    addonSwapInProgress = true;
+                    var prevContent = installBtn.Content;
+                    installBtn.IsEnabled = false;
+                    installBtn.Content   = on ? Loc.GetString("NeuralRendering.Foveated.SwitchingTo") : Loc.GetString("NeuralRendering.Foveated.SwitchingToStock");
+                    bool ok = false;
+                    try
+                    {
+                        ok = await Task.Run(() => SwapDlss5AddonAsync(installPath, on, null, rdx5Svc));
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        CrashReporter.Log($"[NeuralRendering.FoveatedToggle] Swap failed for '{gameName}' — {ex.Message}");
+                    }
+                    finally
+                    {
+                        addonSwapInProgress = false;
+                        installBtn.IsEnabled = true;
+                        installBtn.Content   = ok ? prevContent : Loc.GetString("NeuralRendering.Foveated.SwitchFailed");
+                        RefreshStatus();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CrashReporter.Log($"[NeuralRendering.FoveatedToggle] Unhandled error — {ex.Message}");
+                }
+            };
+            foveatedGroup.Children.Add(foveatedToggle);
+            foveatedGroup.Visibility = IsDlss5ToolMethod(effectiveMethod) ? Visibility.Visible : Visibility.Collapsed;
+            costScalerRow.Children.Add(foveatedGroup);
+        }
+
         nrBody.Children.Add(costScalerRow);
         _window.ViewModel.SetLastUiAction($"NeuralRenderingSectionWithData:CostScalerRow({card.GameName})");
+
+        // ── GITC Uplift: iMMERSE Launchpad toggle (motion vectors from ReShade) ──
+        {
+            bool launchpadPref = _window.ViewModel.GetUpliftLaunchpad(gameName, card.HasDlssUpscaler, store);
+            string launchpadTip = Loc.GetString("NeuralRendering.Launchpad.Tooltip");
+            launchpadRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 4, 0, 0) };
+            var launchpadLabel = new TextBlock
+            {
+                Text = Loc.GetString("NeuralRendering.Launchpad.Label"),
+                FontSize = 12,
+                Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            ToolTipService.SetToolTip(launchpadLabel, launchpadTip);
+            var launchpadToggle = new ToggleSwitch
+            {
+                IsOn = launchpadPref,
+                OnContent = Loc.GetString("Extras.RtxEncore.Opt.On"), OffContent = Loc.GetString("Extras.RtxEncore.Opt.Off"),
+                VerticalAlignment = VerticalAlignment.Center,
+                MinWidth = 0,
+            };
+            ToolTipService.SetToolTip(launchpadToggle, launchpadTip);
+            var launchpadStatus = new TextBlock
+            {
+                Text = "",
+                FontSize = 11,
+                Foreground = UIFactory.GetBrush("#5ECB7D"),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            // Saves the choice; while Uplift is installed it's applied straight away
+            launchpadToggle.Toggled += async (s, ev) =>
+            {
+                bool on = launchpadToggle.IsOn;
+                if (on == launchpadPref) return;
+                launchpadPref = on;
+                _window.ViewModel.SetUpliftLaunchpad(gameName, on, store);
+                try
+                {
+                    if (!await Task.Run(() => UpliftService.IsRhiInstalled(installPath))) return; // applied at install
+                    launchpadToggle.IsEnabled = false;
+                    launchpadStatus.Text = on ? Loc.GetString("Status.Installing") : Loc.GetString("NeuralRendering.Status.Removing");
+                    if (on && !UpliftService.LaunchpadStaged)
+                        await _shaderPackService.EnsurePacksAsync(new[] { UpliftService.LaunchpadPackId });
+                    bool ok = (!on || UpliftService.LaunchpadStaged)
+                              && await Task.Run(() => upliftSvc.SetLaunchpad(installPath, on));
+                    if (ok) await _window.ViewModel.DeployShadersForCardAsync(gameName);
+                    else CrashReporter.Log($"[NeuralRendering.LaunchpadToggle] Launchpad {(on ? "on" : "off")} failed for '{gameName}'");
+                    launchpadStatus.Text = ok ? "" : Loc.GetString("NeuralRendering.Launchpad.Failed");
+                    RefreshStatus();
+                }
+                catch (Exception ex)
+                {
+                    CrashReporter.Log($"[NeuralRendering.LaunchpadToggle] Unhandled error — {ex.Message}");
+                    launchpadStatus.Text = Loc.GetString("NeuralRendering.Launchpad.Failed");
+                }
+                finally { launchpadToggle.IsEnabled = true; }
+            };
+            launchpadRow.Children.Add(launchpadLabel);
+            launchpadRow.Children.Add(launchpadToggle);
+            launchpadRow.Children.Add(launchpadStatus);
+            launchpadRow.Visibility = upliftSelectedAtBuild ? Visibility.Visible : Visibility.Collapsed;
+            nrBody.Children.Add(launchpadRow);
+        }
 
         // Note shown when ShortFuse method is selected — cost scaler is now built into 310.8.2
         if (effectiveMethod == NrMethodShortFuse)
@@ -1794,6 +1983,7 @@ public partial class DetailPanelBuilder
         linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Bridge"), "https://github.com/NIGos/dlss5-bridge"));
         linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.ShortFuse"),   "https://discord.com/channels/1408098019194310818/1543975158937821315"));
         linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Feeder"),      "https://github.com/jlrouzies-fr/DLSS5-Feeder"));
+        linksRow.Children.Add(MakeLink(Loc.GetString("NeuralRendering.Link.Uplift"), Services.UpliftService.ReleasesPage));
         nrBody.Children.Add(linksRow);
         // Tabs (mockup A): method cards + a Setup card, from the same controls
         if (Layout.IsTabs) Layout.ArrangeNeuralRendering(nrBody);

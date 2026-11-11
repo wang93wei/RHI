@@ -44,6 +44,7 @@ public static class AddonManagerDialog
                 MinWidth = 750,
                 RequestedTheme = ElementTheme.Dark,
             };
+            emptyDlg.Resources["ContentDialogMaxWidth"] = 900.0;
             await DialogService.ShowSafeAsync(emptyDlg);
             return;
         }
@@ -118,9 +119,11 @@ public static class AddonManagerDialog
             CloseButtonText = Loc.GetString("Dialog.Close"),
             XamlRoot = xamlRoot,
             Background = Brush(ResourceKeys.SurfaceOverlayBrush),
-            MinWidth = 750,
+            MinWidth = 820,
             RequestedTheme = ElementTheme.Dark,
         };
+        // ContentDialog caps its width at ~548 px unless this is raised (MinWidth alone does nothing)
+        dlg.Resources["ContentDialogMaxWidth"] = 900.0;
 
         await DialogService.ShowSafeAsync(dlg);
     }
@@ -204,7 +207,6 @@ public static class AddonManagerDialog
                 Opacity = 0.6,
                 Foreground = Brush(ResourceKeys.TextPrimaryBrush),
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = 450,
             });
         }
 
@@ -227,7 +229,6 @@ public static class AddonManagerDialog
             FontSize = 11,
             Foreground = Brush(ResourceKeys.AccentRedBrush),
             TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 450,
             Visibility = Visibility.Collapsed,
         };
         textPanel.Children.Add(errorText);

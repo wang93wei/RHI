@@ -244,6 +244,7 @@ public partial class MainViewModel
         AuxInstallService.GlobalPeakNits = _settingsViewModel.PeakNits;
         AuxInstallService.GlobalPeakNitsEnabled = _settingsViewModel.PeakNitsEnabled;
         AuxInstallService.GlobalPeakNitsPresets = _settingsViewModel.PeakNitsPresets;
+        WireDisplayModes();
 
         // Wire up per-game custom ReShade DLL selection resolver
         AuxInstallService.CustomReShadeSelectionResolver = (gameName, store) =>
@@ -256,6 +257,7 @@ public partial class MainViewModel
 
         // Wire up per-game "Load ReShade as ASI"
         AuxInstallService.RsAsiModeResolver = (gameName, store) => GetRsAsiMode(gameName, store);
+        UpdateOrchestrationService.AfterSourceAddonUpdate = ApplySourceSetupAsync;
 
         // Universal MFG Unlocker moves in and out of OptiScaler\plugins with OptiScaler 10 builds
         WireMfgPluginHooks();
@@ -525,6 +527,7 @@ public partial class MainViewModel
                     // the update check yet (4-hour cooldown) — the version list fetch is independent.
                     await rdx5Svc.EnsureStagingAsync().ConfigureAwait(false);
                     await rdx5Svc.EnsureSfStagingAsync().ConfigureAwait(false);
+                    await rdx5Svc.UpdateFoveatedGamesAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] NR addon versions fetch failed — {ex.Message}"); }
             });
@@ -744,6 +747,8 @@ public partial class MainViewModel
                 allGames = allGames.Where(g => !_manifestBlacklist.Contains(g.Name)
                     && !_manifestBlacklistPrefixes.Any(p => g.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase))).ToList();
 
+            // 32-bit Source engine games install into bin\ (moved there below like a manifest folder change)
+            { var sourceGames = allGames; await Task.Run(() => ApplySourceEngineFolders(sourceGames)); }
             // Move installs whose folder the manifest changed, before records are read (so they match)
             await RunManifestFolderMigrationsAsync(allGames);
 
@@ -879,6 +884,7 @@ public partial class MainViewModel
                 _crashReporter.Log($"[MainViewModel.InitializeAsync] Nightly migration complete — {migrated} games set to Nightly");
             }
 
+            MarkRunningGames();
             _filterViewModel.SetAllCards(_allCards);
             _filterViewModel.UpdateCounts();
             _filterViewModel.ApplyFilter();

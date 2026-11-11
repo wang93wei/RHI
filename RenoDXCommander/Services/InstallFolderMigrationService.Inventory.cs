@@ -98,6 +98,21 @@ public partial class InstallFolderMigrationService
             }
         }
 
+        // ── RenoDX Source engine mod's DXVK proxy (RHI placed it: sentinel beside it) ──
+        if (File.Exists(Path.Combine(oldDir, SourceEngineSetup.ProxyDllName + SourceEngineSetup.SentinelSuffix)))
+        {
+            var g = b.Group("RenoDX Source DXVK",
+                File.Exists(Path.Combine(ctx.NewDir, SourceEngineSetup.ProxyDllName + SourceEngineSetup.SentinelSuffix)));
+            b.File(g, SourceEngineSetup.ProxyDllName, requireBackup: false);
+            b.File(g, SourceEngineSetup.ProxyDllName + SourceEngineSetup.SentinelSuffix, suffix: null, requireBackup: false);
+            // ReShade2.ini RHI made for the proxy's runtime (its own sentinel)
+            if (File.Exists(Path.Combine(oldDir, SourceEngineSetup.SecondRuntimeIni + SourceEngineSetup.SentinelSuffix)))
+            {
+                b.File(g, SourceEngineSetup.SecondRuntimeIni, requireBackup: false);
+                b.File(g, SourceEngineSetup.SecondRuntimeIni + SourceEngineSetup.SentinelSuffix, suffix: null, requireBackup: false);
+            }
+        }
+
         // ── Display Commander ────────────────────────────────────────────────
         var dcOld = AuxAt(true, "DisplayCommander");
         if (dcOld != null)
@@ -469,6 +484,12 @@ public partial class InstallFolderMigrationService
             merged.Folders = merged.Folders.Union(old.Folders, StringComparer.OrdinalIgnoreCase).ToList();
         }
         merged.NrMethod ??= old.NrMethod;
+        if (merged.Dlss5Build == null && old.Dlss5Build != null)
+        {
+            merged.Dlss5Build        = old.Dlss5Build;
+            merged.Dlss5BuildVersion = old.Dlss5BuildVersion;
+            merged.Dlss5BuildPinned  = old.Dlss5BuildPinned;
+        }
         return JsonSerializer.Serialize(merged, ManifestJson);
     }
 

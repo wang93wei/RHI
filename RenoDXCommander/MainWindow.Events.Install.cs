@@ -473,10 +473,12 @@ public sealed partial class MainWindow
         => _installEventHandler.LumaToggle_Click(sender, e);
 
     // ── Shared cursor handlers for clickable link text ────────────────────────────
-    private static readonly Microsoft.UI.Input.InputCursor _handCursor =
-        Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-    private static readonly Microsoft.UI.Input.InputCursor _arrowCursor =
-        Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+    // Created on first use (UI thread), not in MainWindow's static initializer: see PadFocusBrush.
+    private static Microsoft.UI.Input.InputCursor? _handCursorCache, _arrowCursorCache;
+    private static Microsoft.UI.Input.InputCursor _handCursor =>
+        _handCursorCache ??= Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
+    private static Microsoft.UI.Input.InputCursor _arrowCursor =>
+        _arrowCursorCache ??= Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
 
     internal void LinkText_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
@@ -657,6 +659,12 @@ public sealed partial class MainWindow
             TrackRecentLaunch(gameName);
             var launchArgs = _gameNameService.LaunchArgsOverrides
                 .TryGetValue(gameName, out var args) ? args : null;
+            // Display mode: its launch arguments replace the Game Overrides ones ("" = none in this mode)
+            if (ViewModel.DisplayModeLaunchValue(card, DisplayModeItemKeys.LaunchArgs) is { } modeArgs)
+            {
+                _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launch arguments from display mode '{ViewModel.ActiveDisplayModeName(card)}': '{modeArgs}'");
+                launchArgs = modeArgs.Length > 0 ? modeArgs : null;
+            }
 
             // ── HDR Auto-Toggle: resolve whether to enable ──
             var hdrOverride = _gameNameService.HdrToggleOverrides
@@ -664,6 +672,11 @@ public sealed partial class MainWindow
             bool shouldToggleHdr = hdrOverride != null
                 ? string.Equals(hdrOverride, "On", StringComparison.OrdinalIgnoreCase)
                 : ViewModel.Settings.HdrAutoToggle;
+            if (ViewModel.DisplayModeHdrOn(card) is bool modeHdr)
+            {
+                shouldToggleHdr = modeHdr; // the game's display mode sets HDR
+                hdrOverride = $"display mode {ViewModel.ActiveDisplayModeName(card)}";
+            }
 
             bool hdrWasAlreadyOn = false;
             List<uint>? hdrTargets = null;
@@ -672,7 +685,7 @@ public sealed partial class MainWindow
                 hdrWasAlreadyOn = HdrToggleService.IsHdrEnabled();
                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] HDR toggle: shouldToggle={shouldToggleHdr}, wasAlreadyOn={hdrWasAlreadyOn}, override='{hdrOverride}'");
                 // Always attempt to enable — IsHdrEnabled can report false positives on some configs
-                hdrTargets = ViewModel.Settings.HdrTargetDisplays;
+                hdrTargets = ViewModel.DisplayModeHdrTargets(card) ?? ViewModel.Settings.HdrTargetDisplays;
                 HdrToggleService.EnableHdr(hdrTargets.Count > 0 ? hdrTargets : null);
             }
             else
@@ -691,9 +704,18 @@ public sealed partial class MainWindow
                     ? string.Equals(resOverride, "On", StringComparison.OrdinalIgnoreCase)
                     : ViewModel.Settings.ResolutionAutoToggle;
 
-                if (shouldToggleRes && !string.IsNullOrEmpty(ViewModel.Settings.ResolutionTarget))
+                // Display mode: Off, On (Settings target) or its own resolution
+                var resolutionTargetKey = ViewModel.Settings.ResolutionTarget;
+                if (ViewModel.DisplayModeResolution(card) is { } modeRes)
                 {
-                    var targetRes = ResolutionToggleService.DisplayResolution.Parse(ViewModel.Settings.ResolutionTarget);
+                    shouldToggleRes = !modeRes.Equals("Off", StringComparison.OrdinalIgnoreCase);
+                    if (shouldToggleRes && !modeRes.Equals("On", StringComparison.OrdinalIgnoreCase)) resolutionTargetKey = modeRes;
+                    _crashReporter.Log($"[MainWindow.LaunchGameAsync] Resolution from display mode '{ViewModel.ActiveDisplayModeName(card)}': {modeRes}");
+                }
+
+                if (shouldToggleRes && !string.IsNullOrEmpty(resolutionTargetKey))
+                {
+                    var targetRes = ResolutionToggleService.DisplayResolution.Parse(resolutionTargetKey);
                     if (targetRes != null)
                     {
                         resolutionToRestore = ResolutionToggleService.GetCurrentResolution();
@@ -707,6 +729,18 @@ public sealed partial class MainWindow
                     shouldToggleRes = false;
                 }
             }
+
+            // Saved while the game runs, so a Refresh or restart of RHI still reverts these on exit
+            var session = new LaunchSession
+            {
+                GameName = gameName,
+                Store = card.Source ?? "",
+                InstallPath = card.InstallPath,
+                HdrToggled = shouldToggleHdr,
+                HdrTargets = hdrTargets is { Count: > 0 } ? hdrTargets.ToList() : null,
+                ResToggled = shouldToggleRes,
+                ResolutionToRestore = resolutionToRestore?.Key,
+            };
 
             // Epic games launched from their exe need the Epic launcher running first
             bool isEpicGame = string.Equals(card.Source, "Epic", StringComparison.OrdinalIgnoreCase)
@@ -730,7 +764,7 @@ public sealed partial class MainWindow
                     UseShellExecute = true,
                     WorkingDirectory = System.IO.Path.GetDirectoryName(userExe) ?? "",
                 });
-                MonitorProcessForHdr(proc, shouldToggleHdr, hdrWasAlreadyOn, gameName, card.Source, card.InstallPath, hdrTargets, shouldToggleRes, resolutionToRestore);
+                MonitorLaunch(proc, session);
                 return;
             }
 
@@ -744,12 +778,13 @@ public sealed partial class MainWindow
                 {
                     await EnsureEpicLauncherAsync();
                     _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via manifest override: {fullPath} {launchArgs}");
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(fullPath)
+                    var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(fullPath)
                     {
                         Arguments = launchArgs ?? "",
                         UseShellExecute = true,
                         WorkingDirectory = card.InstallPath ?? "",
                     });
+                    MonitorLaunch(proc, session);
                     return;
                 }
             }
@@ -784,7 +819,7 @@ public sealed partial class MainWindow
                     _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via Steam: {steamUri}");
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(steamUri) { UseShellExecute = true });
                 }
-                MonitorProcessForHdr(null, shouldToggleHdr, hdrWasAlreadyOn, gameName, card.Source, card.InstallPath, hdrTargets, shouldToggleRes, resolutionToRestore);
+                MonitorLaunch(null, session);
                 return;
             }
 
@@ -795,7 +830,7 @@ public sealed partial class MainWindow
                 var epicUri = Services.GameDetectionService.EpicLaunchUri(dg.EpicCatalogNamespace, dg.EpicCatalogItemId, dg.EpicAppName!);
                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via Epic protocol: {epicUri}");
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(epicUri) { UseShellExecute = true });
-                MonitorProcessForHdr(null, shouldToggleHdr, hdrWasAlreadyOn, gameName, card.Source, card.InstallPath, hdrTargets, shouldToggleRes, resolutionToRestore);
+                MonitorLaunch(null, session);
                 return;
             }
 
@@ -807,7 +842,7 @@ public sealed partial class MainWindow
                 var uri = $"shell:AppsFolder\\{card.DetectedGame.XboxAumid}";
                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via Xbox AUMID: {card.DetectedGame.XboxAumid}");
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri) { UseShellExecute = true });
-                MonitorProcessForHdr(null, shouldToggleHdr, hdrWasAlreadyOn, gameName, card.Source, card.InstallPath, hdrTargets, shouldToggleRes, resolutionToRestore);
+                MonitorLaunch(null, session);
                 return;
             }
 
@@ -838,12 +873,18 @@ public sealed partial class MainWindow
                         UseShellExecute = true,
                         WorkingDirectory = installPath,
                     });
-                    MonitorProcessForHdr(proc, shouldToggleHdr, hdrWasAlreadyOn, gameName, card.Source, card.InstallPath, hdrTargets, shouldToggleRes, resolutionToRestore);
+                    MonitorLaunch(proc, session);
                     return;
                 }
             }
 
             _crashReporter.Log($"[MainWindow.LaunchGameAsync] No launch method found for '{gameName}'");
+            // Nothing was started: undo the display changes made above
+            if (shouldToggleHdr || shouldToggleRes)
+            {
+                LaunchSessionStore.Default.Add(session);
+                RevertLaunchChanges(session);
+            }
         }
         catch (Exception ex)
         {
@@ -863,118 +904,6 @@ public sealed partial class MainWindow
         TrayIconService.UpdateRecentGames(ViewModel.Settings.RecentGamesMenu ? recent : new List<string>());
         if (ViewModel.Settings.RecentGamesMenu)
             _ = Task.Run(() => TrayIconService.UpdateJumpList(recent));
-    }
-
-    /// <summary>
-    /// Monitors a launched process and disables HDR when it exits (if we enabled it).
-    /// For protocol launches (Steam/Epic URL) where proc is null, polls for the game exe by name.
-    /// </summary>
-    private void MonitorProcessForHdr(System.Diagnostics.Process? proc, bool shouldToggle, bool wasAlreadyOn, string gameName, string? store, string? installPath = null, List<uint>? hdrTargets = null, bool shouldToggleRes = false, ResolutionToggleService.DisplayResolution? resolutionToRestore = null)
-    {
-        // Find the card to set IsRunning — match both name and store for multi-store support
-        var card = ViewModel.AllCards.FirstOrDefault(c =>
-            c.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) &&
-            (string.IsNullOrEmpty(store) || c.Source == store));
-
-        if (proc != null)
-        {
-            // Direct exe launch — monitor the process directly
-            DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = true; });
-            ViewModel.NoteGameRunning(true);
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await proc.WaitForExitAsync();
-
-                    // The launched process exited — but it might be a wrapper/launcher (SKSE, MO2)
-                    // that spawned the real game process. Check if any game process is still running
-                    // from the same install folder before disabling HDR.
-                    if (!string.IsNullOrEmpty(installPath))
-                    {
-                        var roots = GameProcessSearchRoots(installPath);
-                        List<System.Diagnostics.Process> surviving = new();
-
-                        // Give the spawned game process a moment to start (wrappers exit almost instantly)
-                        for (int attempt = 0; attempt < 5; attempt++)
-                        {
-                            await Task.Delay(1000);
-                            try { surviving = FindGameProcesses(roots); }
-                            catch (Exception) { /* Safe to ignore: process enumeration can fail transiently; the polling loop simply retries on its next pass. */ }
-
-                            if (surviving.Count > 0) break;
-                        }
-
-                        if (surviving.Count > 0)
-                        {
-                            // A game process is still running — this was a wrapper launch.
-                            // Monitor the real game processes instead.
-                            _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' wrapper exited, found surviving process(es) {DescribeProcesses(surviving)}");
-                            await WaitForGameExitAsync(roots, surviving);
-                        }
-                    }
-
-                    if (shouldToggle) HdrToggleService.DisableHdr(hdrTargets);
-                    if (shouldToggleRes && resolutionToRestore != null) ResolutionToggleService.SetResolution(resolutionToRestore);
-                    else if (shouldToggleRes) ResolutionToggleService.RestoreResolution();
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; RefocusAfterGameExit(gameName); });
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' exited{(shouldToggle ? " — HDR disabled" : "")}{(shouldToggleRes ? " — resolution restored" : "")}");
-                }
-                catch (Exception ex)
-                {
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; });
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' monitoring failed — {ex.Message}");
-                }
-                finally { ViewModel.NoteGameRunning(false); }
-            });
-        }
-        else if (!string.IsNullOrEmpty(installPath))
-        {
-            // Protocol launch (Steam/Epic) — poll for any new process running from the install path
-            _ = Task.Run(async () =>
-            {
-                bool counted = false;
-                try
-                {
-                    var roots = GameProcessSearchRoots(installPath);
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] Polling for game process in {string.Join(", ", roots.Select(r => $"'{r}'"))}...");
-
-                    // Wait up to 2 minutes for the game process to appear (big games can take a while)
-                    List<System.Diagnostics.Process> gameProcs = new();
-                    for (int i = 0; i < 120; i++)
-                    {
-                        await Task.Delay(1000);
-                        try { gameProcs = FindGameProcesses(roots); }
-                        catch (Exception) { /* Safe to ignore: process enumeration can fail transiently; the polling loop simply retries on its next pass. */ }
-
-                        if (gameProcs.Count > 0) break;
-                    }
-
-                    if (gameProcs.Count == 0)
-                    {
-                        _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' — game process not found after 120s");
-                        return;
-                    }
-
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = true; });
-                    ViewModel.NoteGameRunning(true);
-                    counted = true;
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' — found {DescribeProcesses(gameProcs)}, waiting for exit...");
-                    await WaitForGameExitAsync(roots, gameProcs);
-                    if (shouldToggle) HdrToggleService.DisableHdr(hdrTargets);
-                    if (shouldToggleRes && resolutionToRestore != null) ResolutionToggleService.SetResolution(resolutionToRestore);
-                    else if (shouldToggleRes) ResolutionToggleService.RestoreResolution();
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; RefocusAfterGameExit(gameName); });
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' exited{(shouldToggle ? " — HDR disabled" : "")}{(shouldToggleRes ? " — resolution restored" : "")}");
-                }
-                catch (Exception ex)
-                {
-                    DispatcherQueue?.TryEnqueue(() => { if (card != null) card.IsRunning = false; });
-                    _crashReporter.Log($"[MainWindow.MonitorProcess] '{gameName}' poll monitoring failed — {ex.Message}");
-                }
-                finally { if (counted) ViewModel.NoteGameRunning(false); }
-            });
-        }
     }
 
     private static string? GetSteamExePath()

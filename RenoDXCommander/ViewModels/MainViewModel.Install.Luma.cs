@@ -128,9 +128,11 @@ public partial class MainViewModel
                         ? (GetDllOverride(card.GameName)?.ReShadeFileName)
                         : (GetManifestDllNames(card.GameName)?.ReShade is { Length: > 0 } mRs
                             ? mRs
-                            : ResolveAutoReShadeFilename(card.DetectedApis)));
+                            : card.Mod?.IsGenericSource == true
+                                ? SourceEngineSetup.ReShadeDll // Source mod: ReShade proxies DXVK's d3d9.dll
+                                : ResolveAutoReShadeFilename(card.DetectedApis)));
             var effectiveChannel = card.UseNormalReShade ? "(Normal/NoAddons)" : ResolveReShadeChannel(card.GameName, card.Source ?? "");
-            var filenameSource = forceFilename != null ? "DgVoodoo2Override"
+            var filenameSource = forceFilename != null ? "Forced"
                 : (card.DllOverrideEnabled ? "UserDllOverride"
                 : (GetManifestDllNames(card.GameName)?.ReShade is { Length: > 0 } ? "ManifestDllOverride" : "AutoDetect"));
             _crashReporter.Log($"[InstallReShadeAsync] {card.GameName}: " +
@@ -194,6 +196,8 @@ public partial class MainViewModel
             card.RsActionMessage = Loc.GetString("Status.InstallingVulkanReshade");
             try
             {
+                // The layer is shared: make sure it holds the chosen channel's build, not whatever was there before
+                await SyncVulkanLayerAsync(card);
                 AuxInstallService.MergeRsVulkanIni(card.InstallPath, card.GameName, BuildScreenshotSavePath(card.GameName), _settingsViewModel.OverlayHotkey, _settingsViewModel.ScreenshotHotkey);
                 VulkanFootprintService.Create(card.InstallPath);
                 var selVk1 = ResolveShaderSelection(card.GameName, card.ShaderModeOverride, card.Source ?? "");
@@ -266,6 +270,8 @@ public partial class MainViewModel
         {
             // 3. Install the global Vulkan layer (copies DLL, writes manifest, registers in registry)
             await Task.Run(() => InstallLayerAction());
+            // InstallLayer copies Stable; switch it to the chosen channel (Nightly / legacy)
+            await SyncVulkanLayerAsync(card);
 
             // 4. Deploy reshade.vulkan.ini (as reshade.ini) to game directory
             AuxInstallService.MergeRsVulkanIni(card.InstallPath, card.GameName, BuildScreenshotSavePath(card.GameName), _settingsViewModel.OverlayHotkey, _settingsViewModel.ScreenshotHotkey);

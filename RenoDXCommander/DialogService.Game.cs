@@ -41,6 +41,68 @@ public partial class DialogService
         return result == ContentDialogResult.Primary;
     }
 
+    // ── Source engine mod install dialog ────────────────────────────────────────
+
+    /// <summary>
+    /// Shown before the RenoDX Source engine mod's first install: what RHI sets up, the VAC warning for
+    /// -insecure (only used when the game starts from RHI), and the in-game HDR setting. True = install.
+    /// </summary>
+    public async Task<bool> ShowSourceEngineInstallDialogAsync(GameCardViewModel card)
+    {
+        var settings = _window.ViewModel.Settings;
+        if (settings.SourceEngineNoticeDismissed) return true;
+
+        var panel = new StackPanel { Spacing = 10, MaxWidth = 520 };
+        panel.Children.Add(new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            FontSize     = 13,
+            Text         = $"RHI will set up RenoDX's Source engine mod for {card.GameName}:\n" +
+                           "• ReShade as d3d9.dll, loading DXVK (stable) through ReShade's proxy\n" +
+                           "• dxvk.conf in the game's main folder\n" +
+                           "• -insecure in the game's launch options in RHI",
+        });
+        panel.Children.Add(new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            FontSize     = 13,
+            Foreground   = Brush(ResourceKeys.AccentAmberBrush),
+            Text         = "-insecure turns VAC off, which the mod needs (VAC can be on even in single-player). " +
+                           "Don't join VAC-secured servers while the mod is installed, or you risk a VAC ban.\n\n" +
+                           "RHI only adds -insecure when you start the game from RHI. If you start it from Steam, " +
+                           "add -insecure to the game's launch options in Steam as well.",
+        });
+        panel.Children.Add(new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            FontSize     = 13,
+            Text         = "In the game, set High Dynamic Range to Full in the advanced video settings.",
+        });
+        var dontShow = new CheckBox { Content = "Don't show this again", FontSize = 12 };
+        panel.Children.Add(dontShow);
+
+        var dlg = new ContentDialog
+        {
+            Title               = "Source engine HDR mod",
+            Content             = panel,
+            PrimaryButtonText   = "Install",
+            CloseButtonText     = "Cancel",
+            DefaultButton       = ContentDialogButton.Primary,
+            XamlRoot            = _window.Content.XamlRoot,
+            Background          = Brush(ResourceKeys.SurfaceOverlayBrush),
+            RequestedTheme      = ElementTheme.Dark,
+        };
+        var result = await DialogService.ShowSafeAsync(dlg);
+        bool install = result == ContentDialogResult.Primary;
+        // Only remembered when installing: cancelling with it ticked shouldn't skip the dialog next time
+        if (install && dontShow.IsChecked == true)
+        {
+            settings.SourceEngineNoticeDismissed = true;
+            _window.ViewModel.SaveSettingsPublic();
+        }
+        return install;
+    }
+
     // ── UE Extended Warning Dialog ──────────────────────────────────────────────
 
     /// <summary>

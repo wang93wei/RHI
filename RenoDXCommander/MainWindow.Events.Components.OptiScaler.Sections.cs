@@ -107,10 +107,12 @@ public sealed partial class MainWindow
         slVersionCombo = slVersionCell.Combo;
 
         // FG Input
-        var fgInputItems = new[] { "Auto (Default)", "OptiFG (Upscaler)", "DLSSG via Streamline", "DLSSG via Nvngx", "FSR 3.1 FG", "FSR 3.0 FG", "XeFG" };
+        var fgInputCurrent = OsIniToFgInput(ViewModel.GetOsFgInput(card.GameName, store));
+        // The current ini value can be outside the preset list — keep it visible in the dropdown
+        var fgInputItems = OsWithValue(new[] { "Auto (Default)", "OptiFG (Upscaler)", "DLSSG via Streamline", "DLSSG via Nvngx", "FSR 3.1 FG", "FSR 3.0 FG", "XeFG" }, fgInputCurrent);
         var fgInputCell = OsComboCell(cog, Loc.GetString("Dialog.OptiScaler.FgInput"),
             Loc.GetString("Dialog.OptiScaler.FgInputTooltip"),
-            fgInputItems, OsIndexOf(fgInputItems, OsIniToFgInput(ViewModel.GetOsFgInput(card.GameName, store))),
+            fgInputItems, OsIndexOf(fgInputItems, fgInputCurrent),
             i =>
             {
                 var v = OsFgInputToIni(fgInputItems[i]);
@@ -128,10 +130,12 @@ public sealed partial class MainWindow
             fgNvngxCombo.IsEnabled = usable;
         }
 
-        var fgOutputItems = new[] { "Auto (Default)", "FSR FG", "DLSSG", "XeFG" };
+        var fgOutputCurrent = OsIniToFgOutput(ViewModel.GetOsFgOutput(card.GameName, store));
+        // The current ini value can be outside the preset list — keep it visible in the dropdown
+        var fgOutputItems = OsWithValue(new[] { "Auto (Default)", "FSR FG", "DLSSG", "XeFG" }, fgOutputCurrent);
         var fgOutputCell = OsComboCell(cog, Loc.GetString("Dialog.OptiScaler.FgOutput"),
             Loc.GetString("Dialog.OptiScaler.FgOutputTooltip"),
-            fgOutputItems, OsIndexOf(fgOutputItems, OsIniToFgOutput(ViewModel.GetOsFgOutput(card.GameName, store))),
+            fgOutputItems, OsIndexOf(fgOutputItems, fgOutputCurrent),
             i =>
             {
                 var sel = fgOutputItems[i];
@@ -141,10 +145,12 @@ public sealed partial class MainWindow
                 SetNvngxUsable(sel == "DLSSG");
             });
 
-        var nvngxItems = new[] { "None (Real DLSSG)", "Nukem's", "Enabler", "FSR 3/4 FG", "Combo" };
+        var nvngxCurrent = OsIniToFgNvngx(ViewModel.GetOsFgNvngxReplacement(card.GameName, store));
+        // The current ini value can be outside the preset list — keep it visible in the dropdown
+        var nvngxItems = OsWithValue(new[] { "None (Real DLSSG)", "Nukem's", "Enabler", "FSR 3/4 FG", "Combo" }, nvngxCurrent);
         var fgNvngxCell = OsComboCell(cog, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"),
             Loc.GetString("Dialog.OptiScaler.FgNvngxTooltip"),
-            nvngxItems, OsIndexOf(nvngxItems, OsIniToFgNvngx(ViewModel.GetOsFgNvngxReplacement(card.GameName, store)), 0),
+            nvngxItems, OsIndexOf(nvngxItems, nvngxCurrent, 0),
             i =>
             {
                 var v = OsFgNvngxToIni(nvngxItems[i]);

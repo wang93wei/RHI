@@ -23,6 +23,7 @@ internal sealed partial class OverlayWindow : Window
     private readonly Func<string> _hotkeyText;
     private readonly Func<RemoteManifest?> _manifest;
     private readonly Func<RenoDXCommander.ViewModels.SettingsViewModel> _settings;
+    private readonly Action _saveSettings;  // after the overlay changes a setting (hidden achievements)
     private readonly Func<string, string?> _screenshotFolder; // RHI's screenshot folder for a game name
     private readonly IntPtr _hwnd;
     private readonly TextBlock _title = new();
@@ -44,11 +45,12 @@ internal sealed partial class OverlayWindow : Window
     private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     internal OverlayWindow(Func<string> hotkeyText, Func<RemoteManifest?> manifest,
-        Func<RenoDXCommander.ViewModels.SettingsViewModel> settings, Func<string, string?> screenshotFolder)
+        Func<RenoDXCommander.ViewModels.SettingsViewModel> settings, Action saveSettings, Func<string, string?> screenshotFolder)
     {
         _hotkeyText = hotkeyText;
         _manifest = manifest;
         _settings = settings;
+        _saveSettings = saveSettings;
         _screenshotFolder = screenshotFolder;
         Title = Loc.GetString("Overlay.Window.Title");
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -161,9 +163,7 @@ internal sealed partial class OverlayWindow : Window
 
         var card = game.Card;
         _title.Text = card?.GameName ?? (game.ExePath != null ? Path.GetFileNameWithoutExtension(game.ExePath) : Loc.GetString("Overlay.Window.UnknownGame"));
-        _subtitle.Text = card != null
-            ? string.IsNullOrEmpty(card.Source) ? "" : card.Source
-            : Loc.GetString("Overlay.Window.GameNotInLibrary");
+        _subtitle.Text = card?.Source ?? "";
         // Cover the game's whole monitor (not just the work area); its shape sizes the screenshot thumbnails
         var info = new OverlayNative.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<OverlayNative.MONITORINFO>() };
         var monitor = OverlayNative.MonitorFromWindow(game.Hwnd, OverlayNative.MONITOR_DEFAULTTONEAREST);

@@ -453,7 +453,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Unity entries from the last DB fetch. Empty when source is WikiOnly or dev-locked.</summary>
     private Dictionary<string, RenoDXDbUnityEntry> _dbUnityEntries =
         new(StringComparer.OrdinalIgnoreCase);
-    /// <summary>Source engine entries from the last DB fetch. Only listed in Available Mods for now.</summary>
+    /// <summary>Source engine entries from the last DB fetch (the shared Source addon; see MainViewModel.SourceEngine.cs).</summary>
     private Dictionary<string, RenoDXDbSourceEntry> _dbSourceEntries =
         new(StringComparer.OrdinalIgnoreCase);
     /// <summary>
@@ -531,6 +531,9 @@ public partial class MainViewModel : ObservableObject
             if (!string.IsNullOrEmpty(entry.Comments))
                 _genericNotes[name] = entry.Comments;
         foreach (var (name, entry) in _dbUnityEntries)
+            if (!string.IsNullOrEmpty(entry.Comments))
+                _genericNotes[name] = entry.Comments;
+        foreach (var (name, entry) in _dbSourceEntries)
             if (!string.IsNullOrEmpty(entry.Comments))
                 _genericNotes[name] = entry.Comments;
         // Publish Unity entries so UpdateOrchestrationService can access them
@@ -999,6 +1002,8 @@ public partial class MainViewModel : ObservableObject
     private HashSet<string> _updateAllExcludedDc => _gameNameService.UpdateAllExcludedDc;
     private HashSet<string> _updateAllExcludedOs => _gameNameService.UpdateAllExcludedOs;
     private HashSet<string> _updateAllExcludedRef => _gameNameService.UpdateAllExcludedRef;
+    /// <summary>Games with the RHI overlay switched off. Composite-keyed "GameName|Store".</summary>
+    private HashSet<string> _overlayDisabledGames => _gameNameService.OverlayDisabledGames;
     private Dictionary<string, string> _perGameShaderMode => _gameNameService.PerGameShaderMode;
     /// <summary>Per-game Vulkan rendering path preferences. Key = game name, Value = "DirectX" or "Vulkan".</summary>
     private Dictionary<string, string> _vulkanRenderingPaths => _gameNameService.VulkanRenderingPaths;

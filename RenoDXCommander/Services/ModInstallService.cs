@@ -258,6 +258,11 @@ public class ModInstallService : IModInstallService
                 remoteSize = new FileInfo(cachePath).Length;
         }
 
+        // A second download of the same addon ("renodx-x (1).addon64") would be loaded as well: remove it
+        AddonFileNames.RemoveDuplicates(Path.GetDirectoryName(destPath)!, fileName);
+        if (!string.Equals(Path.GetDirectoryName(destPath), gameInstallPath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
+            AddonFileNames.RemoveDuplicates(gameInstallPath, fileName);
+
         var hash = await ComputeHashAsync(destPath);
 
         var record = new InstalledModRecord
@@ -589,6 +594,19 @@ public class ModInstallService : IModInstallService
             var fallback = Path.Combine(record.InstallPath, record.AddonFileName);
             if (File.Exists(fallback)) File.Delete(fallback);
         }
+        // Copies under a duplicate-download name ("renodx-x (1).addon64") are the same mod: remove them too
+        var realName = AddonFileNames.Canonical(record.AddonFileName);
+        foreach (var dir in new[] { addonDir, record.InstallPath }.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            AddonFileNames.RemoveDuplicates(dir, realName);
+            var real = Path.Combine(dir, realName);
+            if (!realName.Equals(record.AddonFileName, StringComparison.OrdinalIgnoreCase) && File.Exists(real))
+            {
+                try { File.Delete(real); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                { CrashReporter.Log($"[ModInstallService.Uninstall] Couldn't delete '{realName}' — {ex.Message}"); }
+            }
+        }
         // Cache copy intentionally kept for future reinstalls.
 
         lock (SafeJsonFile.LockFor(DbPath))
@@ -655,6 +673,22 @@ public class ModInstallService : IModInstallService
             }
             if (changed > 0) SaveDb(db);
             return changed;
+        }
+    }
+
+    /// <summary>Drops records left in an old folder of a game that has a record in its current one (see StaleRecords).</summary>
+    public static void RemoveStaleDuplicateRecords()
+    {
+        lock (SafeJsonFile.LockFor(DbPath))
+        {
+            if (!File.Exists(DbPath)) return;
+            var db = SafeJsonFile.ReadList<InstalledModRecord>(DbPath);
+            var kept = StaleRecords.WithoutStaleDuplicates(db, r => $"{r.GameName}|{r.Store}", r => r.InstallPath,
+                Directory.Exists, out var removed);
+            if (removed.Count == 0) return;
+            foreach (var r in removed)
+                CrashReporter.Log($"[ModInstallService.RemoveStaleDuplicateRecords] '{r.GameName}': dropped old record for '{r.InstallPath}' (folder gone; current folder has one)");
+            SafeJsonFile.Write(DbPath, kept, "ModInstallService.RemoveStaleDuplicateRecords", SafeJsonFile.Indented);
         }
     }
 

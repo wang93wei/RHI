@@ -44,6 +44,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _mfgWarningDismissed;
     [ObservableProperty] private bool _engineBadgeWarningDismissed;
     [ObservableProperty] private bool _umfgReShadeWarningDismissed;
+    /// <summary>"Don't show this again" on the Source engine mod install dialog.</summary>
+    [ObservableProperty] private bool _sourceEngineNoticeDismissed;
+    /// <summary>Achievements (Spotlight panel and overlay): show the name and description of locked hidden ones.</summary>
+    [ObservableProperty] private bool _showHiddenAchievements;
+    /// <summary>Settings page: one tab per section instead of the long list.</summary>
+    [ObservableProperty] private bool _settingsTabbed;
     [ObservableProperty] private bool _lumaRenodxCombinedWarningDismissed;
     [ObservableProperty] private List<string> _enabledGlobalAddons = new();
     [ObservableProperty] private bool _firstLaunchSetupDone;
@@ -82,6 +88,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _lastKnownNewestStreamline = "";
     [ObservableProperty] private bool _hdrAutoToggle;
     [ObservableProperty] private List<uint> _hdrTargetDisplays = new();
+    /// <summary>Display modes (Monitor / TV / ...): shows the mode switch on game pages. Modes and per-game state: GameNameService.DisplayModes.</summary>
+    [ObservableProperty] private bool _displayModesEnabled;
     // ── Resolution Auto-Toggle (dev-only) ─────────────────────────────────────
     [ObservableProperty] private bool _resolutionAutoToggle;
     /// <summary>Target resolution key in "WxH@Hz" format. Empty = no override.</summary>
@@ -108,10 +116,16 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _rhiOverlayPauseGame;
     /// <summary>Spotlight: search, filters and the cover shelf below the game page instead of above it.</summary>
     [ObservableProperty] private bool _spotlightShelfAtBottom;
+    /// <summary>Spotlight: the search / filters / covers strip has no panel colour of its own (it shows the page colour).</summary>
+    [ObservableProperty] private bool _spotlightShelfPlain;
     /// <summary>Spotlight banner height set by dragging its bottom edge; 0 = automatic (follows the window width).</summary>
     [ObservableProperty] private double _spotlightHeroHeight;
     /// <summary>Spotlight cover size set by dragging the cover strip's edge (1 = 120 x 180).</summary>
     [ObservableProperty] private double _spotlightCoverScale = 1.0;
+    /// <summary>Top bar size in percent (every layout), on top of the interface size. Drag its bottom edge or Settings › General.</summary>
+    [ObservableProperty] private int _topBarScale = 100;
+    /// <summary>Game list size in percent (Classic+ and Tabs), on top of the interface size; its width follows. Drag its right edge or Settings › General.</summary>
+    [ObservableProperty] private int _gameListScale = 100;
     /// <summary>What's New: text size (+ / - buttons) and whether the version list + search are hidden.</summary>
     [ObservableProperty] private double _patchNotesFontSize = 12;
     [ObservableProperty] private bool _patchNotesNavHidden;
@@ -349,6 +363,13 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("UmfgReShadeWarningDismissed", out var urwdVal))
             UmfgReShadeWarningDismissed = urwdVal == "true";
 
+        if (s.TryGetValue("SourceEngineNoticeDismissed", out var sendVal))
+            SourceEngineNoticeDismissed = sendVal == "true";
+        if (s.TryGetValue("ShowHiddenAchievements", out var shaVal))
+            ShowHiddenAchievements = shaVal == "true";
+        if (s.TryGetValue("SettingsTabbed", out var stVal))
+            SettingsTabbed = stVal == "true";
+
         if (s.TryGetValue("EnabledGlobalAddons", out var egaVal))
         {
             try
@@ -397,6 +418,7 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("LastKnownNewestDlss", out var lkndVal)) LastKnownNewestDlss = lkndVal ?? "";
         if (s.TryGetValue("LastKnownNewestStreamline", out var lknsVal)) LastKnownNewestStreamline = lknsVal ?? "";
         if (s.TryGetValue("HdrAutoToggle", out var hatVal)) HdrAutoToggle = hatVal == "true";
+        if (s.TryGetValue("DisplayModesEnabled", out var dmeVal)) DisplayModesEnabled = dmeVal == "true";
         if (s.TryGetValue("HdrTargetDisplays", out var htdVal))
         {
             try { HdrTargetDisplays = System.Text.Json.JsonSerializer.Deserialize<List<uint>>(htdVal) ?? new(); }
@@ -431,9 +453,12 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("RhiOverlayController", out var rocVal)) RhiOverlayController = rocVal != "false"; // default true
         if (s.TryGetValue("RhiOverlayPauseGame", out var ropVal)) RhiOverlayPauseGame = ropVal == "true"; // default false
         if (s.TryGetValue("SpotlightShelfAtBottom", out var ssbVal)) SpotlightShelfAtBottom = ssbVal == "true"; // default false (top)
+        if (s.TryGetValue("SpotlightShelfPlain", out var sshpVal)) SpotlightShelfPlain = sshpVal == "true"; // default false (panel colour)
         if (s.TryGetValue("SpotlightHeroHeight", out var shhVal) && double.TryParse(shhVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var shh)) SpotlightHeroHeight = shh;
         if (s.TryGetValue("PatchNotesFontSize", out var pnfVal) && double.TryParse(pnfVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pnf) && pnf > 0) PatchNotesFontSize = pnf;
         if (s.TryGetValue("PatchNotesNavHidden", out var pnhVal)) PatchNotesNavHidden = pnhVal == "true";
+        if (s.TryGetValue("TopBarScale", out var tbsVal) && int.TryParse(tbsVal, out var tbs)) TopBarScale = Math.Clamp(tbs, 50, 200);
+        if (s.TryGetValue("GameListScale", out var glsVal) && int.TryParse(glsVal, out var gls)) GameListScale = Math.Clamp(gls, 50, 200);
         if (s.TryGetValue("SpotlightCoverScale", out var scsVal) && double.TryParse(scsVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scs) && scs > 0) SpotlightCoverScale = scs;
         if (s.TryGetValue("CloseToTray", out var cttVal)) CloseToTray = cttVal == "true";
         if (s.TryGetValue("RecentGamesMenu", out var rgmVal)) RecentGamesMenu = rgmVal == "true";
@@ -569,6 +594,9 @@ public partial class SettingsViewModel : ObservableObject
         s["MfgWarningDismissed"] = MfgWarningDismissed ? "true" : "false";
         s["EngineBadgeWarningDismissed"] = EngineBadgeWarningDismissed ? "true" : "false";
         s["UmfgReShadeWarningDismissed"] = UmfgReShadeWarningDismissed ? "true" : "false";
+        s["SourceEngineNoticeDismissed"] = SourceEngineNoticeDismissed ? "true" : "false";
+        s["ShowHiddenAchievements"] = ShowHiddenAchievements ? "true" : "false";
+        s["SettingsTabbed"] = SettingsTabbed ? "true" : "false";
         s["EnabledGlobalAddons"] = JsonSerializer.Serialize(EnabledGlobalAddons);
         s["FirstLaunchSetupDone"] = FirstLaunchSetupDone ? "true" : "false";
         s["GlobalSkipRdxUpdates"] = GlobalSkipRdxUpdates ? "true" : "false";
@@ -597,6 +625,7 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrEmpty(LastKnownNewestDlss)) s["LastKnownNewestDlss"] = LastKnownNewestDlss;
         if (!string.IsNullOrEmpty(LastKnownNewestStreamline)) s["LastKnownNewestStreamline"] = LastKnownNewestStreamline;
         s["HdrAutoToggle"] = HdrAutoToggle ? "true" : "false";
+        s["DisplayModesEnabled"] = DisplayModesEnabled ? "true" : "false";
         if (HdrTargetDisplays.Count > 0) s["HdrTargetDisplays"] = System.Text.Json.JsonSerializer.Serialize(HdrTargetDisplays);
         s["ResolutionAutoToggle"] = ResolutionAutoToggle ? "true" : "false";
         if (!string.IsNullOrEmpty(ResolutionTarget)) s["ResolutionTarget"] = ResolutionTarget;
@@ -614,10 +643,13 @@ public partial class SettingsViewModel : ObservableObject
         s["RhiOverlayController"] = RhiOverlayController ? "true" : "false";
         s["RhiOverlayPauseGame"] = RhiOverlayPauseGame ? "true" : "false";
         s["SpotlightShelfAtBottom"] = SpotlightShelfAtBottom ? "true" : "false";
+        s["SpotlightShelfPlain"] = SpotlightShelfPlain ? "true" : "false";
         s["SpotlightHeroHeight"] = SpotlightHeroHeight.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
         s["PatchNotesFontSize"] = PatchNotesFontSize.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
         s["PatchNotesNavHidden"] = PatchNotesNavHidden ? "true" : "false";
         s["SpotlightCoverScale"] = SpotlightCoverScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        s["TopBarScale"] = TopBarScale.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        s["GameListScale"] = GameListScale.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["CloseToTray"] = CloseToTray ? "true" : "false";
         s["RecentGamesMenu"] = RecentGamesMenu ? "true" : "false";
         s["StartWithWindows"] = StartWithWindows ? "true" : "false";

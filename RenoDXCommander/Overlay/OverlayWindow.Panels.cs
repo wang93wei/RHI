@@ -248,9 +248,6 @@ internal sealed partial class OverlayWindow
                 BigText(charging ? Loc.GetString("Overlay.Home.BatteryCharging", percent) : Loc.GetString("Overlay.Home.BatteryValue", percent)), stretch: true));
 
         _homeBox.Children.Add(tiles);
-
-        if (card == null)
-            _homeBox.Children.Add(SmallText(Loc.GetString("Overlay.Home.NotInLibrary")));
     }
 
     /// <summary>RHI's own playtime count for the game and a "since" line, or null when there's none yet.</summary>
