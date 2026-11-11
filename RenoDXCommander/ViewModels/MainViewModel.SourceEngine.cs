@@ -77,7 +77,7 @@ public partial class MainViewModel
     {
         if (card.DxvkRecord != null)
         {
-            card.ActionMessage = "Turn off DXVK for this game first. The Source mod sets up its own DXVK.";
+            card.ActionMessage = Loc.GetString("Status.SourceEngine.DxvkEnabled");
             return false;
         }
         if (card.InstalledRecord == null && ConfirmSourceEngineInstall != null && !await ConfirmSourceEngineInstall(card))
@@ -96,7 +96,7 @@ public partial class MainViewModel
         }
         if (card.RequiresVulkanInstall)
         {
-            card.ActionMessage = "This game is set to Vulkan in RHI. Set its graphics API to DirectX 9 in Game Overrides, then install again.";
+            card.ActionMessage = Loc.GetString("Status.SourceEngine.RequiresDx9");
             return false;
         }
 
@@ -108,12 +108,12 @@ public partial class MainViewModel
         if (!reShadeReady)
         {
             _crashReporter.Log($"[MainViewModel.PrepareSourceInstallAsync] '{card.GameName}': installing ReShade as {SourceEngineSetup.ReShadeDll}");
-            card.ActionMessage = "Installing ReShade...";
+            card.ActionMessage = Loc.GetString("Status.InstallingReshade");
             await InstallReShadeInternalAsync(card, SourceEngineSetup.ReShadeDll);
         }
         if (!File.Exists(Path.Combine(card.InstallPath, SourceEngineSetup.ReShadeDll)))
         {
-            card.ActionMessage = "ReShade couldn't be installed as d3d9.dll. See the ReShade row.";
+            card.ActionMessage = Loc.GetString("Status.SourceEngine.ReShadeFailed");
             return false;
         }
         return true;
@@ -146,7 +146,7 @@ public partial class MainViewModel
             .ToList()).ConfigureAwait(false);
 
         if (!File.Exists(StagedD3d9(!is32)) || extraTargets.Any(t => !File.Exists(StagedD3d9(t.Is64Bit))))
-            throw new InvalidOperationException("DXVK couldn't be downloaded. Check your connection or antivirus, then try again.");
+            throw new InvalidOperationException(Loc.GetString("Status.SourceEngine.DxvkDownloadFailed"));
 
         var extraAddons = new Dictionary<bool, string>();
         foreach (var t in extraTargets)

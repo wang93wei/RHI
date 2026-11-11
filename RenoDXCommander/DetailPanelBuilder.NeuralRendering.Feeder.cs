@@ -466,7 +466,7 @@ public partial class DetailPanelBuilder
         // Note: NOT gated on isDx9 — host64 is needed for all 32-bit Feeder installs
         if (card.Is32Bit)
         {
-                _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = "Setting up host64\\...");
+                _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.SettingUpHost64"));
                 await Task.Run(async () =>
                 {
                     try

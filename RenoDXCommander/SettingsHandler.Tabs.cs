@@ -26,7 +26,7 @@ public partial class SettingsHandler
     {
         var b = new Button
         {
-            Content = "Tabs",
+            Content = Loc.GetString("Xaml.Tabs"),
             FontSize = 13,
             MinHeight = 34,
             Padding = new Thickness(12, 0, 12, 0),
@@ -50,9 +50,9 @@ public partial class SettingsHandler
         b.BorderBrush = UIFactory.Brush(on ? ResourceKeys.AccentBlueBorderBrush : ResourceKeys.BorderDefaultBrush);
         b.Foreground = UIFactory.Brush(on ? ResourceKeys.TextPrimaryBrush : ResourceKeys.TextSecondaryBrush);
         ToolTipService.SetToolTip(b, on
-            ? "Settings are shown one section at a time as tabs. Click for the full list."
-            : "Show one section at a time, as tabs");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, on ? "Settings tabs: on" : "Settings tabs: off");
+            ? Loc.GetString("Settings.Tabs.Toggle.TooltipOn")
+            : Loc.GetString("Settings.Tabs.Toggle.TooltipOff"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, on ? Loc.GetString("Settings.Tabs.Toggle.NameOn") : Loc.GetString("Settings.Tabs.Toggle.NameOff"));
     }
 
     /// <summary>The tab strip shown above the sections in tabbed mode (built once, hidden otherwise).</summary>

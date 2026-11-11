@@ -99,12 +99,12 @@ public sealed class DisplayModeStore
     public string? ValidateName(string? name, string? exceptId = null)
     {
         var n = name?.Trim() ?? "";
-        if (n.Length == 0) return "Enter a name.";
-        if (n.Length > MaxNameLength) return $"Use {MaxNameLength} characters or fewer.";
+        if (n.Length == 0) return L("Settings.DisplayModes.Error.EnterName", "Enter a name.");
+        if (n.Length > MaxNameLength) return L("Settings.DisplayModes.Error.NameTooLong", "Use {0} characters or fewer.", MaxNameLength);
         lock (_lock)
             if (_modes.Any(m => m.Name.Equals(n, StringComparison.OrdinalIgnoreCase)
                              && !m.Id.Equals(exceptId ?? "", StringComparison.OrdinalIgnoreCase)))
-                return "A mode with that name already exists.";
+                return L("Settings.DisplayModes.Error.NameExists", "A mode with that name already exists.");
         return null;
     }
 
@@ -452,5 +452,30 @@ public sealed class DisplayModeStore
             foreach (var (mode, vals) in st.Values)
                 if (mode != null && vals != null) c.Values[mode] = CopyValues(vals);
         return c;
+    }
+
+    // English fallback keeps unit tests (no DI) readable; a missing catalog key also falls back to English.
+    private static string L(string key, string fallback)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return fallback;
+            var s = loc.GetString(key);
+            return s == key ? fallback : s;
+        }
+        catch { return fallback; }
+    }
+
+    private static string L(string key, string fallback, params object[] args)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return string.Format(fallback, args);
+            var s = loc.GetString(key, args);
+            return s == key ? string.Format(fallback, args) : s;
+        }
+        catch { return string.Format(fallback, args); }
     }
 }

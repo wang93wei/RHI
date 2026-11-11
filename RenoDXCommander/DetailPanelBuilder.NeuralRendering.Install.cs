@@ -46,7 +46,7 @@ public partial class DetailPanelBuilder
             }
             if (string.IsNullOrEmpty(foveatedVersion))
                 throw new InvalidOperationException("No Foveated DLSS5 Tool release found");
-            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = $"Staging DLSS5 Tool (Foveated) {foveatedVersion}...");
+            _window.DispatcherQueue?.TryEnqueue(() => statusBtn.Content = Loc.GetString("NeuralRendering.Status.StagingDlss5ToolFoveated", foveatedVersion));
             if (!await rdx5Svc.EnsureVersionStagedAsync(Renodx5AddonService.FoveatedSubDir, foveatedVersion).ConfigureAwait(false))
                 throw new InvalidOperationException($"Could not download Foveated DLSS5 Tool {foveatedVersion}");
             addonSourcePath = rdx5Svc.GetVersionedStagedFilePath(Renodx5AddonService.FoveatedSubDir, foveatedVersion)!;

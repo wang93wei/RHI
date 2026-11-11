@@ -66,15 +66,15 @@ internal sealed partial class DetailLayoutHost
         // Screenshots (Spotlight only): opens the game's screenshots in the side panel
         _hShots = new Button { Width = 36, Padding = new Thickness(0), Content = TabsTheme.Icon("", 16) }; // photo
         TabsTheme.Apply(_hShots, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36);
-        ToolTipService.SetToolTip(_hShots, "Screenshots");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hShots, "Screenshots");
+        ToolTipService.SetToolTip(_hShots, Loc.GetString("Overlay.Screenshots.Title"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hShots, Loc.GetString("Overlay.Screenshots.Title"));
         _hShots.Click += (s, e) => OpenPanel(ScreenshotsKey);
 
         // Game settings (Spotlight only): per-game versions of Settings-page options, in the side panel
         _hGameSettings = new Button { Width = 36, Padding = new Thickness(0), Content = TabsTheme.Icon("", 16) }; // cog
         TabsTheme.Apply(_hGameSettings, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36);
-        ToolTipService.SetToolTip(_hGameSettings, "Game settings");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hGameSettings, "Game settings");
+        ToolTipService.SetToolTip(_hGameSettings, Loc.GetString("Detail.GameSettings"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hGameSettings, Loc.GetString("Detail.GameSettings"));
         _hGameSettings.Click += (s, e) => OpenPanel(GameSettingsKey);
 
         var titleRow = new WrapPanel { HorizontalSpacing = 12, VerticalSpacing = 8 };

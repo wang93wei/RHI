@@ -17,18 +17,18 @@ public sealed partial class MainWindow
     private Button BuildOsSaveIniButton(OsCogContext ctx, string? iniPath, Action<string, bool> showStatus)
     {
         var card = ctx.Card;
-        var btn = CogDialog.StyledButton("Save ini...", CogButtonKind.Secondary);
+        var btn = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.SaveIniButton"), CogButtonKind.Secondary);
         ToolTipService.SetToolTip(btn,
-            "Save this game's OptiScaler.ini under a name of your choice. Load it into any game with Load saved ini.");
+            Loc.GetString("Dialog.OptiScaler.SaveIniTooltip"));
 
-        var nameBox = CogDialog.MakeTextBox("", "Name, for example F5 super ini");
+        var nameBox = CogDialog.MakeTextBox("", Loc.GetString("Dialog.OptiScaler.SaveIniNamePlaceholder"));
         nameBox.MaxLength = OsIniLibrary.MaxNameLength;
         var note = MakeOsFooterNote("");
-        var saveBtn = CogDialog.StyledButton("Save", CogButtonKind.Primary, compact: true);
+        var saveBtn = CogDialog.StyledButton(Loc.GetString("Common.Save"), CogButtonKind.Primary, compact: true);
         var panel = new StackPanel { Spacing = 8, Width = 300 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Save this game's OptiScaler.ini as:",
+            Text = Loc.GetString("Dialog.OptiScaler.SaveIniPrompt"),
             TextWrapping = TextWrapping.Wrap,
             FontSize = 12,
         });
@@ -52,7 +52,7 @@ public sealed partial class MainWindow
         nameBox.TextChanged += (_, _) =>
         {
             var name = OsIniLibrary.CleanName(nameBox.Text);
-            ShowNote(name != null && OsIniLibrary.Exists(name) ? $"Replaces your saved ini \"{name}\"." : "", false);
+            ShowNote(name != null && OsIniLibrary.Exists(name) ? Loc.GetString("Dialog.OptiScaler.SaveIniReplaces", name) : "", false);
         };
 
         async Task SaveAsync()
@@ -60,19 +60,21 @@ public sealed partial class MainWindow
             try
             {
                 var name = OsIniLibrary.CleanName(nameBox.Text);
-                if (name == null) { ShowNote("Type a name first.", true); return; }
-                if (iniPath == null || !File.Exists(iniPath)) { ShowNote("This game has no OptiScaler.ini to save.", true); return; }
+                if (name == null) { ShowNote(Loc.GetString("Dialog.OptiScaler.SaveIniNameRequired"), true); return; }
+                if (iniPath == null || !File.Exists(iniPath)) { ShowNote(Loc.GetString("Dialog.OptiScaler.SaveIniNoFile"), true); return; }
                 bool replaced = OsIniLibrary.Exists(name);
                 await Task.Run(() => OsIniLibrary.Save(name, iniPath));
                 // The game now matches the saved ini, so a reinstall puts it back
                 ViewModel.SetOsIniProfile(card.GameName, name, ctx.Store);
                 flyout.Hide();
-                showStatus(replaced ? $"Saved ini \"{name}\" replaced." : $"Saved as \"{name}\". Load it into any game with Load saved ini.", true);
+                showStatus(replaced
+                    ? Loc.GetString("Dialog.OptiScaler.SaveIniReplaced", name)
+                    : Loc.GetString("Dialog.OptiScaler.SaveIniSavedAs", name), true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 CrashReporter.Log($"[MainWindow.BuildOsSaveIniButton] Save failed — {ex.Message}");
-                ShowNote($"Couldn't save: {ex.Message}", true);
+                ShowNote(Loc.GetString("Dialog.OptiScaler.SaveIniFailed", ex.Message), true);
             }
         }
 
@@ -90,9 +92,9 @@ public sealed partial class MainWindow
     {
         var card = ctx.Card;
         var store = ctx.Store;
-        var btn = CogDialog.StyledButton("Load saved ini...", CogButtonKind.Secondary);
+        var btn = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.LoadIniButton"), CogButtonKind.Secondary);
         ToolTipService.SetToolTip(btn,
-            "Use one of your saved inis as this game's OptiScaler.ini. RHI remembers it and puts it back after a reinstall or update.");
+            Loc.GetString("Dialog.OptiScaler.LoadIniTooltip"));
 
         var panel = new StackPanel { Spacing = 8, Width = 320 };
         var flyout = new Flyout { Content = panel };
@@ -110,13 +112,15 @@ public sealed partial class MainWindow
                 note.Foreground = UIFactory.Brush(error ? ResourceKeys.AccentRedBrush : ResourceKeys.TextTertiaryBrush);
             }
 
-            var addBtn = CogDialog.StyledButton("Add from file...", CogButtonKind.Secondary, compact: true);
-            ToolTipService.SetToolTip(addBtn, "Add an OptiScaler.ini from anywhere on your PC (a build's own ini, one shared on Discord, ...) to your saved inis.");
+            var addBtn = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.AddIniButton"), CogButtonKind.Secondary, compact: true);
+            ToolTipService.SetToolTip(addBtn, Loc.GetString("Dialog.OptiScaler.AddIniTooltip"));
             addBtn.Click += async (_, _) =>
             {
                 try
                 {
                     var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+                    // Resolve the localized title on the UI thread (Loc is a DI lookup)
+                    var addTitle = Loc.GetString("Dialog.OptiScaler.AddIniTitle");
                     var file = await Task.Run(() =>
                     {
                         var ofn = new NativeInterop.OpenFileName();
@@ -125,7 +129,7 @@ public sealed partial class MainWindow
                         ofn.filter = "INI files (*.ini)\0*.ini\0All Files (*.*)\0*.*\0";
                         ofn.file = new string(new char[260]);
                         ofn.maxFile = ofn.file.Length;
-                        ofn.title = "Add an OptiScaler.ini";
+                        ofn.title = addTitle;
                         ofn.flags = 0x00080000 | 0x00001000; // OFN_EXPLORER | OFN_FILEMUSTEXIST
                         return NativeInterop.GetOpenFileName(ref ofn) ? ofn.file.TrimEnd('\0') : null;
                     });
@@ -134,17 +138,17 @@ public sealed partial class MainWindow
                     await Task.Run(() => OsIniLibrary.Save(name, file));
                     Fill();
                     flyout.ShowAt(btn);
-                    showStatus($"Added \"{name}\" to your saved inis.", true);
+                    showStatus(Loc.GetString("Dialog.OptiScaler.AddIniDone", name), true);
                 }
                 catch (Exception ex)
                 {
                     CrashReporter.Log($"[MainWindow.BuildOsLoadIniButton] Add from file failed — {ex.Message}");
-                    ShowNote($"Couldn't add the file: {ex.Message}", true);
+                    ShowNote(Loc.GetString("Dialog.OptiScaler.AddIniFailed", ex.Message), true);
                 }
             };
 
-            var folderBtn = CogDialog.StyledButton("Open folder", CogButtonKind.Secondary, compact: true);
-            ToolTipService.SetToolTip(folderBtn, "Open the folder your saved inis are kept in. You can rename or copy them there too.");
+            var folderBtn = CogDialog.StyledButton(Loc.GetString("Detail.OpenFolder"), CogButtonKind.Secondary, compact: true);
+            ToolTipService.SetToolTip(folderBtn, Loc.GetString("Dialog.OptiScaler.OpenIniFolderTooltip"));
             folderBtn.Click += async (_, _) =>
             {
                 try
@@ -155,7 +159,7 @@ public sealed partial class MainWindow
                 catch (Exception ex)
                 {
                     CrashReporter.Log($"[MainWindow.BuildOsLoadIniButton] Open folder failed — {ex.Message}");
-                    ShowNote($"Couldn't open the folder: {ex.Message}", true);
+                    ShowNote(Loc.GetString("Dialog.OptiScaler.OpenIniFolderFailed", ex.Message), true);
                 }
             };
 
@@ -163,7 +167,7 @@ public sealed partial class MainWindow
             {
                 panel.Children.Add(new TextBlock
                 {
-                    Text = "No saved inis yet. Save one from a game with Save ini, or add one from a file.",
+                    Text = Loc.GetString("Dialog.OptiScaler.NoSavedInis"),
                     TextWrapping = TextWrapping.Wrap,
                     FontSize = 12,
                 });
@@ -179,13 +183,13 @@ public sealed partial class MainWindow
             var combo = CogDialog.MakeCombo(names, Math.Max(0, names.FindIndex(n => n.Equals(current, StringComparison.OrdinalIgnoreCase))));
             combo.HorizontalAlignment = HorizontalAlignment.Stretch;
 
-            var useBtn = CogDialog.StyledButton("Use for this game", CogButtonKind.Primary, compact: true);
+            var useBtn = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.UseIniButton"), CogButtonKind.Primary, compact: true);
             useBtn.Click += async (_, _) =>
             {
                 if (combo.SelectedItem is not string name || string.IsNullOrEmpty(card.InstallPath)) return;
                 var gameDir = card.InstallPath;
                 var err = await Task.Run(() => OsIniLibrary.Deploy(name, gameDir, ViewModel.Settings.OsHotkey));
-                if (err != null) { ShowNote($"Couldn't load it: {err}", true); return; }
+                if (err != null) { ShowNote(Loc.GetString("Dialog.OptiScaler.LoadIniFailed", err), true); return; }
 
                 ViewModel.SetOsIniProfile(card.GameName, name, store);
                 // Edits applied to the old ini don't belong to this one
@@ -193,12 +197,12 @@ public sealed partial class MainWindow
                 SyncOsFgSettingsFromIni(card.GameName, store, gameDir);
                 CrashReporter.Log($"[MainWindow.BuildOsLoadIniButton] '{card.GameName}' now uses saved ini '{name}'");
                 flyout.Hide();
-                _osCogNotice = $"Loaded \"{name}\" as this game's OptiScaler.ini. It's put back after a reinstall or update.";
+                _osCogNotice = Loc.GetString("Dialog.OptiScaler.LoadIniNotice", name);
                 ReopenOsCog(ctx); // every setting above now reads the new ini
             };
 
             // Deleting asks for a second click
-            var deleteBtn = CogDialog.StyledButton("Delete", CogButtonKind.Danger, compact: true);
+            var deleteBtn = CogDialog.StyledButton(Loc.GetString("Dialog.Delete"), CogButtonKind.Danger, compact: true);
             bool armed = false;
             deleteBtn.Click += async (_, _) =>
             {
@@ -206,8 +210,8 @@ public sealed partial class MainWindow
                 if (!armed)
                 {
                     armed = true;
-                    deleteBtn.Content = "Click again to delete";
-                    ShowNote($"Delete \"{name}\" from your saved inis? Games already using it keep their OptiScaler.ini.", false);
+                    deleteBtn.Content = Loc.GetString("Dialog.OptiScaler.DeleteIniArmed");
+                    ShowNote(Loc.GetString("Dialog.OptiScaler.DeleteIniConfirm", name), false);
                     return;
                 }
                 try
@@ -215,25 +219,25 @@ public sealed partial class MainWindow
                     await Task.Run(() => OsIniLibrary.Delete(name));
                     if (name.Equals(ViewModel.GetOsIniProfile(card.GameName, store), StringComparison.OrdinalIgnoreCase))
                         ViewModel.SetOsIniProfile(card.GameName, null, store);
-                    showStatus($"Deleted saved ini \"{name}\".", true);
+                    showStatus(Loc.GetString("Dialog.OptiScaler.DeleteIniDone", name), true);
                     Fill();
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     CrashReporter.Log($"[MainWindow.BuildOsLoadIniButton] Delete failed — {ex.Message}");
-                    ShowNote($"Couldn't delete it: {ex.Message}", true);
+                    ShowNote(Loc.GetString("Dialog.OptiScaler.DeleteIniFailed", ex.Message), true);
                 }
             };
             combo.SelectionChanged += (_, _) =>
             {
                 armed = false;
-                deleteBtn.Content = "Delete";
+                deleteBtn.Content = Loc.GetString("Dialog.Delete");
                 ShowNote("", false);
             };
 
             panel.Children.Add(new TextBlock
             {
-                Text = "Use a saved ini as this game's OptiScaler.ini. The current one is backed up first.",
+                Text = Loc.GetString("Dialog.OptiScaler.LoadIniPrompt"),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12,
             });

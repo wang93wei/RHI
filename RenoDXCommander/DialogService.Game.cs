@@ -57,36 +57,30 @@ public partial class DialogService
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize     = 13,
-            Text         = $"RHI will set up RenoDX's Source engine mod for {card.GameName}:\n" +
-                           "• ReShade as d3d9.dll, loading DXVK (stable) through ReShade's proxy\n" +
-                           "• dxvk.conf in the game's main folder\n" +
-                           "• -insecure in the game's launch options in RHI",
+            Text         = Loc.GetString("Dialog.SourceEngine.Setup", card.GameName),
         });
         panel.Children.Add(new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize     = 13,
             Foreground   = Brush(ResourceKeys.AccentAmberBrush),
-            Text         = "-insecure turns VAC off, which the mod needs (VAC can be on even in single-player). " +
-                           "Don't join VAC-secured servers while the mod is installed, or you risk a VAC ban.\n\n" +
-                           "RHI only adds -insecure when you start the game from RHI. If you start it from Steam, " +
-                           "add -insecure to the game's launch options in Steam as well.",
+            Text         = Loc.GetString("Dialog.SourceEngine.VacWarning"),
         });
         panel.Children.Add(new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize     = 13,
-            Text         = "In the game, set High Dynamic Range to Full in the advanced video settings.",
+            Text         = Loc.GetString("Dialog.SourceEngine.HdrSetting"),
         });
-        var dontShow = new CheckBox { Content = "Don't show this again", FontSize = 12 };
+        var dontShow = new CheckBox { Content = Loc.GetString("Dialog.DonTShowThisAgain"), FontSize = 12 };
         panel.Children.Add(dontShow);
 
         var dlg = new ContentDialog
         {
-            Title               = "Source engine HDR mod",
+            Title               = Loc.GetString("Dialog.SourceEngine.Title"),
             Content             = panel,
-            PrimaryButtonText   = "Install",
-            CloseButtonText     = "Cancel",
+            PrimaryButtonText   = Loc.GetString("Dialog.Install"),
+            CloseButtonText     = Loc.GetString("Dialog.Cancel"),
             DefaultButton       = ContentDialogButton.Primary,
             XamlRoot            = _window.Content.XamlRoot,
             Background          = Brush(ResourceKeys.SurfaceOverlayBrush),

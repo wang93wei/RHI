@@ -94,6 +94,9 @@ Search now works much like Steam's:
 - Neural Rendering: added a GITC Uplift link to the links at the bottom of the section.
 - RTX Encore's DLL name picker can recommend a different name for a game when it needs one, and lists the recommended name first. Thanks emptyes for the first version of this.
 
+**Localization**
+- All new and changed text in this release is now in the five languages RHI ships with (English, Simplified and Traditional Chinese, Japanese and Korean): Display modes, the Settings tabs, the shader picker, the Spotlight panels, OptiScaler All Settings and saved inis, the Source engine setup dialog, screenshots and the tray menu.
+
 ### Bug Fixes
 
 **HDR and resolution when a game closes**

@@ -91,7 +91,7 @@ public sealed class DisplayModeItem
     /// <summary>A value as shown to the user ("700 nits", "F12", "On", ...).</summary>
     public string Format(string? value)
     {
-        if (value == null) return "Not set";
+        if (value == null) return DisplayModeItems.L("DisplayMode.Value.NotSet", "Not set");
         switch (Kind)
         {
             case DisplayModeValueKind.Choice:
@@ -100,10 +100,10 @@ public sealed class DisplayModeItem
             case DisplayModeValueKind.ReShadeKey:
                 return HotkeyManager.FormatHotkeyDisplay(value);
             case DisplayModeValueKind.Text:
-                return value.Length == 0 ? "None" : value;
+                return value.Length == 0 ? DisplayModeItems.L("Option.None", "None") : value;
             case DisplayModeValueKind.Number:
             case DisplayModeValueKind.Decimal:
-                if (Key is DisplayModeItemKeys.UlTargetFps or DisplayModeItemKeys.DcFpsLimit && IsZero(value)) return "Off";
+                if (Key is DisplayModeItemKeys.UlTargetFps or DisplayModeItemKeys.DcFpsLimit && IsZero(value)) return DisplayModeItems.L("Option.Off", "Off");
                 return Unit == null ? value : $"{value} {Unit}";
             default:
                 return value;
@@ -145,6 +145,44 @@ public static class DisplayModeItems
 
     public static IReadOnlyList<string> Groups { get; } = new[] { GroupHdr, GroupFrameRate, GroupImage, GroupControls, GroupLaunch };
 
+    /// <summary>Display text for a group id (the ids stay English for grouping / comparisons).</summary>
+    public static string GroupLabel(string group) => group switch
+    {
+        GroupHdr => L("DisplayMode.Group.HdrAndBrightness", GroupHdr),
+        GroupFrameRate => L("DisplayMode.Group.FrameRate", GroupFrameRate),
+        GroupImage => L("DisplayMode.Group.Image", GroupImage),
+        GroupControls => L("DisplayMode.Group.Controls", GroupControls),
+        GroupLaunch => L("DisplayMode.Group.Launch", GroupLaunch),
+        _ => group,
+    };
+
+    // ── Localization ──────────────────────────────────────────────────────────
+    // English fallback keeps unit tests (no DI) and the static metadata readable;
+    // a missing catalog key also falls back to the English text, never the raw key.
+    internal static string L(string key, string fallback)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return fallback;
+            var s = loc.GetString(key);
+            return s == key ? fallback : s;
+        }
+        catch { return fallback; }
+    }
+
+    internal static string L(string key, string fallback, params object[] args)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return string.Format(fallback, args);
+            var s = loc.GetString(key, args);
+            return s == key ? string.Format(fallback, args) : s;
+        }
+        catch { return string.Format(fallback, args); }
+    }
+
     private static IReadOnlyList<DisplayModeItem>? _all;
     public static IReadOnlyList<DisplayModeItem> All => _all ??= Build();
 
@@ -152,11 +190,11 @@ public static class DisplayModeItems
 
     // ── Reasons ───────────────────────────────────────────────────────────────
 
-    private const string NoReShadeIni = "ReShade isn't installed (no reshade.ini)";
-    private const string NoRenoDx = "No RenoDX mod installed";
-    private const string NoReLimiter = "ReLimiter isn't installed (no relimiter.ini)";
-    private const string NoDc = "Display Commander isn't installed (no DisplayCommander.ini)";
-    private const string NoNvidia = "Needs an NVIDIA GPU and driver";
+    private static string NoReShadeIni => L("DisplayMode.Reason.NoReShadeIni", "ReShade isn't installed (no reshade.ini)");
+    private static string NoRenoDx => L("DisplayMode.Reason.NoRenoDx", "No RenoDX mod installed");
+    private static string NoReLimiter => L("DisplayMode.Reason.NoReLimiter", "ReLimiter isn't installed (no relimiter.ini)");
+    private static string NoDc => L("DisplayMode.Reason.NoDc", "Display Commander isn't installed (no DisplayCommander.ini)");
+    private static string NoNvidia => L("DisplayMode.Reason.NoNvidia", "Needs an NVIDIA GPU and driver");
 
     private static string? NeedReShade(DisplayModeContext c) => File.Exists(c.ReShadeIni) ? null : NoReShadeIni;
     private static string? NeedRenoDx(DisplayModeContext c) => !c.HasRenoDx ? NoRenoDx : NeedReShade(c);
@@ -167,33 +205,33 @@ public static class DisplayModeItems
     private static IReadOnlyList<DisplayModeItem> Build() => new List<DisplayModeItem>
     {
         // ── HDR and brightness ────────────────────────────────────────────────
-        RdxNits(DisplayModeItemKeys.RdxPeakNits, "toneMapPeakNits", "Peak brightness (RenoDX)",
-            "RenoDX's peak brightness. Set it to your display's peak: TVs and monitors are often very different."),
-        RdxNits(DisplayModeItemKeys.RdxGameNits, "toneMapGameNits", "Game brightness (RenoDX)",
-            "RenoDX's game (paper white) brightness. A darker room usually wants a lower value."),
-        RdxNits(DisplayModeItemKeys.RdxUiNits, "toneMapUINits", "UI brightness (RenoDX)",
-            "RenoDX's brightness for menus and the HUD."),
+        RdxNits(DisplayModeItemKeys.RdxPeakNits, "toneMapPeakNits", L("DisplayMode.Item.RdxPeakNits.Label", "Peak brightness (RenoDX)"),
+            L("DisplayMode.Item.RdxPeakNits.Help", "RenoDX's peak brightness. Set it to your display's peak: TVs and monitors are often very different.")),
+        RdxNits(DisplayModeItemKeys.RdxGameNits, "toneMapGameNits", L("DisplayMode.Item.RdxGameNits.Label", "Game brightness (RenoDX)"),
+            L("DisplayMode.Item.RdxGameNits.Help", "RenoDX's game (paper white) brightness. A darker room usually wants a lower value.")),
+        RdxNits(DisplayModeItemKeys.RdxUiNits, "toneMapUINits", L("DisplayMode.Item.RdxUiNits.Label", "UI brightness (RenoDX)"),
+            L("DisplayMode.Item.RdxUiNits.Help", "RenoDX's brightness for menus and the HUD.")),
         new()
         {
-            Key = DisplayModeItemKeys.RtxHdrPeak, Label = "RTX HDR peak brightness", Group = GroupHdr, Kind = DisplayModeValueKind.Number,
+            Key = DisplayModeItemKeys.RtxHdrPeak, Label = L("DisplayMode.Item.RtxHdrPeak.Label", "RTX HDR peak brightness"), Group = GroupHdr, Kind = DisplayModeValueKind.Number,
             Unit = "nits", Min = 100, Max = 10000,
-            Help = "Peak brightness for NVIDIA RTX HDR (NVIDIA driver profile). Only for games with RTX HDR turned on in the RenoDX ⚙.",
-            Unavailable = c => !c.IsRtxHdrEnabled ? "RTX HDR isn't on for this game" : NeedNvidia(c),
+            Help = L("DisplayMode.Item.RtxHdrPeak.Help", "Peak brightness for NVIDIA RTX HDR (NVIDIA driver profile). Only for games with RTX HDR turned on in the RenoDX ⚙."),
+            Unavailable = c => !c.IsRtxHdrEnabled ? L("DisplayMode.Reason.RtxHdrOff", "RTX HDR isn't on for this game") : NeedNvidia(c),
             Read = c =>
             {
                 uint v = c.Nvidia!.GetRtxHdrPeakBrightness(c.GameName, c.InstallPath);
                 return v > 0 ? v.ToString(CultureInfo.InvariantCulture) : null;
             },
             Write = (c, v) => uint.TryParse(v, out var n) && c.Nvidia!.SetRtxHdrPeakBrightness(c.GameName, c.InstallPath, n)
-                ? null : "Couldn't write the NVIDIA profile",
+                ? null : L("DisplayMode.Error.WriteNvidiaProfile", "Couldn't write the NVIDIA profile"),
         },
 
         // ── Frame rate ────────────────────────────────────────────────────────
         new()
         {
-            Key = DisplayModeItemKeys.UlTargetFps, Label = "ReLimiter frame rate cap", Group = GroupFrameRate, Kind = DisplayModeValueKind.Number,
+            Key = DisplayModeItemKeys.UlTargetFps, Label = L("DisplayMode.Item.UlTargetFps.Label", "ReLimiter frame rate cap"), Group = GroupFrameRate, Kind = DisplayModeValueKind.Number,
             Unit = "FPS", Min = 20, Max = 1000, AllowZero = true,
-            Help = "target_fps in the game's relimiter.ini. 0 = off.",
+            Help = L("DisplayMode.Item.UlTargetFps.Help", "target_fps in the game's relimiter.ini. 0 = off."),
             Unavailable = NeedReLimiter,
             // No relimiter.ini = no value (not "off"); a file without target_fps = off
             Read = c => !File.Exists(c.ReLimiterIni) ? null
@@ -201,7 +239,7 @@ public static class DisplayModeItems
                 && int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n.ToString(CultureInfo.InvariantCulture) : "0",
             Write = (c, v) =>
             {
-                if (!int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)) return "Not a number";
+                if (!int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)) return L("DisplayMode.Error.NotANumber", "Not a number");
                 AuxInstallService.ApplyUlTargetFps(c.ReLimiterIni, n);
                 foreach (var extra in ReLimiterExtraInis(c)) AuxInstallService.ApplyUlTargetFps(extra, n);
                 return null;
@@ -209,9 +247,9 @@ public static class DisplayModeItems
         },
         new()
         {
-            Key = DisplayModeItemKeys.DcFpsLimit, Label = "Display Commander FPS limit", Group = GroupFrameRate, Kind = DisplayModeValueKind.Decimal,
+            Key = DisplayModeItemKeys.DcFpsLimit, Label = L("DisplayMode.Item.DcFpsLimit.Label", "Display Commander FPS limit"), Group = GroupFrameRate, Kind = DisplayModeValueKind.Decimal,
             Unit = "FPS", Min = 20, Max = 1000, AllowZero = true,
-            Help = "fps_limit in the game's DisplayCommander.ini. 0 = no limit. Decimals allowed (e.g. 117.5).",
+            Help = L("DisplayMode.Item.DcFpsLimit.Help", "fps_limit in the game's DisplayCommander.ini. 0 = no limit. Decimals allowed (e.g. 117.5)."),
             Unavailable = NeedDc,
             Read = c => !File.Exists(c.DcIni) ? null
                 : Dlssg20_30Service.ReadIniValue(c.DcIni, "DisplayCommander", "fps_limit") is { } v
@@ -221,8 +259,8 @@ public static class DisplayModeItems
         },
         new()
         {
-            Key = DisplayModeItemKeys.DriverFpsCap, Label = "NVIDIA driver FPS limit", Group = GroupFrameRate, Kind = DisplayModeValueKind.Choice,
-            Help = "The driver's Max Frame Rate for this game (NVIDIA profile). Follow global = no value of its own.",
+            Key = DisplayModeItemKeys.DriverFpsCap, Label = L("DisplayMode.Item.DriverFpsCap.Label", "NVIDIA driver FPS limit"), Group = GroupFrameRate, Kind = DisplayModeValueKind.Choice,
+            Help = L("DisplayMode.Item.DriverFpsCap.Help", "The driver's Max Frame Rate for this game (NVIDIA profile). Follow global = no value of its own."),
             Choices = DriverFpsChoices,
             Unavailable = NeedNvidia,
             Read = c => c.Nvidia!.GetPerGameFpsLimit(c.GameName, c.InstallPath) is uint v ? v.ToString(CultureInfo.InvariantCulture) : "global",
@@ -231,13 +269,13 @@ public static class DisplayModeItems
                 bool ok = v == "global"
                     ? c.Nvidia!.ClearPerGameFpsLimit(c.GameName, c.InstallPath)
                     : uint.TryParse(v, out var n) && c.Nvidia!.SetPerGameFpsLimit(c.GameName, c.InstallPath, n);
-                return ok ? null : "Couldn't write the NVIDIA profile";
+                return ok ? null : L("DisplayMode.Error.WriteNvidiaProfile", "Couldn't write the NVIDIA profile");
             },
         },
         new()
         {
-            Key = DisplayModeItemKeys.MfgMode, Label = "DLSS frame generation", Group = GroupFrameRate, Kind = DisplayModeValueKind.Choice,
-            Help = "The driver's frame generation override for this game: off, a fixed multiplier (e.g. 2x for a 120 Hz TV, 4x for a 240 Hz monitor) or dynamic.",
+            Key = DisplayModeItemKeys.MfgMode, Label = L("DisplayMode.Item.MfgMode.Label", "DLSS frame generation"), Group = GroupFrameRate, Kind = DisplayModeValueKind.Choice,
+            Help = L("DisplayMode.Item.MfgMode.Help", "The driver's frame generation override for this game: off, a fixed multiplier (e.g. 2x for a 120 Hz TV, 4x for a 240 Hz monitor) or dynamic."),
             Choices = () => MfgChoices,
             Unavailable = NeedNvidia,
             Read = c =>
@@ -275,32 +313,32 @@ public static class DisplayModeItems
         // ── Image ─────────────────────────────────────────────────────────────
         new()
         {
-            Key = DisplayModeItemKeys.DlssSrPreset, Label = "DLSS Super Resolution preset", Group = GroupImage, Kind = DisplayModeValueKind.Choice,
-            Help = "The driver's DLSS SR preset override for this game (NVIDIA profile).",
+            Key = DisplayModeItemKeys.DlssSrPreset, Label = L("DisplayMode.Item.DlssSrPreset.Label", "DLSS Super Resolution preset"), Group = GroupImage, Kind = DisplayModeValueKind.Choice,
+            Help = L("DisplayMode.Item.DlssSrPreset.Help", "The driver's DLSS SR preset override for this game (NVIDIA profile)."),
             Choices = () => DlssPresetService.SrPresets.Select(p => (p.Name, p.Value.ToString(CultureInfo.InvariantCulture))).ToList(),
             Unavailable = NeedNvidia,
             Read = c => c.Nvidia!.GetSrPreset(c.GameName, c.InstallPath).ToString(CultureInfo.InvariantCulture),
-            Write = (c, v) => uint.TryParse(v, out var p) && c.Nvidia!.SetSrPreset(c.GameName, c.InstallPath, p) ? null : "Couldn't write the NVIDIA profile",
+            Write = (c, v) => uint.TryParse(v, out var p) && c.Nvidia!.SetSrPreset(c.GameName, c.InstallPath, p) ? null : L("DisplayMode.Error.WriteNvidiaProfile", "Couldn't write the NVIDIA profile"),
         },
         new()
         {
-            Key = DisplayModeItemKeys.DlssSrScale, Label = "DLSS render scale", Group = GroupImage, Kind = DisplayModeValueKind.Choice,
-            Help = "The driver's DLSS SR render scale override, e.g. Performance on a 4K TV and Quality on a 1440p monitor.",
+            Key = DisplayModeItemKeys.DlssSrScale, Label = L("DisplayMode.Item.DlssSrScale.Label", "DLSS render scale"), Group = GroupImage, Kind = DisplayModeValueKind.Choice,
+            Help = L("DisplayMode.Item.DlssSrScale.Help", "The driver's DLSS SR render scale override, e.g. Performance on a 4K TV and Quality on a 1440p monitor."),
             Choices = () => DlssPresetService.RenderScaleOptions.Where(o => o.Value != 0xFFFFFFFF)
                 .Select(o => (o.Name, o.Value.ToString(CultureInfo.InvariantCulture))).ToList(),
             Unavailable = NeedNvidia,
             Read = c => c.Nvidia!.GetSrRenderScale(c.GameName, c.InstallPath).ToString(CultureInfo.InvariantCulture),
-            Write = (c, v) => uint.TryParse(v, out var p) && c.Nvidia!.SetSrRenderScale(c.GameName, c.InstallPath, p) ? null : "Couldn't write the NVIDIA profile",
+            Write = (c, v) => uint.TryParse(v, out var p) && c.Nvidia!.SetSrRenderScale(c.GameName, c.InstallPath, p) ? null : L("DisplayMode.Error.WriteNvidiaProfile", "Couldn't write the NVIDIA profile"),
         },
         new()
         {
-            Key = DisplayModeItemKeys.RsPreset, Label = "ReShade preset", Group = GroupImage, Kind = DisplayModeValueKind.Text,
-            Help = "The ReShade preset file the game loads (PresetPath in reshade.ini), e.g. a sharper preset for the TV. A name like TV.ini is relative to the game folder.",
+            Key = DisplayModeItemKeys.RsPreset, Label = L("DisplayMode.Item.RsPreset.Label", "ReShade preset"), Group = GroupImage, Kind = DisplayModeValueKind.Text,
+            Help = L("DisplayMode.Item.RsPreset.Help", "The ReShade preset file the game loads (PresetPath in reshade.ini), e.g. a sharper preset for the TV. A name like TV.ini is relative to the game folder."),
             Unavailable = NeedReShade,
             Read = c => Dlssg20_30Service.ReadIniValue(c.ReShadeIni, "GENERAL", "PresetPath"),
             Write = (c, v) =>
             {
-                if (v.Length == 0) return "Enter a preset file name";
+                if (v.Length == 0) return L("DisplayMode.Error.EnterPresetFileName", "Enter a preset file name");
                 Dlssg20_30Service.WriteIniValue(c.ReShadeIni, "GENERAL", "PresetPath", v);
                 return null;
             },
@@ -309,24 +347,24 @@ public static class DisplayModeItems
         // ── Controls ──────────────────────────────────────────────────────────
         new()
         {
-            Key = DisplayModeItemKeys.RsOverlayKey, Label = "ReShade overlay key", Group = GroupControls, Kind = DisplayModeValueKind.ReShadeKey,
-            Help = "The key that opens the ReShade overlay. Saved to every reshade*.ini in the game folder.",
+            Key = DisplayModeItemKeys.RsOverlayKey, Label = L("DisplayMode.Item.RsOverlayKey.Label", "ReShade overlay key"), Group = GroupControls, Kind = DisplayModeValueKind.ReShadeKey,
+            Help = L("DisplayMode.Item.RsOverlayKey.Help", "The key that opens the ReShade overlay. Saved to every reshade*.ini in the game folder."),
             Unavailable = NeedReShade,
             Read = c => Dlssg20_30Service.ReadIniValue(c.ReShadeIni, "INPUT", "KeyOverlay"),
             Write = (c, v) => { foreach (var f in ReShadeInis(c)) AuxInstallService.ApplyOverlayHotkey(f, v); return null; },
         },
         new()
         {
-            Key = DisplayModeItemKeys.RsScreenshotKey, Label = "ReShade screenshot key", Group = GroupControls, Kind = DisplayModeValueKind.ReShadeKey,
-            Help = "The key for a ReShade screenshot (Backspace = none). Saved to every reshade*.ini in the game folder.",
+            Key = DisplayModeItemKeys.RsScreenshotKey, Label = L("DisplayMode.Item.RsScreenshotKey.Label", "ReShade screenshot key"), Group = GroupControls, Kind = DisplayModeValueKind.ReShadeKey,
+            Help = L("DisplayMode.Item.RsScreenshotKey.Help", "The key for a ReShade screenshot (Backspace = none). Saved to every reshade*.ini in the game folder."),
             Unavailable = NeedReShade,
             Read = c => Dlssg20_30Service.ReadIniValue(c.ReShadeIni, "INPUT", "KeyScreenshot"),
             Write = (c, v) => { foreach (var f in ReShadeInis(c)) AuxInstallService.ApplyScreenshotHotkey(f, v); return null; },
         },
         new()
         {
-            Key = DisplayModeItemKeys.RsGamepadNav, Label = "ReShade controller navigation", Group = GroupControls, Kind = DisplayModeValueKind.Choice,
-            Help = "Lets a controller move around the ReShade overlay (GamepadNavigation in reshade.ini). Handy on the TV.",
+            Key = DisplayModeItemKeys.RsGamepadNav, Label = L("DisplayMode.Item.RsGamepadNav.Label", "ReShade controller navigation"), Group = GroupControls, Kind = DisplayModeValueKind.Choice,
+            Help = L("DisplayMode.Item.RsGamepadNav.Help", "Lets a controller move around the ReShade overlay (GamepadNavigation in reshade.ini). Handy on the TV."),
             Choices = () => OffOn01,
             Unavailable = NeedReShade,
             Read = c => Dlssg20_30Service.ReadIniValue(c.ReShadeIni, "INPUT", "GamepadNavigation") is { } v ? (v == "1" ? "1" : "0") : "0",
@@ -334,8 +372,8 @@ public static class DisplayModeItems
         },
         new()
         {
-            Key = DisplayModeItemKeys.UlOsdKey, Label = "ReLimiter OSD key", Group = GroupControls, Kind = DisplayModeValueKind.ReLimiterKey,
-            Help = "The key that shows ReLimiter's on-screen display (osd_toggle_key in relimiter.ini).",
+            Key = DisplayModeItemKeys.UlOsdKey, Label = L("DisplayMode.Item.UlOsdKey.Label", "ReLimiter OSD key"), Group = GroupControls, Kind = DisplayModeValueKind.ReLimiterKey,
+            Help = L("DisplayMode.Item.UlOsdKey.Help", "The key that shows ReLimiter's on-screen display (osd_toggle_key in relimiter.ini)."),
             Unavailable = NeedReLimiter,
             Read = c => Dlssg20_30Service.ReadIniValue(c.ReLimiterIni, "FrameLimiter", "osd_toggle_key"),
             Write = (c, v) =>
@@ -349,33 +387,33 @@ public static class DisplayModeItems
         // ── When RHI launches the game ────────────────────────────────────────
         new()
         {
-            Key = DisplayModeItemKeys.Hdr, Label = "Windows HDR on launch", Group = GroupLaunch, Kind = DisplayModeValueKind.Choice, AtLaunch = true,
-            Help = "Turn Windows HDR on when RHI launches the game (off again when it closes). The HDR button on the game page sets this for the current mode.",
+            Key = DisplayModeItemKeys.Hdr, Label = L("DisplayMode.Item.Hdr.Label", "Windows HDR on launch"), Group = GroupLaunch, Kind = DisplayModeValueKind.Choice, AtLaunch = true,
+            Help = L("DisplayMode.Item.Hdr.Help", "Turn Windows HDR on when RHI launches the game (off again when it closes). The HDR button on the game page sets this for the current mode."),
             Choices = () => OffOn,
         },
         new()
         {
-            Key = DisplayModeItemKeys.HdrDisplay, Label = "HDR display", Group = GroupLaunch, Kind = DisplayModeValueKind.Choice, AtLaunch = true,
-            Help = "Which display gets HDR turned on, e.g. the TV in TV mode. Settings = the displays chosen in Settings › Display.",
+            Key = DisplayModeItemKeys.HdrDisplay, Label = L("DisplayMode.Item.HdrDisplay.Label", "HDR display"), Group = GroupLaunch, Kind = DisplayModeValueKind.Choice, AtLaunch = true,
+            Help = L("DisplayMode.Item.HdrDisplay.Help", "Which display gets HDR turned on, e.g. the TV in TV mode. Settings = the displays chosen in Settings › Display."),
             Choices = HdrDisplayChoices,
         },
         new()
         {
-            Key = DisplayModeItemKeys.Resolution, Label = "Resolution on launch", Group = GroupLaunch, Kind = DisplayModeValueKind.Choice, AtLaunch = true,
-            Help = "Switch the desktop resolution when RHI launches the game (put back when it closes). On = the target resolution in Settings › Display.",
+            Key = DisplayModeItemKeys.Resolution, Label = L("DisplayMode.Item.Resolution.Label", "Resolution on launch"), Group = GroupLaunch, Kind = DisplayModeValueKind.Choice, AtLaunch = true,
+            Help = L("DisplayMode.Item.Resolution.Help", "Switch the desktop resolution when RHI launches the game (put back when it closes). On = the target resolution in Settings › Display."),
             Choices = ResolutionChoices,
         },
         new()
         {
-            Key = DisplayModeItemKeys.LaunchArgs, Label = "Launch arguments", Group = GroupLaunch, Kind = DisplayModeValueKind.Text, AtLaunch = true,
-            Help = "Arguments RHI passes to the game in this mode (instead of the ones in Game Overrides), e.g. -fullscreen.",
+            Key = DisplayModeItemKeys.LaunchArgs, Label = L("DisplayMode.Item.LaunchArgs.Label", "Launch arguments"), Group = GroupLaunch, Kind = DisplayModeValueKind.Text, AtLaunch = true,
+            Help = L("DisplayMode.Item.LaunchArgs.Help", "Arguments RHI passes to the game in this mode (instead of the ones in Game Overrides), e.g. -fullscreen."),
         },
     };
 
     private static DisplayModeItem RdxNits(string key, string iniKey, string label, string help) => new()
     {
         Key = key, Label = label, Group = GroupHdr, Kind = DisplayModeValueKind.Number, Unit = "nits", Min = 1, Max = 10000,
-        Help = help + $" Saved as {iniKey} in every [renodx-preset] section of reshade.ini.",
+        Help = help + " " + L("DisplayMode.Item.RdxNits.SavedAs", "Saved as {0} in every [renodx-preset] section of reshade.ini.", iniKey),
         Unavailable = NeedRenoDx,
         Read = c => ReadRdx(c.ReShadeIni, iniKey),
         Write = (c, v) => WriteRdx(c.ReShadeIni, iniKey, v),
@@ -421,7 +459,7 @@ public static class DisplayModeItems
     /// </summary>
     internal static string? WriteRdx(string iniPath, string iniKey, string value)
     {
-        if (!File.Exists(iniPath)) return "reshade.ini wasn't found";
+        if (!File.Exists(iniPath)) return L("DisplayMode.Error.ReshadeIniNotFound", "reshade.ini wasn't found");
         var text = File.ReadAllText(iniPath);
         var eol = text.Contains("\r\n") ? "\r\n" : "\n";
         var lines = text.Split('\n').Select(l => l.TrimEnd('\r')).ToList();
@@ -494,17 +532,17 @@ public static class DisplayModeItems
 
     // ── Choice lists ──────────────────────────────────────────────────────────
 
-    private static readonly IReadOnlyList<(string, string)> OffOn = new[] { ("Off", "Off"), ("On", "On") };
-    private static readonly IReadOnlyList<(string, string)> OffOn01 = new[] { ("Off", "0"), ("On", "1") };
+    private static readonly IReadOnlyList<(string, string)> OffOn = new[] { (L("Option.Off", "Off"), "Off"), (L("Option.On", "On"), "On") };
+    private static readonly IReadOnlyList<(string, string)> OffOn01 = new[] { (L("Option.Off", "Off"), "0"), (L("Option.On", "On"), "1") };
 
     private static readonly IReadOnlyList<(string, string)> MfgChoices = new[]
     {
-        ("Off", "off"), ("2x", "fixed:1"), ("3x", "fixed:2"), ("4x", "fixed:3"), ("5x", "fixed:4"), ("6x", "fixed:5"), ("Dynamic", "dynamic"),
+        (L("Option.Off", "Off"), "off"), ("2x", "fixed:1"), ("3x", "fixed:2"), ("4x", "fixed:3"), ("5x", "fixed:4"), ("6x", "fixed:5"), (L("DisplayMode.Choice.Dynamic", "Dynamic"), "dynamic"),
     };
 
     private static IReadOnlyList<(string, string)> DriverFpsChoices()
     {
-        var list = new List<(string, string)> { ("Follow global", "global"), ("Off", "0") };
+        var list = new List<(string, string)> { (L("DisplayMode.Choice.FollowGlobal", "Follow global"), "global"), (L("Option.Off", "Off"), "0") };
         foreach (var fps in new uint[] { 30, 40, 48, 50, 58, 60, 72, 90, 97, 100, 116, 117, 120, 138, 141, 144, 157, 160, 165, 175, 196, 200, 224, 225, 240, 280, 300, 360, 480 })
             list.Add(($"{fps} FPS", fps.ToString(CultureInfo.InvariantCulture)));
         return list;
@@ -514,7 +552,7 @@ public static class DisplayModeItems
     private static IReadOnlyList<(string, string)> ResolutionChoices()
     {
         if (_resolutions != null) return _resolutions;
-        var list = new List<(string, string)> { ("Off", "Off"), ("On (Settings target)", "On") };
+        var list = new List<(string, string)> { (L("Option.Off", "Off"), "Off"), (L("DisplayMode.Choice.OnSettingsTarget", "On (Settings target)"), "On") };
         try
         {
             foreach (var r in ResolutionToggleService.GetSupportedResolutions().OrderByDescending(r => r.Width).ThenByDescending(r => r.Height).ThenByDescending(r => r.RefreshRate))
@@ -529,7 +567,7 @@ public static class DisplayModeItems
 
     private static IReadOnlyList<(string, string)> HdrDisplayChoices()
     {
-        var list = new List<(string, string)> { ("Settings", "default") };
+        var list = new List<(string, string)> { (L("Common.Settings", "Settings"), "default") };
         try
         {
             foreach (var d in HdrToggleService.GetAllDisplays().Where(d => d.HdrSupported))

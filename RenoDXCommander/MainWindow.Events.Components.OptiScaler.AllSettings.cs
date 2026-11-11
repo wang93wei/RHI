@@ -30,9 +30,8 @@ public sealed partial class MainWindow
         if (!File.Exists(Path.Combine(gameDir, OptiScalerService.IniFileName))) return;
         var openKey = $"{card.GameName}|{store}";
 
-        cog.AddSection("All Settings");
-        cog.AddNote("Every setting in this game's OptiScaler.ini, with the options the installed OptiScaler build lists. " +
-                    "Nothing is written until you press Apply. Applied changes are kept when OptiScaler is reinstalled or updated.");
+        cog.AddSection(Loc.GetString("Dialog.OptiScaler.AllSettingsSection"));
+        cog.AddNote(Loc.GetString("Dialog.OptiScaler.AllSettingsNote"));
 
         var settings = new List<OsIniSetting>();
         var pending = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -40,11 +39,11 @@ public sealed partial class MainWindow
 
         var host = new StackPanel { Spacing = 10, Visibility = Visibility.Collapsed };
         var sectionCombo = CogDialog.MakeCombo(Array.Empty<string>(), -1);
-        var search = CogDialog.MakeTextBox("", "Search all settings");
+        var search = CogDialog.MakeTextBox("", Loc.GetString("Dialog.OptiScaler.AllSettingsSearchPlaceholder"));
         var filterRow = new Grid { ColumnSpacing = 12 };
         filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        ToolTipService.SetToolTip(sectionCombo, "Section of OptiScaler.ini to show.");
+        ToolTipService.SetToolTip(sectionCombo, Loc.GetString("Dialog.OptiScaler.AllSettingsSectionTooltip"));
         Grid.SetColumn(search, 1);
         filterRow.Children.Add(sectionCombo);
         filterRow.Children.Add(search);
@@ -61,15 +60,17 @@ public sealed partial class MainWindow
         {
             if (applyBtn != null)
             {
-                applyBtn.Content = pending.Count == 0 ? "Apply" : $"Apply {pending.Count} change{(pending.Count == 1 ? "" : "s")}";
+                applyBtn.Content = pending.Count == 0
+                    ? Loc.GetString("Common.Apply")
+                    : Loc.GetString("Dialog.OptiScaler.AllSettingsApplyCount", pending.Count);
                 applyBtn.IsEnabled = pending.Count > 0;
             }
             if (revertBtn != null) revertBtn.IsEnabled = pending.Count > 0;
             var saved = ViewModel.GetOsIniEdits(card.GameName, store).Count;
             if (forgetBtn != null) forgetBtn.IsEnabled = saved > 0;
             info.Text = saved > 0
-                ? $"{saved} applied edit{(saved == 1 ? " is" : "s are")} saved for this game and written again after a reinstall or update. Hover a setting for its description."
-                : "Hover a setting for its description. Settings not in the file yet are shown with auto and added when you change them.";
+                ? Loc.GetString("Dialog.OptiScaler.AllSettingsSavedEdits", saved)
+                : Loc.GetString("Dialog.OptiScaler.AllSettingsHoverHint");
         }
 
         // One cell per setting: dropdown for documented options, text box for anything else
@@ -85,8 +86,8 @@ public sealed partial class MainWindow
             }
 
             var help = s.Help;
-            if (!string.IsNullOrEmpty(s.Default)) help += (help.Length > 0 ? "\n" : "") + $"Default (auto): {s.Default}";
-            help += (help.Length > 0 ? "\n" : "") + $"[{s.Section}] {s.Key}" + (s.InFile ? "" : " (not in the file yet)");
+            if (!string.IsNullOrEmpty(s.Default)) help += (help.Length > 0 ? "\n" : "") + Loc.GetString("Dialog.OptiScaler.AllSettingsDefaultAuto", s.Default);
+            help += (help.Length > 0 ? "\n" : "") + $"[{s.Section}] {s.Key}" + (s.InFile ? "" : " " + Loc.GetString("Dialog.OptiScaler.AllSettingsNotInFile"));
             var label = showSection ? $"{s.Key} ({s.Section})" : s.Key;
 
             FrameworkElement control;
@@ -105,7 +106,7 @@ public sealed partial class MainWindow
                     if (!values.Any(x => x.Equals(v, StringComparison.OrdinalIgnoreCase)))
                     {
                         values.Add(v);
-                        labels.Add(v.Length == 0 ? "(empty)" : v);
+                        labels.Add(v.Length == 0 ? Loc.GetString("Dialog.OptiScaler.AllSettingsEmptyOption") : v);
                     }
                 int sel = values.FindIndex(x => x.Equals(Current(), StringComparison.OrdinalIgnoreCase));
                 var combo = CogDialog.MakeCombo(labels, sel);
@@ -134,10 +135,10 @@ public sealed partial class MainWindow
                 var all = settings.Where(s => Matches(s, q)).ToList();
                 shown = all.Take(OsAllSearchLimit).ToList();
                 listHost.Children.Add(MakeOsFooterNote(all.Count == 0
-                    ? "No settings match."
+                    ? Loc.GetString("Dialog.OptiScaler.AllSettingsNoMatch")
                     : all.Count > shown.Count
-                        ? $"Showing the first {shown.Count} of {all.Count} matches."
-                        : $"{all.Count} match{(all.Count == 1 ? "" : "es")}."));
+                        ? Loc.GetString("Dialog.OptiScaler.AllSettingsShowingFirst", shown.Count, all.Count)
+                        : Loc.GetString("Dialog.OptiScaler.AllSettingsMatchCount", all.Count)));
             }
             else
             {
@@ -162,7 +163,7 @@ public sealed partial class MainWindow
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 CrashReporter.Log($"[MainWindow.BuildOsAllSettingsSection] Couldn't read OptiScaler.ini — {ex.Message}");
-                cog.SetError($"Couldn't read OptiScaler.ini: {ex.Message}");
+                cog.SetError(Loc.GetString("Dialog.OptiScaler.AllSettingsReadFailed", ex.Message));
                 return;
             }
             var sections = settings.Select(s => s.Section).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -196,12 +197,12 @@ public sealed partial class MainWindow
         };
         void OnSearchTick(DispatcherQueueTimer t, object o) => Render();
 
-        applyBtn = cog.MakeButton("Apply", CogButtonKind.Primary, async () =>
+        applyBtn = cog.MakeButton(Loc.GetString("Common.Apply"), CogButtonKind.Primary, async () =>
         {
             if (pending.Count == 0) return;
             var values = pending.Select(kv => { var (s, k) = OsIniEditor.SplitId(kv.Key); return (s, k, kv.Value); }).ToList();
             var err = await Task.Run(() => OsIniEditor.WriteValues(gameDir, values));
-            if (err != null) { cog.SetError($"Couldn't write OptiScaler.ini: {err}"); return; }
+            if (err != null) { cog.SetError(Loc.GetString("Dialog.OptiScaler.AllSettingsWriteFailed", err)); return; }
 
             var saved = ViewModel.GetOsIniEdits(card.GameName, store);
             foreach (var kv in pending) saved[kv.Key] = kv.Value;
@@ -218,30 +219,30 @@ public sealed partial class MainWindow
 
             CrashReporter.Log($"[MainWindow.BuildOsAllSettingsSection] Applied {values.Count} OptiScaler.ini change(s) for '{card.GameName}'");
             _osAllOpenFor = openKey;
-            _osAllAppliedMessage = $"Applied {values.Count} change{(values.Count == 1 ? "" : "s")} to OptiScaler.ini.";
+            _osAllAppliedMessage = Loc.GetString("Dialog.OptiScaler.AllSettingsAppliedCount", values.Count);
             ReopenOsCog(ctx); // the settings above show the new values too
-        }, "Write the changed settings to this game's OptiScaler.ini. The old file is backed up first.");
+        }, Loc.GetString("Dialog.OptiScaler.AllSettingsApplyTooltip"));
 
-        revertBtn = cog.MakeButton("Revert", CogButtonKind.Secondary, () =>
+        revertBtn = cog.MakeButton(Loc.GetString("Dialog.OptiScaler.Revert"), CogButtonKind.Secondary, () =>
         {
             pending.Clear();
             Render();
             UpdateButtons();
-        }, "Forget the changes you haven't applied yet.");
+        }, Loc.GetString("Dialog.OptiScaler.RevertTooltip"));
 
-        forgetBtn = cog.MakeButton("Forget saved edits", CogButtonKind.Secondary, () =>
+        forgetBtn = cog.MakeButton(Loc.GetString("Dialog.OptiScaler.ForgetSavedEdits"), CogButtonKind.Secondary, () =>
         {
             ViewModel.SetOsIniEdits(card.GameName, null, store);
             UpdateButtons();
-            cog.SetSuccess("Saved edits forgotten. OptiScaler.ini is unchanged; a reinstall will use the default settings.");
-        }, "Stop writing your applied edits again after a reinstall or update. Doesn't change the current OptiScaler.ini.");
+            cog.SetSuccess(Loc.GetString("Dialog.OptiScaler.ForgetSavedEditsDone"));
+        }, Loc.GetString("Dialog.OptiScaler.ForgetSavedEditsTooltip"));
 
-        var backupsBtn = cog.MakeButton("Open backups", CogButtonKind.Secondary, async () =>
+        var backupsBtn = cog.MakeButton(Loc.GetString("Dialog.OptiScaler.OpenBackups"), CogButtonKind.Secondary, async () =>
         {
             var dir = OsIniEditor.BackupDir(gameDir);
-            if (!Directory.Exists(dir)) { cog.SetStatus("No backups yet. One is made each time you press Apply."); return; }
+            if (!Directory.Exists(dir)) { cog.SetStatus(Loc.GetString("Dialog.OptiScaler.NoBackupsYet")); return; }
             await Windows.System.Launcher.LaunchFolderPathAsync(dir);
-        }, "Copies of OptiScaler.ini from before each Apply (newest 5).");
+        }, Loc.GetString("Dialog.OptiScaler.OpenBackupsTooltip"));
 
         var actions = new Controls.WrapPanel { HorizontalSpacing = 8, VerticalSpacing = 8 };
         foreach (var b in new[] { applyBtn, revertBtn, forgetBtn, backupsBtn }) actions.Children.Add(b);
@@ -255,11 +256,13 @@ public sealed partial class MainWindow
         {
             bool open = host.Visibility != Visibility.Visible;
             host.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            showBtn!.Content = open ? "Hide all settings" : "Show all settings";
+            showBtn!.Content = open
+                ? Loc.GetString("Dialog.OptiScaler.HideAllSettings")
+                : Loc.GetString("Dialog.OptiScaler.ShowAllSettings");
             _osAllOpenFor = open ? openKey : null;
             if (open && !loaded) await LoadAsync();
         }
-        showBtn = cog.MakeButton("Show all settings", CogButtonKind.Secondary, ToggleAsync);
+        showBtn = cog.MakeButton(Loc.GetString("Dialog.OptiScaler.ShowAllSettings"), CogButtonKind.Secondary, ToggleAsync);
         cog.AddButtons(showBtn);
         cog.AddContent(host);
         UpdateButtons();

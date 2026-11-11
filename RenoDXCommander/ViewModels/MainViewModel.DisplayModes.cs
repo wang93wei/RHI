@@ -90,12 +90,12 @@ public partial class MainViewModel
         if (!DisplayModesOn) return null;
         if (card.IsRunning)
         {
-            refused?.Invoke($"Close {card.GameName} first: games write their settings when they close, which would undo the switch.");
+            refused?.Invoke(Loc.GetString("DisplayMode.Error.CloseFirst", card.GameName));
             return null;
         }
         if (string.IsNullOrEmpty(card.InstallPath))
         {
-            refused?.Invoke("This game has no install folder.");
+            refused?.Invoke(Loc.GetString("DisplayMode.Error.NoInstallFolder"));
             return null;
         }
         var ctx = BuildDisplayModeContext(card);
@@ -129,7 +129,7 @@ public partial class MainViewModel
                 if (ct.IsCancellationRequested) break;
                 var (card, ctx) = targets[i];
                 if (store.ItemsFor(ctx.Key).Count == 0) continue;
-                progress?.Report((modeId == null ? $"Turning off: {ctx.GameName}" : $"{modeName} mode: {ctx.GameName}",
+                progress?.Report((modeId == null ? Loc.GetString("DisplayMode.Progress.TurningOff", ctx.GameName) : Loc.GetString("DisplayMode.Progress.SwitchingMode", modeName, ctx.GameName),
                     (double)i / Math.Max(1, targets.Count) * 100));
                 try
                 {
@@ -163,7 +163,7 @@ public partial class MainViewModel
         bool isActive = modeId.Equals(store.ActiveModeId(key) ?? "", StringComparison.OrdinalIgnoreCase);
         if (isActive && !item.AtLaunch && store.Swaps(key, item.Key))
         {
-            if (card.IsRunning) return "Saved. The game is running, so it's written the next time you switch modes.";
+            if (card.IsRunning) return Loc.GetString("DisplayMode.Status.SavedRunning");
             var ctx = BuildDisplayModeContext(card);
             var svc = DisplayModeService;
             // Cleared: the mode default, else the game's normal value

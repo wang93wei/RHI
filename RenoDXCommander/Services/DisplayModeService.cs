@@ -43,12 +43,16 @@ public sealed class DisplayModeService
                 if (written.Count > 0)
                     parts.Add(string.Join(", ", written.Select(i => $"{i.Item.Label} {i.Item.Format(i.Value)}")));
                 if (launch.Count > 0)
-                    parts.Add("on launch: " + string.Join(", ", launch.Select(i => $"{i.Item.Label} {i.Item.Format(i.Value)}")));
-                var text = TurnedOff ? $"{GameName}: display mode off, using global settings" : $"{GameName}: {ModeName} mode";
+                    parts.Add(L("DisplayMode.Summary.OnLaunch", "on launch: ") + string.Join(", ", launch.Select(i => $"{i.Item.Label} {i.Item.Format(i.Value)}")));
+                var text = TurnedOff
+                    ? L("DisplayMode.Summary.Off", "{0}: display mode off, using global settings", GameName)
+                    : L("DisplayMode.Summary.Mode", "{0}: {1} mode", GameName, ModeName);
                 if (parts.Count > 0) text += ". " + string.Join("; ", parts);
-                else text += TurnedOff ? ". Nothing to change." : ". Nothing to change (no values set for this mode yet).";
+                else text += TurnedOff
+                    ? L("DisplayMode.Summary.NothingToChange", ". Nothing to change.")
+                    : L("DisplayMode.Summary.NothingToChangeYet", ". Nothing to change (no values set for this mode yet).");
                 var failed = Items.Where(i => i.Problem != null && i.Written == false && i.Value != null).ToList();
-                if (failed.Count > 0) text += ". Couldn't set: " + string.Join(", ", failed.Select(i => i.Item.Label));
+                if (failed.Count > 0) text += L("DisplayMode.Summary.CouldntSet", ". Couldn't set: ") + string.Join(", ", failed.Select(i => i.Item.Label));
                 return text;
             }
         }
@@ -299,7 +303,7 @@ public sealed class DisplayModeService
                                        or ArgumentException or NotSupportedException or System.Runtime.InteropServices.COMException)
         {
             CrashReporter.Log($"[DisplayModeService.Write] '{ctx.GameName}' {item.Key}={value} failed — {ex.Message}");
-            return ex is UnauthorizedAccessException ? "Access denied" : ex.Message;
+            return ex is UnauthorizedAccessException ? L("DisplayMode.Error.AccessDenied", "Access denied") : ex.Message;
         }
     }
 
@@ -312,5 +316,30 @@ public sealed class DisplayModeService
             CrashReporter.Log($"[DisplayModeService] {item.Key} {what} failed — {ex.Message}");
             return what == "check" ? ex.Message : null;
         }
+    }
+
+    // English fallback keeps unit tests (no DI) readable; a missing catalog key also falls back to English.
+    private static string L(string key, string fallback)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return fallback;
+            var s = loc.GetString(key);
+            return s == key ? fallback : s;
+        }
+        catch { return fallback; }
+    }
+
+    private static string L(string key, string fallback, params object[] args)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return string.Format(fallback, args);
+            var s = loc.GetString(key, args);
+            return s == key ? string.Format(fallback, args) : s;
+        }
+        catch { return string.Format(fallback, args); }
     }
 }

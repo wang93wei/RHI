@@ -1,4 +1,4 @@
-﻿// DetailPanelBuilder.Overrides.RsChannel.cs — ReShade Channel Override + Update Inclusion + Middle Row Grid.
+// DetailPanelBuilder.Overrides.RsChannel.cs — ReShade Channel Override + Update Inclusion + Middle Row Grid.
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -151,11 +151,10 @@ public partial class DetailPanelBuilder
                 {
                     var vLegacyDialog = new ContentDialog
                     {
-                        Title = "Vulkan ReShade Channel Override",
-                        Content = "Vulkan games share a global ReShade layer.\n\n" +
-                            $"Switching to ReShade {pickedVersion} will change it for ALL Vulkan games.",
-                        PrimaryButtonText = "Apply to All Vulkan Games",
-                        CloseButtonText = "Cancel",
+                        Title = Loc.GetString("Dialog.VulkanReshadeChannelOverride"),
+                        Content = Loc.GetString("Dialog.VulkanLegacyChannelOverride.Content", pickedVersion),
+                        PrimaryButtonText = Loc.GetString("Dialog.ApplyToAllVulkanGames"),
+                        CloseButtonText = Loc.GetString("Dialog.Cancel"),
                         XamlRoot = _window.Content.XamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     };

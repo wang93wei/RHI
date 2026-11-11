@@ -101,11 +101,11 @@ internal sealed partial class OverlayWindow
     private Button MakeHiddenAchToggle(Grid row)
     {
         bool on = _settings().ShowHiddenAchievements;
-        var b = new Button { Content = "Show hidden", Padding = new Thickness(16, 0, 16, 0), VerticalAlignment = VerticalAlignment.Stretch };
+        var b = new Button { Content = Loc.GetString("Achievements.ShowHidden"), Padding = new Thickness(16, 0, 16, 0), VerticalAlignment = VerticalAlignment.Stretch };
         TabsTheme.Apply(b, DetailLayoutHost.ToggleLook(on), height: double.NaN, fontSize: 15);
         ToolTipService.SetToolTip(b, on
-            ? "Hidden achievements show their name and description. Click to hide them again."
-            : "Show the name and description of hidden achievements (may spoil the story).");
+            ? Loc.GetString("Achievements.ShowHidden.Tooltip.On")
+            : Loc.GetString("Achievements.ShowHidden.Tooltip.Off"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, on ? "Show hidden achievements: on" : "Show hidden achievements: off");
         b.Click += (_, _) =>
         {

@@ -131,10 +131,12 @@ public static partial class ShaderPopupHelper
     private static void SetExpanded(Button b, bool open)
     {
         int n = b.Tag is int c ? c : 0;
-        b.Content = open ? "Hide shaders" : n == 1 ? "Show 1 shader" : $"Show {n} shaders";
+        b.Content = open ? Loc.GetString("Shader.Card.HideShaders")
+            : n == 1 ? Loc.GetString("Shader.Card.ShowShadersOne")
+            : Loc.GetString("Shader.Card.ShowShaders", n);
     }
 
     /// <summary>Category heading text with how many of its packs are selected.</summary>
     private static string HeadingText(string category, int selected, int total)
-        => selected > 0 ? $"{category}   {selected} of {total} selected" : category;
+        => selected > 0 ? Loc.GetString("Shader.Card.HeadingWithCount", category, selected, total) : category;
 }

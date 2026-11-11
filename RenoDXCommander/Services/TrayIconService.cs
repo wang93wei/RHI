@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -9,6 +10,10 @@ namespace RenoDXCommander.Services;
 public static class TrayIconService
 {
     private const string AppId = "RHI.ReShadeHDRInstaller";
+
+    // Same static-singleton lookup used by other services (LocOpt, ShortcutService, ...).
+    // App.Services is built in the App constructor, before the tray icon is created.
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
@@ -101,8 +106,8 @@ public static class TrayIconService
             AppendMenu(hMenu, MF_SEPARATOR, 0, null);
         }
 
-        AppendMenu(hMenu, MF_STRING, 1, "Open RHI");
-        AppendMenu(hMenu, MF_STRING, 2, "Exit");
+        AppendMenu(hMenu, MF_STRING, 1, Loc.GetString("Tray.Open"));
+        AppendMenu(hMenu, MF_STRING, 2, Loc.GetString("Tray.Exit"));
 
         // Required for the menu to close when clicking away
         SetForegroundWindow(_hwnd);

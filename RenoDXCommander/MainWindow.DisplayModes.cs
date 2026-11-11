@@ -30,7 +30,7 @@ public sealed partial class MainWindow
     {
         var (hdrOn, hdrSource) = ResolveHdrButton(card);
         DetailHdrToggleBtn.Tag = card;
-        DetailHdrToggleText.Text = "HDR";
+        DetailHdrToggleText.Text = Loc.GetString("Xaml.Hdr");
         StyleClassicToggle(DetailHdrToggleBtn, DetailHdrToggleText, hdrOn);
         ToolTipService.SetToolTip(DetailHdrToggleBtn, DetailPanelBuilder.HdrToggleTooltip(hdrOn, hdrSource));
 
@@ -39,7 +39,7 @@ public sealed partial class MainWindow
             var (resOn, resSource) = ResolveResButton(card);
             DetailResToggleBtn.Visibility = Visibility.Visible;
             DetailResToggleBtn.Tag = card;
-            DetailResToggleText.Text = "RES";
+            DetailResToggleText.Text = Loc.GetString("Xaml.Res");
             StyleClassicToggle(DetailResToggleBtn, DetailResToggleText, resOn);
             ToolTipService.SetToolTip(DetailResToggleBtn, DetailPanelBuilder.ResToggleTooltip(resOn, resSource));
         }
@@ -60,11 +60,11 @@ public sealed partial class MainWindow
     private (bool On, string Source) ResolveHdrButton(GameCardViewModel card)
     {
         if (ViewModel.DisplayModeOwnsHdr(card) && ViewModel.DisplayModeHdrOn(card) is bool modeOn)
-            return (modeOn, $"set by its {ViewModel.ActiveDisplayModeName(card)} display mode");
+            return (modeOn, Loc.GetString("DisplayMode.Source.SetByMode", ViewModel.ActiveDisplayModeName(card)));
         var ov = _gameNameService.HdrToggleOverrides.TryGetValue(card.GameName, out var v) ? v : null;
         return ov != null
-            ? (string.Equals(ov, "On", StringComparison.OrdinalIgnoreCase), "set for this game")
-            : (ViewModel.Settings.HdrAutoToggle, "following Settings › Display & HDR");
+            ? (string.Equals(ov, "On", StringComparison.OrdinalIgnoreCase), Loc.GetString("DisplayMode.Source.SetForGame"))
+            : (ViewModel.Settings.HdrAutoToggle, Loc.GetString("DisplayMode.Source.FollowingSettings"));
     }
 
     private (bool On, string Source) ResolveResButton(GameCardViewModel card)
@@ -72,15 +72,15 @@ public sealed partial class MainWindow
         if (ViewModel.DisplayModeOwnsResolution(card) && ViewModel.DisplayModeResolution(card) is { } mv)
         {
             var name = ViewModel.ActiveDisplayModeName(card);
-            if (mv.Equals("Off", StringComparison.OrdinalIgnoreCase)) return (false, $"set by its {name} display mode");
-            if (mv.Equals("On", StringComparison.OrdinalIgnoreCase)) return (true, $"set by its {name} display mode");
+            if (mv.Equals("Off", StringComparison.OrdinalIgnoreCase)) return (false, Loc.GetString("DisplayMode.Source.SetByMode", name));
+            if (mv.Equals("On", StringComparison.OrdinalIgnoreCase)) return (true, Loc.GetString("DisplayMode.Source.SetByMode", name));
             var r = ResolutionToggleService.DisplayResolution.Parse(mv);
-            return (true, $"set by its {name} display mode: {r?.Label ?? mv}");
+            return (true, Loc.GetString("DisplayMode.Source.SetByModeResolution", name, r?.Label ?? mv));
         }
         var ov = _gameNameService.ResToggleOverrides.TryGetValue(card.GameName, out var v) ? v : null;
         return ov != null
-            ? (string.Equals(ov, "On", StringComparison.OrdinalIgnoreCase), "set for this game")
-            : (ViewModel.Settings.ResolutionAutoToggle, "following Settings › Display & HDR");
+            ? (string.Equals(ov, "On", StringComparison.OrdinalIgnoreCase), Loc.GetString("DisplayMode.Source.SetForGame"))
+            : (ViewModel.Settings.ResolutionAutoToggle, Loc.GetString("DisplayMode.Source.FollowingSettings"));
     }
 
     /// <summary>HDR button click while the game's display mode sets HDR: flips it for the current mode. False = not handled.</summary>
@@ -152,14 +152,14 @@ public sealed partial class MainWindow
                 var text = new TextBlock { Text = ViewModel.ActiveDisplayModeName(card), FontSize = 11 };
                 var b = MakeClassicChip(text);
                 StyleClassicToggle(b, text, active != null);
-                ToolTipService.SetToolTip(b, "Display mode. Click to switch.");
+                ToolTipService.SetToolTip(b, Loc.GetString("DisplayMode.Switch.Tooltip"));
                 b.Click += (s, e) => ShowDisplayModeMenu(card, b);
                 _dmClassicHost.Children.Add(b);
             }
             var cogText = new TextBlock { Text = "⚙", FontSize = 11 };
             var cog = MakeClassicChip(cogText);
             StyleClassicToggle(cog, cogText, false);
-            ToolTipService.SetToolTip(cog, "Display mode settings for this game: what it swaps and its values per mode");
+            ToolTipService.SetToolTip(cog, Loc.GetString("DisplayMode.Settings.Tooltip"));
             cog.Click += async (s, e) => await ShowDisplayModeGameDialogAsync(card);
             _dmClassicHost.Children.Add(cog);
         }
@@ -208,7 +208,7 @@ public sealed partial class MainWindow
                 };
                 TabsTheme.Apply(b, DetailLayoutHost.ToggleLook(on), height: 36, fontSize: 12);
                 ToolTipService.SetToolTip(b, ModeButtonTooltip(card, m.Name, on));
-                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, $"{m.Name} display mode");
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(b, Loc.GetString("DisplayMode.Button.AutomationName", m.Name));
                 string? id = on ? null : m.Id; // the active mode again = turn it off
                 b.Click += async (s, e) => { await SwitchDisplayModeFromUiAsync(card, id); afterChange(); };
                 AddButton(b, true);
@@ -216,17 +216,17 @@ public sealed partial class MainWindow
         }
         else
         {
-            var b = new Button { Content = $"Display mode: {ViewModel.ActiveDisplayModeName(card)}", HorizontalAlignment = HorizontalAlignment.Stretch };
+            var b = new Button { Content = Loc.GetString("DisplayMode.Switch.Multiple", ViewModel.ActiveDisplayModeName(card)), HorizontalAlignment = HorizontalAlignment.Stretch };
             TabsTheme.Apply(b, DetailLayoutHost.ToggleLook(active != null), height: 36, fontSize: 12);
-            ToolTipService.SetToolTip(b, "Display mode. Click to switch.");
+            ToolTipService.SetToolTip(b, Loc.GetString("DisplayMode.Switch.Tooltip"));
             b.Click += (s, e) => ShowDisplayModeMenu(card, b, afterChange);
             AddButton(b, true);
         }
 
         var cog = new Button { Width = 36, Padding = new Thickness(0), Content = TabsTheme.Icon("", 15) };
         TabsTheme.Apply(cog, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36);
-        ToolTipService.SetToolTip(cog, "Display mode settings for this game: what it swaps and its values per mode");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(cog, "Display mode settings");
+        ToolTipService.SetToolTip(cog, Loc.GetString("DisplayMode.Settings.Tooltip"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(cog, Loc.GetString("DisplayMode.Settings.AutomationName"));
         cog.Click += async (s, e) => { await ShowDisplayModeGameDialogAsync(card); afterChange(); };
         AddButton(cog, false);
         return grid;
@@ -236,17 +236,17 @@ public sealed partial class MainWindow
     {
         var items = ViewModel.DisplayModeStore.ItemsFor(MainViewModel.DisplayModeKey(card))
             .Select(DisplayModeItems.Get).Where(i => i != null).Select(i => i!.Label).ToList();
-        var what = items.Count == 0 ? "nothing yet (choose what to swap with the ⚙)" : string.Join(", ", items);
+        var what = items.Count == 0 ? Loc.GetString("DisplayMode.Tooltip.NothingYet") : string.Join(", ", items);
         return on
-            ? $"{modeName} mode is active for this game.\nSwaps: {what}.\nClick to turn it off: the game goes back to your global settings."
-            : $"Switch this game to {modeName} mode.\nSwaps: {what}.";
+            ? Loc.GetString("DisplayMode.Tooltip.Active", modeName, what)
+            : Loc.GetString("DisplayMode.Tooltip.Inactive", modeName, what);
     }
 
     private void ShowDisplayModeMenu(GameCardViewModel card, FrameworkElement anchor, Action? afterChange = null)
     {
         var menu = new MenuFlyout();
         var active = ViewModel.ActiveDisplayModeId(card);
-        var off = new ToggleMenuFlyoutItem { Text = "Off (global settings)", IsChecked = active == null };
+        var off = new ToggleMenuFlyoutItem { Text = Loc.GetString("DisplayMode.Menu.Off"), IsChecked = active == null };
         off.Click += async (s, e) => { await SwitchDisplayModeFromUiAsync(card, null); afterChange?.Invoke(); };
         menu.Items.Add(off);
         foreach (var m in ViewModel.DisplayModeStore.Modes)
@@ -283,7 +283,7 @@ public sealed partial class MainWindow
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             CrashReporter.Log($"[MainWindow.SwitchDisplayModeFromUiAsync] '{card.GameName}' — {ex.Message}");
-            ShowStatusBarMessage($"Couldn't switch display mode: {ex.Message}", TimeSpan.FromSeconds(8));
+            ShowStatusBarMessage(Loc.GetString("DisplayMode.Error.SwitchFailed", ex.Message), TimeSpan.FromSeconds(8));
         }
         finally
         {
@@ -305,9 +305,9 @@ public sealed partial class MainWindow
     private MenuFlyoutSubItem? BuildDisplayModeMenu(GameCardViewModel card)
     {
         if (!ViewModel.DisplayModesOn) return null;
-        var sub = new MenuFlyoutSubItem { Text = "Display mode" };
+        var sub = new MenuFlyoutSubItem { Text = Loc.GetString("DisplayMode.Menu.Title") };
         var active = ViewModel.ActiveDisplayModeId(card);
-        var off = new ToggleMenuFlyoutItem { Text = "Off (global settings)", IsChecked = active == null };
+        var off = new ToggleMenuFlyoutItem { Text = Loc.GetString("DisplayMode.Menu.Off"), IsChecked = active == null };
         off.Click += async (s, e) =>
         {
             try { await SwitchDisplayModeFromUiAsync(card, null); }
@@ -326,7 +326,7 @@ public sealed partial class MainWindow
             sub.Items.Add(item);
         }
         sub.Items.Add(new MenuFlyoutSeparator());
-        var settings = new MenuFlyoutItem { Text = "Display mode settings..." };
+        var settings = new MenuFlyoutItem { Text = Loc.GetString("DisplayMode.Menu.Settings") };
         settings.Click += async (s, e) => await ShowDisplayModeGameDialogAsync(card);
         sub.Items.Add(settings);
         return sub;
@@ -353,17 +353,15 @@ public sealed partial class MainWindow
                 inGame = vm.DisplayModeService.ReadCurrent(ctx, items);
             });
 
-            var cog = new CogDialog("Display Mode Settings", Content.XamlRoot);
-            cog.AddIntro($"Display modes swap settings for {card.GameName} when you switch between them, e.g. Monitor and TV. " +
-                         "The game remembers its own values per mode: when you switch away from a mode, what the game has then " +
-                         "(including changes made in game) is kept for that mode. Off = no mode: the game uses your global settings.");
+            var cog = new CogDialog(Loc.GetString("DisplayMode.Dialog.Title"), Content.XamlRoot);
+            cog.AddIntro(Loc.GetString("DisplayMode.Dialog.Intro", card.GameName));
             if (!vm.DisplayModesOn)
-                cog.AddWarning("Display modes are off. Turn them on in Settings › Display to show the switch on game pages.");
+                cog.AddWarning(Loc.GetString("DisplayMode.Dialog.WarnOff"));
             if (card.IsRunning)
-                cog.AddWarning("The game is running. Close it before switching modes.");
+                cog.AddWarning(Loc.GetString("DisplayMode.Dialog.WarnRunning"));
 
             // ── Mode ──
-            cog.AddSection("Mode");
+            cog.AddSection(Loc.GetString("DisplayMode.Dialog.SectionMode"));
             var modes = store.Modes;
             var modeNames = modes.Select(m => m.Name).ToList();
             int modeIdx = modes.ToList().FindIndex(m => m.Id.Equals(store.ActiveModeId(key) ?? "", StringComparison.OrdinalIgnoreCase));
@@ -372,12 +370,11 @@ public sealed partial class MainWindow
             ComboBox? valuesModeCombo = null;
 
             // Off first, then the modes
-            cog.AddCombo("Current mode",
-                "Switching writes this game's values for that mode. Pick the current mode again to re-apply its values. " +
-                "Off writes your global settings back (and what the game had before modes, for settings without a global value).",
-                new[] { "Off" }.Concat(modeNames).ToList(), modeIdx + 1, i =>
+            cog.AddCombo(Loc.GetString("DisplayMode.Dialog.CurrentMode"),
+                Loc.GetString("DisplayMode.Dialog.CurrentMode.Help"),
+                new[] { Loc.GetString("Option.Off") }.Concat(modeNames).ToList(), modeIdx + 1, i =>
                 {
-                    if (!vm.DisplayModesOn) { cog.SetError("Turn display modes on in Settings › Display first."); return false; }
+                    if (!vm.DisplayModesOn) { cog.SetError(Loc.GetString("DisplayMode.Dialog.TurnOnFirst")); return false; }
                     _ = SwitchFromDialogAsync(i == 0 ? null : modes[i - 1].Id);
                     return true;
                 });
@@ -396,12 +393,12 @@ public sealed partial class MainWindow
             }
 
             // ── What it swaps ──
-            cog.AddSection("What this game swaps");
+            cog.AddSection(Loc.GetString("DisplayMode.Dialog.SectionWhatSwaps"));
             var checks = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
             bool suppress = false;
-            cog.AddCombo("List",
-                "The default list is set in Settings › Display › Display modes. Pick Its own list to choose for this game only.",
-                new[] { "Default list", "Its own list" }, store.UsesDefaultItems(key) ? 0 : 1, i =>
+            cog.AddCombo(Loc.GetString("DisplayMode.Dialog.List"),
+                Loc.GetString("DisplayMode.Dialog.List.Help"),
+                new[] { Loc.GetString("DisplayMode.Dialog.ListDefault"), Loc.GetString("DisplayMode.Dialog.ListOwn") }, store.UsesDefaultItems(key) ? 0 : 1, i =>
                 {
                     vm.SetDisplayModeItems(card, i == 0 ? null : store.ItemsFor(key));
                     SyncChecks();
@@ -412,7 +409,7 @@ public sealed partial class MainWindow
             var checkGrid = new Controls.AutoFitGrid { MinColumnWidth = 270 };
             foreach (var group in DisplayModeItems.Groups)
             {
-                var head = TabsTheme.SectionHeading(group);
+                var head = TabsTheme.SectionHeading(DisplayModeItems.GroupLabel(group));
                 head.FontSize = 11;
                 head.Margin = new Thickness(0, 6, 0, 0);
                 cog.AddContent(head);
@@ -422,12 +419,12 @@ public sealed partial class MainWindow
                     var reason = reasons.TryGetValue(item.Key, out var r) ? r : null;
                     var cb = new CheckBox
                     {
-                        Content = reason == null ? item.Label : $"{item.Label} (not available)",
+                        Content = reason == null ? item.Label : Loc.GetString("DisplayMode.Dialog.NotAvailableSuffix", item.Label),
                         FontSize = 12,
                         MinWidth = 0,
                         Opacity = reason == null ? 1 : 0.6,
                     };
-                    ToolTipService.SetToolTip(cb, reason == null ? item.Help : $"{item.Help}\n\nNot available for this game now: {reason}. It's used once that changes.");
+                    ToolTipService.SetToolTip(cb, reason == null ? item.Help : Loc.GetString("DisplayMode.Dialog.NotAvailableTooltip", item.Help, reason));
                     var k = item.Key;
                     cb.Checked += (_, _) => OnCheck();
                     cb.Unchecked += (_, _) => OnCheck();
@@ -460,10 +457,9 @@ public sealed partial class MainWindow
             SyncChecks();
 
             // ── Values ──
-            cog.AddSection("Values");
-            cog.AddNote("Empty = the mode's default from Settings › Display › Display modes, else the game's normal value (your global setting, " +
-                        "or what it had before display modes). Values for the current mode are written to the game as soon as you set them.");
-            valuesModeCombo = cog.AddCombo("Values for", null, modeNames, activeIdx, i => { BuildValues(); return true; });
+            cog.AddSection(Loc.GetString("DisplayMode.Dialog.SectionValues"));
+            cog.AddNote(Loc.GetString("DisplayMode.Dialog.ValuesNote"));
+            valuesModeCombo = cog.AddCombo(Loc.GetString("DisplayMode.Dialog.ValuesFor"), null, modeNames, activeIdx, i => { BuildValues(); return true; });
             cog.AddContent(valuesPanel);
 
             void BuildValues()
@@ -477,21 +473,21 @@ public sealed partial class MainWindow
                     .OrderBy(i => items.ToList().IndexOf(i)).ToList();
                 if (swapped.Count == 0)
                 {
-                    valuesPanel.Children.Add(MutedLine("Tick what this game swaps above."));
+                    valuesPanel.Children.Add(MutedLine(Loc.GetString("DisplayMode.Dialog.TickWhatSwaps")));
                     return;
                 }
                 foreach (var item in swapped)
                 {
                     var def = store.ModeDefault(mode.Id, item.Key);
-                    var unset = def != null ? $"Mode default ({item.Format(def)})"
-                        : item.AtLaunch ? "Not set (the game's own setting)" : "Not set (normal value)";
+                    var unset = def != null ? Loc.GetString("DisplayMode.Dialog.UnsetModeDefault", item.Format(def))
+                        : item.AtLaunch ? Loc.GetString("DisplayMode.Dialog.UnsetLaunch") : Loc.GetString("DisplayMode.Dialog.UnsetNormal");
                     var editor = DisplayModeEditor.Build(item, store.GameValue(key, mode.Id, item.Key), unset,
                         v => vm.SetDisplayModeGameValueAsync(card, mode.Id, item, v),
                         (text, error) => { if (error) cog.SetError(text); else cog.SetSuccess(text); });
                     var notes = new List<string>();
-                    if (item.AtLaunch) notes.Add("Used when RHI launches the game");
-                    else if (reasons.TryGetValue(item.Key, out var reason) && reason != null) notes.Add($"Not available now: {reason}");
-                    else if (isActive && inGame.TryGetValue(item.Key, out var now)) notes.Add($"In the game now: {item.Format(now)}");
+                    if (item.AtLaunch) notes.Add(Loc.GetString("DisplayMode.Dialog.UsedOnLaunch"));
+                    else if (reasons.TryGetValue(item.Key, out var reason) && reason != null) notes.Add(Loc.GetString("DisplayMode.Dialog.NotAvailableNow", reason));
+                    else if (isActive && inGame.TryGetValue(item.Key, out var now)) notes.Add(Loc.GetString("DisplayMode.Dialog.InGameNow", item.Format(now)));
                     valuesPanel.Children.Add(MakeValueRow(item.Label, editor, string.Join(". ", notes), item.Help));
                 }
             }

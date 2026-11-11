@@ -188,7 +188,7 @@ public partial class DetailPanelBuilder
 
         // Method combo (col 0)
         var methodStack = new StackPanel { Spacing = 2 };
-        methodStack.Children.Add(new TextBlock { Text = "Method", FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) });
+        methodStack.Children.Add(new TextBlock { Text = Loc.GetString("NeuralRendering.Method.Label"), FontSize = 10, Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) });
 
         var methodCombo = new ComboBox
         {
@@ -1196,7 +1196,7 @@ public partial class DetailPanelBuilder
             }
             else if (anyInstalled)
             {
-                installBtn.Content = "Reinstall";
+                installBtn.Content = Loc.GetString("NeuralRendering.Button.Reinstall");
                 installBtn.Background  = UIFactory.Brush(ResourceKeys.SurfaceOverlayBrush);
                 installBtn.Foreground  = UIFactory.Brush(ResourceKeys.TextSecondaryBrush);
                 installBtn.BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush);

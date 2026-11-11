@@ -17,7 +17,7 @@ internal sealed partial class DetailLayoutHost
     {
         if (_window.ViewModel.SelectedGame is not { } card) return null;
         var root = new StackPanel { Spacing = 14 };
-        root.Children.Add(MutedText("Settings from the Settings page that apply to this game only."));
+        root.Children.Add(MutedText(Loc.GetString("Detail.GameSettings.Intro")));
 
         var rows = new StackPanel { Spacing = 16 };
         AddOverlayRow(rows, card);
@@ -33,11 +33,11 @@ internal sealed partial class DetailLayoutHost
         var toggle = new ToggleSwitch
         {
             IsOn = !vm.IsOverlayDisabled(name, store),
-            OnContent = "On",
-            OffContent = "Off",
+            OnContent = Loc.GetString("Xaml.On"),
+            OffContent = Loc.GetString("Xaml.Off"),
             MinWidth = 0,
         };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(toggle, "RHI overlay");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(toggle, Loc.GetString("Overlay.Settings.EnabledLabel"));
         toggle.Toggled += (s, e) =>
         {
             try
@@ -50,26 +50,26 @@ internal sealed partial class DetailLayoutHost
                 CrashReporter.Log($"[DetailLayoutHost.GameSettings] Overlay toggle for '{name}' failed — {ex.Message}");
             }
         };
-        string desc = "Open the RHI overlay over this game with its hotkey or the controller. When off, the hotkey goes to the game.";
-        if (!vm.Settings.RhiOverlayEnabled) desc += " The overlay is currently off for all games in Settings.";
-        AddGameSettingRow(rows, "RHI overlay", desc, toggle);
+        string desc = Loc.GetString("Detail.GameSettings.OverlayDesc");
+        if (!vm.Settings.RhiOverlayEnabled) desc += " " + Loc.GetString("Detail.GameSettings.OverlayDisabledNote");
+        AddGameSettingRow(rows, Loc.GetString("Overlay.Settings.EnabledLabel"), desc, toggle);
     }
 
     private void AddDisplayModeRow(StackPanel rows, GameCardViewModel card)
     {
         var vm = _window.ViewModel;
-        var btn = new Button { Content = "Choose...", Padding = new Thickness(14, 0, 14, 0) };
+        var btn = new Button { Content = Loc.GetString("Detail.GameSettings.Choose"), Padding = new Thickness(14, 0, 14, 0) };
         TabsTheme.Apply(btn, TabsTheme.BlueButton, height: 34, fontSize: 12);
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(btn, "Display mode settings");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(btn, Loc.GetString("Detail.GameSettings.DisplayMode.Automation"));
         btn.Click += async (s, e) =>
         {
             try { await _window.ShowDisplayModeGameDialogAsync(card); }
             catch (Exception ex) when (ex is InvalidOperationException) { CrashReporter.Log($"[DetailLayoutHost.GameSettings] Display modes — {ex.Message}"); }
         };
         string desc = vm.DisplayModesOn
-            ? $"What this game swaps between display modes (now {vm.ActiveDisplayModeName(card)}), and its values per mode."
-            : "What this game swaps between display modes, and its values per mode. Display modes are off in Settings › Display.";
-        AddGameSettingRow(rows, "Display modes", desc, btn);
+            ? Loc.GetString("Detail.GameSettings.DisplayModesDesc.On", vm.ActiveDisplayModeName(card))
+            : Loc.GetString("Detail.GameSettings.DisplayModesDesc.Off");
+        AddGameSettingRow(rows, Loc.GetString("Detail.GameSettings.DisplayModes"), desc, btn);
     }
 
     /// <summary>One setting: label and a one-line description on the left, the control on the right.</summary>

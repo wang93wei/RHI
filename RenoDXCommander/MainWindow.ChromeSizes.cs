@@ -47,7 +47,7 @@ public sealed partial class MainWindow
                         Margin = new Thickness(0, 0, 0, -4), // straddles the edge
                     };
                     Grid.SetRow(_topBarGrip, Grid.GetRow(_xamlTopBar));
-                    ToolTipService.SetToolTip(_topBarGrip, "Drag to resize the top bar. Double-click to reset.");
+                    ToolTipService.SetToolTip(_topBarGrip, Loc.GetString("Detail.TopBar.Resize.Tooltip"));
                     HookTopBarGrip(_topBarGrip);
                     root.Children.Add(_topBarGrip);
                 }
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
                 };
                 Grid.SetColumn(_listWidthGrip, 0);
                 Grid.SetRowSpan(_listWidthGrip, 2); // Spotlight adds a second row
-                ToolTipService.SetToolTip(_listWidthGrip, "Drag to resize the game list. Double-click to reset.");
+                ToolTipService.SetToolTip(_listWidthGrip, Loc.GetString("Detail.GameList.Resize.Tooltip"));
                 HookListGrip(_listWidthGrip);
                 GameViewPanel.Children.Add(_listWidthGrip);
                 GameViewPanel.SizeChanged += (s, e) =>

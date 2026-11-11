@@ -1,4 +1,5 @@
 using System.Security.Principal;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 
 namespace RenoDXCommander.Services;
@@ -17,6 +18,8 @@ public static class VulkanLayerService
     public const string LayerManifestName = "ReShade64.json";
     public const string RegistryKeyPath = @"SOFTWARE\Khronos\Vulkan\ImplicitLayers";
     public const string LayerName = "VK_LAYER_reshade";
+
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     private static string LayerDllPath => Path.Combine(LayerDirectory, LayerDllName);
     private static string LayerManifestPath => Path.Combine(LayerDirectory, LayerManifestName);
@@ -107,7 +110,7 @@ public static class VulkanLayerService
     {
         if (!IsRunningAsAdmin())
             throw new UnauthorizedAccessException(
-                "Administrator privileges are required to install the Vulkan ReShade layer.");
+                Loc.GetString("VulkanLayer.Error.AdminRequiredInstall"));
 
         var stagedDll = AuxInstallService.RsStagedPath64;
         if (!File.Exists(stagedDll))
@@ -257,7 +260,7 @@ public static class VulkanLayerService
     {
         if (!IsRunningAsAdmin())
             throw new UnauthorizedAccessException(
-                "Administrator privileges are required to uninstall the Vulkan ReShade layer.");
+                Loc.GetString("VulkanLayer.Error.AdminRequiredUninstall"));
 
         UninstallLayer(Registry.LocalMachine, RegistryKeyPath, LayerManifestPath, LayerDllPath);
     }

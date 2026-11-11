@@ -11,6 +11,30 @@ namespace RenoDXCommander;
 
 internal static class DisplayModeEditor
 {
+    private static string L(string key, string fallback)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return fallback;
+            var s = loc.GetString(key);
+            return s == key ? fallback : s;
+        }
+        catch { return fallback; }
+    }
+
+    private static string L(string key, string fallback, params object[] args)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return string.Format(fallback, args);
+            var s = loc.GetString(key, args);
+            return s == key ? string.Format(fallback, args) : s;
+        }
+        catch { return string.Format(fallback, args); }
+    }
+
     /// <param name="item">The item being edited.</param>
     /// <param name="value">The value set here, or null.</param>
     /// <param name="unsetLabel">What "not set" means, e.g. "Mode default (700 nits)" or "Not set".</param>
@@ -28,12 +52,14 @@ internal static class DisplayModeEditor
                 var error = await set(v);
                 if (error != null) { report(error, true); return; }
                 current = v;
-                report(v == null ? $"{item.Label}: {unsetLabel}." : $"{item.Label}: {item.Format(v)}.", false);
+                report(v == null
+                    ? L("DisplayMode.Editor.Result", "{0}: {1}.", item.Label, unsetLabel)
+                    : L("DisplayMode.Editor.Result", "{0}: {1}.", item.Label, item.Format(v)), false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
                 CrashReporter.Log($"[DisplayModeEditor] {item.Key} save failed — {ex.Message}");
-                report($"Couldn't save {item.Label}: {ex.Message}", true);
+                report(L("DisplayMode.Editor.SaveFailed", "Couldn't save {0}: {1}", item.Label, ex.Message), true);
             }
         }
 
@@ -68,10 +94,10 @@ internal static class DisplayModeEditor
             {
                 bool reshade = item.Kind == DisplayModeValueKind.ReShadeKey;
                 string Shown() => current == null ? "" : item.Format(current);
-                var box = CogDialog.MakeTextBox(Shown(), unsetLabel + " - click, then press a key");
+                var box = CogDialog.MakeTextBox(Shown(), L("DisplayMode.Editor.ClickThenPressKey", "{0} - click, then press a key", unsetLabel));
                 box.IsReadOnly = true;
-                box.GotFocus += (_, _) => box.PlaceholderText = "Press a key...";
-                box.LostFocus += (_, _) => { box.PlaceholderText = unsetLabel + " - click, then press a key"; box.Text = Shown(); };
+                box.GotFocus += (_, _) => box.PlaceholderText = L("DisplayMode.Editor.PressKey", "Press a key...");
+                box.LostFocus += (_, _) => { box.PlaceholderText = L("DisplayMode.Editor.ClickThenPressKey", "{0} - click, then press a key", unsetLabel); box.Text = Shown(); };
                 box.KeyDown += async (_, ev) =>
                 {
                     var key = ev.Key;
@@ -92,7 +118,7 @@ internal static class DisplayModeEditor
                     box.Text = Shown();
                 };
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, item.Label);
-                var clear = CogDialog.StyledButton("Clear", CogButtonKind.Secondary, compact: true);
+                var clear = CogDialog.StyledButton(L("Dialog.Clear", "Clear"), CogButtonKind.Secondary, compact: true);
                 ToolTipService.SetToolTip(clear, unsetLabel);
                 clear.Click += async (_, _) => { await Save(null); box.Text = Shown(); };
                 return CogDialog.Inline(box, clear);
@@ -103,13 +129,15 @@ internal static class DisplayModeEditor
                 string placeholder = item.Kind switch
                 {
                     DisplayModeValueKind.Number or DisplayModeValueKind.Decimal =>
-                        unsetLabel + (item.AllowZero ? $" ({item.Min:0}-{item.Max:0}, 0 = off)" : $" ({item.Min:0}-{item.Max:0})"),
+                        item.AllowZero
+                            ? L("DisplayMode.Editor.NumberPlaceholderZero", "{0} ({1}-{2}, 0 = off)", unsetLabel, item.Min.ToString("0"), item.Max.ToString("0"))
+                            : L("DisplayMode.Editor.NumberPlaceholder", "{0} ({1}-{2})", unsetLabel, item.Min.ToString("0"), item.Max.ToString("0")),
                     _ => unsetLabel,
                 };
                 var box = CogDialog.MakeTextBox(current ?? "", placeholder);
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, item.Label);
-                var setBtn = CogDialog.StyledButton("Set", CogButtonKind.Secondary, compact: true);
-                var clear = CogDialog.StyledButton("Clear", CogButtonKind.Secondary, compact: true);
+                var setBtn = CogDialog.StyledButton(L("Dialog.Set", "Set"), CogButtonKind.Secondary, compact: true);
+                var clear = CogDialog.StyledButton(L("Dialog.Clear", "Clear"), CogButtonKind.Secondary, compact: true);
                 ToolTipService.SetToolTip(clear, unsetLabel);
 
                 async Task SetFromBox()
@@ -118,7 +146,7 @@ internal static class DisplayModeEditor
                     if (item.Kind == DisplayModeValueKind.Text)
                     {
                         // Launch arguments may be empty on purpose (no arguments in this mode)
-                        if (text.Trim().Length == 0 && item.Key != DisplayModeItemKeys.LaunchArgs) { report($"Enter a value for {item.Label}, or press Clear.", true); return; }
+                        if (text.Trim().Length == 0 && item.Key != DisplayModeItemKeys.LaunchArgs) { report(L("DisplayMode.Editor.EnterValue", "Enter a value for {0}, or press Clear.", item.Label), true); return; }
                         await Save(text.Trim());
                         return;
                     }
@@ -126,8 +154,8 @@ internal static class DisplayModeEditor
                     if (norm == null)
                     {
                         report(item.AllowZero
-                            ? $"Enter a number from {item.Min:0} to {item.Max:0} (0 = off)."
-                            : $"Enter a number from {item.Min:0} to {item.Max:0}.", true);
+                            ? L("DisplayMode.Editor.EnterNumberZero", "Enter a number from {0} to {1} (0 = off).", item.Min.ToString("0"), item.Max.ToString("0"))
+                            : L("DisplayMode.Editor.EnterNumber", "Enter a number from {0} to {1}.", item.Min.ToString("0"), item.Max.ToString("0")), true);
                         return;
                     }
                     box.Text = norm;

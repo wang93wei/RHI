@@ -37,21 +37,17 @@ public partial class SettingsHandler
             var outer = new StackPanel { Spacing = 10 };
             card.Child = outer;
             var head = new StackPanel { Spacing = 3 };
-            head.Children.Add(new TextBlock { Text = "Display modes", Style = FindStyle("SettingsCardTitleStyle") });
+            head.Children.Add(new TextBlock { Text = Loc.GetString("Settings.DisplayModes.Title"), Style = FindStyle("SettingsCardTitleStyle") });
             head.Children.Add(new TextBlock
             {
-                Text = "Save sets of the settings RHI applies to a game and switch between them from its page, e.g. one for your monitor and one for your TV, "
-                     + "or for trying different setups. Modes don't change your display themselves. Each game swaps only what you choose "
-                     + "(peak brightness, frame rate caps, keys, DLSS settings, HDR and resolution on launch, ...) and remembers its own values per mode.",
+                Text = Loc.GetString("Settings.DisplayModes.Intro"),
                 Style = FindStyle("SettingsCardDescStyle"),
                 TextWrapping = TextWrapping.Wrap,
             });
             outer.Children.Add(head);
             outer.Children.Add(new TextBlock
             {
-                Text = "A game set to a mode keeps its own values for what it swaps, so settings elsewhere in RHI that write to every game "
-                     + "(peak brightness, frame rate cap, keys) skip it. Click the game's active mode again (or pick Off) to turn its mode off: "
-                     + "it goes back to your global settings. New games start with their mode off.",
+                Text = Loc.GetString("Settings.DisplayModes.Note"),
                 Style = FindStyle("SettingsNoteStyle"),
                 Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush),
                 TextWrapping = TextWrapping.Wrap,
@@ -87,21 +83,20 @@ public partial class SettingsHandler
 
         // ── On / off ──
         var onCombo = new ComboBox { Style = FindStyle("SettingsComboStyle") };
-        onCombo.Items.Add(new ComboBoxItem { Content = "Off" });
-        onCombo.Items.Add(new ComboBoxItem { Content = "On" });
+        onCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.Off") });
+        onCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.On") });
         onCombo.SelectedIndex = vm.DisplayModesOn ? 1 : 0;
-        ToolTipService.SetToolTip(onCombo, "On shows the mode switch on game pages (Classic+, Tabs and Spotlight), beside the HDR and resolution buttons, "
-            + "and in the game menu. Off hides it; games keep the settings they have now.");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(onCombo, "Display modes");
+        ToolTipService.SetToolTip(onCombo, Loc.GetString("Settings.DisplayModes.ShowOnPages.Tooltip"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(onCombo, Loc.GetString("Settings.DisplayModes.Title"));
         onCombo.SelectionChanged += (s, e) =>
         {
             if (onCombo.SelectedIndex < 0) return;
             vm.SetDisplayModesEnabled(onCombo.SelectedIndex == 1);
         };
-        _dmBody.Children.Add(SettingRow("Show on game pages", onCombo));
+        _dmBody.Children.Add(SettingRow(Loc.GetString("Settings.DisplayModes.ShowOnPages"), onCombo));
 
         // ── Modes ──
-        _dmBody.Children.Add(new TextBlock { Text = "Modes", Style = FindStyle("SettingsHeadStyle") });
+        _dmBody.Children.Add(new TextBlock { Text = Loc.GetString("Settings.DisplayModes.ModesHeading"), Style = FindStyle("SettingsHeadStyle") });
         for (int i = 0; i < modes.Count; i++)
         {
             var m = modes[i];
@@ -111,7 +106,9 @@ public partial class SettingsHandler
             int setCount = DisplayModeItems.All.Count(it => store.ModeDefault(m.Id, it.Key) != null);
             var label = new TextBlock
             {
-                Text = setCount == 0 ? $"{m.Name}  (no defaults set)" : $"{m.Name}  ({setCount} default{(setCount == 1 ? "" : "s")})",
+                Text = setCount == 0
+                    ? Loc.GetString("Settings.DisplayModes.NoDefaultsSet", m.Name)
+                    : Loc.GetString(setCount == 1 ? "Settings.DisplayModes.DefaultsCountOne" : "Settings.DisplayModes.DefaultsCountMany", m.Name, setCount),
                 Style = FindStyle("SettingsLabelStyle"),
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
@@ -120,58 +117,59 @@ public partial class SettingsHandler
             var buttons = new Controls.WrapPanel { HorizontalSpacing = 6, VerticalSpacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
             var id = m.Id;
             var name = m.Name;
-            buttons.Children.Add(DmButton("Defaults...", DmKind.Normal, $"The values games use in {name} mode until they have their own.",
+            buttons.Children.Add(DmButton(Loc.GetString("Settings.DisplayModes.DefaultsButton"), DmKind.Normal, Loc.GetString("Settings.DisplayModes.DefaultsButton.Tooltip", name),
                 async () => await ShowModeDefaultsAsync(id)));
-            buttons.Children.Add(DmButton("Rename", DmKind.Normal, $"Rename {name}", async () =>
+            buttons.Children.Add(DmButton(Loc.GetString("Collections.Dialog.Rename"), DmKind.Normal, Loc.GetString("Settings.DisplayModes.RenameButton.Tooltip", name), async () =>
             {
-                var newName = await PromptModeNameAsync("Rename mode", $"New name for {name}:", "Rename", name, id);
-                if (newName != null && vm.RenameDisplayMode(id, newName)) SetDmStatus($"Renamed {name} to {newName}.", false);
+                var newName = await PromptModeNameAsync(Loc.GetString("Settings.DisplayModes.RenameDialog.Title"), Loc.GetString("Settings.DisplayModes.RenameDialog.Prompt", name), Loc.GetString("Settings.DisplayModes.RenameDialog.Primary"), name, id);
+                if (newName != null && vm.RenameDisplayMode(id, newName)) SetDmStatus(Loc.GetString("Settings.DisplayModes.Renamed", name, newName), false);
             }));
             // Both always shown (greyed at the ends) so the rows line up
-            var up = DmButton("Move up", DmKind.Normal, "Move this mode left on game pages", async () => { vm.MoveDisplayMode(id, -1); await Task.CompletedTask; });
+            var up = DmButton(Loc.GetString("Settings.DisplayModes.MoveUpButton"), DmKind.Normal, Loc.GetString("Settings.DisplayModes.MoveUpButton.Tooltip"), async () => { vm.MoveDisplayMode(id, -1); await Task.CompletedTask; });
             up.IsEnabled = i > 0;
             buttons.Children.Add(up);
-            var down = DmButton("Move down", DmKind.Normal, "Move this mode right on game pages", async () => { vm.MoveDisplayMode(id, 1); await Task.CompletedTask; });
+            var down = DmButton(Loc.GetString("Settings.DisplayModes.MoveDownButton"), DmKind.Normal, Loc.GetString("Settings.DisplayModes.MoveDownButton.Tooltip"), async () => { vm.MoveDisplayMode(id, 1); await Task.CompletedTask; });
             down.IsEnabled = i < modes.Count - 1;
             buttons.Children.Add(down);
             if (modes.Count > 1)
-                buttons.Children.Add(DmButton("Delete", DmKind.Danger, $"Delete {name}. Games in it have their mode turned off (back to your global settings).", async () =>
+                buttons.Children.Add(DmButton(Loc.GetString("Dialog.Delete"), DmKind.Danger, Loc.GetString("Settings.DisplayModes.DeleteButton.Tooltip", name), async () =>
                 {
-                    if (!await ConfirmAsync("Delete mode",
-                            $"Delete {name}? Games in {name} mode have their mode turned off: they go back to your global settings " +
-                            $"(running games are just set to Off), and the values games remembered for {name} are forgotten.",
-                            "Delete")) return;
+                    if (!await ConfirmAsync(Loc.GetString("Settings.DisplayModes.DeleteDialog.Title"),
+                            Loc.GetString("Settings.DisplayModes.DeleteDialog.Body", name),
+                            Loc.GetString("Dialog.Delete"))) return;
                     var (deleted, turnedOff) = await vm.DeleteDisplayModeAsync(id);
                     if (deleted)
-                        SetDmStatus(turnedOff > 0 ? $"Deleted {name}. {turnedOff} game{(turnedOff == 1 ? "" : "s")} turned off." : $"Deleted {name}.", false);
+                        SetDmStatus(turnedOff > 0
+                            ? Loc.GetString(turnedOff == 1 ? "Settings.DisplayModes.DeletedGamesOne" : "Settings.DisplayModes.DeletedGamesMany", name, turnedOff)
+                            : Loc.GetString("Settings.DisplayModes.Deleted", name), false);
                 }));
             Grid.SetColumn(buttons, 1);
             row.Children.Add(buttons);
             _dmBody.Children.Add(row);
         }
         var addRow = new Controls.WrapPanel { HorizontalSpacing = 8, VerticalSpacing = 8 };
-        var addBtn = DmButton("Add mode", DmKind.Primary, $"Add another mode (up to {DisplayModeStore.MaxModes}), e.g. Handheld or Projector.", async () =>
+        var addBtn = DmButton(Loc.GetString("Settings.DisplayModes.AddButton"), DmKind.Primary, Loc.GetString("Settings.DisplayModes.AddButton.Tooltip", DisplayModeStore.MaxModes), async () =>
         {
-            var newName = await PromptModeNameAsync("Add mode", "Name for the new mode:", "Add", "", null);
+            var newName = await PromptModeNameAsync(Loc.GetString("Settings.DisplayModes.AddDialog.Title"), Loc.GetString("Settings.DisplayModes.AddDialog.Prompt"), Loc.GetString("Settings.DisplayModes.AddDialog.Primary"), "", null);
             if (newName == null) return;
             var newId = vm.AddDisplayMode(newName);
-            if (newId != null) SetDmStatus($"Added {newName}. Set its defaults with Defaults..., or give games their own values from their page.", false);
+            if (newId != null) SetDmStatus(Loc.GetString("Settings.DisplayModes.Added", newName), false);
         });
         addBtn.IsEnabled = modes.Count < DisplayModeStore.MaxModes;
         addRow.Children.Add(addBtn);
         _dmBody.Children.Add(addRow);
 
         // ── Default list ──
-        _dmBody.Children.Add(new TextBlock { Text = "What games swap", Style = FindStyle("SettingsHeadStyle") });
+        _dmBody.Children.Add(new TextBlock { Text = Loc.GetString("Settings.DisplayModes.WhatGamesSwap"), Style = FindStyle("SettingsHeadStyle") });
         var defaults = store.DefaultItems.Select(DisplayModeItems.Get).Where(i => i != null).Select(i => i!.Label).ToList();
-        var listBtn = DmButton("Choose...", DmKind.Normal, "Pick what games swap unless you choose for a game on its page (the ⚙ beside the mode switch).",
+        var listBtn = DmButton(Loc.GetString("Settings.DisplayModes.ChooseButton"), DmKind.Normal, Loc.GetString("Settings.DisplayModes.ChooseButton.Tooltip"),
             async () => await ShowDefaultItemsAsync());
         var listRow = new Grid { ColumnSpacing = 10 };
         listRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         listRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         listRow.Children.Add(new TextBlock
         {
-            Text = defaults.Count == 0 ? "Nothing (choose for each game on its page)" : string.Join(", ", defaults),
+            Text = defaults.Count == 0 ? Loc.GetString("Settings.DisplayModes.NothingChosen") : string.Join(", ", defaults),
             Style = FindStyle("SettingsLabelStyle"),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
@@ -181,24 +179,24 @@ public partial class SettingsHandler
         _dmBody.Children.Add(listRow);
         _dmBody.Children.Add(new TextBlock
         {
-            Text = "The default for every game. A game can have its own list (the ⚙ beside its mode switch).",
+            Text = Loc.GetString("Settings.DisplayModes.DefaultListHelp"),
             Style = FindStyle("SettingsHelpStyle"),
             TextWrapping = TextWrapping.Wrap,
         });
 
         // ── Switch all ──
-        _dmBody.Children.Add(new TextBlock { Text = "Switch all games", Style = FindStyle("SettingsHeadStyle") });
+        _dmBody.Children.Add(new TextBlock { Text = Loc.GetString("Settings.DisplayModes.SwitchAllHeading"), Style = FindStyle("SettingsHeadStyle") });
         var allCombo = new ComboBox { Style = FindStyle("SettingsComboStyle"), MinWidth = 140 };
         foreach (var m in modes) allCombo.Items.Add(new ComboBoxItem { Content = m.Name });
-        allCombo.Items.Add(new ComboBoxItem { Content = "Off" }); // last: turns every game's mode off
+        allCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.Off") }); // last: turns every game's mode off
         allCombo.SelectedIndex = 0;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(allCombo, "Mode to switch all games to");
-        var allBtn = DmButton("Switch", DmKind.Primary, "Switch every game to this mode, e.g. for an evening on the TV, or turn every game's mode off. Running and hidden games are skipped.",
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(allCombo, Loc.GetString("Settings.DisplayModes.SwitchAllCombo.AutomationName"));
+        var allBtn = DmButton(Loc.GetString("Settings.DisplayModes.SwitchButton"), DmKind.Primary, Loc.GetString("Settings.DisplayModes.SwitchButton.Tooltip"),
             async () =>
             {
                 int i = allCombo.SelectedIndex;
                 if (i < 0 || i > modes.Count) return;
-                if (i == modes.Count) await SwitchAllAsync(null, "Off");
+                if (i == modes.Count) await SwitchAllAsync(null, Loc.GetString("Option.Off"));
                 else await SwitchAllAsync(modes[i].Id, modes[i].Name);
             });
         allBtn.IsEnabled = vm.DisplayModesOn;
@@ -208,12 +206,12 @@ public partial class SettingsHandler
         allGrid.Children.Add(allCombo);
         Grid.SetColumn(allBtn, 1);
         allGrid.Children.Add(allBtn);
-        _dmBody.Children.Add(SettingRow("Switch every game to", allGrid, maxWidth: 300));
+        _dmBody.Children.Add(SettingRow(Loc.GetString("Settings.DisplayModes.SwitchEveryGameTo"), allGrid, maxWidth: 300));
         _dmBody.Children.Add(new TextBlock
         {
             Text = vm.DisplayModesOn
-                ? "Writes each game's values for that mode (Off: your global settings). Running and hidden games are skipped."
-                : "Turn on Show on game pages first.",
+                ? Loc.GetString("Settings.DisplayModes.SwitchAllHelp")
+                : Loc.GetString("Settings.DisplayModes.SwitchAllHelpOff"),
             Style = FindStyle("SettingsHelpStyle"),
             TextWrapping = TextWrapping.Wrap,
         });
@@ -264,7 +262,7 @@ public partial class SettingsHandler
             catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
             {
                 CrashReporter.Log($"[SettingsHandler.DisplayModes] '{text}' failed — {ex.Message}");
-                SetDmStatus($"{text} failed: {ex.Message}", true);
+                SetDmStatus(Loc.GetString("Settings.DisplayModes.ActionFailed", text, ex.Message), true);
             }
             finally { _dmBusy = false; }
         };
@@ -288,17 +286,15 @@ public partial class SettingsHandler
         var store = vm.DisplayModeStore;
         var name = store.NameOf(modeId);
         if (name == null) return;
-        var cog = new CogDialog($"{name} Mode", _window.Content.XamlRoot);
-        cog.AddIntro($"Values games use in {name} mode until they have their own. A game gets its own value when you switch it away from {name} " +
-                     "(what it has then is kept) or when you set one on its page. Empty = not set: the game uses its normal value " +
-                     "(your global setting, or what it had before display modes; left as it is when there's neither).");
+        var cog = new CogDialog(Loc.GetString("Settings.DisplayModes.ModeDefaults.Title", name), _window.Content.XamlRoot);
+        cog.AddIntro(Loc.GetString("Settings.DisplayModes.ModeDefaults.Intro", name));
         foreach (var group in DisplayModeItems.Groups)
         {
-            cog.AddSection(group);
+            cog.AddSection(DisplayModeItems.GroupLabel(group));
             foreach (var item in DisplayModeItems.All.Where(i => i.Group == group))
             {
                 var key = item.Key;
-                var editor = DisplayModeEditor.Build(item, store.ModeDefault(modeId, key), "Not set",
+                var editor = DisplayModeEditor.Build(item, store.ModeDefault(modeId, key), Loc.GetString("DisplayMode.Value.NotSet"),
                     v => { vm.SetDisplayModeDefault(modeId, key, v); return Task.FromResult<string?>(null); },
                     (text, error) => { if (error) cog.SetError(text); else cog.SetSuccess(text); });
                 cog.AddRow(item.Label, editor, item.Help);
@@ -313,14 +309,13 @@ public partial class SettingsHandler
     {
         var vm = ViewModel;
         var store = vm.DisplayModeStore;
-        var cog = new CogDialog("Display Modes", _window.Content.XamlRoot);
-        cog.AddIntro("What games swap when you switch modes, unless a game has its own list (the ⚙ beside its mode switch). " +
-                     "Items a game can't use (e.g. ReLimiter isn't installed) are skipped for that game.");
+        var cog = new CogDialog(Loc.GetString("Settings.DisplayModes.DefaultItems.Title"), _window.Content.XamlRoot);
+        cog.AddIntro(Loc.GetString("Settings.DisplayModes.DefaultItems.Intro"));
         var checks = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
         var current = store.DefaultItems;
         foreach (var group in DisplayModeItems.Groups)
         {
-            cog.AddSection(group);
+            cog.AddSection(DisplayModeItems.GroupLabel(group));
             var grid = new Controls.AutoFitGrid { MinColumnWidth = 270 };
             foreach (var item in DisplayModeItems.All.Where(i => i.Group == group))
             {
@@ -343,19 +338,17 @@ public partial class SettingsHandler
     {
         var vm = ViewModel;
         bool off = modeId == null;
-        if (!await ConfirmAsync(off ? "Turn off all games" : "Switch all games",
+        if (!await ConfirmAsync(off ? Loc.GetString("Settings.DisplayModes.TurnOffAll.Title") : Loc.GetString("Settings.DisplayModes.SwitchAll.Title"),
                 off
-                    ? "Turn every game's display mode off? Each game goes back to your global settings (and what it had before modes, " +
-                      "for settings without a global value). What it has now is kept for its current mode. Running and hidden games are skipped."
-                    : $"Switch every game to {modeName} mode? Each game gets its values for {modeName} (what it has now is kept for its current mode). " +
-                      "Running and hidden games are skipped.",
-                off ? "Turn off" : "Switch")) return;
+                    ? Loc.GetString("Settings.DisplayModes.TurnOffAll.Body")
+                    : Loc.GetString("Settings.DisplayModes.SwitchAll.Body", modeName),
+                off ? Loc.GetString("Settings.DisplayModes.TurnOffAll.Primary") : Loc.GetString("Settings.DisplayModes.SwitchButton"))) return;
 
-        var text = new TextBlock { Text = "Starting...", TextWrapping = TextWrapping.Wrap };
+        var text = new TextBlock { Text = Loc.GetString("Settings.DisplayModes.Starting"), TextWrapping = TextWrapping.Wrap };
         var bar = new ProgressBar { Minimum = 0, Maximum = 100, Height = 6 };
         var dialog = new ContentDialog
         {
-            Title = off ? "Turning display modes off" : $"Switching to {modeName}",
+            Title = off ? Loc.GetString("Settings.DisplayModes.TurningOff.Title") : Loc.GetString("Settings.DisplayModes.SwitchingTo.Title", modeName),
             Content = new StackPanel { Spacing = 12, Width = 380, Children = { text, bar } },
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -367,9 +360,9 @@ public partial class SettingsHandler
             result = await vm.SwitchAllDisplayModesAsync(modeId, progress, _window.LifetimeToken);
         }
         var msg = off
-            ? $"Turned off {result.Switched} game{(result.Switched == 1 ? "" : "s")}."
-            : $"Switched {result.Switched} game{(result.Switched == 1 ? "" : "s")} to {modeName}.";
-        if (result.Running > 0) msg += $" {result.Running} running game{(result.Running == 1 ? " was" : "s were")} skipped.";
+            ? Loc.GetString(result.Switched == 1 ? "Settings.DisplayModes.TurnedOffGamesOne" : "Settings.DisplayModes.TurnedOffGamesMany", result.Switched)
+            : Loc.GetString(result.Switched == 1 ? "Settings.DisplayModes.SwitchedGamesOne" : "Settings.DisplayModes.SwitchedGamesMany", result.Switched, modeName);
+        if (result.Running > 0) msg += Loc.GetString(result.Running == 1 ? "Settings.DisplayModes.RunningSkippedOne" : "Settings.DisplayModes.RunningSkippedMany", result.Running);
         SetDmStatus(msg, false);
         _window.ShowStatusBarMessage(msg, TimeSpan.FromSeconds(8));
     }
@@ -381,7 +374,7 @@ public partial class SettingsHandler
             Title = title,
             Content = new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap, MaxWidth = 460 },
             PrimaryButtonText = primary,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -393,7 +386,7 @@ public partial class SettingsHandler
     private async Task<string?> PromptModeNameAsync(string title, string prompt, string primary, string initial, string? renamingId)
     {
         var store = ViewModel.DisplayModeStore;
-        var box = new TextBox { Text = initial, MaxLength = DisplayModeStore.MaxNameLength, Width = 340, PlaceholderText = "e.g. Handheld" };
+        var box = new TextBox { Text = initial, MaxLength = DisplayModeStore.MaxNameLength, Width = 340, PlaceholderText = Loc.GetString("Settings.DisplayModes.NamePlaceholder") };
         var error = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = TabsTheme.B("#FF9AA8"), Visibility = Visibility.Collapsed };
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(new TextBlock { Text = prompt, TextWrapping = TextWrapping.Wrap });
@@ -404,7 +397,7 @@ public partial class SettingsHandler
             Title = title,
             Content = panel,
             PrimaryButtonText = primary,
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,

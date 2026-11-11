@@ -160,8 +160,7 @@ public class MassDlssDeployDialog
             Margin = new Thickness(0, 4, 0, 0),
         };
         ToolTipService.SetToolTip(autoCreateCheck,
-            "If a game has no matching NVIDIA driver profile, create one so the presets can be applied. "
-            + "Also adds the game's exe to a matched profile that's missing it.");
+            Loc.GetString("Dialog.DlssDeploy.AutoCreateProfilesNote"));
         rightPanel.Children.Add(autoCreateCheck);
 
         // ── Separator ──
@@ -684,8 +683,7 @@ public class MassDlssDeployDialog
             CornerRadius = new CornerRadius(6),
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(presetCombo,
-            "Preset applied through each game's NVIDIA driver profile. None leaves each game's current preset unchanged.");
+        ToolTipService.SetToolTip(presetCombo, Loc.GetString("Dialog.DlssDeploy.PresetTooltip"));
         return presetCombo;
     }
 

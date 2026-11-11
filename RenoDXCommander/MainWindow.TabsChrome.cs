@@ -158,7 +158,7 @@ public sealed partial class MainWindow
         _shelfPositionBtn.Height = 30;
         _shelfPositionBtn.Visibility = Visibility.Collapsed;
         _shelfPositionBtn.CornerRadius = new CornerRadius(6);
-        ToolTipService.SetToolTip(_shelfPositionBtn, "Game list options");
+        ToolTipService.SetToolTip(_shelfPositionBtn, Loc.GetString("MainWindow.Tabs.GameListOptions"));
         _shelfPositionBtn.Click += ShelfPositionBtn_Click;
         Grid.SetColumn(_shelfPositionBtn, 1);
         _countsGrid.Children.Add(_shelfPositionBtn);
