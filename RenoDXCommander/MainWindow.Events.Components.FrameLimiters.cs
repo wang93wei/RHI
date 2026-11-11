@@ -18,7 +18,9 @@ namespace RenoDXCommander;
 public sealed partial class MainWindow
 {
     /// <summary>VRR frame rate caps (same as the global settings), used by the ReLimiter and Display Commander ⚙.</summary>
-    private static readonly (int Fps, string Label)[] VrrFpsPresets =
+    /// <remarks>Built on each access, not in a static initializer: the type initializer must not touch DI
+    /// (MainWindowStaticInitTests runs it without a service provider).</remarks>
+    private static (int Fps, string Label)[] VrrFpsPresets => new[]
     {
         (59,  LocOpt.T("59 (60Hz VRR)")),
         (73,  LocOpt.T("73 (75Hz VRR)")),
