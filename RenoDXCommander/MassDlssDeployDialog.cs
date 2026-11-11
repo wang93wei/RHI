@@ -683,7 +683,7 @@ public class MassDlssDeployDialog
             CornerRadius = new CornerRadius(6),
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
-        ToolTipService.SetToolTip(presetCombo, Loc.GetString("Dialog.DlssDeploy.PresetTooltip"));
+        ToolTipService.SetToolTip(presetCombo, App.Services.GetRequiredService<ILocalizationService>().GetString("Dialog.DlssDeploy.PresetTooltip"));
         return presetCombo;
     }
 
