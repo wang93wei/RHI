@@ -209,7 +209,13 @@ public partial class SettingsHandler
         bool hasPat = System.IO.File.Exists(patPath);
 
         // Update the PAT status text to show file state
-        if (hasPat)
+        if (hasPat && GitHubTokenHandler.TokenRejected)
+        {
+            _window.GitHubPatStatusText.Text = Loc.GetString("Settings.Accounts.PatRejected");
+            _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentAmberDimBrush);
+            _window.GitHubPatStatusText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        }
+        else if (hasPat)
         {
             _window.GitHubPatStatusText.Text = Loc.GetString("Settings.GitHub.Pat.Active");
             _window.GitHubPatStatusText.Foreground = UIFactory.Brush(ResourceKeys.AccentGreenBrush);

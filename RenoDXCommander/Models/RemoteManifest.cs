@@ -759,4 +759,12 @@ public class ManifestFeatureFlags
     /// <summary>Resolution auto-toggle feature (Settings card + per-game toggle).</summary>
     [JsonPropertyName("resolutionControl")]
     public bool? ResolutionControl { get; set; }
+
+    /// <summary>HSF row in Extras › MFG Unlocks (off until HSF's repo is public).</summary>
+    [JsonPropertyName("hsf")]
+    public bool? Hsf { get; set; }
+
+    /// <summary>ANR FG preset in the OptiScaler ⚙.</summary>
+    [JsonPropertyName("anrFg")]
+    public bool? AnrFg { get; set; }
 }

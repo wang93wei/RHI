@@ -1,6 +1,6 @@
 // SettingsHandler.DisplayModes.cs -- Settings › Display › "Display modes" card (built in C#, XAML constraint):
 // the on/off switch for the game page mode switch, the modes (add / rename / reorder / delete, default values per
-// mode), the default list of what games swap, and "Switch all games". Appended to the Display section the first
+// mode, which every game in that mode gets) and "Switch all games". Appended to the Display section the first
 // time Settings opens; rebuilt when modes change. Data: MainViewModel.DisplayModes.cs.
 
 using Microsoft.UI.Xaml;
@@ -159,31 +159,6 @@ public partial class SettingsHandler
         addRow.Children.Add(addBtn);
         _dmBody.Children.Add(addRow);
 
-        // ── Default list ──
-        _dmBody.Children.Add(new TextBlock { Text = Loc.GetString("Settings.DisplayModes.WhatGamesSwap"), Style = FindStyle("SettingsHeadStyle") });
-        var defaults = store.DefaultItems.Select(DisplayModeItems.Get).Where(i => i != null).Select(i => i!.Label).ToList();
-        var listBtn = DmButton(Loc.GetString("Settings.DisplayModes.ChooseButton"), DmKind.Normal, Loc.GetString("Settings.DisplayModes.ChooseButton.Tooltip"),
-            async () => await ShowDefaultItemsAsync());
-        var listRow = new Grid { ColumnSpacing = 10 };
-        listRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        listRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        listRow.Children.Add(new TextBlock
-        {
-            Text = defaults.Count == 0 ? Loc.GetString("Settings.DisplayModes.NothingChosen") : string.Join(", ", defaults),
-            Style = FindStyle("SettingsLabelStyle"),
-            TextWrapping = TextWrapping.Wrap,
-            VerticalAlignment = VerticalAlignment.Center,
-        });
-        Grid.SetColumn(listBtn, 1);
-        listRow.Children.Add(listBtn);
-        _dmBody.Children.Add(listRow);
-        _dmBody.Children.Add(new TextBlock
-        {
-            Text = Loc.GetString("Settings.DisplayModes.DefaultListHelp"),
-            Style = FindStyle("SettingsHelpStyle"),
-            TextWrapping = TextWrapping.Wrap,
-        });
-
         // ── Switch all ──
         _dmBody.Children.Add(new TextBlock { Text = Loc.GetString("Settings.DisplayModes.SwitchAllHeading"), Style = FindStyle("SettingsHeadStyle") });
         var allCombo = new ComboBox { Style = FindStyle("SettingsComboStyle"), MinWidth = 140 };
@@ -300,35 +275,6 @@ public partial class SettingsHandler
                 cog.AddRow(item.Label, editor, item.Help);
             }
         }
-        await cog.ShowAsync();
-        RefreshDisplayModesCard();
-    }
-
-    /// <summary>The default list of what games swap (games without a list of their own).</summary>
-    private async Task ShowDefaultItemsAsync()
-    {
-        var vm = ViewModel;
-        var store = vm.DisplayModeStore;
-        var cog = new CogDialog(Loc.GetString("Settings.DisplayModes.DefaultItems.Title"), _window.Content.XamlRoot);
-        cog.AddIntro(Loc.GetString("Settings.DisplayModes.DefaultItems.Intro"));
-        var checks = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
-        var current = store.DefaultItems;
-        foreach (var group in DisplayModeItems.Groups)
-        {
-            cog.AddSection(DisplayModeItems.GroupLabel(group));
-            var grid = new Controls.AutoFitGrid { MinColumnWidth = 270 };
-            foreach (var item in DisplayModeItems.All.Where(i => i.Group == group))
-            {
-                var cb = new CheckBox { Content = item.Label, FontSize = 12, MinWidth = 0, IsChecked = current.Contains(item.Key, StringComparer.OrdinalIgnoreCase) };
-                ToolTipService.SetToolTip(cb, item.Help);
-                cb.Checked += (_, _) => Save();
-                cb.Unchecked += (_, _) => Save();
-                checks[item.Key] = cb;
-                grid.Children.Add(cb);
-            }
-            cog.AddContent(grid);
-        }
-        void Save() => vm.SetDisplayModeDefaultItems(checks.Where(c => c.Value.IsChecked == true).Select(c => c.Key).ToList());
         await cog.ShowAsync();
         RefreshDisplayModesCard();
     }

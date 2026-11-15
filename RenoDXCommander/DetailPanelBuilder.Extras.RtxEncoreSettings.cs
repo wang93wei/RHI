@@ -18,6 +18,24 @@ public partial class DetailPanelBuilder
     private static string[] RtxOffOn => new[] { Loc.GetString("Extras.RtxEncore.Opt.Off"), Loc.GetString("Extras.RtxEncore.Opt.On") };
     private static readonly string[] RtxOffOnValues = { "false", "true" };
 
+    /// <summary>The Games without DLSS status line: which NVIDIA files RHI put in for RTX Encore, or why not.</summary>
+    private static string RtxEncoreNoDlssStatusText(RtxEncoreService svc, string installPath, bool encoreInstalled)
+    {
+        if (!encoreInstalled)
+            return Loc.GetString("Extras.RtxEncore.Settings.NoDlss.StatusNotInstalled");
+        var st = svc.ReadNoDlssRuntimeStatus(installPath);
+        string Part(string what, bool installed, bool missing, RtxEncoreService.NoDlssUnitState? last)
+        {
+            if (installed) return Loc.GetString("Extras.RtxEncore.Settings.NoDlss.PartInstalled", what);
+            if (missing) return Loc.GetString("Extras.RtxEncore.Settings.NoDlss.PartRemovedByUser", what);
+            if (last?.Reason is { Length: > 0 } r) return Loc.GetString("Extras.RtxEncore.Settings.NoDlss.PartNotInstalled", what, r);
+            return Loc.GetString("Extras.RtxEncore.Settings.NoDlss.PartPending", what);
+        }
+        return Loc.GetString("Extras.RtxEncore.Settings.NoDlss.StatusHeader",
+            Part(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.PartWhat.DlssUpscaling"), st.UpscalingInstalled, st.UpscalingMissing, st.LastResult?.Upscaling),
+            Part(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.PartWhat.FrameGen"), st.FrameGenInstalled, st.FrameGenMissing, st.LastResult?.FrameGeneration));
+    }
+
     /// <summary>⚙ dialog for RTX Encore. Every change is saved as soon as it's made.</summary>
     private async Task ShowRtxEncoreSettingsAsync(GameCardViewModel card, RtxEncoreService svc,
         string installPath, bool isInstalled, bool nrDeployed)
@@ -121,6 +139,57 @@ public partial class DetailPanelBuilder
         SetXefgEnabled(((ComboBox)engineCell.Control).SelectedIndex == 2);
         cog.AddCompactGrid(tensorCell, pacingCell, uiCell, alphaCell);
         cog.AddNote(Loc.GetString("Extras.RtxEncore.Settings.XefgOnlyNote"));
+
+        // ── Games without DLSS (RTX Encore 2.0+: DLSS / XeSS, frame generation on the displayed image) ──
+        cog.AddSection(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Section"));
+        cog.AddNote(RtxEncoreNoDlssStatusText(svc, installPath, canEdit));
+        // Always shown here (the install dialog can be dismissed): DLSS-FG + ReShade as dxgi.dll crashes at startup (RTX Encore #133)
+        if (canEdit && IsReShadeDxgi(card) && svc.ReadNoDlssRuntimeStatus(installPath).FrameGenInstalled)
+            cog.AddWarning(EncoreDlssFgReShadeWarningText);
+        var noDlssEngines = new[] { "dlss", "xess", "nis", "fsr1" };
+        int upIdx = 0;
+        if (canEdit && string.Equals(RtxEncoreConfig.Get(cfgPath!, "dlssSuperResolution", "dlssWithoutGameDlss"), "true", StringComparison.OrdinalIgnoreCase))
+        {
+            var eng = RtxEncoreConfig.Get(cfgPath!, "dlssSuperResolution", "dlssWithoutGameDlssEngine") ?? "dlss";
+            int e = Array.FindIndex(noDlssEngines, v => v.Equals(eng, StringComparison.OrdinalIgnoreCase));
+            upIdx = (e < 0 ? 0 : e) + 1;
+        }
+        var upscalingCell = cog.CompactCombo(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Upscaling.Label"),
+            Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Upscaling.Help"),
+            new[] { LocOpt.T("None"), "DLSS", "XeSS", "NIS", "FSR 1" }, upIdx, i =>
+            {
+                if (!canEdit) return false;
+                // The in-game menu's Engine: None = off, otherwise on with that engine (no separate switch)
+                RtxEncoreConfig.SetBool(cfgPath!, "dlssSuperResolution", "dlssWithoutGameDlss", i > 0);
+                if (i > 0) RtxEncoreConfig.SetString(cfgPath!, "dlssSuperResolution", "dlssWithoutGameDlssEngine", noDlssEngines[i - 1]);
+                CrashReporter.Log($"[RtxEncoreCog] '{gameName}': dlssSuperResolution.dlssWithoutGameDlss = {(i > 0 ? "true, engine " + noDlssEngines[i - 1] : "false")}");
+                MarkSaved();
+                cog.SetSuccess(Loc.GetString("Extras.RtxEncore.Settings.Saved"));
+                return true;
+            }, isEnabled: canEdit);
+        cog.AddCompactGrid(
+            upscalingCell,
+            Choice(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Output.Label"),
+                Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Output.Help"),
+                "dlssSuperResolution", "dlssWithoutGameDlssOutput",
+                new[] { Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Output.OptGame"), Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Output.OptScreen") },
+                new[] { "game", "screen" }, "game"),
+            Choice(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Motion.Label"),
+                Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Motion.Help"),
+                "dlssSuperResolution", "presentOpticalFlow",
+                new[]
+                {
+                    Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Motion.OptGameMv"),
+                    Loc.GetString("Extras.RtxEncore.Label"),
+                    Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Motion.OptShader"),
+                    Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Motion.OptOfQuality"),
+                    Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Motion.OptOfFast"),
+                },
+                new[] { "game", "encore", "shader", "quality", "fast" }, "game"),
+            Choice(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.FrameGen.Label"),
+                Loc.GetString("Extras.RtxEncore.Settings.NoDlss.FrameGen.Help"),
+                "frameGeneration", "frameGenerationWithoutGameFg", RtxOffOn, RtxOffOnValues, "false"));
+        cog.AddNote(Loc.GetString("Extras.RtxEncore.Settings.NoDlss.Note"));
 
         // ── Image quality ───────────────────────────────────────────────────────
         cog.AddSection(Loc.GetString("Extras.RtxEncore.Settings.SectionQuality"));
@@ -327,8 +396,10 @@ public partial class DetailPanelBuilder
                 try
                 {
                     if (svc.GetNrDllCachedPath() == null)
+                    if (svc.GetNrDllCachedPath() == null)
                         cog.SetStatus(Loc.GetString("Extras.RtxEncore.Nr.Downloading", RtxEncoreService.NrRequiredVer));
-                    var cached = await svc.EnsureNrDllCachedAsync(App.Services.GetRequiredService<IDlssStreamlineService>());
+                    var dlssS = App.Services.GetRequiredService<IDlssStreamlineService>();
+                    var cached = await svc.EnsureNrDllCachedAsync(dlssS);
                     if (cached == null)
                     {
                         CrashReporter.Log($"[RtxEncoreCog] NR {RtxEncoreService.NrRequiredVer} not available — not deployed");
@@ -340,6 +411,8 @@ public partial class DetailPanelBuilder
                     var installedAs = _window.ViewModel.GetRtxEncoreInstalledAs(gameName, store);
                     if (await Task.Run(() => svc.DeployNrDll(installPath, installedAs)))
                     {
+                        // A game with no DLSS of its own may be in the scan skip cache: un-skip it so the NR DLL shows
+                        dlssS.RecordDlssFound(gameName);
                         nrOn = true;
                         cog.SetSuccess(Loc.GetString("Extras.RtxEncore.Nr.Deployed", RtxEncoreService.NrRequiredVer));
                     }

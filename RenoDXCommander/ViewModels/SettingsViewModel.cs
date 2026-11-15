@@ -34,6 +34,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _osNightlyCleanup;
     /// <summary>RHI's own interface size in percent (on top of Windows scaling). 100 = normal.</summary>
     [ObservableProperty] private int _uiScale = 100;
+    /// <summary>Colour theme id (ThemePresets: "Default", "OledBlack", …, or "Custom").</summary>
+    [ObservableProperty] private string _colorTheme = "Default";
+    /// <summary>Colours picked for the Custom theme ("Background=#RRGGBB;Panel=…"). Empty = not set yet.</summary>
+    [ObservableProperty] private string _customThemeColors = "";
     [ObservableProperty] private bool _osDlssInputs = true;
     [ObservableProperty] private bool _osFirstTimeWarningDismissed;
     [ObservableProperty] private bool _ueExtendedWarningDismissed;
@@ -44,6 +48,16 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _mfgWarningDismissed;
     [ObservableProperty] private bool _engineBadgeWarningDismissed;
     [ObservableProperty] private bool _umfgReShadeWarningDismissed;
+    /// <summary>"Don't show this again" on the HSF install notice (anti-cheat, other frame generation).</summary>
+    [ObservableProperty] private bool _hsfNoticeDismissed;
+    /// <summary>"Don't show this again" on the closed-source notices before installing RTX Encore / 20/30 FG Unlock.</summary>
+    [ObservableProperty] private bool _rtxEncoreClosedSourceDismissed;
+    /// <summary>"Don't show this again" on the RTX Encore DLSS-FG + ReShade dxgi.dll warning (RTX Encore issue #133).</summary>
+    [ObservableProperty] private bool _encoreDlssFgReShadeWarningDismissed;
+    [ObservableProperty] private bool _dlssg2030ClosedSourceDismissed;
+    [ObservableProperty] private bool _anrFgClosedSourceDismissed;
+    /// <summary>GITC Uplift's NR on/off key ([Uplift] EnableKey, a Win32 virtual-key code; 0 = none, Uplift's default).</summary>
+    [ObservableProperty] private int _upliftEnableKey;
     /// <summary>"Don't show this again" on the Source engine mod install dialog.</summary>
     [ObservableProperty] private bool _sourceEngineNoticeDismissed;
     /// <summary>Achievements (Spotlight panel and overlay): show the name and description of locked hidden ones.</summary>
@@ -90,6 +104,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private List<uint> _hdrTargetDisplays = new();
     /// <summary>Display modes (Monitor / TV / ...): shows the mode switch on game pages. Modes and per-game state: GameNameService.DisplayModes.</summary>
     [ObservableProperty] private bool _displayModesEnabled;
+    // Show the HDR / Resolution launch buttons on game pages (hidden = still applied at launch)
+    [ObservableProperty] private bool _showHdrLaunchButton = true;
+    [ObservableProperty] private bool _showResLaunchButton = true;
     // ── Resolution Auto-Toggle (dev-only) ─────────────────────────────────────
     [ObservableProperty] private bool _resolutionAutoToggle;
     /// <summary>Target resolution key in "WxH@Hz" format. Empty = no override.</summary>
@@ -105,8 +122,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _steamAchievements;
     /// <summary>Spotlight: show the selected Xbox game's achievements (opt-in, Settings › Achievements).</summary>
     [ObservableProperty] private bool _xboxAchievements;
-    /// <summary>RHI overlay: a full-screen RHI page over the game, opened with a hotkey (Settings › RHI overlay).</summary>
-    [ObservableProperty] private bool _rhiOverlayEnabled = true;
+    /// <summary>RHI overlay: a full-screen RHI page over the game, opened with a hotkey (Settings › RHI overlay). Opt-in: off until turned on.</summary>
+    [ObservableProperty] private bool _rhiOverlayEnabled;
     /// <summary>RHI overlay hotkey in ReShade's "vk,ctrl,shift,alt" format. Default Alt + ` (VK_OEM_3).</summary>
     [ObservableProperty] private string _rhiOverlayHotkey = DefaultRhiOverlayHotkey;
     public const string DefaultRhiOverlayHotkey = "192,0,0,1";
@@ -250,7 +267,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("SkipUpdateCheck", out var sucVal))
             SkipUpdateCheck = sucVal == "true";
 
-        if (s.TryGetValue("BetaOptIn", out var boVal))
+        // "Get beta updates" (rhi-beta). Saved as GetBetaUpdates: the old BetaOptIn key (RDXC-era beta
+        // channel, no UI for years) is ignored on purpose so nobody is moved to betas without choosing it.
+        if (s.TryGetValue("GetBetaUpdates", out var boVal))
             BetaOptIn = boVal == "true";
 
         if (s.TryGetValue("VerboseLogging", out var vlVal))
@@ -362,6 +381,18 @@ public partial class SettingsViewModel : ObservableObject
 
         if (s.TryGetValue("UmfgReShadeWarningDismissed", out var urwdVal))
             UmfgReShadeWarningDismissed = urwdVal == "true";
+        if (s.TryGetValue("HsfNoticeDismissed", out var hsfndVal))
+            HsfNoticeDismissed = hsfndVal == "true";
+        if (s.TryGetValue("RtxEncoreClosedSourceDismissed", out var recsVal))
+            RtxEncoreClosedSourceDismissed = recsVal == "true";
+        if (s.TryGetValue("EncoreDlssFgReShadeWarningDismissed", out var edrwVal))
+            EncoreDlssFgReShadeWarningDismissed = edrwVal == "true";
+        if (s.TryGetValue("Dlssg2030ClosedSourceDismissed", out var d23csVal))
+            Dlssg2030ClosedSourceDismissed = d23csVal == "true";
+        if (s.TryGetValue("AnrFgClosedSourceDismissed", out var anrcsVal))
+            AnrFgClosedSourceDismissed = anrcsVal == "true";
+        if (s.TryGetValue("UpliftEnableKey", out var upKeyVal) && int.TryParse(upKeyVal, out var upKey) && upKey is >= 0 and <= 255)
+            UpliftEnableKey = upKey;
 
         if (s.TryGetValue("SourceEngineNoticeDismissed", out var sendVal))
             SourceEngineNoticeDismissed = sendVal == "true";
@@ -419,6 +450,8 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("LastKnownNewestStreamline", out var lknsVal)) LastKnownNewestStreamline = lknsVal ?? "";
         if (s.TryGetValue("HdrAutoToggle", out var hatVal)) HdrAutoToggle = hatVal == "true";
         if (s.TryGetValue("DisplayModesEnabled", out var dmeVal)) DisplayModesEnabled = dmeVal == "true";
+        ShowHdrLaunchButton = !s.TryGetValue("ShowHdrLaunchButton", out var shlbVal) || shlbVal != "false";
+        ShowResLaunchButton = !s.TryGetValue("ShowResLaunchButton", out var srlbVal) || srlbVal != "false";
         if (s.TryGetValue("HdrTargetDisplays", out var htdVal))
         {
             try { HdrTargetDisplays = System.Text.Json.JsonSerializer.Deserialize<List<uint>>(htdVal) ?? new(); }
@@ -448,7 +481,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("ControllerSupport", out var csVal)) ControllerSupport = csVal != "false"; // default true
         if (s.TryGetValue("SteamAchievements", out var saVal)) SteamAchievements = saVal == "true"; // default false (opt-in)
         if (s.TryGetValue("XboxAchievements", out var xaVal)) XboxAchievements = xaVal == "true"; // default false (opt-in)
-        if (s.TryGetValue("RhiOverlayEnabled", out var roeVal)) RhiOverlayEnabled = roeVal != "false"; // default true
+        // Opt-in from 2.9.3 (off by default). Saved under a new key: the 2.9.3 betas saved "RhiOverlayEnabled"=true for everyone (on by default then),
+        // so the old key is ignored and the overlay starts off for every user until they turn it on.
+        if (s.TryGetValue("RhiOverlayOn", out var roeVal)) RhiOverlayEnabled = roeVal == "true";
         if (s.TryGetValue("RhiOverlayHotkey", out var rohVal) && !string.IsNullOrWhiteSpace(rohVal)) RhiOverlayHotkey = rohVal;
         if (s.TryGetValue("RhiOverlayController", out var rocVal)) RhiOverlayController = rocVal != "false"; // default true
         if (s.TryGetValue("RhiOverlayPauseGame", out var ropVal)) RhiOverlayPauseGame = ropVal == "true"; // default false
@@ -457,6 +492,8 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("SpotlightHeroHeight", out var shhVal) && double.TryParse(shhVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var shh)) SpotlightHeroHeight = shh;
         if (s.TryGetValue("PatchNotesFontSize", out var pnfVal) && double.TryParse(pnfVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pnf) && pnf > 0) PatchNotesFontSize = pnf;
         if (s.TryGetValue("PatchNotesNavHidden", out var pnhVal)) PatchNotesNavHidden = pnhVal == "true";
+        if (s.TryGetValue("ColorTheme", out var ctVal) && !string.IsNullOrWhiteSpace(ctVal)) ColorTheme = ctVal;
+        if (s.TryGetValue("CustomThemeColors", out var cthVal)) CustomThemeColors = cthVal ?? "";
         if (s.TryGetValue("TopBarScale", out var tbsVal) && int.TryParse(tbsVal, out var tbs)) TopBarScale = Math.Clamp(tbs, 50, 200);
         if (s.TryGetValue("GameListScale", out var glsVal) && int.TryParse(glsVal, out var gls)) GameListScale = Math.Clamp(gls, 50, 200);
         if (s.TryGetValue("SpotlightCoverScale", out var scsVal) && double.TryParse(scsVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scs) && scs > 0) SpotlightCoverScale = scs;
@@ -562,7 +599,7 @@ public partial class SettingsViewModel : ObservableObject
     public void SaveSettingsToDict(Dictionary<string, string> s)
     {
         s["SkipUpdateCheck"]   = SkipUpdateCheck ? "true" : "false";
-        s["BetaOptIn"]         = BetaOptIn ? "true" : "false";
+        s["GetBetaUpdates"]    = BetaOptIn ? "true" : "false";
         s["VerboseLogging"]    = VerboseLogging ? "true" : "false";
         s["LastSeenVersion"]   = LastSeenVersion;
         s["ShaderDeployMode"]  = SelectedShaderPacks.Count > 0 ? "Select" : "Off";
@@ -594,6 +631,12 @@ public partial class SettingsViewModel : ObservableObject
         s["MfgWarningDismissed"] = MfgWarningDismissed ? "true" : "false";
         s["EngineBadgeWarningDismissed"] = EngineBadgeWarningDismissed ? "true" : "false";
         s["UmfgReShadeWarningDismissed"] = UmfgReShadeWarningDismissed ? "true" : "false";
+        s["HsfNoticeDismissed"] = HsfNoticeDismissed ? "true" : "false";
+        s["RtxEncoreClosedSourceDismissed"] = RtxEncoreClosedSourceDismissed ? "true" : "false";
+        s["EncoreDlssFgReShadeWarningDismissed"] = EncoreDlssFgReShadeWarningDismissed ? "true" : "false";
+        s["Dlssg2030ClosedSourceDismissed"] = Dlssg2030ClosedSourceDismissed ? "true" : "false";
+        s["AnrFgClosedSourceDismissed"] = AnrFgClosedSourceDismissed ? "true" : "false";
+        s["UpliftEnableKey"] = UpliftEnableKey.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["SourceEngineNoticeDismissed"] = SourceEngineNoticeDismissed ? "true" : "false";
         s["ShowHiddenAchievements"] = ShowHiddenAchievements ? "true" : "false";
         s["SettingsTabbed"] = SettingsTabbed ? "true" : "false";
@@ -626,6 +669,8 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrEmpty(LastKnownNewestStreamline)) s["LastKnownNewestStreamline"] = LastKnownNewestStreamline;
         s["HdrAutoToggle"] = HdrAutoToggle ? "true" : "false";
         s["DisplayModesEnabled"] = DisplayModesEnabled ? "true" : "false";
+        s["ShowHdrLaunchButton"] = ShowHdrLaunchButton ? "true" : "false";
+        s["ShowResLaunchButton"] = ShowResLaunchButton ? "true" : "false";
         if (HdrTargetDisplays.Count > 0) s["HdrTargetDisplays"] = System.Text.Json.JsonSerializer.Serialize(HdrTargetDisplays);
         s["ResolutionAutoToggle"] = ResolutionAutoToggle ? "true" : "false";
         if (!string.IsNullOrEmpty(ResolutionTarget)) s["ResolutionTarget"] = ResolutionTarget;
@@ -638,7 +683,7 @@ public partial class SettingsViewModel : ObservableObject
         s["ControllerSupport"] = ControllerSupport ? "true" : "false";
         s["SteamAchievements"] = SteamAchievements ? "true" : "false";
         s["XboxAchievements"] = XboxAchievements ? "true" : "false";
-        s["RhiOverlayEnabled"] = RhiOverlayEnabled ? "true" : "false";
+        s["RhiOverlayOn"] = RhiOverlayEnabled ? "true" : "false";
         s["RhiOverlayHotkey"] = RhiOverlayHotkey;
         s["RhiOverlayController"] = RhiOverlayController ? "true" : "false";
         s["RhiOverlayPauseGame"] = RhiOverlayPauseGame ? "true" : "false";
@@ -648,6 +693,8 @@ public partial class SettingsViewModel : ObservableObject
         s["PatchNotesFontSize"] = PatchNotesFontSize.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
         s["PatchNotesNavHidden"] = PatchNotesNavHidden ? "true" : "false";
         s["SpotlightCoverScale"] = SpotlightCoverScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        s["ColorTheme"] = ColorTheme;
+        s["CustomThemeColors"] = CustomThemeColors;
         s["TopBarScale"] = TopBarScale.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["GameListScale"] = GameListScale.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["CloseToTray"] = CloseToTray ? "true" : "false";

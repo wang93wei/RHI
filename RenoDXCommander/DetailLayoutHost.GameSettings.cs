@@ -1,5 +1,6 @@
-// DetailLayoutHost.GameSettings.cs -- Spotlight's Game settings panel (the cog beside the game's title): per-game
-// versions of Settings-page options that the Tune this game sections don't cover. A built panel, like Screenshots.
+// DetailLayoutHost.GameSettings.cs -- Game settings (the cog beside the game's title): per-game versions of
+// Settings-page options that the Tune this game sections don't cover. Spotlight = a built side panel, like
+// Screenshots; Tabs = in place under the header (CogDialog host); Classic+ = a dialog (Settings button in the header).
 // Rows are label + one-line description + control (AddGameSettingRow); add new settings there.
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -19,11 +20,74 @@ internal sealed partial class DetailLayoutHost
         var root = new StackPanel { Spacing = 14 };
         root.Children.Add(MutedText(Loc.GetString("Detail.GameSettings.Intro")));
 
+        root.Children.Add(TabsTheme.MakeCard(BuildGameSettingsRows(card, openDisplayModes: null), 16));
+        return root;
+    }
+
+    /// <summary>
+    /// Tabs and Classic+: the same settings as a cog (in place under the header in Tabs, a dialog in Classic+).
+    /// Display modes opens its own dialog, so the cog closes first (only one dialog can be open).
+    /// </summary>
+    internal async Task ShowGameSettingsCogAsync(XamlRoot? xamlRoot)
+    {
+        if (_window.ViewModel.SelectedGame is not { } card || xamlRoot == null) return;
+        bool openDisplayModes = false;
+        var cog = new CogDialog(Loc.GetString("Detail.GameSettings"), xamlRoot);
+        cog.AddIntro(Loc.GetString("Detail.GameSettings.Intro"));
+        cog.AddContent(BuildGameSettingsRows(card, () => { openDisplayModes = true; cog.Hide(); }));
+        await cog.ShowAsync();
+        if (openDisplayModes) await _window.ShowDisplayModeGameDialogAsync(card);
+    }
+
+    private StackPanel BuildGameSettingsRows(GameCardViewModel card, Action? openDisplayModes)
+    {
         var rows = new StackPanel { Spacing = 16 };
         AddOverlayRow(rows, card);
-        AddDisplayModeRow(rows, card);
-        root.Children.Add(TabsTheme.MakeCard(rows, 16));
-        return root;
+        AddDisplayModeRow(rows, card, openDisplayModes);
+        AddSteamUpdateBlockRow(rows, card);
+        return rows;
+    }
+
+    /// <summary>
+    /// Steam games only: makes the game's appmanifest_&lt;appid&gt;.acf read-only so Steam can't update it.
+    /// The file's attribute is the state (nothing saved), so the toggle matches the file.
+    /// </summary>
+    private void AddSteamUpdateBlockRow(StackPanel rows, GameCardViewModel card)
+    {
+        if (!string.Equals(card.Source, "Steam", StringComparison.OrdinalIgnoreCase)) return;
+        var acf = SteamUpdateBlocker.FindAppManifest(card.InstallPath, card.DetectedGame?.SteamAppId);
+        if (acf == null) return;
+
+        string baseDesc = Loc.GetString("Detail.GameSettings.SteamBlock.Desc");
+        var toggle = new ToggleSwitch
+        {
+            IsOn = SteamUpdateBlocker.IsBlocked(acf),
+            OnContent = Loc.GetString("Xaml.On"),
+            OffContent = Loc.GetString("Xaml.Off"),
+            MinWidth = 0,
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(toggle, Loc.GetString("Detail.GameSettings.SteamBlock.Label"));
+        var status = new TextBlock
+        {
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = TabsTheme.B(TabsTheme.TextSecondary),
+            Visibility = Visibility.Collapsed,
+        };
+        bool reverting = false;
+        toggle.Toggled += (s, e) =>
+        {
+            if (reverting) return;
+            var error = SteamUpdateBlocker.SetBlocked(acf, toggle.IsOn);
+            if (error == null) { status.Visibility = Visibility.Collapsed; return; }
+            reverting = true;
+            toggle.IsOn = !toggle.IsOn;
+            reverting = false;
+            status.Text = Loc.GetString("Detail.GameSettings.SteamBlock.Error", error);
+            status.Visibility = Visibility.Visible;
+        };
+        AddGameSettingRow(rows, Loc.GetString("Detail.GameSettings.SteamBlock.Label"), baseDesc, toggle);
+        rows.Children.Add(status);
     }
 
     private void AddOverlayRow(StackPanel rows, GameCardViewModel card)
@@ -55,7 +119,7 @@ internal sealed partial class DetailLayoutHost
         AddGameSettingRow(rows, Loc.GetString("Overlay.Settings.EnabledLabel"), desc, toggle);
     }
 
-    private void AddDisplayModeRow(StackPanel rows, GameCardViewModel card)
+    private void AddDisplayModeRow(StackPanel rows, GameCardViewModel card, Action? openDisplayModes)
     {
         var vm = _window.ViewModel;
         var btn = new Button { Content = Loc.GetString("Detail.GameSettings.Choose"), Padding = new Thickness(14, 0, 14, 0) };
@@ -63,6 +127,7 @@ internal sealed partial class DetailLayoutHost
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(btn, Loc.GetString("Detail.GameSettings.DisplayMode.Automation"));
         btn.Click += async (s, e) =>
         {
+            if (openDisplayModes != null) { openDisplayModes(); return; } // a cog: it closes, then the dialog opens
             try { await _window.ShowDisplayModeGameDialogAsync(card); }
             catch (Exception ex) when (ex is InvalidOperationException) { CrashReporter.Log($"[DetailLayoutHost.GameSettings] Display modes — {ex.Message}"); }
         };

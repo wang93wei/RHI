@@ -485,8 +485,15 @@ public partial class MainViewModel
                         break;
                     }
                 }
-                // Trust first candidate if none exist on disk (Phase 2 will verify)
-                installPath = resolvedOverride ?? Path.Combine(game.InstallPath, candidates[0].Trim());
+                // None exists: trust the first candidate only while the game's root can't be read (drive not
+                // ready yet; Phase 2 verifies). With the root there, a missing subfolder means the root is wrong
+                // for this entry (e.g. a saved folder RHI used to store as the root): keep the cached folder.
+                if (resolvedOverride == null && !Directory.Exists(game.InstallPath))
+                    resolvedOverride = Path.Combine(game.InstallPath, candidates[0].Trim());
+                if (resolvedOverride != null)
+                    installPath = resolvedOverride;
+                else
+                    _crashReporter.Log($"[CacheLoad] '{game.Name}': no manifest subfolder '{subPath}' under '{game.InstallPath}' — keeping '{installPath}'");
                 if (resolvedOverride != null && _installPathMigrationGames.Contains(game.Name))
                     DlssStreamlineService.RegisterMovedInstallRoot(installPath, game.InstallPath);
             }
@@ -857,7 +864,7 @@ public partial class MainViewModel
                 if (detection.DlssgPath != null && File.Exists(detection.DlssgPath))
                     detection.DlssgVersion = _dlssStreamlineService.GetFileVersion(detection.DlssgPath);
                 if (detection.DlssnrPath != null && File.Exists(detection.DlssnrPath))
-                    detection.DlssnrVersion = _dlssStreamlineService.GetFileVersion(detection.DlssnrPath);
+                    detection.DlssnrVersion = _dlssStreamlineService.GetFileVersion(DlssNrCostScalerService.ResolveRealNrDllPath(detection.DlssnrPath)); // real DLL behind an NR Cost Scaler proxy
                 if (detection.StreamlineInterposerPath != null && File.Exists(detection.StreamlineInterposerPath))
                     detection.StreamlineVersion = _dlssStreamlineService.GetFileVersion(detection.StreamlineInterposerPath);
 

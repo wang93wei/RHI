@@ -19,16 +19,17 @@ public partial class DialogService
     {
         var fileSize = new System.IO.FileInfo(dxgiPath).Length;
         var sizeKB   = fileSize / 1024.0;
+        var dllName  = System.IO.Path.GetFileName(dxgiPath);
 
         var dlg = new ContentDialog
         {
-            Title               = Loc.GetString("Dialog.UnknownDxgi.Title"),
+            Title               = Loc.GetString("Dialog.UnknownDxgi.Title", dllName),
             Content             = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
                 Foreground   = Brush(ResourceKeys.AccentAmberBrush),
                 FontSize     = 13,
-                Text         = Loc.GetString("Dialog.UnknownDxgi.Content", card.InstallPath, $"{sizeKB:N0}"),
+                Text         = Loc.GetString("Dialog.UnknownDxgi.Content", card.InstallPath, $"{sizeKB:N0}", dllName),
             },
             PrimaryButtonText   = Loc.GetString("Dialog.Overwrite"),
             CloseButtonText     = Loc.GetString("Dialog.Cancel"),
@@ -739,7 +740,7 @@ public partial class DialogService
             panel.Children.Add(new Border
             {
                 Height      = 1,
-                Background  = new SolidColorBrush(Windows.UI.Color.FromArgb(40, 255, 255, 255)),
+                Background  = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(40, 255, 255, 255)),
                 Margin      = new Thickness(0, 0, 0, 12),
             });
         }

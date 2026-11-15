@@ -309,7 +309,13 @@ public partial class SettingsHandler
         EnsureCustomFoldersCard();
         EnsureOsCustomBuildsCard();
         EnsureControllerSetting();
+        EnsureBetaUpdatesSetting();
+        EnsureUpliftKeySetting();
         EnsureDisplayModesCard();
+        EnsureColorThemeCard();
+        EnsureLaunchButtonRows();
+        EnsureShaderCompileRow();
+        EnsureSteamGridDbCard();
         EnsureAchievementsSection(); // before the nav, so it gets a jump button
         EnsureRhiOverlaySection();   // same; lands after Achievements (both go just before Tools)
         EnsureSettingsNavigation();

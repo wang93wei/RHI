@@ -964,18 +964,19 @@ public partial class MainViewModel
     /// RTX Encore catch-up for games that already have it: Intel's XeSS SDK files are set up (or brought up to
     /// what RHI now does: libxess.dll, the licence, the game's own copies replaced in place) and refreshed when a
     /// game update put old copies back; RHI-deployed NR DLLs older than 310.9.16 are moved to it, and moved beside
-    /// the mod for .asi installs. Hidden games are left alone.
+    /// the mod for .asi installs. The NVIDIA files for games without DLSS (RtxEncoreService.NoDlssRuntimes) are
+    /// installed or removed to match the game. Hidden games are left alone.
     /// </summary>
     private void ReconcileRtxEncoreFiles()
     {
         var svc = App.Services.GetRequiredService<RtxEncoreService>();
-        var games = new List<(string InstallPath, string InstalledAs, string ModDir, bool NrDeployed)>();
+        var games = new List<(string InstallPath, string InstalledAs, string ModDir, bool NrDeployed, bool Is32Bit, bool OsInstalled)>();
         foreach (var c in _allCards.ToList())
         {
             if (c.IsHidden || string.IsNullOrEmpty(c.InstallPath)) continue;
             var installedAs = GetRtxEncoreInstalledAs(c.GameName, c.Source ?? "");
             if (string.IsNullOrEmpty(installedAs) || !svc.IsInstalledIn(c.InstallPath, installedAs)) continue;
-            games.Add((c.InstallPath, installedAs, svc.ModDir(c.InstallPath, installedAs), GetRtxEncoreNrDllDeployed(c.GameName, c.Source ?? "")));
+            games.Add((c.InstallPath, installedAs, svc.ModDir(c.InstallPath, installedAs), GetRtxEncoreNrDllDeployed(c.GameName, c.Source ?? ""), c.Is32Bit, c.IsOsInstalled));
         }
         if (games.Count == 0) return;
         _ = Task.Run(async () =>
@@ -997,6 +998,20 @@ public partial class MainViewModel
                         svc.MoveNrDllBesideMod(g.InstallPath, g.InstalledAs);
                         svc.UpgradeNrDllIfOlder(g.InstallPath, g.InstalledAs);
                     }
+
+                // NVIDIA files for games without DLSS: installed where the game has none of its own (existing installs,
+                // or OptiScaler / HSF removed since), removed where it now has its own or OptiScaler / HSF came in
+                foreach (var g in games)
+                {
+                    try
+                    {
+                        await svc.ReconcileNoDlssRuntimesAsync(g.InstallPath, g.Is32Bit, g.OsInstalled, _dlssStreamlineService).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException or TaskCanceledException)
+                    {
+                        _crashReporter.Log($"[MainViewModel.ReconcileRtxEncoreFiles] NVIDIA files for '{g.InstallPath}' — {ex.Message}");
+                    }
+                }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
             {
@@ -1183,10 +1198,10 @@ public partial class MainViewModel
             foreach (var candidate in preferenceOrder)
             {
                 var candidatePath = System.IO.Path.Combine(installPath, candidate);
-                bool takenByOther = System.IO.File.Exists(candidatePath)
-                    && !string.Equals(rsRecord?.InstalledAs, candidate, StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(card.OsInstalledFile, candidate, StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(card.DcInstalledFile, candidate, StringComparison.OrdinalIgnoreCase);
+                // A name another RHI component holds (RE Framework's dinput8.dll, ...) is never used;
+                // ASI Loader would refuse it anyway
+                if (UltimateAsiLoaderService.FixedRhiDllOwner(card, candidate) != null) continue;
+                bool takenByOther = System.IO.File.Exists(candidatePath);
                 if (!takenByOther) { chosenName = candidate; break; }
             }
 
@@ -2055,8 +2070,13 @@ public partial class MainViewModel
     private void ApplyGameRenames(List<DetectedGame> games)
         => _gameNameService.ApplyGameRenames(games);
 
-    private void ApplyFolderOverrides(List<DetectedGame> games)
-        => _gameNameService.ApplyFolderOverrides(games);
+    /// <param name="fromStoreScan">True for lists from a store scan (Refresh / background scan), which still hold
+    /// each game's detected folder; corrected Reset targets are saved.</param>
+    private void ApplyFolderOverrides(List<DetectedGame> games, bool fromStoreScan = false)
+    {
+        if (_gameNameService.ApplyFolderOverrides(games, fromStoreScan) > 0)
+            SaveNameMappings();
+    }
 
     public void AddNameMapping(string detectedName, string wikiKey)
     {
@@ -2336,7 +2356,7 @@ public partial class MainViewModel
                         && string.Equals(card.DlssnrInstalledVersion, previousDlss, StringComparison.OrdinalIgnoreCase))
                     {
                         await _dlssStreamlineService.SwapDlssnrAsync(card.DlssDetection.DlssnrPath, newestDlss);
-                        card.DlssnrInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(card.DlssDetection.DlssnrPath));
+                        card.DlssnrInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(DlssNrCostScalerService.ResolveRealNrDllPath(card.DlssDetection.DlssnrPath)));
                         gameUpdated = true;
                     }
                 }
@@ -2344,7 +2364,11 @@ public partial class MainViewModel
                 {
                     _crashReporter.Log($"[RunDlssAutoUpdateAsync] DLSS auto-update failed for '{card.GameName}' — {ex.Message}");
                 }
-                if (gameUpdated) dlssUpdated++;
+                if (gameUpdated)
+                {
+                    dlssUpdated++;
+                    UpdateHistory.Record("DLSS", $"{card.GameName} (DLSS)", previousDlss, newestDlss);
+                }
             }
 
             // ── Streamline Auto-Update ──
@@ -2360,6 +2384,7 @@ public partial class MainViewModel
                         card.StreamlineInstalledVersion = DlssStreamlineService.FormatVersion(_dlssStreamlineService.GetFileVersion(
                             card.DlssDetection.StreamlineInterposerPath ?? ""));
                         slUpdated++;
+                        UpdateHistory.Record("DLSS", $"{card.GameName} (Streamline)", previousSl, newestSl);
                     }
                 }
                 catch (Exception ex)

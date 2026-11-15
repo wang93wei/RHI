@@ -814,6 +814,7 @@ public partial class DetailPanelBuilder
                 bool dlssi = false, dlssdi = false, dlssgi = false, hostExeOk = true;
                 bool srOk = false, rrOk = false, fgOk = false, nrOk = false;
                 bool ualOk = false, feedFxPresent = false, lumeniteFxPresent = false;
+                int? feederMv = null;
                 bool isDx9Feeder = false, dgVoodooOk = false;
                 string? nrv = null, dlssv = null, dlssdv = null, dlssgv = null;
                 string? srv = null, rrv = null, fgv = null, nrv2 = null;
@@ -877,6 +878,7 @@ public partial class DetailPanelBuilder
                     Directory.GetFiles(shadersDir, "DLSS5_Feed.fx", SearchOption.AllDirectories).Length > 0;
                 lumeniteFxPresent = Directory.Exists(shadersDir) &&
                     Directory.GetFiles(shadersDir, "lumenite_Kernel.fx", SearchOption.AllDirectories).Length > 0;
+                feederMv = FeederPreset.ReadGameProvider(installPath);
 
                 // dgVoodoo2 (DX9 Feeder) — only when DX9 is the PRIMARY graphics API,
                 // not just present in DetectedApis (UE4 games have a legacy DX9 shim in DetectedApis).
@@ -914,7 +916,7 @@ public partial class DetailPanelBuilder
                     d5BuildSuffix = d5Suffix;
                     RefreshStatusWithData(d5i, sfi, nri, bri, fei, rsi, dlssi, dlssdi, dlssgi, nrv, dlssv, dlssdv, dlssgv, hostExeOk,
                         srOk, rrOk, fgOk, nrOk, srv, rrv, fgv, nrv2,
-                        ualName, ualOk, feedFxPresent, lumeniteFxPresent, isDx9Feeder, dgVoodooOk,
+                        ualName, ualOk, feedFxPresent, lumeniteFxPresent, feederMv, isDx9Feeder, dgVoodooOk,
                         (upi, upHelper, upDll, upDllV, upFx, upVer, upPin != null, upLaunchpad));
                 });
             });  // end Task.Run
@@ -928,7 +930,7 @@ public partial class DetailPanelBuilder
             bool srOk, bool rrOk, bool fgOk, bool nrOk,
             string? srv, string? rrv, string? fgv, string? nrv2,
             string? ualName, bool ualOk,
-            bool feedFxPresent, bool lumeniteFxPresent,
+            bool feedFxPresent, bool lumeniteFxPresent, int? feederMv,
             bool isDx9Feeder, bool dgVoodooOk,
             (bool Addon, bool Helper, bool Dll, string? DllVersion, bool Shaders, string? Version, bool Pinned, bool? Launchpad) uplift)
         {
@@ -1002,7 +1004,11 @@ public partial class DetailPanelBuilder
                     Tag(dlssi ? Loc.GetString("NeuralRendering.Tag.DlssSr", dlssv)        : Loc.GetString("NeuralRendering.Tag.DlssSr.Missing"),       dlssi);
                     Tag(nri   ? Loc.GetString("NeuralRendering.Tag.NrDll", nrv)           : Loc.GetString("NeuralRendering.Tag.NrDll.Missing"),        nri);
                     Tag(feedFxPresent    ? Loc.GetString("NeuralRendering.Tag.FeedFx")    : Loc.GetString("NeuralRendering.Tag.FeedFx.Missing"),    feedFxPresent);
-                    Tag(lumeniteFxPresent ? Loc.GetString("NeuralRendering.Tag.LumeniteFx") : Loc.GetString("NeuralRendering.Tag.LumeniteFx.Missing"), lumeniteFxPresent);
+                    // Feeder 2.0.0+ has its own motion vectors (DLSS5_MV_PROVIDER=5): LumeniteFX only matters for 3 / 4
+                    if (feederMv is int mv && !FeederPreset.NeedsLumenite(mv))
+                        Tag(mv == FeederPreset.BuiltInProvider ? Loc.GetString("NeuralRendering.Tag.MvBuiltIn") : Loc.GetString("NeuralRendering.Tag.MvProvider", mv), true);
+                    else
+                        Tag(lumeniteFxPresent ? Loc.GetString("NeuralRendering.Tag.LumeniteFx") : Loc.GetString("NeuralRendering.Tag.LumeniteFx.Missing"), lumeniteFxPresent);
                     if (isDx9Feeder)
                         Tag(dgVoodooOk ? Loc.GetString("NeuralRendering.Tag.DgVoodoo2") : Loc.GetString("NeuralRendering.Tag.DgVoodoo2.Missing"), dgVoodooOk);
                     break;
@@ -1086,6 +1092,7 @@ public partial class DetailPanelBuilder
                             ? Loc.GetString("NeuralRendering.Description.UpliftNote")
                             : "")
                         + Loc.GetString("NeuralRendering.Description.Uplift")
+                        + (card.HasDlssUpscaler ? Loc.GetString("NeuralRendering.Description.UpliftDlssNote") : "")
                         + (isVulkan || card.GraphicsApi == GraphicsApiType.OpenGL ? Loc.GetString("NeuralRendering.Description.UpliftVulkanNote") : "");
                     descLink.Content = Loc.GetString("NeuralRendering.Link.UpliftGuide");
                     descLink.NavigateUri = new Uri(UpliftService.ReleasesPage);
@@ -1298,7 +1305,7 @@ public partial class DetailPanelBuilder
             methodCombo.IsEnabled  = false;
             installBtn.IsEnabled   = false;
             removeBtn.IsEnabled    = false;
-            installBtn.Content     = "Removing...";
+            installBtn.Content     = Loc.GetString("NeuralRendering.Status.Removing");
 
             try
             {
@@ -1405,7 +1412,7 @@ public partial class DetailPanelBuilder
         {
             installBtn.IsEnabled = false;
             removeBtn.IsEnabled  = false;
-            installBtn.Content   = "Installing...";
+            installBtn.Content   = Loc.GetString("Status.Installing");
 
             var selKey = (methodCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? effectiveMethod;
 
@@ -1904,6 +1911,7 @@ public partial class DetailPanelBuilder
             launchpadRow.Children.Add(launchpadLabel);
             launchpadRow.Children.Add(launchpadToggle);
             launchpadRow.Children.Add(launchpadStatus);
+
             launchpadRow.Visibility = upliftSelectedAtBuild ? Visibility.Visible : Visibility.Collapsed;
             nrBody.Children.Add(launchpadRow);
         }

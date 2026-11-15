@@ -441,7 +441,7 @@ public static class GameReportEncoder
             ["addons"] = addons,
             ["dlssStreamline"] = dlssInfo,
             ["userNote"] = userNote,
-            ["rhiVersion"] = updateService.CurrentVersion.ToString(),
+            ["rhiVersion"] = AppVersionInfo.Display,
             ["timestamp"] = DateTime.UtcNow.ToString("O"),
         };
     }

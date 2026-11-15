@@ -106,6 +106,18 @@ public sealed partial class MainWindow
             }, isEnabled: combinedOn);
         slVersionCombo = slVersionCell.Combo;
 
+        // FG Nvngx Override is used with FG Output DLSSG or FG Input "DLSSG via Nvngx"
+        ComboBox? fgNvngxCombo = null;
+        void SetNvngxUsable(bool usable)
+        {
+            if (fgNvngxCombo == null) return;
+            fgNvngxCombo.Opacity = usable ? 1.0 : CogDialog.DisabledOpacity;
+            fgNvngxCombo.IsHitTestVisible = usable;
+            fgNvngxCombo.IsEnabled = usable;
+        }
+        bool NvngxApplies() => OptiScalerService.UsesNvngxReplacement(
+            ViewModel.GetOsFgInput(card.GameName, store), ViewModel.GetOsFgOutput(card.GameName, store));
+
         // FG Input
         var fgInputCurrent = OsIniToFgInput(ViewModel.GetOsFgInput(card.GameName, store));
         // The current ini value can be outside the preset list — keep it visible in the dropdown
@@ -118,17 +130,10 @@ public sealed partial class MainWindow
                 var v = OsFgInputToIni(fgInputItems[i]);
                 ViewModel.SetOsFgInput(card.GameName, v, store);
                 if (!string.IsNullOrEmpty(card.InstallPath)) OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "FrameGen", "FGInput", v);
+                SetNvngxUsable(NvngxApplies());
             });
 
-        // FG Output + FG Nvngx Override (only used with DLSSG output)
-        ComboBox? fgNvngxCombo = null;
-        void SetNvngxUsable(bool usable)
-        {
-            if (fgNvngxCombo == null) return;
-            fgNvngxCombo.Opacity = usable ? 1.0 : CogDialog.DisabledOpacity;
-            fgNvngxCombo.IsHitTestVisible = usable;
-            fgNvngxCombo.IsEnabled = usable;
-        }
+        // FG Output
 
         var fgOutputCurrent = OsIniToFgOutput(ViewModel.GetOsFgOutput(card.GameName, store));
         // The current ini value can be outside the preset list — keep it visible in the dropdown
@@ -142,12 +147,16 @@ public sealed partial class MainWindow
                 var v = OsFgOutputToIni(sel);
                 ViewModel.SetOsFgOutput(card.GameName, v, store);
                 if (!string.IsNullOrEmpty(card.InstallPath)) OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "FrameGen", "FGOutput", v);
-                SetNvngxUsable(sel == "DLSSG");
+                SetNvngxUsable(NvngxApplies());
             });
 
+        // Built-in replacements, then custom providers found in OptiScaler's custom folder (e.g. ANR FG)
         var nvngxCurrent = OsIniToFgNvngx(ViewModel.GetOsFgNvngxReplacement(card.GameName, store));
-        // The current ini value can be outside the preset list — keep it visible in the dropdown
-        var nvngxItems = OsWithValue(new[] { "None (Real DLSSG)", "Nukem's", "Enabler", "FSR 3/4 FG", "Combo" }, nvngxCurrent);
+        var nvngxBase = new[] { "None (Real DLSSG)", "Nukem's", "Enabler", "FSR 3/4 FG", "Combo" };
+        var nvngxItems = OsWithValue(nvngxBase
+            .Concat(OptiScalerService.FindCustomFgProviders(card.InstallPath)
+                .Where(n => !nvngxBase.Contains(OsIniToFgNvngx(n))))
+            .ToArray(), nvngxCurrent);
         var fgNvngxCell = OsComboCell(cog, Loc.GetString("Dialog.OptiScaler.FgNvngxOverride"),
             Loc.GetString("Dialog.OptiScaler.FgNvngxTooltip"),
             nvngxItems, OsIndexOf(nvngxItems, nvngxCurrent, 0),
@@ -155,13 +164,13 @@ public sealed partial class MainWindow
             {
                 var v = OsFgNvngxToIni(nvngxItems[i]);
                 ViewModel.SetOsFgNvngxReplacement(card.GameName, v, store);
-                if (!string.IsNullOrEmpty(card.InstallPath) && string.Equals(ViewModel.GetOsFgOutput(card.GameName, store), "dlssg", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(card.InstallPath) && NvngxApplies())
                     OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "FrameGen", "FGNvngxReplacement", v);
             });
         fgNvngxCombo = fgNvngxCell.Combo;
         ctx.FgOutputCombo = fgOutputCell.Combo;
         ctx.FgNvngxCombo = fgNvngxCombo;
-        SetNvngxUsable(fgOutputCell.Combo.SelectedItem as string == "DLSSG");
+        SetNvngxUsable(NvngxApplies());
 
         // HUD Fix — [OptiFG] HUDFix
         var hudFixCurrent = ReadOsIniSectionValue(card.InstallPath, "OptiFG", "HUDFix", "auto");

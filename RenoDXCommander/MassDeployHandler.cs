@@ -27,7 +27,10 @@ public class MassDeployHandler
     {
         try
         {
-            var eligible = _window.ViewModel.AllCards.Where(c => c.RsStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
+            // Hidden games are left alone; games whose reshade.ini is locked (Keep reshade.ini updated off) are skipped
+            var vm = _window.ViewModel;
+            var eligible = vm.AllCards.Where(c => c.RsStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)
+                                                  && !c.IsHidden && vm.GetKeepRsIniUpdated(c.GameName, c.Source ?? "")).ToList();
             var confirmDialog = new ContentDialog
             {
                 Title = Loc.GetString("Dialog.ConfirmMassDeployment"),
@@ -78,7 +81,7 @@ public class MassDeployHandler
     {
         try
         {
-            var eligible = _window.ViewModel.AllCards.Where(c => c.UlStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
+            var eligible = _window.ViewModel.AllCards.Where(c => c.UlStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath) && !c.IsHidden).ToList();
             var confirmDialog = new ContentDialog
             {
                 Title = Loc.GetString("Dialog.ConfirmMassDeployment"),
@@ -119,7 +122,7 @@ public class MassDeployHandler
     {
         try
         {
-            var eligible = _window.ViewModel.AllCards.Where(c => c.DcStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
+            var eligible = _window.ViewModel.AllCards.Where(c => c.DcStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath) && !c.IsHidden).ToList();
             var confirmDialog = new ContentDialog
             {
                 Title = Loc.GetString("Dialog.ConfirmMassDeployment"),
@@ -169,7 +172,7 @@ public class MassDeployHandler
                 return;
             }
 
-            var eligible = _window.ViewModel.AllCards.Where(c => c.OsStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath)).ToList();
+            var eligible = _window.ViewModel.AllCards.Where(c => c.OsStatus == GameStatus.Installed && !string.IsNullOrEmpty(c.InstallPath) && !c.IsHidden).ToList();
             var confirmDialog = new ContentDialog
             {
                 Title = Loc.GetString("Dialog.ConfirmMassDeployment"),

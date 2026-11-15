@@ -101,16 +101,25 @@ public partial class MainViewModel
 
     // ── Commands ──────────────────────────────────────────────────────────────────
 
-    public Task RefreshAsync() => RunLibraryOperationAsync(RefreshCoreAsync);
+    public Task RefreshAsync() => RunLibraryOperationAsync(() => RefreshCoreAsync(null));
+
+    /// <summary>
+    /// Refresh, plus a full rescan of <paramref name="rescanGame"/> (the selected game): its DLSS, engine, folder,
+    /// bitness and addon caches are forgotten first, as Full Refresh does for every game, so DLSS that was added or
+    /// removed shows straight away without a Full Refresh.
+    /// </summary>
+    public Task RefreshAsync(GameCardViewModel? rescanGame) => RunLibraryOperationAsync(() => RefreshCoreAsync(rescanGame));
 
     /// <summary>True while a scan (startup, Refresh, Full Refresh) holds the library gate; a Refresh started now waits for it.</summary>
     public bool IsLibraryOperationRunning => _libraryOperationGate.CurrentCount == 0;
 
     /// <summary>Refresh; <paramref name="onStarted"/> runs once the gate is acquired (after any scan already running).</summary>
-    public Task RefreshAsync(Action onStarted) => RunLibraryOperationAsync(() => { onStarted(); return RefreshCoreAsync(); });
+    public Task RefreshAsync(Action onStarted) => RunLibraryOperationAsync(() => { onStarted(); return RefreshCoreAsync(null); });
 
-    private async Task RefreshCoreAsync()
+    private async Task RefreshCoreAsync(GameCardViewModel? rescanGame)
     {
+        if (rescanGame != null) ForgetGameScans(rescanGame);
+
         // Re-check games in the DLSS skip cache before rebuilding cards.
         // Games confirmed as "no DLSS" after 3+ scans are skipped in BuildCards — this
         // gives them a fresh look so newly installed DLSS (e.g. game update) is detected
@@ -145,6 +154,33 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
+    /// <summary>
+    /// Full Refresh for one game: drops its entries from the scan caches (engine / folder / stamps by the library
+    /// folder, bitness / addon by the resolved folder, DLSS by name). Runs inside the library gate, so no card
+    /// build is reading them.
+    /// </summary>
+    private void ForgetGameScans(GameCardViewModel card)
+    {
+        try
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in new[] { card.DetectedGame?.InstallPath, card.InstallPath })
+                if (!string.IsNullOrEmpty(p)) keys.Add(p.TrimEnd('\\', '/').ToLowerInvariant());
+            int removed = 0;
+            foreach (var k in keys)
+            {
+                if (_engineTypeCache.Remove(k)) removed++;
+                if (_resolvedPathCache.Remove(k)) removed++;
+                if (_engineFolderStamps.Remove(k)) removed++;
+                if (_bitnessCache.Remove(k)) removed++;
+                if (_addonFileCache.Remove(k)) removed++;
+            }
+            _dlssStreamlineService.ForgetGame(card.GameName);
+            _crashReporter.Log($"[MainViewModel.ForgetGameScans] '{card.GameName}' — {removed} cached scan entr{(removed == 1 ? "y" : "ies")} cleared; rescanning it");
+        }
+        catch (Exception ex) { _crashReporter.Log($"[MainViewModel.ForgetGameScans] '{card.GameName}' — {ex.Message}"); }
+    }
+
     public Task FullRefreshAsync(IProgress<string>? progress = null)
         => RunLibraryOperationAsync(() => FullRefreshCoreAsync(progress));
 
@@ -257,6 +293,10 @@ public partial class MainViewModel
 
         // Wire up per-game "Load ReShade as ASI"
         AuxInstallService.RsAsiModeResolver = (gameName, store) => GetRsAsiMode(gameName, store);
+        // ReShade never takes a DLL name another RHI component holds (ASI Loader, RE Framework, extras)
+        AuxInstallService.OtherDllOwnerResolver = OtherReShadeDllOwner;
+        // ReShade uninstall keeps reshade.ini when the game's ini is locked
+        AuxInstallService.RsIniLockedResolver = (gameName, store) => !GetKeepRsIniUpdated(gameName, store);
         UpdateOrchestrationService.AfterSourceAddonUpdate = ApplySourceSetupAsync;
 
         // Universal MFG Unlocker moves in and out of OptiScaler\plugins with OptiScaler 10 builds
@@ -482,6 +522,7 @@ public partial class MainViewModel
                 try { await _dlssStreamlineService.FetchManifestAsync(); }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] DLSS manifest fetch failed — {ex.Message}"); }
                 await OsPresetService.FetchManifestAsync(_http);
+                await Services.UltraPlus.UltraPlusData.FetchAsync(_http); // unlock_extra.txt only
             });
             // Initialize DLSS preset service (loads NVAPI + caches driver profiles)
             _ = Task.Run(() => { try { _dlssPresetService.Initialize(); } catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] DLSS preset init failed — {ex.Message}"); } });
@@ -550,6 +591,7 @@ public partial class MainViewModel
 
             // Apply manifest-driven shader pack and addon pack overrides
             (_shaderPackService as ShaderPackService)?.ApplyManifestOverrides(_manifest);
+            if (!forceRescan) QueueManifestShaderPackCheck(); // once per launch, not on every Refresh
             (_addonPackService as AddonPackService)?.ApplyManifestOverrides(_manifest);
 
             // First launch without a saved library takes this full-scan path instead of the
@@ -706,6 +748,8 @@ public partial class MainViewModel
             ApplyGameRenames(detectedGames);
 
             // Apply persisted folder overrides so user-chosen paths survive Refresh.
+            // Only the freshly scanned games still hold the store's folder (cached ones carry saved paths)
+            ApplyFolderOverrides(freshGames, fromStoreScan: true);
             ApplyFolderOverrides(detectedGames);
 
             // Combine auto-detected + manual games.

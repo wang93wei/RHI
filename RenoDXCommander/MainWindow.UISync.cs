@@ -43,9 +43,7 @@ public sealed partial class MainWindow
                     // Lock Back button during refresh from Settings page
                     SettingsBackBtn.IsEnabled = !loading;
                     RefreshStatusBar();
-                    if (!silent) StatusDot.Fill = new SolidColorBrush(loading
-                        ? ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentAmberBrush]).Color
-                        : ((SolidColorBrush)Application.Current.Resources[ResourceKeys.AccentGreenBrush]).Color);
+                    if (!silent) StatusDot.Fill = UIFactory.Brush(loading ? ResourceKeys.AccentAmberBrush : ResourceKeys.AccentGreenBrush);
                     if (!silent) ToolTipService.SetToolTip(StatusDot, loading
                         ? Loc.GetString("MainWindow.StatusBar.Scanning.Tooltip")
                         : Loc.GetString("MainWindow.StatusBar.UpToDate.Tooltip"));
@@ -67,6 +65,11 @@ public sealed partial class MainWindow
                         if (App._gitHubTokenExpiredOnStartup)
                         {
                             ShowStatusBarMessage(Loc.GetString("GitHub.Status.SessionExpiredNotice"),
+                                TimeSpan.FromSeconds(15));
+                        }
+                        else if (RenoDXCommander.Services.GitHubTokenHandler.TokenRejected)
+                        {
+                            ShowStatusBarMessage("⚠ GitHub rejected your token (expired or revoked) — add a new one in Settings → Accounts & Data",
                                 TimeSpan.FromSeconds(15));
                         }
                         // On Refresh (silent=true), the ListView still has its old item selected
@@ -175,16 +178,17 @@ public sealed partial class MainWindow
     /// </summary>
     private void RefreshFilterButtonStyles()
     {
-        var active   = ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipActiveBrush]).Color;
-        var inactive = ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipDefaultBrush]).Color;
-        var activeFg   = ((SolidColorBrush)Application.Current.Resources[ResourceKeys.TextPrimaryBrush]).Color;
-        var inactiveFg = ((SolidColorBrush)Application.Current.Resources[ResourceKeys.ChipTextBrush]).Color;
+        // Shared theme brushes (they follow the colour theme)
+        var active     = UIFactory.Brush(ResourceKeys.ChipActiveBrush);
+        var inactive   = UIFactory.Brush(ResourceKeys.ChipDefaultBrush);
+        var activeFg   = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
+        var inactiveFg = UIFactory.Brush(ResourceKeys.ChipTextBrush);
 
         foreach (var b in new[] { FilterFavourites, FilterInstalled, FilterDetected, FilterUnreal, FilterUnity, FilterOther, FilterRenoDX, FilterLuma, FilterHidden })
         {
             bool isActive = ViewModel.ActiveFilters.Contains(b.Tag as string ?? "");
-            b.Background  = new SolidColorBrush(isActive ? active   : inactive);
-            b.Foreground  = new SolidColorBrush(isActive ? activeFg : inactiveFg);
+            b.Background  = isActive ? active   : inactive;
+            b.Foreground  = isActive ? activeFg : inactiveFg;
         }
         if (_tabsChromeBuilt) RefreshTabsChromeSoon(); // segmented filter + Filters count
     }
@@ -311,6 +315,9 @@ public sealed partial class MainWindow
 
     private async Task CheckForAppUpdateAsync()
         => await _dialogService.CheckForAppUpdateAsync();
+
+    /// <summary>Settings › Get beta updates turned on: look for an update (beta included) now.</summary>
+    internal Task CheckForAppUpdateNowAsync() => _dialogService.CheckForAppUpdateAsync();
 
     private async Task ShowPatchNotesDialogAsync()
         => await _dialogService.ShowPatchNotesDialogAsync();

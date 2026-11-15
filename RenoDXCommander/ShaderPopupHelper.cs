@@ -1135,7 +1135,7 @@ public static partial class ShaderPopupHelper
                     var zipPath = ShaderProfileService.BuildExportZip(packIds, exclDict, shaderPackService,
                         activeProfileIdx >= 0 && activeProfileIdx < profiles.Count
                             ? profiles[activeProfileIdx]
-                            : new ShaderProfile { Name = "Exported Profile", SelectedPacks = packIds, FileExclusions = exclDict.ToDictionary(k => k.Key, k => k.Value.ToList()) });
+                            : new ShaderProfile { Name = Loc.GetString("ShaderPicker.ExportedProfileName"), SelectedPacks = packIds, FileExclusions = exclDict.ToDictionary(k => k.Key, k => k.Value.ToList()) });
                     var storageFile = await Windows.Storage.StorageFile.GetFileFromPathAsync(zipPath);
                     var dp = new Windows.ApplicationModel.DataTransfer.DataPackage();
                     dp.SetStorageItems(new[] { storageFile });

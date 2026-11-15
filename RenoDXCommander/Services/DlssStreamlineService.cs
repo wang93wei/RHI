@@ -499,6 +499,19 @@ public partial class DlssStreamlineService : IDlssStreamlineService
             return null;
         }
 
+        // A cached path that is now one of RTX Encore's NVIDIA files (games without DLSS) isn't the game's:
+        // full scan, which skips them
+        var encoreMarkers = new Dictionary<string, List<RtxEncoreNvidiaMarker.Entry>>(StringComparer.OrdinalIgnoreCase);
+        if ((entry.DlssPath != null && RtxEncoreNvidiaMarker.IsOwnedFile(entry.DlssPath, encoreMarkers))
+            || (entry.DlssgPath != null && RtxEncoreNvidiaMarker.IsOwnedFile(entry.DlssgPath, encoreMarkers))
+            || (entry.StreamlineFolder != null
+                && RtxEncoreNvidiaMarker.IsOwnedFile(Path.Combine(entry.StreamlineFolder, StreamlineIndicator), encoreMarkers)))
+        {
+            CrashReporter.Log($"[DlssStreamlineService.TryFastDetect] Cached paths for '{gameName}' include RTX Encore's NVIDIA files — rescanning");
+            InvalidateTrustedPath(gameName);
+            return null;
+        }
+
         // Verify cached paths still exist
         var result = new DlssDetectionResult();
         bool anyValid = false;
@@ -520,7 +533,7 @@ public partial class DlssStreamlineService : IDlssStreamlineService
         }
         if (entry.DlssnrPath != null)
         {
-            if (File.Exists(entry.DlssnrPath)) { result.DlssnrPath = entry.DlssnrPath; result.DlssnrVersion = GetFileVersion(entry.DlssnrPath); anyValid = true; }
+            if (File.Exists(entry.DlssnrPath)) { result.DlssnrPath = entry.DlssnrPath; result.DlssnrVersion = GetFileVersion(DlssNrCostScalerService.ResolveRealNrDllPath(entry.DlssnrPath)); anyValid = true; } // real DLL behind an NR Cost Scaler proxy
             else { InvalidateTrustedPath(gameName); return null; }
         }
         if (entry.StreamlineFolder != null)
@@ -654,6 +667,12 @@ public partial class DlssStreamlineService : IDlssStreamlineService
         var dlssnrPath = entry.DlssnrPath?.Replace('/', '\\');
         var streamlineFolder = entry.StreamlineFolder?.Replace('/', '\\');
 
+        // Cached before RHI skipped mod-owned folders (HSF_streamline): scan again
+        if (DlssStreamlineService.IsInModOwnedFolder(dlssPath) || DlssStreamlineService.IsInModOwnedFolder(dlssdPath)
+            || DlssStreamlineService.IsInModOwnedFolder(dlssgPath) || DlssStreamlineService.IsInModOwnedFolder(dlssnrPath)
+            || DlssStreamlineService.IsInModOwnedFolder(streamlineFolder))
+            return false;
+
         if (dlssPath != null && !dlssPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
             return false;
         if (dlssdPath != null && !dlssdPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
@@ -669,6 +688,25 @@ public partial class DlssStreamlineService : IDlssStreamlineService
                               StringComparison.OrdinalIgnoreCase))
             return false;
         return true;
+    }
+
+    /// <summary>
+    /// Forgets everything RHI remembers about one game's DLSS files (its "no DLSS" count and its trusted paths),
+    /// so the next card build scans it from scratch. Full Refresh for one game (Refresh on the selected game).
+    /// </summary>
+    public void ForgetGame(string gameName)
+    {
+        bool hadSkip;
+        lock (_scanSkipCacheLock)
+        {
+            EnsureScanCacheLoaded_Unlocked();
+            hadSkip = _scanSkipCache!.Remove(gameName);
+        }
+        if (hadSkip) SaveScanCache();
+        EnsureTrustedCacheLoaded();
+        bool hadTrusted = _trustedPathCache!.Remove(gameName);
+        if (hadTrusted) SaveTrustedCache();
+        CrashReporter.Log($"[DlssStreamlineService.ForgetGame] '{gameName}' — skip entry {(hadSkip ? "removed" : "none")}, trusted paths {(hadTrusted ? "removed" : "none")}");
     }
 
     /// <summary>Removes a game from the trusted path cache.</summary>
@@ -722,7 +760,9 @@ public partial class DlssStreamlineService : IDlssStreamlineService
 
         // Download on-demand
         await DownloadAndCacheAsync(newest.Url, cachedDir, DlssDllName).ConfigureAwait(false);
-        return File.Exists(cachedDll) ? cachedDll : null;
+        if (!File.Exists(cachedDll)) return null;
+        RecordNewestCached("DLSS (nvngx_dlss.dll)", _manifest?.Dlss, DlssCacheDir, DlssDllName, false);
+        return cachedDll;
     }
 
     /// <summary>
@@ -740,7 +780,9 @@ public partial class DlssStreamlineService : IDlssStreamlineService
             return cachedDll;
 
         await DownloadAndCacheAsync(newest.Url, cachedDir, DlssdDllName).ConfigureAwait(false);
-        return File.Exists(cachedDll) ? cachedDll : null;
+        if (!File.Exists(cachedDll)) return null;
+        RecordNewestCached("DLSS RR (nvngx_dlssd.dll)", _manifest?.Dlssd, DlssdCacheDir, DlssdDllName, false);
+        return cachedDll;
     }
 
     /// <summary>
@@ -758,7 +800,9 @@ public partial class DlssStreamlineService : IDlssStreamlineService
             return cachedDll;
 
         await DownloadAndCacheAsync(newest.Url, cachedDir, DlssgDllName).ConfigureAwait(false);
-        return File.Exists(cachedDll) ? cachedDll : null;
+        if (!File.Exists(cachedDll)) return null;
+        RecordNewestCached("DLSS FG (nvngx_dlssg.dll)", _manifest?.Dlssg, DlssgCacheDir, DlssgDllName, false);
+        return cachedDll;
     }
 
     /// <summary>
@@ -776,7 +820,9 @@ public partial class DlssStreamlineService : IDlssStreamlineService
             return cachedDll;
 
         await DownloadAndCacheAsync(newest.Url, cachedDir, DlssnrDllName).ConfigureAwait(false);
-        return File.Exists(cachedDll) ? cachedDll : null;
+        if (!File.Exists(cachedDll)) return null;
+        RecordNewestCached("DLSS NR (nvngx_dlssnr.dll)", _manifest?.Dlssnr, DlssnrCacheDir, DlssnrDllName, true);
+        return cachedDll;
     }
 
     /// <summary>
@@ -816,7 +862,30 @@ public partial class DlssStreamlineService : IDlssStreamlineService
             return cachedDir;
 
         await DownloadAndCacheStreamlineAsync(newest.Url, cachedDir).ConfigureAwait(false);
-        return (File.Exists(indicator) || File.Exists(fallback)) ? cachedDir : null;
+        if (!File.Exists(indicator) && !File.Exists(fallback)) return null;
+        RecordNewestCached("Streamline", _manifest?.Streamline, StreamlineCacheDir, StreamlineIndicator, false);
+        return cachedDir;
+    }
+
+    /// <summary>
+    /// Update History entry when the newest manifest version has just been cached: the previous
+    /// version is the newest older manifest entry that is still cached. Nothing cached before = first download, not recorded.
+    /// </summary>
+    private static void RecordNewestCached(string componentName, List<DlssManifestEntry>? entries,
+        string cacheDir, string markerFile, bool sanitizeDir)
+    {
+        if (entries == null || entries.Count == 0) return;
+        string? previous = null;
+        try
+        {
+            previous = entries.Skip(1).FirstOrDefault(e => !string.IsNullOrEmpty(e.Version) && File.Exists(Path.Combine(cacheDir,
+                sanitizeDir ? SanitizeVersionForPath(e.Version) : e.Version, markerFile)))?.Version;
+        }
+        catch (ArgumentException ex)
+        {
+            CrashReporter.Log($"[DlssStreamlineService.RecordNewestCached] {componentName}: could not read the cache — {ex.Message}");
+        }
+        UpdateHistory.Record("DLSS", componentName, previous, entries[0].Version);
     }
 }
 

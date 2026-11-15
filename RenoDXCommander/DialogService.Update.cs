@@ -90,7 +90,7 @@ public partial class DialogService
                         Foreground   = Brush(ResourceKeys.TextSecondaryBrush),
                         FontSize     = 14,
                         Text         = Loc.GetString("Dialog.AppUpdate.Content",
-                                           updateInfo.CurrentVersion,
+                                           updateInfo.CurrentDisplayVersion ?? AppVersionInfo.Display,
                                            updateInfo.DisplayVersion ?? updateInfo.RemoteVersion.ToString()),
                     },
                 },
@@ -188,8 +188,8 @@ public partial class DialogService
             // Wait for UI to settle and any update dialog to finish
             await Task.Delay(1500, _window.LifetimeToken);
 
-            var current = _updateService.CurrentVersion;
-            var versionStr = $"{current.Major}.{current.Minor}.{current.Build}";
+            // Full version incl. beta / 4th number, so each beta and each hotfix shows its notes once
+            var versionStr = AppVersionInfo.Current.ToTagString();
             var markerFile = Path.Combine(PatchNotesDir, $"PatchNotes-{versionStr}.txt");
 
             // Clean up markers from older versions

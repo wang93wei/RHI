@@ -66,7 +66,7 @@ public class MassDlssDeployDialog
                 Content = card.GameName,
                 FontSize = 12,
                 IsEnabled = !isV1,
-                Foreground = new SolidColorBrush(isV1
+                Foreground = UIFactory.ThemedBrush(isV1
                     ? Windows.UI.Color.FromArgb(255, 120, 120, 120)
                     : Windows.UI.Color.FromArgb(255, 220, 220, 220)),
             };
@@ -79,8 +79,8 @@ public class MassDlssDeployDialog
         var selectAllBtn = new Button
         {
             Content = Loc.GetString("Dialog.SelectAll"), FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
+            Background = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
+            Foreground = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             CornerRadius = new CornerRadius(6),
         };
         selectAllBtn.Click += (_, _) => { foreach (var cb in checkBoxes) if (cb.IsEnabled) cb.IsChecked = true; };
@@ -88,8 +88,8 @@ public class MassDlssDeployDialog
         var deselectAllBtn = new Button
         {
             Content = Loc.GetString("Dialog.DeselectAll"), FontSize = 11, Padding = new Thickness(8, 4, 8, 4),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
+            Background = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 30, 40, 60)),
+            Foreground = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             CornerRadius = new CornerRadius(6),
         };
         deselectAllBtn.Click += (_, _) => { foreach (var cb in checkBoxes) cb.IsChecked = false; };
@@ -136,7 +136,7 @@ public class MassDlssDeployDialog
         rightPanel.Children.Add(new Border
         {
             Height = 1,
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
+            Background = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
             Margin = new Thickness(0, 4, 0, 4),
         });
         rightPanel.Children.Add(BuildDropdownSection(Loc.GetString("Dialog.DlssDeploy.LabelSrPreset"), srPresetCombo));
@@ -156,7 +156,7 @@ public class MassDlssDeployDialog
             Content = Loc.GetString("Dialog.AutoCreateNvidiaProfiles"),
             IsChecked = true,
             FontSize = 11,
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
+            Foreground = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 180, 190, 220)),
             Margin = new Thickness(0, 4, 0, 0),
         };
         ToolTipService.SetToolTip(autoCreateCheck,
@@ -167,7 +167,7 @@ public class MassDlssDeployDialog
         var separator = new Border
         {
             Width = 1,
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
+            Background = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
             VerticalAlignment = VerticalAlignment.Stretch,
             Margin = new Thickness(16, 0, 16, 0),
         };
@@ -176,7 +176,7 @@ public class MassDlssDeployDialog
         var rightSeparator = new Border
         {
             Width = 1,
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
+            Background = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 60, 70, 90)),
             VerticalAlignment = VerticalAlignment.Stretch,
             Margin = new Thickness(16, 0, 0, 0),
         };
@@ -251,7 +251,7 @@ public class MassDlssDeployDialog
         int dlssCount = 0, dlssdCount = 0, dlssgCount = 0, slCount = 0;
         int srPresetCount = 0, rrPresetCount = 0, fgPresetCount = 0, presetMissedCount = 0;
         int srDriverCount = 0, rrDriverCount = 0, fgDriverCount = 0;
-        int skippedNoComponent = 0, skippedAlreadyAtVersion = 0;
+        int skippedNoComponent = 0, skippedAlreadyAtVersion = 0, skippedOwned = 0;
         var failedGames = new List<string>();
         // Set auto-create flag on preset service
         var presetService = App.Services.GetRequiredService<DlssPresetService>();
@@ -264,7 +264,7 @@ public class MassDlssDeployDialog
         {
             Text = Loc.GetString("Dialog.DeployingToSelectedGames"),
             FontSize = 12,
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
+            Foreground = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -342,7 +342,7 @@ public class MassDlssDeployDialog
                     else if (dlssVersion == DefaultOption)
                     {
                         if (_dlssService.HasBackup(detection.DlssPath))
-                        { _dlssService.Restore(detection.DlssPath); dlssCount++; }
+                        { if (_dlssService.Restore(detection.DlssPath, card.InstallPath)) dlssCount++; else skippedOwned++; }
                     }
                     else if (dlssVersion == CustomOption)
                     {
@@ -368,7 +368,7 @@ public class MassDlssDeployDialog
                     else if (dlssdVersion == DefaultOption)
                     {
                         if (_dlssService.HasBackup(detection.DlssdPath))
-                        { _dlssService.Restore(detection.DlssdPath); dlssdCount++; }
+                        { if (_dlssService.Restore(detection.DlssdPath, card.InstallPath)) dlssdCount++; else skippedOwned++; }
                     }
                     else if (dlssdVersion == CustomOption)
                     {
@@ -394,7 +394,7 @@ public class MassDlssDeployDialog
                     else if (dlssgVersion == DefaultOption)
                     {
                         if (_dlssService.HasBackup(detection.DlssgPath))
-                        { _dlssService.Restore(detection.DlssgPath); dlssgCount++; }
+                        { if (_dlssService.Restore(detection.DlssgPath, card.InstallPath)) dlssgCount++; else skippedOwned++; }
                     }
                     else if (dlssgVersion == CustomOption)
                     {
@@ -415,7 +415,7 @@ public class MassDlssDeployDialog
                 {
                     if (slVersion == DefaultOption)
                     {
-                        _dlssService.RestoreStreamline(detection.StreamlineFolder); slCount++;
+                        if (_dlssService.RestoreStreamline(detection.StreamlineFolder, card.InstallPath) == 0) slCount++; else skippedOwned++;
                     }
                     else if (slVersion == CustomOption)
                     {
@@ -493,6 +493,7 @@ public class MassDlssDeployDialog
             report.AppendLine(Loc.GetString("Dialog.DlssDeploy.ProfilesCreated", presetService.ProfilesCreatedCount));
         if (skippedAlreadyAtVersion > 0) report.AppendLine("\n" + Loc.GetString("Dialog.DlssDeploy.SkippedAlreadyAtVersion", skippedAlreadyAtVersion));
         if (skippedNoComponent > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.SkippedNoComponent", skippedNoComponent));
+        if (skippedOwned > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.LeftAsTheyAre", skippedOwned));
         if (presetMissedCount > 0) report.AppendLine(Loc.GetString("Dialog.DlssDeploy.PresetsMissed", presetMissedCount));
         if (failedGames.Count > 0)
         {
@@ -517,6 +518,7 @@ public class MassDlssDeployDialog
     private async Task ExecuteRestoreAllAsync(List<GameCardViewModel> eligibleCards, List<CheckBox> checkBoxes)
     {
         int restoredCount = 0;
+        int keptCount = 0;
         int presetsResetCount = 0;
         var presetService = App.Services.GetRequiredService<DlssPresetService>();
 
@@ -525,7 +527,7 @@ public class MassDlssDeployDialog
         {
             Text = Loc.GetString("Dialog.RestoringSelectedGames"),
             FontSize = 12,
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
+            Foreground = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 200, 200, 200)),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -568,10 +570,11 @@ public class MassDlssDeployDialog
             // Restore DLL backups
             if (card.HasAnyDlssBackup)
             {
-                _dlssService.RestoreAll(detection);
+                // Files another RHI component placed or uses are left alone: don't count those games as restored
+                if (_dlssService.RestoreAll(detection, card.InstallPath) == 0) restoredCount++;
+                else keptCount++;
                 card.RefreshDlssVersions(_dlssService);
                 card.NotifyAll();
-                restoredCount++;
             }
 
             // Reset presets to Default (0x0) and clear driver overrides
@@ -588,8 +591,9 @@ public class MassDlssDeployDialog
 
         var reportText = new System.Text.StringBuilder();
         if (restoredCount > 0) reportText.AppendLine(Loc.GetString("Dialog.DlssDeploy.RestoredToDefault", restoredCount));
+        if (keptCount > 0) reportText.AppendLine(Loc.GetString("Dialog.DlssDeploy.RestoreKeptSome", keptCount));
         if (presetsResetCount > 0) reportText.AppendLine(Loc.GetString("Dialog.DlssDeploy.PresetsReset", presetsResetCount));
-        if (restoredCount == 0 && presetsResetCount == 0) reportText.Append(Loc.GetString("Dialog.DlssDeploy.NoRestoreNeeded"));
+        if (restoredCount == 0 && keptCount == 0 && presetsResetCount == 0) reportText.Append(Loc.GetString("Dialog.DlssDeploy.NoRestoreNeeded"));
 
         var resultDialog = new ContentDialog
         {
@@ -656,7 +660,7 @@ public class MassDlssDeployDialog
             Text = label,
             FontSize = 12,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 200, 210, 230)),
+            Foreground = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(255, 200, 210, 230)),
         });
         panel.Children.Add(combo);
         return panel;

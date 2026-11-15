@@ -255,11 +255,9 @@ public partial class DetailPanelBuilder
         }
         catch (Exception ex) { CrashReporter.Log($"[DetailPanelBuilder.ShowUalDllPickerAsync] Failed to list DLLs in '{card.InstallPath}' — {ex.Message}"); }
 
-        // RHI-managed filenames to flag as conflict
-        var rhiOwned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrEmpty(card.RsInstalledFile))  rhiOwned.Add(card.RsInstalledFile);
-        if (!string.IsNullOrEmpty(card.OsInstalledFile))  rhiOwned.Add(card.OsInstalledFile);
-        if (!string.IsNullOrEmpty(card.DcInstalledFile))  rhiOwned.Add(card.DcInstalledFile);
+        // RHI-managed filenames to flag as conflict (ReShade, OptiScaler, DC, RE Framework, DXVK, dgVoodoo2)
+        var rhiOwned = new HashSet<string>(UltimateAsiLoaderService.FixedRhiDllOwners(card).Keys, StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(currentDllName)) rhiOwned.Remove(currentDllName);
 
         string? chosen = null;
 
@@ -420,6 +418,10 @@ public partial class DetailPanelBuilder
         installBtn.Click += async (s, e) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
+            var st = _window.ViewModel.Settings;
+            if (!isInstalled && !await ShowClosedSourceNoticeAsync("RTX Encore", "SilyNoMeta",
+                    () => st.RtxEncoreClosedSourceDismissed, () => st.RtxEncoreClosedSourceDismissed = true, installBtn.XamlRoot ?? _window.Content.XamlRoot))
+                return;
             var chosen = await ShowRtxEncoreDllPickerAsync(card, currentDllName);
             if (chosen == null) return;
             installBtn.IsEnabled = false; installBtn.Content = Loc.GetString("Status.Installing");
@@ -436,7 +438,11 @@ public partial class DetailPanelBuilder
                     {
                         var dlssS = App.Services.GetRequiredService<IDlssStreamlineService>();
                         if (await svc.EnsureNrDllCachedAsync(dlssS) != null)
-                            await Task.Run(() => svc.DeployNrDll(installPath, chosen));
+                        {
+                            // A game with no DLSS of its own may be in the scan skip cache: un-skip it so the NR DLL shows
+                            if (await Task.Run(() => svc.DeployNrDll(installPath, chosen)))
+                                dlssS.RecordDlssFound(gameName);
+                        }
                         else
                             CrashReporter.Log($"[RtxEncoreInstall] NR DLL {RtxEncoreService.NrRequiredVer} not available — skipping NR deploy");
                     }
@@ -459,7 +465,19 @@ public partial class DetailPanelBuilder
                     if (!xessOk)
                         CrashReporter.Log($"[RtxEncoreInstall] XeSS files not deployed for '{installPath}' (download failed or folder not writable)");
 
+                    // NVIDIA files for games without DLSS (DLSS upscaling + frame generation), only where the game has
+                    // none of its own; never over an existing file. Not fatal. Deliberately no RecordDlssFound: these
+                    // are RTX Encore's pinned builds, hidden from DLSS detection so swaps / auto-update never touch them.
+                    installBtn.Content = Loc.GetString("Extras.RtxEncore.InstallingNvidiaFiles");
+                    var noDlss = await Task.Run(() => svc.DeployNoDlssRuntimesAsync(installPath, card.Is32Bit, card.IsOsInstalled,
+                        App.Services.GetRequiredService<IDlssStreamlineService>()));
+                    CrashReporter.Log($"[RtxEncoreInstall] NVIDIA files for games without DLSS in '{installPath}': upscaling {(noDlss.Upscaling.Installed ? "installed" : noDlss.Upscaling.Reason)}, frame generation {(noDlss.FrameGeneration.Installed ? "installed" : noDlss.FrameGeneration.Reason)}");
+
                     RequestExtrasRebuild(card);
+
+                    // DLSS-FG with ReShade as dxgi.dll crashes the game at startup (RTX Encore #133): warn, don't block
+                    if (noDlss.FrameGeneration.Installed && IsReShadeDxgi(card))
+                        await ShowEncoreDlssFgReShadeWarningAsync(installBtn.XamlRoot);
                 }
                 else { installBtn.Content = Loc.GetString("Extras.InstallFailed.Button"); installBtn.IsEnabled = true; }
             }
@@ -484,6 +502,7 @@ public partial class DetailPanelBuilder
             svc.Uninstall(installPath, currentDllName, removeNrDll: nrDeployed);
             var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
             _ = Task.Run(() => mfgSvc.RemoveEncoreIntelFiles(installPath, modDir));
+            _ = Task.Run(() => svc.RemoveNoDlssRuntimes(installPath));
             _window.ViewModel.SetRtxEncoreInstalledAs(gameName, null, store);
             if (nrDeployed) _window.ViewModel.SetRtxEncoreNrDllDeployed(gameName, false, store);
             RequestExtrasRebuild(card);

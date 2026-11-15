@@ -241,7 +241,7 @@ public sealed partial class MainWindow
         if (_shelf != null)
         {
             Grid.SetRow(_shelf, bottom ? 0 : 3);
-            // Keep the side padding (UpdateShelfCentering widens it to centre a short Favourites row)
+            // Keep the side padding (UpdateShelfCentering widens it to centre a row that fits)
             _shelf.Padding = bottom ? new Thickness(_shelf.Padding.Left, 12, _shelf.Padding.Right, 2)
                                     : new Thickness(_shelf.Padding.Left, 4, _shelf.Padding.Right, 10);
             PlaceCoverGrip(bottom);
@@ -363,8 +363,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// With the Favourites filter or a collection on, centres the covers when they all fit on screen (extra side
-    /// padding); otherwise they start at the left as usual.
+    /// Centres the covers when they all fit on screen (extra side padding), whatever the filter or collection;
+    /// a longer row starts at the left as usual.
     /// </summary>
     private void UpdateShelfCentering()
     {
@@ -373,7 +373,7 @@ public sealed partial class MainWindow
         {
             double side = 20;
             double width = _shelf.ActualWidth;
-            if (width > 0 && (ViewModel.ActiveFilters.Contains("Favourites") || ViewModel.ActiveCollectionName != null))
+            if (width > 0)
             {
                 double items = ViewModel.DisplayedGames.Count * (TileWidth + 8); // tile + item margin 4,0,4,0
                 if (items > 0 && items + 40 <= width) side = Math.Floor((width - items) / 2);
@@ -597,7 +597,7 @@ public sealed partial class MainWindow
 
     // ── Custom artwork (game menu › Artwork) ──────────────────────────────────
 
-    /// <summary>"Artwork" submenu for the game menu: set or reset the cover and the banner.</summary>
+    /// <summary>"Artwork" submenu for the game menu: set, browse (SteamGridDB) or reset the cover and the banner.</summary>
     private MenuFlyoutSubItem BuildArtworkMenu(GameCardViewModel card)
     {
         var key = ArtKey(card);
@@ -610,6 +610,9 @@ public sealed partial class MainWindow
         }
         Add(Loc.GetString("MainWindow.Shelf.SetCustomCover"), () => _ = PickCustomArtAsync(card, SteamArtworkService.Kind.Cover));
         Add(Loc.GetString("MainWindow.Shelf.SetCustomBanner"), () => _ = PickCustomArtAsync(card, SteamArtworkService.Kind.Hero));
+        sub.Items.Add(new MenuFlyoutSeparator());
+        Add(Loc.GetString("MainWindow.Shelf.BrowseCovers"), () => _detailPanelBuilder.Layout.OpenArtworkPicker(card, SteamArtworkService.Kind.Cover));
+        Add(Loc.GetString("MainWindow.Shelf.BrowseBanners"), () => _detailPanelBuilder.Layout.OpenArtworkPicker(card, SteamArtworkService.Kind.Hero));
         bool customCover = SteamArtworkService.TryGetCustom(key, SteamArtworkService.Kind.Cover) != null;
         bool customHero = SteamArtworkService.TryGetCustom(key, SteamArtworkService.Kind.Hero) != null;
         if (customCover || customHero) sub.Items.Add(new MenuFlyoutSeparator());
@@ -684,7 +687,10 @@ public sealed partial class MainWindow
         ShowArtChange(card, kind);
     }
 
-    private void ShowArtChange(GameCardViewModel card, SteamArtworkService.Kind kind)
+    /// <summary>Opens Settings at a section (e.g. the artwork picker's "Add an API key" button → Accounts).</summary>
+    internal void OpenSettingsSection(string key) => _settingsHandler.OpenAtSection(key);
+
+    internal void ShowArtChange(GameCardViewModel card, SteamArtworkService.Kind kind)
     {
         if (kind == SteamArtworkService.Kind.Cover) ReloadCover(card);
         else if (ReferenceEquals(ViewModel.SelectedGame, card)) _detailPanelBuilder.Layout.ReloadHeroArt();

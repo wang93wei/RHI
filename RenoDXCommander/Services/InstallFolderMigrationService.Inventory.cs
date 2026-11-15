@@ -192,6 +192,15 @@ public partial class InstallFolderMigrationService
                 b.File(g, Path.Combine(modRel, "rtx-encore.jsonc"));
                 b.Dir(g, Path.Combine(modRel, "rtx-encore-runtimes"));
                 AddEncoreMarkerRebase(plan, oldDir, newDir, Path.Combine(modRel, Rtx40MfgService.EncoreRuntimeRelDir, EncoreMarker));
+                // NVIDIA files for games without DLSS: always in the install folder (beside the exe), listed in
+                // rtx-encore-runtimes\nvidia\rhi_installed.txt there (moved with the folder above for proxy installs)
+                var nvidiaRecord = RtxEncoreNvidiaMarker.Read(oldDir);
+                if (nvidiaRecord.Count > 0)
+                {
+                    if (modRel.Length > 0)
+                        b.Dir(g, Path.Combine(RtxEncoreNvidiaMarker.RuntimesFolder, RtxEncoreNvidiaMarker.NvidiaFolder));
+                    foreach (var e in nvidiaRecord) b.File(g, e.Name, requireBackup: false);
+                }
             }
         }
 
@@ -223,8 +232,10 @@ public partial class InstallFolderMigrationService
             {
                 if (component.Equals(RtxEncoreService.ComponentName, StringComparison.OrdinalIgnoreCase)) continue; // above
                 var g = b.Group(NrLabel(component), newManifest?.Components.ContainsKey(component) == true);
-                bool addonFirst = component.Equals(UpliftService.Component, StringComparison.OrdinalIgnoreCase);
-                foreach (var f in record.Files) b.Recorded(g, f, addonFirst);
+                bool isHsf = component.Equals(HsfService.Component, StringComparison.OrdinalIgnoreCase);
+                bool addonFirst = isHsf || component.Equals(UpliftService.Component, StringComparison.OrdinalIgnoreCase);
+                // HSF's Streamline / DLSS-G copies are its own files, never backed up game DLLs
+                foreach (var f in record.Files) b.Recorded(g, f, addonFirst, requireBackupForDlss: !isHsf);
                 if (component.Equals("Feeder", StringComparison.OrdinalIgnoreCase))
                 {
                     b.Dir(g, "host64");
@@ -234,7 +245,7 @@ public partial class InstallFolderMigrationService
                         b.File(g, "dgVoodoo.conf");
                     }
                 }
-                if (addonFirst) b.AddonDir(g, UpliftService.DllFolder);
+                if (addonFirst) b.AddonDir(g, isHsf ? HsfService.StreamlineFolder : UpliftService.DllFolder);
             }
             if (oldManifest.SharedFiles.Count > 0)
             {
@@ -286,6 +297,14 @@ public partial class InstallFolderMigrationService
         {
             var g = b.Group("DXVK", dxvks.Any(r => IsNew(r.InstallPath)));
             foreach (var dll in dxvkOld.InstalledDlls) b.File(g, dll, requireBackup: false);
+            // A DLL moved aside for OptiScaler 0.9 sits in the root plugins\ (only that file, never the folder:
+            // it can be the game's); one in OptiScaler\plugins moves with OptiScaler\ above.
+            foreach (var dll in dxvkOld.PluginFolderDlls)
+            {
+                var copy = DxvkService.FindPluginCopy(oldDir, dll);
+                if (copy != null && DxvkService.IsRootPluginsDir(oldDir, Path.GetDirectoryName(copy)!))
+                    b.File(g, Path.Combine("plugins", Path.GetFileName(copy)), suffix: null, requireBackup: false);
+            }
             if (dxvkOld.DeployedConf) b.File(g, "dxvk.conf");
             b.File(g, "d3d9.dll.reshade_backup", suffix: null);
         }
@@ -407,6 +426,7 @@ public partial class InstallFolderMigrationService
         "ShortFuse" => "DLSS Tool (ShortFuse)",
         "Feeder" => "DLSS5 Feeder",
         "Uplift" => "GITC Uplift",
+        "HSF" => "HSF",
         _ => component,
     };
 

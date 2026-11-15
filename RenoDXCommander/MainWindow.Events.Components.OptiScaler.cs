@@ -145,8 +145,13 @@ public sealed partial class MainWindow
     private const string OsAutoLabel = "Auto (Default)";
 
     /// <summary>Display item → ini value for items outside the known list (the item is the raw value).</summary>
-    private static string OsRawOrAuto(string display) =>
-        string.IsNullOrWhiteSpace(display) || display == OsAutoLabel ? "auto" : display;
+    private static string OsRawOrAuto(string display)
+    {
+        // The combo shows a translated "Auto (Default)" label; map it back to the canonical value
+        // before deciding, so a translated label never gets written into OptiScaler.ini or a preset.
+        if (display == LocOpt.T("Auto (Default)")) display = OsAutoLabel;
+        return string.IsNullOrWhiteSpace(display) || display == OsAutoLabel ? "auto" : display;
+    }
 
     /// <summary>Ini value → display item for values outside the known list.</summary>
     private static string OsAutoOrRaw(string? ini) =>
@@ -417,7 +422,7 @@ public sealed partial class MainWindow
             ctx.FpsLimitCombo = fpsCell.Combo;
 
             // ── DXGI spoofing — [Spoofing] Dxgi ──────────────────────────────
-            var dxgiItems = new[] { "Auto (Default)", "True", "False" };
+            var dxgiItems = new[] { LocOpt.T("Auto (Default)"), "True", "False" };
             var dxgiCurrent = ReadOsIniSectionValue(card.InstallPath, "Spoofing", "Dxgi", "auto");
             var dxgiCell = OsComboCell(cog, Loc.GetString("Dialog.OptiScaler.DxgiSpoofing"),
                 Loc.GetString("Dialog.OptiScaler.DxgiSpoofingTooltip"),
@@ -445,14 +450,18 @@ public sealed partial class MainWindow
 
             // Refilling the list must not write the value back to the ini.
             bool refreshingUpscaler = false;
+            // Canonical (source-language) items, index-aligned with the localized display list
+            // shown in the combo, so the selected value is written back untranslated.
+            string[] upscalerRaw = Array.Empty<string>();
             void RefreshUpscalerCombo(string api)
             {
                 refreshingUpscaler = true;
                 try
                 {
                     var current = OsIniToUpscalerOption(api, ReadOsUpscalerIni(card.InstallPath, OsApiToIniKey(api)));
-                    apiUpscalerCombo.ItemsSource = OsWithValue(OsGetUpscalerOptions(api), current);
-                    apiUpscalerCombo.SelectedItem = current;
+                    upscalerRaw = OsWithValue(OsGetUpscalerOptions(api), current);
+                    apiUpscalerCombo.ItemsSource = upscalerRaw.Select(LocOpt.T).ToArray();
+                    apiUpscalerCombo.SelectedIndex = Array.IndexOf(upscalerRaw, current);
                 }
                 finally { refreshingUpscaler = false; }
             }
@@ -475,11 +484,12 @@ public sealed partial class MainWindow
             apiUpscalerCombo.SelectionChanged += (s, ev) =>
             {
                 if (refreshingUpscaler) return;
-                if (apiUpscalerCombo.SelectedItem is not string sel || string.IsNullOrEmpty(card.InstallPath)) return;
+                int idx = apiUpscalerCombo.SelectedIndex;
+                if (idx < 0 || idx >= upscalerRaw.Length || string.IsNullOrEmpty(card.InstallPath)) return;
                 var api = apiCombo.SelectedItem as string ?? "DX11";
                 try
                 {
-                    OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "Upscalers", OsApiToIniKey(api), OsUpscalerOptionToIni(api, sel));
+                    OptiScalerService.SetOptiScalerIniValue(card.InstallPath, "Upscalers", OsApiToIniKey(api), OsUpscalerOptionToIni(api, upscalerRaw[idx]));
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

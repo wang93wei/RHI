@@ -84,7 +84,7 @@ public partial class MainViewModel
             if (!_dxvkService.IsStagingReady)
                 await _dxvkService.EnsureStagingAsync();
 
-            await _dxvkService.InstallAsync(card,
+            bool installed = await _dxvkService.InstallAsync(card,
                 new Progress<(string message, double percent)>(p =>
                 {
                     card.DxvkActionMessage = p.message;
@@ -93,6 +93,16 @@ public partial class MainViewModel
                 screenshotSavePath: BuildScreenshotSavePath(card.GameName),
                 overlayHotkey: _settingsViewModel.OverlayHotkey,
                 screenshotHotkey: _settingsViewModel.ScreenshotHotkey);
+            if (!installed)
+            {
+                // The service reported why through progress. Don't mark the card as DXVK / Vulkan
+                // or save the variant: nothing new was installed.
+                _crashReporter.Log($"[MainViewModel.InstallDxvkAsync] DXVK install failed for '{card.GameName}' — card left as it was");
+                card.NotifyAll();
+                // A standard-mode install may have switched ReShade before it failed; the panel is imperative
+                RequestDetailPanelRebuild?.Invoke(card);
+                return;
+            }
 
 card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
             card.DxvkEnabled = true; // must be set so RequiresVulkanInstall returns true for DX11
@@ -125,6 +135,7 @@ card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
         {
             card.DxvkActionMessage = Loc.GetString("Status.InstallFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("InstallDxvk", ex, note: $"Game: {card.GameName}");
+            RequestDetailPanelRebuild?.Invoke(card);
         }
         finally
         {
@@ -138,16 +149,25 @@ card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
     /// <summary>
     /// Uninstalls DXVK from the given game card.
     /// Removes deployed DLLs, restores backups, and cleans up the tracking record.
+    /// Returns false when nothing was removed (game running, or the uninstall failed); true when it was
+    /// removed or there was nothing to remove.
     /// </summary>
-    public async Task UninstallDxvkAsync(GameCardViewModel card)
+    public async Task<bool> UninstallDxvkAsync(GameCardViewModel card)
     {
-        if (string.IsNullOrEmpty(card.InstallPath)) return;
+        if (string.IsNullOrEmpty(card.InstallPath)) return true; // no folder = nothing of DXVK's to remove
 
         card.DxvkIsInstalling = true;
         card.DxvkActionMessage = Loc.GetString("Status.RemovingDxvk");
         try
         {
-            await _dxvkService.UninstallAsync(card);
+            var failed = await _dxvkService.UninstallAsync(card);
+            if (failed != null)
+            {
+                // Record and files kept: the card stays as installed
+                card.DxvkActionMessage = failed;
+                card.NotifyAll();
+                return false;
+            }
             card.DxvkEnabled = false; // must be cleared so RequiresVulkanInstall returns false after uninstall
 
             // Clear persisted Vulkan rendering path
@@ -179,11 +199,13 @@ card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
 
             // Rebuild the detail panel — uninstall reverts GraphicsApi and RS state.
             RequestDetailPanelRebuild?.Invoke(card);
+            return true;
         }
         catch (Exception ex)
         {
             card.DxvkActionMessage = Loc.GetString("Status.UninstallFailedWithReason", ex.Message);
             _crashReporter.WriteCrashReport("UninstallDxvk", ex, note: $"Game: {card.GameName}");
+            return false;
         }
         finally
         {
@@ -298,7 +320,13 @@ card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
         }
         else
         {
-            UninstallDxvk(card);
+            if (!await UninstallDxvkAsync(card))
+            {
+                // Nothing removed (game running): DXVK is still installed, keep the toggle and API as they are
+                card.DxvkEnabled = true;
+                card.NotifyAll();
+                return;
+            }
 
             // Re-resolve Graphics API from manifest/user overrides after uninstall.
             // The DxvkService sets a hardcoded DX9 default for Lilium HDR uninstall,

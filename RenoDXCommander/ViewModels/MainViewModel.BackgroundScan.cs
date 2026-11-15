@@ -149,6 +149,7 @@ public partial class MainViewModel
                 try { await _dlssStreamlineService.FetchManifestAsync(); }
                 catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] DLSS manifest fetch failed — {ex.Message}"); }
                 await OsPresetService.FetchManifestAsync(_http);
+                await Services.UltraPlus.UltraPlusData.FetchAsync(_http); // unlock_extra.txt only
             });
             var dxvkTask     = Task.Run(async () => {
                 try
@@ -247,6 +248,7 @@ public partial class MainViewModel
 
             // Apply manifest-driven shader pack and addon pack overrides
             (_shaderPackService as ShaderPackService)?.ApplyManifestOverrides(_manifest);
+            QueueManifestShaderPackCheck();
             (_addonPackService as AddonPackService)?.ApplyManifestOverrides(_manifest);
             DlssPresetService.ApplyManifestPresets(_manifest);
 
@@ -373,6 +375,8 @@ public partial class MainViewModel
 
             // Apply persisted renames and folder overrides
             ApplyGameRenames(detectedGames);
+            // Only the freshly scanned games still hold the store's folder (cached ones carry saved paths)
+            ApplyFolderOverrides(freshGames, fromStoreScan: true);
             ApplyFolderOverrides(detectedGames);
 
             // Combine auto-detected + manual games
@@ -498,6 +502,12 @@ public partial class MainViewModel
 
                 // GITC Uplift: check for a new release and update the games that have it
                 await RefreshUpliftInstallsAsync("RunBackgroundScanAndMergeAsync");
+
+                // Which NVIDIA card(s) the PC has (cached; the HSF install uses it)
+                _ = GpuInfoService.GetNvidiaGpusAsync();
+
+                // HSF: same for the frame generation add-on
+                await RefreshHsfInstallsAsync("RunBackgroundScanAndMergeAsync");
 
                 // Start periodic update check timer (fires every 4h while app is running)
                 StartPeriodicUpdateCheckTimer();

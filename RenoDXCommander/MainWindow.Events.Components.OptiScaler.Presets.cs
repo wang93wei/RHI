@@ -54,7 +54,11 @@ public sealed partial class MainWindow
         });
 
         // ── Ready-made presets ──────────────────────────────────────────────
-        var manifestPresets = OsPresetService.ManifestPresets;
+        // ANR FG is behind the manifest flag "anrFg" (kept where it's already installed)
+        bool showAnr = FeatureFlags.AnrFg || AnrFgService.IsInstalledIn(card.InstallPath);
+        var manifestPresets = OsPresetService.ManifestPresets
+            .Where(p => p.InstallAnrFg != true || showAnr)
+            .ToList();
         var active = manifestPresets.FirstOrDefault(p => IsOsPresetActive(card, p));
 
         var description = MakeOsPresetCaption(active != null
@@ -75,6 +79,29 @@ public sealed partial class MainWindow
             {
                 try
                 {
+                    // ANR FG is closed source: same notice as RTX Encore before its first install. In the Spotlight panel
+                    // and Tabs the cog isn't a dialog, so the notice opens over it and it stays where it is. As a dialog
+                    // (Classic+) it has to close first (only one dialog can be open; DialogService waits for that) and
+                    // opens again afterwards.
+                    var st = ViewModel.Settings;
+                    var xamlRoot = pill.XamlRoot ?? Content.XamlRoot;
+                    bool cogHidden = false;
+                    if (p.InstallAnrFg == true && !AnrFgService.IsInstalledIn(card.InstallPath) && !st.AnrFgClosedSourceDismissed)
+                    {
+                        if (!ctx.Cog.IsEmbedded)
+                        {
+                            ctx.Cog.Hide();
+                            cogHidden = true;
+                        }
+                        bool go = await DetailPanelBuilder.ShowClosedSourceNoticeAsync("ANR FG", "Apex Compute",
+                            () => st.AnrFgClosedSourceDismissed, () => st.AnrFgClosedSourceDismissed = true, xamlRoot,
+                            "https://github.com/apex-compute/ANR");
+                        if (!go)
+                        {
+                            if (cogHidden) ReopenOsCog(ctx);
+                            return;
+                        }
+                    }
                     foreach (var b in pills.Children.OfType<Button>()) b.IsEnabled = false;
                     ShowStatus(Loc.GetString("Dialog.OptiScaler.ApplyingPreset", p.Name), true);
                     ApplyOsPreset(card, p);
@@ -83,6 +110,52 @@ public sealed partial class MainWindow
                         ShowStatus(Loc.GetString("Dialog.OptiScaler.ApplyingPresetMfg", p.Name), true);
                         var error = await ViewModel.EnsureUniversalMfgForPresetAsync(card);
                         RefreshExtrasIfSelected(card);
+                        if (error != null)
+                        {
+                            ShowStatus(Loc.GetString("Dialog.OptiScaler.PresetAppliedBut", p.Name, error), false);
+                            foreach (var b in pills.Children.OfType<Button>()) b.IsEnabled = true;
+                            return;
+                        }
+                    }
+                    if (p.InstallAnrFg == true)
+                    {
+                        ShowStatus(Loc.GetString("Dialog.OptiScaler.ApplyingPresetAnrFg", p.Name), true);
+                        string? error;
+                        if (cogHidden)
+                        {
+                            // The cog closed for the notice: show the download in a progress dialog, errors in a dialog,
+                            // then open the cog again
+                            var progress = new ContentDialog
+                            {
+                                Title = Loc.GetString("Dialog.OptiScaler.InstallingAnrFg"),
+                                Content = new StackPanel
+                                {
+                                    Spacing = 12,
+                                    Children =
+                                    {
+                                        new TextBlock { Text = Loc.GetString("Dialog.OptiScaler.ApplyingPresetAnrFg", p.Name), TextWrapping = TextWrapping.Wrap },
+                                        new ProgressBar { IsIndeterminate = true, Height = 6 },
+                                    },
+                                },
+                                XamlRoot = xamlRoot,
+                                RequestedTheme = ElementTheme.Dark,
+                            };
+                            await using (await DialogService.ShowProgressAsync(progress))
+                                error = await ViewModel.EnsureAnrFgForPresetAsync(card);
+                            if (error != null)
+                                await DialogService.ShowSafeAsync(new ContentDialog
+                                {
+                                    Title = Loc.GetString("Dialog.OptiScaler.AnrFgNotInstalled"),
+                                    Content = new TextBlock { Text = Loc.GetString("Dialog.OptiScaler.PresetAppliedBut", p.Name, error), TextWrapping = TextWrapping.Wrap },
+                                    CloseButtonText = Loc.GetString("Dialog.Ok"),
+                                    XamlRoot = xamlRoot,
+                                    RequestedTheme = ElementTheme.Dark,
+                                });
+                            ReopenOsCog(ctx);
+                            if (error == null) CrashReporter.Log($"[OsPreset.ApplyManifest] '{p.Name}' applied to '{card.GameName}'");
+                            return;
+                        }
+                        error = await ViewModel.EnsureAnrFgForPresetAsync(card);
                         if (error != null)
                         {
                             ShowStatus(Loc.GetString("Dialog.OptiScaler.PresetAppliedBut", p.Name, error), false);
@@ -257,7 +330,7 @@ public sealed partial class MainWindow
         if (!Same(p.FgEnabled, ReadOsIniSectionValue(card.InstallPath, "FrameGen", "Enabled", ""), "false")) return false;
         if (!Same(p.FgInput, ViewModel.GetOsFgInput(card.GameName, store), "auto")) return false;
         if (!Same(p.FgOutput, ViewModel.GetOsFgOutput(card.GameName, store), "auto")) return false;
-        if (string.Equals(p.FgOutput, "dlssg", StringComparison.OrdinalIgnoreCase)
+        if (OptiScalerService.UsesNvngxReplacement(p.FgInput, p.FgOutput)
             && !Same(p.FgNvngxReplacement, ViewModel.GetOsFgNvngxReplacement(card.GameName, store), "None")) return false;
         if (!Same(p.HudFix, ReadOsIniSectionValue(card.InstallPath, "OptiFG", "HUDFix", ""), "auto")) return false;
         if (!Same(p.ForceReflex, ReadOsIniSectionValue(card.InstallPath, "fakenvapi", "ForceReflex", ""), "0")) return false;
@@ -265,6 +338,7 @@ public sealed partial class MainWindow
         if (!Same(p.DxgiSpoofing, ReadOsIniSectionValue(card.InstallPath, "Spoofing", "Dxgi", ""), "auto")) return false;
         if (p.DeployStreamline.HasValue && p.DeployStreamline.Value != ViewModel.GetOsDeployStreamline(card.GameName, store)) return false;
         if (p.InstallUniversalMfg == true && !card.Rtx40MfgInstalled) return false;
+        if (p.InstallAnrFg == true && !AnrFgService.IsInstalledIn(card.InstallPath)) return false;
         return true;
     }
 

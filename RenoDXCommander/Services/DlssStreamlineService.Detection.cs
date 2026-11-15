@@ -16,22 +16,25 @@ public partial class DlssStreamlineService
         var result = new DlssDetectionResult();
         if (string.IsNullOrEmpty(exactFolderPath) || !Directory.Exists(exactFolderPath)) return result;
 
+        // RTX Encore's NVIDIA files for games without DLSS are never the game's (see SearchDirectory)
+        var encoreMarkers = new Dictionary<string, List<RtxEncoreNvidiaMarker.Entry>>(StringComparer.OrdinalIgnoreCase);
         void TryDll(string folder, string dllName, Action<string, string?> setter)
         {
             var path = Path.Combine(folder, dllName);
-            if (File.Exists(path)) setter(path, GetFileVersion(path));
+            if (File.Exists(path) && !RtxEncoreNvidiaMarker.IsOwnedFile(path, encoreMarkers)) setter(path, GetFileVersion(path));
         }
 
         TryDll(exactFolderPath, DlssDllName,  (p, v) => { result.DlssPath  = p; result.DlssVersion  = v; });
         TryDll(exactFolderPath, DlssdDllName, (p, v) => { result.DlssdPath = p; result.DlssdVersion = v; });
         TryDll(exactFolderPath, DlssgDllName, (p, v) => { result.DlssgPath = p; result.DlssgVersion = v; });
-        TryDll(exactFolderPath, DlssnrDllName,(p, v) => { result.DlssnrPath = p; result.DlssnrVersion = v; });
+        // With the NR Cost Scaler installed nvngx_dlssnr.dll is its proxy: read the real DLL's version
+        TryDll(exactFolderPath, DlssnrDllName,(p, _) => { result.DlssnrPath = p; result.DlssnrVersion = GetFileVersion(DlssNrCostScalerService.ResolveRealNrDllPath(p)); });
 
         // Check Streamline — use dedicated path if provided, else check DLSS folder
         var slFolder = (!string.IsNullOrEmpty(streamlineFolderPath) && Directory.Exists(streamlineFolderPath))
             ? streamlineFolderPath : exactFolderPath;
         var slInterposer = Path.Combine(slFolder, StreamlineIndicator);
-        if (File.Exists(slInterposer))
+        if (File.Exists(slInterposer) && !RtxEncoreNvidiaMarker.IsOwnedFile(slInterposer, encoreMarkers))
         {
             result.StreamlineFolder = slFolder;
             result.StreamlineInterposerPath = slInterposer;
@@ -84,8 +87,8 @@ public partial class DlssStreamlineService
             result.DlssdVersion = GetFileVersion(result.DlssdPath);
         if (result.DlssgPath != null)
             result.DlssgVersion = GetFileVersion(result.DlssgPath);
-        if (result.DlssnrPath != null)
-            result.DlssnrVersion = GetFileVersion(result.DlssnrPath);
+        if (result.DlssnrPath != null) // the real DLL behind an NR Cost Scaler proxy
+            result.DlssnrVersion = GetFileVersion(DlssNrCostScalerService.ResolveRealNrDllPath(result.DlssnrPath));
         if (result.StreamlineInterposerPath != null)
         {
             result.StreamlineVersion = GetFileVersion(result.StreamlineInterposerPath);
@@ -341,6 +344,20 @@ public partial class DlssStreamlineService
     }
 
     /// <summary>
+    /// Folders that hold a mod's own DLSS / Streamline copies, which the game never loads:
+    /// HSF_streamline (HSF's Streamline 2.14 and DLSS-G). Counting them made a game without DLSS-G
+    /// look like it had it, and DLSS swaps would then have replaced the files HSF was built against.
+    /// </summary>
+    internal static readonly string[] ModOwnedFolderNames = { HsfService.StreamlineFolder };
+
+    internal static bool IsModOwnedFolder(string directory) =>
+        ModOwnedFolderNames.Contains(Path.GetFileName(directory.TrimEnd('\\', '/')), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>True if the path has a mod-owned folder (<see cref="ModOwnedFolderNames"/>) in it.</summary>
+    internal static bool IsInModOwnedFolder(string? path) =>
+        path != null && path.Replace('/', '\\').Split('\\').Any(seg => ModOwnedFolderNames.Contains(seg, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>
     /// Recursively searches directories for DLSS/Streamline DLLs,
     /// gracefully skipping directories that throw access-denied exceptions.
     /// Skips DLSS DLLs in directories containing OptiScaler.ini (those are
@@ -355,12 +372,35 @@ public partial class DlssStreamlineService
 
         bool hasOptiScalerIni = File.Exists(Path.Combine(directory, "OptiScaler.ini"));
 
+        // RTX Encore's NVIDIA files for games without DLSS (listed in rtx-encore-runtimes\nvidia\rhi_installed.txt):
+        // not the game's DLSS, so never counted. Counting them would let swaps / auto-update / Batch Deploy
+        // replace builds RTX Encore pins by hash. Marker read lazily, once per folder.
+        List<RtxEncoreNvidiaMarker.Entry>? encoreOwned = null;
+        bool IsEncoreOwned(string file)
+        {
+            encoreOwned ??= File.Exists(RtxEncoreNvidiaMarker.MarkerPath(directory))
+                ? RtxEncoreNvidiaMarker.Read(directory) : new List<RtxEncoreNvidiaMarker.Entry>();
+            if (encoreOwned.Count == 0) return false;
+            try { return RtxEncoreNvidiaMarker.IsOwned(encoreOwned, Path.GetFileName(file), new FileInfo(file).Length); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                CrashReporter.Log($"[DlssStreamlineService.SearchDirectory] Could not check '{file}' — {ex.Message}");
+                return false;
+            }
+        }
+
         // Check files in the current directory
         try
         {
             foreach (var file in Directory.EnumerateFiles(directory, "*.dll"))
             {
                 var fileName = Path.GetFileName(file);
+
+                if ((string.Equals(fileName, DlssDllName, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(fileName, DlssgDllName, StringComparison.OrdinalIgnoreCase)
+                     || KnownStreamlineDlls.Contains(fileName, StringComparer.OrdinalIgnoreCase))
+                    && IsEncoreOwned(file))
+                    continue;
 
                 if (string.Equals(fileName, DlssDllName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -417,6 +457,7 @@ public partial class DlssStreamlineService
         {
             foreach (var subDir in Directory.EnumerateDirectories(directory))
             {
+                if (IsModOwnedFolder(subDir)) continue; // a mod's own bundled copies, not the game's
                 SearchDirectory(subDir, result, depth + 1);
             }
         }

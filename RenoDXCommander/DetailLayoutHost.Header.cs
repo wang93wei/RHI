@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using RenoDXCommander.Controls;
+using RenoDXCommander.Services;
 
 namespace RenoDXCommander;
 
@@ -70,12 +71,20 @@ internal sealed partial class DetailLayoutHost
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hShots, Loc.GetString("Overlay.Screenshots.Title"));
         _hShots.Click += (s, e) => OpenPanel(ScreenshotsKey);
 
-        // Game settings (Spotlight only): per-game versions of Settings-page options, in the side panel
+        // Game settings: per-game versions of Settings-page options (Spotlight: the side panel; Tabs: in place)
         _hGameSettings = new Button { Width = 36, Padding = new Thickness(0), Content = TabsTheme.Icon("", 16) }; // cog
         TabsTheme.Apply(_hGameSettings, TabsTheme.IconButton with { Fg = TabsTheme.TextSecondary }, height: 36);
         ToolTipService.SetToolTip(_hGameSettings, Loc.GetString("Detail.GameSettings"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hGameSettings, Loc.GetString("Detail.GameSettings"));
-        _hGameSettings.Click += (s, e) => OpenPanel(GameSettingsKey);
+        _hGameSettings.Click += async (s, e) =>
+        {
+            try
+            {
+                if (IsSpotlight) OpenPanel(GameSettingsKey);
+                else await ShowGameSettingsCogAsync(_hGameSettings.XamlRoot);
+            }
+            catch (Exception ex) { CrashReporter.Log($"[DetailLayoutHost.Header] Game settings — {ex.Message}"); }
+        };
 
         var titleRow = new WrapPanel { HorizontalSpacing = 12, VerticalSpacing = 8 };
         titleRow.Children.Add(_hTitle);
@@ -273,7 +282,7 @@ internal sealed partial class DetailLayoutHost
 
         _hTitle!.Text = w.HeaderGameName.Text;
         _hShots!.Visibility = IsSpotlight ? Visibility.Visible : Visibility.Collapsed; // the side panel is Spotlight's
-        _hGameSettings!.Visibility = _hShots.Visibility;
+        _hGameSettings!.Visibility = Visibility.Visible; // every layout with this header (Tabs, Spotlight)
 
         // Favourite star (amber, filled) / outline
         bool fav = card?.IsFavourite == true;
@@ -355,9 +364,15 @@ internal sealed partial class DetailLayoutHost
         if (resOn != _hResOn || _hRes!.Tag == null) { _hResOn = resOn; _hRes = ReplaceToggle(_hRes!, 1, Loc.GetString("Detail.ResolutionSwitch"), resOn, e => w.HeaderToggleRes(e)); }
         ToolTipService.SetToolTip(_hHdr, ToolTipService.GetToolTip(w.HeaderHdrButton) as string);
         ToolTipService.SetToolTip(_hRes, ToolTipService.GetToolTip(w.HeaderResButton) as string);
+        // Either can be hidden in Settings › Display: the other takes the whole row, neither = no row
+        bool hdrShown = w.HeaderHdrButton.Visibility == Visibility.Visible;
         bool resShown = w.HeaderResButton.Visibility == Visibility.Visible;
+        _hHdr.Visibility = hdrShown ? Visibility.Visible : Visibility.Collapsed;
         _hRes.Visibility = resShown ? Visibility.Visible : Visibility.Collapsed;
         Grid.SetColumnSpan(_hHdr, resShown ? 1 : 2);
+        Grid.SetColumn(_hRes, hdrShown ? 1 : 0);
+        Grid.SetColumnSpan(_hRes, hdrShown ? 1 : 2);
+        _hToggles!.Visibility = hdrShown || resShown ? Visibility.Visible : Visibility.Collapsed;
 
         RefreshHeaderDisplayModes(card);
 
@@ -374,7 +389,7 @@ internal sealed partial class DetailLayoutHost
         if (card != null && vm.DisplayModesOn)
         {
             var key = ViewModels.MainViewModel.DisplayModeKey(card);
-            sig = key + "|" + vm.ActiveDisplayModeId(card) + "|" + string.Join(",", vm.DisplayModeStore.Modes.Select(m => m.Id + "=" + m.Name))
+            sig = key + "|" + vm.ActiveDisplayModeId(card) + "|" + string.Join(",", vm.DisplayModeStore.ModesFor(key).Select(m => m.Id + "=" + m.Name))
                 + "|" + string.Join(",", vm.DisplayModeStore.ItemsFor(key));
         }
         if (sig == _hModesSig && (_hModes.Child != null) == (sig.Length > 0)) return;

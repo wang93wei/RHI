@@ -307,6 +307,7 @@ internal sealed partial class OverlayWindow
             gameBody.Children.Add(SubHeading(Loc.GetString("Overlay.Game.DlssStreamlineHeading")));
             gameBody.Children.Add(dlss);
         }
+        if (MakeUltraPlusButton(card) is { } upButton) gameBody.Children.Add(upButton); // unlock_extra.txt only
         _gameBox.Children.Add(MakeCard(Loc.GetString("Overlay.Game.Title"), gameBody, stretch: true));
     }
 
@@ -419,7 +420,7 @@ internal sealed partial class OverlayWindow
         inner.Children.Add(body);
         return new Border
         {
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0x12, 0x18, 0x24)),
+            Background = UIFactory.ThemedBrush(Windows.UI.Color.FromArgb(0xE6, 0x12, 0x18, 0x24)),
             BorderBrush = TabsTheme.B(TabsTheme.CardBorder),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),

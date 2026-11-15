@@ -32,11 +32,11 @@ public sealed partial class MainWindow
         try
         {
             fillBrush = Application.Current.Resources[ResourceKeys.SkeletonBaseBrush] as SolidColorBrush
-                        ?? new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x1A, 0x20, 0x28));
+                        ?? UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0x1A, 0x20, 0x28));
         }
         catch
         {
-            fillBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x1A, 0x20, 0x28));
+            fillBrush = UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0x1A, 0x20, 0x28));
         }
 
         // Create skeleton rows (sidebar — shared across all views) and collect shimmer targets
@@ -281,7 +281,7 @@ public sealed partial class MainWindow
             Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Detail.Components"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
+            Foreground = UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
             Margin = new Thickness(0, 0, 0, 4),
         });
 
@@ -339,7 +339,7 @@ public sealed partial class MainWindow
         {
             Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Detail.FrameLimiters"),
             FontSize = 10,
-            Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
+            Foreground = UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 4, 0, 2),
         });
@@ -398,7 +398,7 @@ public sealed partial class MainWindow
         {
             Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Detail.Optional"),
             FontSize = 10,
-            Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
+            Foreground = UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0x5A, 0x68, 0x80)),
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 4, 0, 2),
         });
@@ -486,7 +486,7 @@ public sealed partial class MainWindow
             Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Dialog.Overrides"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
+            Foreground = UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
         });
 
         // Row 1: Game name (editable) + DLL naming override — two-column
@@ -598,7 +598,7 @@ public sealed partial class MainWindow
             Text = App.Services.GetRequiredService<ILocalizationService>().GetString("Dialog.Manage"),
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
+            Foreground = UIFactory.ThemedBrush(ColorHelper.FromArgb(0xFF, 0xE8, 0xEC, 0xF2)),
         });
 
         // Two buttons side by side: "Change install folder" + "Reset folder / Remove game"

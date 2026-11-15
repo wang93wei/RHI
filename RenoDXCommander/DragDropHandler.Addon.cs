@@ -583,7 +583,7 @@ public partial class DragDropHandler
                     };
                     targetCard.IsExternalOnly = true;
                     targetCard.ExternalUrl    = existingNexus;
-                    targetCard.ExternalLabel  = "Download from Nexus Mods";
+                    targetCard.ExternalLabel  = Loc.GetString("DragDrop.DownloadFromNexus");
                 }
                 else
                 {
@@ -596,7 +596,7 @@ public partial class DragDropHandler
                     };
                     targetCard.IsExternalOnly = true;
                     targetCard.ExternalUrl    = "https://discord.gg/gF4GRJWZ2A";
-                    targetCard.ExternalLabel  = "Download from Discord";
+                    targetCard.ExternalLabel  = Loc.GetString("DragDrop.DownloadFromDiscord");
                 }
             }
 
@@ -657,29 +657,28 @@ public partial class DragDropHandler
     /// </summary>
     private async Task<bool> OfferCustomOptiScalerBuildAsync(string archivePath, string archiveName, string? sourceUrl)
     {
-        var name = await OsCustomBuildDialogs.AskNameAsync(_window.Content.XamlRoot, "Add custom OptiScaler build?",
+        var name = await OsCustomBuildDialogs.AskNameAsync(_window.Content.XamlRoot, Loc.GetString("Dialog.OptiScaler.AddCustomBuild.Title"),
             OsCustomBuildService.SuggestName(sourceUrl ?? archivePath),
-            intro: $"{archiveName} contains an OptiScaler build. Add it to your custom OptiScaler builds? "
-                 + "You can then pick it in a game's OptiScaler settings. RHI never updates custom builds. Only add builds from people you trust.");
+            intro: Loc.GetString("Dialog.OptiScaler.AddCustomBuild.Intro", archiveName));
         if (name == null) return false;
-        _window.ShowStatusBarMessage($"Adding custom OptiScaler build {name}...", TimeSpan.FromSeconds(30));
+        _window.ShowStatusBarMessage(Loc.GetString("Dialog.OptiScaler.AddCustomBuild.Adding", name), TimeSpan.FromSeconds(30));
         var result = await Task.Run(() => OsCustomBuildService.ImportAsync(archivePath, name, null, null, _window.LifetimeToken,
             originLabel: sourceUrl != null ? new Uri(sourceUrl).GetLeftPart(UriPartial.Path) : archiveName));
         var done = new ContentDialog
         {
-            Title = result.Build != null ? "Custom OptiScaler build added" : "Couldn't add it",
+            Title = result.Build != null ? Loc.GetString("Dialog.OptiScaler.AddCustomBuild.Added") : Loc.GetString("Dialog.OptiScaler.AddCustomBuild.Failed"),
             Content = new TextBlock
             {
                 Text = result.Build != null
-                    ? $"Added {result.Build.Label}. Pick it in a game's OptiScaler settings (Version), or as the Default version in Settings › Components."
+                    ? Loc.GetString("Dialog.OptiScaler.AddCustomBuild.AddedDetail", result.Build.Label)
                       + (result.Note != null ? Environment.NewLine + Environment.NewLine + result.Note : "")
-                    : result.Error ?? "Something went wrong.",
+                    : result.Error ?? Loc.GetString("Dialog.OptiScaler.AddCustomBuild.Unexpected"),
                 TextWrapping = TextWrapping.Wrap,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
         };
-        _window.ShowStatusBarMessage(result.Build != null ? $"Added custom OptiScaler build {result.Build.Name}" : "Couldn't add the OptiScaler build", TimeSpan.FromSeconds(6));
+        _window.ShowStatusBarMessage(result.Build != null ? Loc.GetString("Dialog.OptiScaler.AddCustomBuild.StatusAdded", result.Build.Name) : Loc.GetString("Dialog.OptiScaler.AddCustomBuild.StatusFailed"), TimeSpan.FromSeconds(6));
         await DialogService.ShowSafeAsync(done);
         return result.Build != null;
     }

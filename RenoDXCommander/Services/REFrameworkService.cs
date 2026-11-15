@@ -18,7 +18,7 @@ public class REFrameworkService : IREFrameworkService
 
     // ── Constants ──────────────────────────────────────────────────────────────────
 
-    private const string DllFileName = "dinput8.dll";
+    public const string DllFileName = "dinput8.dll";
     private const string DownloadBaseUrl = "https://github.com/praydog/REFramework-nightly/releases/latest/download/";
     private const string LatestReleasePageUrl = "https://github.com/praydog/REFramework-nightly/releases/latest";
     private const string ReleasesApiUrl ="https://api.github.com/repos/praydog/REFramework-nightly/releases";
@@ -113,6 +113,13 @@ public class REFrameworkService : IREFrameworkService
             CrashReporter.Log($"[REFrameworkService.InstallAsync] Installed RE Framework build {version} ({zipName} {zipSize:N0} bytes, {DllFileName} {new FileInfo(destPath).Length:N0} bytes) for '{gameName}' in '{installPath}'");
 
             progress?.Report((L("Status.ReFrameworkInstalled"), 100));
+
+            // ── Update History (an install over an older build; first installs aren't updates) ──
+            var previousVersion = LoadRecords().FirstOrDefault(r =>
+                r.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase) &&
+                r.InstallPath.Equals(installPath, StringComparison.OrdinalIgnoreCase))?.InstalledVersion;
+            // One name for every game, so the log's dedupe keeps one entry per build during Update All
+            UpdateHistory.Record("RE Framework", "RE Framework", previousVersion, version);
 
             // ── Persist install record ────────────────────────────────────────
             var record = new REFrameworkInstalledRecord
