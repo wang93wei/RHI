@@ -38,7 +38,7 @@ public class RtxEncoreNoDlssTests : IDisposable
         File.WriteAllText(path, RtxEncoreNvidiaMarker.Format(entries));
     }
 
-    private static RtxEncoreService NewEncore() => new(new HttpClient(), new NullReporter(), new GitHubETagCache());
+    private static RtxEncoreService NewEncore() => new(new HttpClient(), new NullReporter(), new GitHubETagCache(), new LocalizationService());
 
     // ── Record ───────────────────────────────────────────────────────────────
 
