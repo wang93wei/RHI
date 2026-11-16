@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "game_count": 56111,
-  "generated": "2026-11-15T11:20:25Z",
+  "game_count": 56116,
+  "generated": "2026-11-16T11:21:43Z",
   "name_overrides": {
     "ACE COMBAT 8: WINGS OF THEVE": "Ace Combat 8: Wings of Theve",
     "AFOP": "Avatar: Frontiers of Pandora",
@@ -18422,6 +18422,7 @@
     },
     "Better Than Dead": {
       "steam_appid": 2599690,
+      "config_path": "%LOCALAPPDATA%\\BTD\\Saved\\SaveGames\\Settings\\MyOptions.sav",
       "engine": "Unreal Engine 5"
     },
     "Between Horizons": {
@@ -21479,6 +21480,7 @@
     },
     "Bloodshed": {
       "steam_appid": 2747550,
+      "dx11": true,
       "engine": "Unity"
     },
     "Bloodsports.TV": {
@@ -24860,6 +24862,7 @@
     "Bug Battle": {
       "steam_appid": 752000
     },
+    "Bug Bomber": {},
     "Bug Fables: The Everlasting Sapling": {
       "steam_appid": 1082710,
       "dx11": true,
@@ -49531,7 +49534,6 @@
       "steam_appid": 1107450
     },
     "Dreams to Reality": {
-      "dx11": true,
       "config_path": "<path-to-game>\\DHOOK.ini"
     },
     "Dreamscape": {
@@ -51521,7 +51523,8 @@
     },
     "Dynasty Warriors 4: Hyper": {
       "dx9": true,
-      "config_path": "%USERPROFILE%\\Documents\\KOEI\\<Localized Dynasty Warriors 4 Hyper>\\*.*"
+      "config_path": "%USERPROFILE%\\Documents\\KOEI\\<Localized Dynasty Warriors 4 Hyper>\\*.*",
+      "engine": "KTGL"
     },
     "Dynasty Warriors 6": {
       "dx9": true,
@@ -75792,6 +75795,7 @@
       "dx11": true,
       "config_path": "HKEY_CURRENT_USER\\Software\\JetCat Games\\Heliborne"
     },
+    "Helicops": {},
     "Helicopter 2015: Natural Disasters": {
       "steam_appid": 350540
     },
@@ -103661,7 +103665,7 @@
     "Miasma Chronicles": {
       "steam_appid": 1649010,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\Miasma\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\Miasma\\Saved\\Config\\WindowsNoEditor",
       "engine": "Unreal Engine 4"
     },
     "Miasmata": {
@@ -122886,8 +122890,8 @@
     "Pigeon Simulator": {
       "steam_appid": 1496260,
       "dx12": true,
-      "config_path": "%APPDATA%\\PigeonSimulator\\Saved\\Config\\WindowsNoEditor\\",
-      "config_path_xbox": "%APPDATA%\\PigeonSimulator\\Saved\\Config\\WinGDK\\",
+      "config_path": "%APPDATA%\\PigeonSimulator\\Saved\\Config\\WindowsNoEditor",
+      "config_path_xbox": "%APPDATA%\\PigeonSimulator\\Saved\\Config\\WinGDK",
       "engine": "Unreal Engine 5"
     },
     "Pigeons Attack": {
@@ -125264,7 +125268,7 @@
     "Police Simulator Patrol Officers": {
       "steam_appid": 997010,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\Boston\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\Boston\\Saved\\Config\\WindowsNoEditor",
       "engine": "Unreal Engine 4"
     },
     "Police Simulator: Patrol Duty": {
@@ -134836,7 +134840,7 @@
     "Returnal": {
       "steam_appid": 1649240,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\Returnal\\Steam\\Saved\\Config\\",
+      "config_path": "%LOCALAPPDATA%\\Returnal\\Steam\\Saved\\Config",
       "engine": "Unreal Engine 4"
     },
     "Returner 77": {
@@ -146630,6 +146634,10 @@
     },
     "SimTower": {},
     "SimTown": {},
+    "SimTractor": {
+      "dx9": true,
+      "engine": "Virtools"
+    },
     "SimTunes": {},
     "Simulacra": {
       "steam_appid": 712730,
@@ -159437,6 +159445,9 @@
       "dx12": true,
       "config_path_xbox": "%LOCALAPPDATA%\\SMB\\Saved\\Config\\WinGDK\\",
       "engine": "Unreal Engine 5"
+    },
+    "Super Meat Boy Again+": {
+      "steam_appid": 4269060
     },
     "Super Meat Boy Forever": {
       "steam_appid": 581660,
@@ -175425,6 +175436,7 @@
     "Theatre of Doom": {
       "steam_appid": 553020
     },
+    "Theatre of Pain": {},
     "Theatre of the Absurd": {
       "steam_appid": 299110,
       "engine": "Unity"

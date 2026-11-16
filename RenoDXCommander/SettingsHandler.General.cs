@@ -208,7 +208,8 @@ public partial class SettingsHandler
             var currentOverlayHotkey = _currentHotkeyString;
             var currentScreenshotHotkey = _currentScreenshotHotkeyString;
             var rsVariableListUseTabs = ViewModel.Settings.RsVariableListUseTabs;
-        
+            var shippedAddonsEnabled = ViewModel.Settings.RsShippedAddonsEnabled;
+
             await Task.Run(() =>
             {
                 foreach (var card in allCards)
@@ -244,6 +245,8 @@ public partial class SettingsHandler
                             ApplyScreenshotSettingsToIni(iniFile, savePath, overlayHotkey,
                                 currentScreenshotHotkey, rsVariableListUseTabs);
                         keepModes?.Invoke();
+                        // Built-in add-ons setting, both ways (reshade.ini + ReShadeN.ini only, not presets)
+                        AuxInstallService.WriteShippedAddonsSetting(card.InstallPath, shippedAddonsEnabled);
                         updatedCount++;
                     }
                     catch (Exception ex)

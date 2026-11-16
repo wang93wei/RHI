@@ -294,7 +294,7 @@ public partial class DetailPanelBuilder
     }
 
     private static readonly string[] DeDllNames =
-        { "version.dll", "dxgi.dll", "winmm.dll", "dbghelp.dll", "psapi.dll", "winhttp.dll" };
+        { "dxgi.dll", "version.dll", "winmm.dll", "dbghelp.dll", "psapi.dll", "winhttp.dll" }; // the Nexus page's order: dxgi usual, the rest fallbacks
 
     /// <summary>
     /// After installing MFG Ada Unlock into a reshade.ini AddonPath folder, removes the copy older
@@ -599,9 +599,7 @@ public partial class DetailPanelBuilder
         {
             try
             {
-                var cog = new CogDialog(Loc.GetString("Extras.DlssEnabler.Settings.Title"), _window.Content.XamlRoot);
-                cog.AddEmpty(Loc.GetString("Extras.DlssEnabler.Settings.Content"));
-                await cog.ShowAsync();
+                await ShowDlssEnablerSettingsAsync(card, deSvc, installPath, isInstalled);
             }
             catch (Exception ex)
             {
