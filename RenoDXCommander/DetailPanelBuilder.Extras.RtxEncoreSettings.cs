@@ -289,12 +289,6 @@ public partial class DetailPanelBuilder
 
         // ── Smooth Motion ───────────────────────────────────────────────────────
         cog.AddSection(Loc.GetString("Extras.RtxEncore.Settings.SectionSmoothMotion"));
-        var gameApiValue = card.GraphicsApi switch
-        {
-            GraphicsApiType.DirectX11 => "d3d11",
-            GraphicsApiType.Vulkan    => "vulkan",
-            _                         => "d3d12",
-        };
         var apiDisplays = new[] { "DirectX 12", "DirectX 11", "Vulkan" };
         var apiValues   = new[] { "d3d12", "d3d11", "vulkan" };
         var smCell = Choice(Loc.GetString("Extras.RtxEncore.Settings.SmoothMotion.Label"), Loc.GetString("Extras.RtxEncore.Settings.SmoothMotion.Help"),
