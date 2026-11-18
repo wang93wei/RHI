@@ -763,7 +763,7 @@ internal sealed partial class DetailLayoutHost
                     TextWrapping = TextWrapping.Wrap,
                     Foreground = TabsTheme.B(TabsTheme.TextSecondary),
                 };
-                var pick = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, Content = selected ? "Selected" : "Select" };
+                var pick = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, Content = selected ? Loc.GetString("Option.Selected") : Loc.GetString("Option.Select") };
                 TabsTheme.Apply(pick, selected ? TabsTheme.GreenButton : TabsTheme.BlueButton, height: 36);
                 pick.IsEnabled = opt.IsEnabled && !selected;
                 pick.Click += (s, e) => method.SelectedIndex = idx;

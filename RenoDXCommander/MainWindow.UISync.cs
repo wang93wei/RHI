@@ -69,7 +69,7 @@ public sealed partial class MainWindow
                         }
                         else if (RenoDXCommander.Services.GitHubTokenHandler.TokenRejected)
                         {
-                            ShowStatusBarMessage("⚠ GitHub rejected your token (expired or revoked) — add a new one in Settings → Accounts & Data",
+                            ShowStatusBarMessage(Loc.GetString("Settings.Accounts.TokenRejectedToast"),
                                 TimeSpan.FromSeconds(15));
                         }
                         // On Refresh (silent=true), the ListView still has its old item selected

@@ -65,8 +65,8 @@ public partial class SettingsHandler
             topCols.Children.Add(colourCol);
             topCols.Children.Add(topDivider);
             topCols.Children.Add(_appearanceSizes);
-            colourCol.Children.Add(new TextBlock { Text = "Colours", Style = FindStyle("SettingsHeadStyle") });
-            _appearanceSizes.Children.Add(new TextBlock { Text = "Sizes", Style = FindStyle("SettingsHeadStyle") });
+            colourCol.Children.Add(new TextBlock { Text = Loc.GetString("Settings.Theme.Heading.Colours"), Style = FindStyle("SettingsHeadStyle") });
+            _appearanceSizes.Children.Add(new TextBlock { Text = Loc.GetString("Settings.Theme.Heading.Sizes"), Style = FindStyle("SettingsHeadStyle") });
             outer.Children.Add(topCols);
 
             // Theme row

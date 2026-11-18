@@ -38,18 +38,14 @@ public partial class DetailPanelBuilder
 
         var dontShowCheck = new CheckBox
         {
-            Content = "Don't show this again",
+            Content = Loc.GetString("Dialog.DonTShowThisAgain"),
             FontSize = 12,
             Margin = new Thickness(0, 12, 0, 0),
         };
         var content = new StackPanel { Spacing = 4 };
         content.Children.Add(new TextBlock
         {
-            Text = "ReShade is installed in this game. Universal MFG Unlocker's XeSS frame generation (\"XeMFG standalone\" in its menu) "
-                 + "doesn't start while ReShade is loaded: the mod's menu shows \"Waiting menu_factory_not_dxgi\". "
-                 + "This happens whether ReShade is installed as a DLL or as an ASI.\n\n"
-                 + "DLSS multi frame generation works as normal. To use XeMFG with ReShade, install OptiScaler (nightly, F5 or DLSS NR) "
-                 + "and set FG Output to XeFG in OptiScaler's settings; RHI then installs the mod as an OptiScaler plugin.",
+            Text = Loc.GetString("Extras.Rtx40Mfg.ReShadeWarning.Content"),
             TextWrapping = TextWrapping.Wrap,
             FontSize = 13,
             LineHeight = 22,
@@ -59,10 +55,10 @@ public partial class DetailPanelBuilder
 
         var dialog = new ContentDialog
         {
-            Title = "XeMFG and ReShade",
+            Title = Loc.GetString("Extras.Rtx40Mfg.ReShadeWarning.Title"),
             Content = content,
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -90,7 +86,7 @@ public partial class DetailPanelBuilder
         // Extras that can't be installed together (DetailPanelBuilder.Extras.Conflicts.cs)
         var blocker = ExtraBlocker(card, ExtraKind.Dlssg2030);
 
-        string statusText  = isInstalled ? (svc.StagedVersion ?? "Installed") : "Ready";
+        string statusText  = isInstalled ? (svc.StagedVersion ?? Loc.GetString("Status.Installed")) : Loc.GetString("Status.Ready");
         string statusColor = isInstalled ? "#5ECB7D" : "#A0AABB";
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -104,15 +100,12 @@ public partial class DetailPanelBuilder
         // Col 0 — label
         var label = new TextBlock
         {
-            Text = "20/30 FG Unlock",
+            Text = Loc.GetString("Extras.Dlssg2030"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(label, "20/30 FG Unlock — turns on a game's greyed-out DLSS Frame Generation on RTX 20 and 30 (up to 6x where the game allows it), with NVIDIA's or Intel's XeSS frame generation model.\n"
-            + "GPU: RTX 30 and RTX 20 (RTX 20 is less tested). RTX 40 and 50 work too: frame generation then runs the mod's own kernels instead of NVIDIA's. Needs NVIDIA driver R580 or newer and Hardware-accelerated GPU scheduling turned on in Windows.\n"
-            + "Game: must already have DLSS Frame Generation. Games with an old DLSS Frame Generation (3.8 or older, for example The Witcher 3 next-gen) don't get frame generation; games whose own frame generation stops at 4x stay at 4x.\n"
-            + "API: DirectX 12 only. No ASI Loader or ReShade needed. Not for online games with anti-cheat. Use one frame generation mod per game (not with OptiScaler's frame generation, DLSS Enabler or HSF).");
+        ToolTipService.SetToolTip(label, Loc.GetString("Extras.Dlssg2030.Tooltip"));
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
 
@@ -128,7 +121,7 @@ public partial class DetailPanelBuilder
         };
         if (isInstalled)
         {
-            ToolTipService.SetToolTip(statusBlock, $"Installed as: {currentDllName}\nClick to open GitHub releases");
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.InstalledAs.Tooltip", currentDllName));
             statusBlock.PointerPressed += (s, e) =>
                 _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/sdli1995/dlssg_for_sm86"));
             AttachLinkCursor(statusBlock);
@@ -139,7 +132,7 @@ public partial class DetailPanelBuilder
         // Col 2 — Info button
         var infoBtn = new Button
         {
-            Content = "Info",
+            Content = Loc.GetString("Dialog.Info"),
             FontSize = 11,
             Padding = new Thickness(6, 2, 6, 2),
             Width = 36,
@@ -150,7 +143,7 @@ public partial class DetailPanelBuilder
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
         };
-        ToolTipService.SetToolTip(infoBtn, "Open 20/30 FG Unlock GitHub page");
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.Dlssg2030.Info.Tooltip"));
         infoBtn.Click += (s, e) =>
             _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/sdli1995/dlssg_for_sm86"));
         Grid.SetColumn(infoBtn, 2);
@@ -159,7 +152,7 @@ public partial class DetailPanelBuilder
         // Col 3 — Install button
         var installBtn = new Button
         {
-            Content = isInstalled ? "↺  Reinstall 20/30 FG" : "⬇  Install 20/30 FG",
+            Content = isInstalled ? Loc.GetString("Extras.Dlssg2030.Reinstall.Button") : Loc.GetString("Extras.Dlssg2030.Install.Button"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -177,8 +170,8 @@ public partial class DetailPanelBuilder
         else
         {
             ToolTipService.SetToolTip(installBtn, isInstalled
-                ? $"Reinstall 20/30 FG Unlock (currently deployed as {currentDllName})"
-                : "Install 20/30 FG Unlock — deploys the proxy DLL you choose, dlssg_sm86.ini and the dlssg_sm86 folder");
+                ? Loc.GetString("Extras.Dlssg2030.Reinstall.Tooltip", currentDllName)
+                : Loc.GetString("Extras.Dlssg2030.Install.Tooltip"));
         }
 
         installBtn.Click += async (s, e) =>
@@ -191,8 +184,8 @@ public partial class DetailPanelBuilder
                 var st = _window.ViewModel.Settings;
                 if (!isInstalled)
                 {
-                    if (!await ConfirmAntiCheatAsync(card, "20/30 FG Unlock", AntiCheatNoticeKey.Dlssg2030, xamlRoot)) return;
-                    if (!await ShowClosedSourceNoticeAsync("20/30 FG Unlock", "sdli1995",
+                    if (!await ConfirmAntiCheatAsync(card, Loc.GetString("Extras.Dlssg2030"), AntiCheatNoticeKey.Dlssg2030, xamlRoot)) return;
+                    if (!await ShowClosedSourceNoticeAsync(Loc.GetString("Extras.Dlssg2030"), "sdli1995",
                             () => st.Dlssg2030ClosedSourceDismissed, () => st.Dlssg2030ClosedSourceDismissed = true, xamlRoot))
                         return;
                     if (card.IsOsInstalled && !await ConfirmDlssg2030WithOptiScalerAsync(xamlRoot)) return;
@@ -202,7 +195,7 @@ public partial class DetailPanelBuilder
                 if (chosen == null) return;
 
                 installBtn.IsEnabled = false;
-                installBtn.Content   = "Installing...";
+                installBtn.Content   = Loc.GetString("Status.Installing");
 
                 // Only one proxy may be in the folder: if reinstalling under a different name,
                 // put the old slot back first (the ini and dlssg_sm86\ folder are reused)
@@ -228,14 +221,14 @@ public partial class DetailPanelBuilder
                 else
                 {
                     CrashReporter.Log($"[BuildDlssg2030Row] '{gameName}': {(staged ? "install" : "download")} failed");
-                    installBtn.Content   = staged ? "Install failed — see the log" : "Download failed — try again";
+                    installBtn.Content   = staged ? Loc.GetString("Extras.InstallFailedSeeLog.Button") : Loc.GetString("Extras.DownloadFailedRetry.Button");
                     installBtn.IsEnabled = true;
                 }
             }
             catch (Exception ex)
             {
                 CrashReporter.Log($"[BuildDlssg2030Row] Install failed — {ex.Message}");
-                installBtn.Content   = "Install failed — see the log";
+                installBtn.Content   = Loc.GetString("Extras.InstallFailedSeeLog.Button");
                 installBtn.IsEnabled = true;
             }
         };
@@ -243,7 +236,7 @@ public partial class DetailPanelBuilder
         row.Children.Add(installBtn);
 
         // Col 4 — Cog button
-        var cogBtn = CogDialog.MakeCogButton("20/30 FG Unlock settings");
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.Dlssg2030.Settings.Tooltip"));
         cogBtn.Click += async (s, e) =>
         {
             try { await ShowDlssg2030SettingsAsync(installPath, isInstalled); }
@@ -265,7 +258,7 @@ public partial class DetailPanelBuilder
             Opacity = isInstalled ? 1.0 : 0,
             IsHitTestVisible = isInstalled,
         };
-        ToolTipService.SetToolTip(removeBtn, "Remove 20/30 FG Unlock from this game");
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.Dlssg2030.Remove.Tooltip"));
         removeBtn.Click += (s, e) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
@@ -324,10 +317,10 @@ public partial class DetailPanelBuilder
                 VerticalAlignment = VerticalAlignment.Center,
             });
             if (isRecommended)
-                contentRow.Children.Add(MakeBadge("Recommended", "#1A3A20", "#6AE87A", "#2A5A30"));
-            AddExtraDllBadges(contentRow, btn, option, "20/30 FG Unlock");
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
+            AddExtraDllBadges(contentRow, btn, option, Loc.GetString("Extras.Dlssg2030"));
             if (isCurrent)
-                contentRow.Children.Add(MakeBadge("Current", "#182840", "#7AACDD", "#2A4468"));
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
 
             btn.Content = contentRow;
 
@@ -346,7 +339,7 @@ public partial class DetailPanelBuilder
 
         var pickerDialog = new ContentDialog
         {
-            Title = "Choose 20/30 FG Unlock DLL name",
+            Title = Loc.GetString("Extras.Dlssg2030.DllPicker.Title"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -354,8 +347,7 @@ public partial class DetailPanelBuilder
                 {
                     new TextBlock
                     {
-                        Text = "Choose which proxy DLL the game loads. Start with version.dll; if frame generation doesn't appear in the game, reinstall with the next name in the list. dxgi.dll and d3d12.dll are a last resort and don't work in Vulkan games. "
-                             + "To check it loaded, set Log detail to Details in the ⚙ and look for the game's exe name in the mod's log.",
+                        Text = Loc.GetString("Extras.Dlssg2030.DllPicker.Content"),
                         FontSize = 11,
                         Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
                         TextWrapping = TextWrapping.Wrap,
@@ -363,7 +355,7 @@ public partial class DetailPanelBuilder
                     scrollViewer,
                 }
             },
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot        = _window.Content.XamlRoot,
         };
 
@@ -389,7 +381,7 @@ public partial class DetailPanelBuilder
             && (HsfService.IsInstalledIn(installPath, false) || HsfService.IsInstalledIn(installPath, true));
 
         // Status
-        string statusText  = isInstalled ? (mfgSvc.StagedVersion ?? "Installed") : "Ready";
+        string statusText  = isInstalled ? (mfgSvc.StagedVersion ?? Loc.GetString("Status.Installed")) : Loc.GetString("Status.Ready");
         string statusColor = isInstalled ? "#5ECB7D" : "#A0AABB";
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -403,17 +395,13 @@ public partial class DetailPanelBuilder
         // Col 0 — label
         var label = new TextBlock
         {
-            Text = "Universal MFG Unlocker",
+            Text = Loc.GetString("Extras.Rtx40Mfg.FullName"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap, // long name; wraps instead of clipping in the 120 px column
         };
-        ToolTipService.SetToolTip(label, "Universal MFG Unlocker (formerly RTX 40 MFG Unlock) — DLSS Multi Frame Generation (up to 6x) on RTX 20, 30 and 40, plus XeSS frame generation (XeMFG) on any GPU.\n"
-            + "GPU: RTX 20, 30 and 40 for DLSS MFG (RTX 50 has it natively). XeMFG on NVIDIA and AMD, Intel Arc experimental.\n"
-            + "Game: DLSS MFG needs the game's own DLSS Frame Generation. XeMFG standalone (experimental) also works with the game's DLSS, XeSS or FSR 3.1 upscaling. Not for games with anti-cheat.\n"
-            + "API: DirectX 12 and Vulkan (DLSS MFG in Vulkan is experimental, without Dynamic MFG). In DirectX 11 games only its menu and DLSS 5 run.\n"
-            + "No ReShade or ASI Loader needed. RHI also installs the XeSS files XeMFG needs.");
+        ToolTipService.SetToolTip(label, Loc.GetString("Extras.Rtx40Mfg.Tooltip"));
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
 
@@ -429,7 +417,7 @@ public partial class DetailPanelBuilder
         };
         if (isInstalled)
         {
-            ToolTipService.SetToolTip(statusBlock, $"Installed as: {currentDllName}\nClick to open GitHub releases page");
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.InstalledAsPage.Tooltip", currentDllName));
             statusBlock.PointerPressed += (s, e) =>
                 _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/dashdogy/MFG-Unlocker/releases"));
             AttachLinkCursor(statusBlock);
@@ -440,7 +428,7 @@ public partial class DetailPanelBuilder
         // Col 2 — Info button
         var infoBtn = new Button
         {
-            Content = "Info",
+            Content = Loc.GetString("Dialog.Info"),
             FontSize = 11,
             Padding = new Thickness(6, 2, 6, 2),
             Width = 36,
@@ -451,7 +439,7 @@ public partial class DetailPanelBuilder
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
         };
-        ToolTipService.SetToolTip(infoBtn, "Open the Universal MFG Unlocker GitHub page");
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.Rtx40Mfg.Info.Tooltip"));
         infoBtn.Click += (s, e) =>
             _ = Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/dashdogy/MFG-Unlocker"));
         Grid.SetColumn(infoBtn, 2);
@@ -460,7 +448,7 @@ public partial class DetailPanelBuilder
         // Col 3 — Install button
         var installBtn = new Button
         {
-            Content = isInstalled ? "↺  Reinstall Universal MFG Unlocker" : "⬇  Install Universal MFG Unlocker",
+            Content = isInstalled ? Loc.GetString("Extras.Rtx40Mfg.Reinstall.Button") : Loc.GetString("Extras.Rtx40Mfg.Install.Button"),
             FontSize = 12,
             Height = 32,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -487,13 +475,13 @@ public partial class DetailPanelBuilder
             bool osPluginLikely = card.IsOsInstalled && !string.IsNullOrEmpty(installPath)
                 && System.IO.Directory.Exists(System.IO.Path.Combine(installPath, "OptiScaler"));
             ToolTipService.SetToolTip(installBtn,
-                isHsfMods ? "Reinstall Universal MFG Unlocker in HSF_streamline\\mods (loaded by HSF's helper)"
-                : isPluginInstall ? $"Reinstall Universal MFG Unlocker (loaded by OptiScaler from {currentDllName})"
+                isHsfMods ? Loc.GetString("Extras.Rtx40Mfg.Tooltip.HsfModsReinstall")
+                : isPluginInstall ? Loc.GetString("Extras.Rtx40Mfg.Tooltip.PluginReinstall", currentDllName)
                 : osPluginLikely ? (isInstalled
-                    ? $"Reinstall Universal MFG Unlocker. OptiScaler is installed, so it moves from {currentDllName} into OptiScaler\\plugins."
-                    : "Install Universal MFG Unlocker as an OptiScaler plugin (OptiScaler\\plugins\\MFGUnlocker.asi), as its author recommends with OptiScaler.")
-                : isInstalled ? $"Reinstall Universal MFG Unlocker (currently deployed as {currentDllName})"
-                : "Install Universal MFG Unlocker — deploys the unlock DLL under a name you choose");
+                    ? Loc.GetString("Extras.Rtx40Mfg.Tooltip.PluginMoveReinstall", currentDllName)
+                    : Loc.GetString("Extras.Rtx40Mfg.Tooltip.PluginInstall"))
+                : isInstalled ? Loc.GetString("Extras.Rtx40Mfg.Reinstall.Tooltip", currentDllName)
+                : Loc.GetString("Extras.Rtx40Mfg.Install.Tooltip"));
         }
 
         installBtn.Click += async (s, e) =>
@@ -508,7 +496,7 @@ public partial class DetailPanelBuilder
             bool liveInstalled = !string.IsNullOrEmpty(liveDllName) && mfgSvc.IsInstalledIn(installPath, liveDllName);
 
             // Games on RHI's anti-cheat list: warn before a new install (not on reinstall / update)
-            if (!liveInstalled && !await ConfirmAntiCheatAsync(card, "Universal MFG Unlocker",
+            if (!liveInstalled && !await ConfirmAntiCheatAsync(card, Loc.GetString("Extras.Rtx40Mfg.FullName"),
                     AntiCheatNoticeKey.UniversalMfg, installBtn.XamlRoot))
                 return;
 
@@ -517,7 +505,7 @@ public partial class DetailPanelBuilder
             if ((liveInstalled && Rtx40MfgService.IsHsfModsInstall(liveDllName)) || (hasHsf && card.Is32Bit))
             {
                 installBtn.IsEnabled = false;
-                installBtn.Content   = "Installing...";
+                installBtn.Content   = Loc.GetString("Status.Installing");
                 var hsfError = await vm.InstallMfgForHsfAsync(card, null);
                 if (hsfError != null) CrashReporter.Log($"[BuildRtx40MfgRow] HSF mods reinstall failed — {hsfError}");
                 RequestExtrasRebuild(card);
@@ -541,7 +529,7 @@ public partial class DetailPanelBuilder
             }
 
             installBtn.IsEnabled = false;
-            installBtn.Content   = "Installing...";
+            installBtn.Content   = Loc.GetString("Status.Installing");
             try
             {
                 // Proxy → plugin: move it so the old proxy name is remembered for when OptiScaler is removed
@@ -579,14 +567,14 @@ public partial class DetailPanelBuilder
                 }
                 else
                 {
-                    installBtn.Content   = "Download failed — try again";
+                    installBtn.Content   = Loc.GetString("Extras.DownloadFailedRetry.Button");
                     installBtn.IsEnabled = true;
                 }
             }
             catch (Exception ex)
             {
                 CrashReporter.Log($"[BuildRtx40MfgRow] Install failed — {ex.Message}");
-                installBtn.Content   = "Install failed";
+                installBtn.Content   = Loc.GetString("Extras.InstallFailed.Button");
                 installBtn.IsEnabled = true;
             }
         };
@@ -594,66 +582,59 @@ public partial class DetailPanelBuilder
         row.Children.Add(installBtn);
 
         // Col 4 — Cog button
-        var cogBtn = CogDialog.MakeCogButton("Universal MFG Unlocker settings");
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.Rtx40Mfg.Settings.Tooltip"));
         cogBtn.Click += async (s, e) =>
         {
             try
             {
-                var cog = new CogDialog("Universal MFG Unlocker", _window.Content.XamlRoot);
-                cog.AddIntro("Press Backspace in-game to open the Universal MFG Unlocker menu. It offers these modes:");
-                cog.AddNote("• Follow game: uses the game's own MFG setting");
-                cog.AddNote("• Fixed 2x to 6x: forces a specific multiplier");
-                cog.AddNote("• Dynamic: targets the display refresh rate or a custom FPS value (not in Vulkan games)");
-                cog.AddIntro("If the picture freezes above 2x, try Frame Generation preset B, in the mod's menu or in this game's DLSS / Streamline section "
-                    + "(on RTX 30, restart the game after changing it).");
+                var cog = new CogDialog(Loc.GetString("Extras.Rtx40Mfg.FullName"), _window.Content.XamlRoot);
+                cog.AddIntro(Loc.GetString("Extras.Rtx40Mfg.Settings.Intro"));
+                cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.ModeFollowGame"));
+                cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.ModeFixed"));
+                cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.ModeDynamic"));
+                cog.AddIntro(Loc.GetString("Extras.Rtx40Mfg.Settings.PresetNote"));
                 if (isInstalled)
-                    cog.AddNote($"Currently installed as: {currentDllName}");
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.CurrentlyInstalled", currentDllName));
                 if (isInstalled && Rtx40MfgService.IsBinkName(currentDllName))
-                    cog.AddNote($"The game's own {currentDllName} is kept beside it as {System.IO.Path.GetFileNameWithoutExtension(currentDllName)}Hooked.dll, as the mod needs. Removing the mod puts it back.");
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.BinkNote", currentDllName, System.IO.Path.GetFileNameWithoutExtension(currentDllName)));
 
                 // Stable OptiScaler (0.9) beside a proxy install: the mod doesn't support it
                 if (isInstalled && !isPluginInstall && !isHsfMods && card.IsOsInstalled && !string.IsNullOrEmpty(installPath)
                     && !System.IO.Directory.Exists(System.IO.Path.Combine(installPath, "OptiScaler")))
-                    cog.AddWarning("Stable OptiScaler (0.9) isn't supported by the mod. Use OptiScaler nightly, F5 or DLSS NR.");
+                    cog.AddWarning(Loc.GetString("Extras.Rtx40Mfg.Settings.StableOsWarning"));
 
                 if (isPluginInstall)
                 {
-                    cog.AddSection("Loaded by OptiScaler");
-                    cog.AddIntro("OptiScaler loads the mod as a plugin, as its author recommends. Frame generation is chosen in OptiScaler, not here: "
-                        + "open OptiScaler's ⚙ and set FG Output to DLSSG for DLSS multi frame generation, or XeFG for XeMFG. "
-                        + "OptiScaler's default (Auto) runs no frame generation.");
-                    cog.AddNote("With a recent OptiScaler nightly (4 November 2026 or newer) the DLSS presets and DLSS 5 are in an \"MFG Unlocker\" tab of OptiScaler's menu; "
-                        + "older builds show the mod's menu beside OptiScaler's. If OptiScaler is removed, RHI moves the mod back next to the game's exe.");
-                    cog.AddNote("On RTX 30, DLSS multi frame generation through OptiScaler is experimental; if it doesn't start, use XeFG.");
-                    cog.AddNote("Through OptiScaler, XeFG works in DirectX 12 games. Vulkan games need the mod author's own OptiScaler build.");
-                    cog.AddNote("OptiScaler's frame limit counts generated frames, so raise or remove it at high multipliers.");
-                    cog.AddNote("XeMFG can also run as OptiScaler's DLSS frame generation, but only with the mod author's OptiScaler build. RHI doesn't install that build.");
-                    cog.AddButtons(cog.MakeButton("Author's OptiScaler build", CogButtonKind.Secondary,
+                    cog.AddSection(Loc.GetString("Extras.Rtx40Mfg.Settings.OsSection"));
+                    cog.AddIntro(Loc.GetString("Extras.Rtx40Mfg.Settings.OsIntro"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.OsNote"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.OsRtx30Note"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.OsXefgNote"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.OsFrameLimitNote"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.OsXemfgNote"));
+                    cog.AddButtons(cog.MakeButton(Loc.GetString("Extras.Rtx40Mfg.Settings.OsAuthorBuild.Button"), CogButtonKind.Secondary,
                         async () => { await Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/dashdogy/OptiScaler/releases")); },
-                        "Open the releases page of the mod author's OptiScaler build"));
+                        Loc.GetString("Extras.Rtx40Mfg.Settings.OsAuthorBuild.Tooltip")));
                 }
 
                 if (isHsfMods || hasHsf)
                 {
-                    cog.AddSection("Used with HSF");
+                    cog.AddSection(Loc.GetString("Extras.Rtx40Mfg.Settings.HsfSection"));
                     cog.AddIntro(isHsfMods
-                        ? "Installed in HSF_streamline\\mods: HSF's helper loads the unlocker from there (32-bit games). "
-                          + "Pick the multiplier in HSF's tab in ReShade's overlay. Removing HSF removes this copy too."
-                        : "HSF is installed in this game. Pick the multiplier in HSF's tab in ReShade's overlay.");
-                    cog.AddNote("No RTXMFG-XeSS folder: HSF's frame generation is DLSS, so XeMFG isn't used.");
+                        ? Loc.GetString("Extras.Rtx40Mfg.Settings.HsfModsIntro")
+                        : Loc.GetString("Extras.Rtx40Mfg.Settings.HsfIntro"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.HsfNoXessNote"));
                 }
 
-                cog.AddSection("XeSS frame generation (XeMFG)");
+                cog.AddSection(Loc.GetString("Extras.Rtx40Mfg.Settings.XessSection"));
                 if (isHsfMods || hasHsf)
-                    cog.AddIntro("Not installed in games with HSF. If you want XeMFG here instead, remove HSF and reinstall the mod.");
+                    cog.AddIntro(Loc.GetString("Extras.Rtx40Mfg.Settings.XessHsfIntro"));
                 else if (isPluginInstall)
-                    cog.AddIntro("Through OptiScaler, XeMFG is OptiScaler's FG Output set to XeFG. It uses the XeSS files OptiScaler installs, so nothing else is needed.");
+                    cog.AddIntro(Loc.GetString("Extras.Rtx40Mfg.Settings.XessViaOs"));
                 else
                 {
-                    cog.AddIntro("The mod can also run Intel's XeSS frame generation itself, 2x to 6x on any GPU (experimental, DirectX 12 and Vulkan). "
-                        + "Tick XeMFG standalone in the in-game menu and pick the MFG mode. In games with DLSS Frame Generation, turn that on in the game; XeMFG replaces it. "
-                        + "Other games need DLSS, XeSS or FSR 3.1 upscaling on (Vulkan: DLSS only), with the game's own FSR or XeSS frame generation off.");
-                    cog.AddNote("It needs Intel's libxess_fg.dll and libxell.dll in an RTXMFG-XeSS folder next to the mod; RHI installs them with the mod.");
+                    cog.AddIntro(Loc.GetString("Extras.Rtx40Mfg.Settings.XessIntro"));
+                    cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.XessFilesNote"));
                 }
                 if (isInstalled && !isPluginInstall && !isHsfMods && !hasHsf && !string.IsNullOrEmpty(installPath))
                 {
@@ -661,18 +642,17 @@ public partial class DetailPanelBuilder
                     bool xessPresent = System.IO.File.Exists(System.IO.Path.Combine(xessDir, "libxess_fg.dll"))
                                     && System.IO.File.Exists(System.IO.Path.Combine(xessDir, "libxell.dll"));
                     if (xessPresent)
-                        cog.AddNote("XeSS files: installed.");
+                        cog.AddNote(Loc.GetString("Extras.Rtx40Mfg.Settings.XessInstalled"));
                     else
-                        cog.AddWarning("XeSS files: missing. Reinstall the mod to add them.");
+                        cog.AddWarning(Loc.GetString("Extras.Rtx40Mfg.Settings.XessMissing"));
                 }
                 if (string.Equals(card.RsInstalledFile, "dxgi.dll", StringComparison.OrdinalIgnoreCase))
-                    cog.AddWarning("ReShade is installed as dxgi.dll in this game. With XeMFG at 5x and 6x, some generated frames may not reach the screen. "
-                        + "If that happens, give ReShade a different DLL name in Game Overrides › DLL naming overrides.");
+                    cog.AddWarning(Loc.GetString("Extras.Rtx40Mfg.Settings.ReShadeDxgiWarning"));
 
                 AddUmfgRtxHairSection(cog, card, mfgSvc, isInstalled, isHsfMods);
                 AddUmfgDlss5Section(cog, card, mfgSvc, isInstalled, isHsfMods);
 
-                cog.AddButtons(cog.MakeButton("Open GitHub page", CogButtonKind.Secondary,
+                cog.AddButtons(cog.MakeButton(Loc.GetString("Extras.Rtx40Mfg.Settings.OpenGithub"), CogButtonKind.Secondary,
                     async () => { await Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/dashdogy/MFG-Unlocker")); }));
                 await cog.ShowAsync();
             }
@@ -699,7 +679,7 @@ public partial class DetailPanelBuilder
             Opacity = isInstalled ? 1.0 : 0,
             IsHitTestVisible = isInstalled,
         };
-        ToolTipService.SetToolTip(removeBtn, "Remove Universal MFG Unlocker from this game");
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.Rtx40Mfg.Remove.Tooltip"));
         removeBtn.Click += async (s, e) =>
         {
             try
@@ -785,26 +765,26 @@ public partial class DetailPanelBuilder
                 VerticalAlignment = VerticalAlignment.Center,
             });
             if (isRecommended)
-                contentRow.Children.Add(MakeBadge("Recommended", "#1A3A20", "#6AE87A", "#2A5A30"));
-            AddExtraDllBadges(contentRow, btn, option, "Universal MFG Unlocker");
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Recommended"), "#1A3A20", "#6AE87A", "#2A5A30"));
+            AddExtraDllBadges(contentRow, btn, option, Loc.GetString("Extras.Rtx40Mfg.FullName"));
             if (!isRhiOwned && isDxgiConflict)
-                contentRow.Children.Add(MakeBadge("May conflict with ReShade/OS", "#2A1A10", "#CC9955", "#5A3A18"));
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.MayConflict"), "#2A1A10", "#CC9955", "#5A3A18"));
             if (isCurrent)
-                contentRow.Children.Add(MakeBadge("Current", "#182840", "#7AACDD", "#2A4468"));
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Badge.Current"), "#182840", "#7AACDD", "#2A4468"));
 
             btn.Content = contentRow;
 
             if (noGameBink)
             {
-                contentRow.Children.Add(MakeBadge("Game has no Bink DLL", "#2A1818", "#CC6666", "#5A2828"));
+                contentRow.Children.Add(MakeBadge(Loc.GetString("Extras.Rtx40Mfg.Badge.NoGameBink"), "#2A1818", "#CC6666", "#5A2828"));
                 ToolTipService.SetToolTip(btn, File.Exists(Rtx40MfgService.BinkHookedPath(Path.Combine(installDir, name)))
-                    ? $"{System.IO.Path.GetFileNameWithoutExtension(name)}Hooked.dll is already there: another mod uses this Bink name."
-                    : $"This game has no {name}. The mod's Bink route keeps the game's own {name} beside it as {System.IO.Path.GetFileNameWithoutExtension(name)}Hooked.dll, so it only works in games that ship one.");
+                    ? Loc.GetString("Extras.Rtx40Mfg.BinkTaken.Tooltip", System.IO.Path.GetFileNameWithoutExtension(name))
+                    : Loc.GetString("Extras.Rtx40Mfg.NoBinkDll.Tooltip", name, System.IO.Path.GetFileNameWithoutExtension(name)));
             }
             else if (!isRhiOwned && Rtx40MfgService.IsBinkName(name) && !isCurrent)
-                ToolTipService.SetToolTip(btn, $"RHI renames the game's {name} to {System.IO.Path.GetFileNameWithoutExtension(name)}Hooked.dll and keeps both, as the mod needs. Removing the mod puts it back.");
+                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.Rtx40Mfg.BinkRename.Tooltip", name, System.IO.Path.GetFileNameWithoutExtension(name)));
             if (!isRhiOwned && isDxgiConflict)
-                ToolTipService.SetToolTip(btn, "dxgi.dll may conflict with ReShade or OptiScaler if they also use this name.");
+                ToolTipService.SetToolTip(btn, Loc.GetString("Extras.DllName.DxgiConflict.Tooltip"));
 
             btn.Tag    = name;
             btn.Click += (s, ev) =>
@@ -822,7 +802,7 @@ public partial class DetailPanelBuilder
 
         var pickerDialog = new ContentDialog
         {
-            Title = "Choose Universal MFG Unlocker DLL name",
+            Title = Loc.GetString("Extras.Rtx40Mfg.DllPicker.Title"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -830,8 +810,7 @@ public partial class DetailPanelBuilder
                 {
                     new TextBlock
                     {
-                        Text = "Choose a name the game loads early. Start with version.dll, then winmm.dll; if the mod's menu (Backspace) doesn't appear, reinstall with the next name. "
-                             + "Vulkan games may not load DirectX names such as dxgi.dll or d3d12.dll.",
+                        Text = Loc.GetString("Extras.Rtx40Mfg.DllPicker.Content"),
                         FontSize = 11,
                         Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
                         TextWrapping = TextWrapping.Wrap,
@@ -839,7 +818,7 @@ public partial class DetailPanelBuilder
                     scrollViewer,
                 }
             },
-            CloseButtonText = "Cancel",
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot        = _window.Content.XamlRoot,
         };
 

@@ -165,14 +165,14 @@ public sealed partial class MainWindow
             };
             ToolTipService.SetToolTip(add, Loc.GetString("Collections.Chip.AddTooltip"));
             _collectionsWrap.Children.Add(add);
-            var manage = MakeCollectionChip("Manage", false);
+            var manage = MakeCollectionChip(Loc.GetString("Dialog.Manage"), false);
             manage.Tag = CollectionManageChipTag;
             manage.Click += async (s, e) =>
             {
                 try { await ShowCollectionManagerAsync(manage.XamlRoot ?? Content?.XamlRoot, null); }
                 catch (Exception ex) { CrashReporter.Log($"[MainWindow.ManageCollectionsChip_Click] {ex.Message}"); }
             };
-            ToolTipService.SetToolTip(manage, "Create, rename, reorder and delete collections, and tick the games in each one.");
+            ToolTipService.SetToolTip(manage, Loc.GetString("Collections.Chip.ManageTooltip"));
             _collectionsWrap.Children.Add(manage);
             UpdateCollectionEmptyText();
         }
@@ -249,7 +249,7 @@ public sealed partial class MainWindow
                 try { await DeleteCollectionAsync(anchor.XamlRoot ?? Content?.XamlRoot, name); }
                 catch (Exception ex) { CrashReporter.Log($"[MainWindow.CollectionDelete_Click] {ex.Message}"); }
             };
-            var manage = new MenuFlyoutItem { Text = "Manage collections…" };
+            var manage = new MenuFlyoutItem { Text = Loc.GetString("Collections.Menu.Manage") };
             manage.Click += async (s, e) =>
             {
                 try { await ShowCollectionManagerAsync(anchor.XamlRoot ?? Content?.XamlRoot, name); }
@@ -322,7 +322,7 @@ public sealed partial class MainWindow
             catch (Exception ex) { CrashReporter.Log($"[MainWindow.NewCollectionMenu_Click] {ex.Message}"); }
         };
         sub.Items.Add(create);
-        var manage = new MenuFlyoutItem { Text = "Manage collections…" };
+        var manage = new MenuFlyoutItem { Text = Loc.GetString("Collections.Menu.Manage") };
         manage.Click += async (s, e) =>
         {
             try { await ShowCollectionManagerAsync((s as FrameworkElement)?.XamlRoot ?? Content?.XamlRoot, null); }

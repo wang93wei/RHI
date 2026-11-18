@@ -62,14 +62,11 @@ public partial class SettingsHandler
                 combo.SelectionChanged += UiScaleCombo_SelectionChanged;
 
                 // Top bar and game list sizes, on top of the interface size
-                _topBarScaleCombo = AddSizeRow(list, list.Children.IndexOf(row) + 1, "Top bar size",
-                    "Makes the top bar smaller or larger, on top of the interface size, in every layout. " +
-                    "You can also drag the top bar's bottom edge. Double-click the edge to reset it.",
+                _topBarScaleCombo = AddSizeRow(list, list.Children.IndexOf(row) + 1, Loc.GetString("Settings.UiScale.TopBar.Label"),
+                    Loc.GetString("Settings.UiScale.TopBar.Help"),
                     pct => { ViewModel.Settings.TopBarScale = pct; _window.ApplyTopBarScale(); });
-                _gameListScaleCombo = AddSizeRow(list, list.Children.IndexOf(row) + 2, "Game list size",
-                    "Makes the game list smaller or larger, on top of the interface size (Classic+ and Tabs; " +
-                    "Spotlight's covers have their own size). " +
-                    "You can also drag the list's right edge. Double-click the edge to reset it.",
+                _gameListScaleCombo = AddSizeRow(list, list.Children.IndexOf(row) + 2, Loc.GetString("Settings.UiScale.GameList.Label"),
+                    Loc.GetString("Settings.UiScale.GameList.Help"),
                     pct => { ViewModel.Settings.GameListScale = pct; _window.ApplyGameListScale(); });
             }
             SelectUiScale();

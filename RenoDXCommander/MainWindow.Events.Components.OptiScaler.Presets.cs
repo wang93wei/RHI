@@ -92,7 +92,7 @@ public sealed partial class MainWindow
                         // (Vulkan needs the mod author's own OptiScaler build; stable 0.9 isn't supported by the mod)
                         if (card.RequiresVulkanInstall || card.IsVulkanOnly)
                         {
-                            ShowStatus($"{p.Name} is for DirectX 12 games. In Vulkan games, XeFG through OptiScaler needs the Universal MFG Unlocker author's own OptiScaler build, which RHI doesn't install.", false);
+                            ShowStatus(Loc.GetString("Dialog.OptiScaler.PresetDx12Only", p.Name), false);
                             return;
                         }
                         bool os10 = card.IsOsInstalled
@@ -100,7 +100,7 @@ public sealed partial class MainWindow
                             : OsVariants.IsOs10(ViewModel.GetOsVariant(card.GameName, ctx.Store));
                         if (!os10)
                         {
-                            ShowStatus($"{p.Name} needs OptiScaler nightly, F5 or DLSS NR. Stable OptiScaler (0.9) isn't supported by Universal MFG Unlocker.", false);
+                            ShowStatus(Loc.GetString("Dialog.OptiScaler.PresetNeedsOs10", p.Name), false);
                             return;
                         }
                         // Anti-cheat warning before a new install of the mod (not when it's already there)

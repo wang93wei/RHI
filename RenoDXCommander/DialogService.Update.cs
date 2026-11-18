@@ -224,7 +224,7 @@ public partial class DialogService
 
             // Updates install silently now (issue #76): say plainly that it worked
             if (updatedFromOlder && !_window.IsShuttingDown)
-                _window.ShowStatusBarMessage($"Updated to RHI {AppVersionInfo.Display}.", TimeSpan.FromSeconds(20));
+                _window.ShowStatusBarMessage(Loc.GetString("Dialog.UpdatedTo", AppVersionInfo.Display), TimeSpan.FromSeconds(20));
 
             if (!_window.IsShuttingDown) await ShowPatchNotesDialogAsync();
         }

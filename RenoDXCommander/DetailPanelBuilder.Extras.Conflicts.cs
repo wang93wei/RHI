@@ -96,17 +96,20 @@ public partial class DetailPanelBuilder
     /// <summary>Disables an Extras install button because <paramref name="blocker"/> is installed.</summary>
     private static void ApplyExtraBlock(Button installBtn, TextBlock? label, ExtraKind self, ExtraKind blocker, string? reason = null)
     {
-        reason ??= $"{ExtraDisplayName(blocker)} is installed in this game and can't be used together with {ExtraDisplayName(self)}. Remove {ExtraDisplayName(blocker)} first.";
+        reason ??= Loc.GetString("Extras.Conflict.Reason",
+            ExtraDisplayName(blocker), ExtraDisplayName(self), ExtraDisplayName(blocker));
         installBtn.IsEnabled        = false;
         installBtn.IsHitTestVisible = false;
         installBtn.Opacity          = 0.35;
-        installBtn.Content          = $"Remove {ExtraShortName(blocker)} first";
+        installBtn.Content          = Loc.GetString("Extras.Conflict.RemoveFirst", ExtraShortName(blocker));
         ToolTipService.SetToolTip(installBtn, reason);
         // Disabled buttons show no tooltip: put the reason on the row's label too
         if (label != null)
         {
             var existing = ToolTipService.GetToolTip(label) as string;
-            ToolTipService.SetToolTip(label, string.IsNullOrEmpty(existing) ? reason : $"{existing}\n\n{reason}");
+            ToolTipService.SetToolTip(label, string.IsNullOrEmpty(existing)
+                ? reason
+                : Loc.GetString("Extras.Conflict.TooltipJoin", existing, reason));
         }
         CrashReporter.Log($"[DetailPanelBuilder.ApplyExtraBlock] {self} blocked by {blocker}");
     }

@@ -45,18 +45,17 @@ public partial class DetailPanelBuilder
             LineHeight = 20,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
-        Para($"{card.GameName} is on RHI's anti-cheat list.");
-        Para($"{modName} isn't supported in games with online anti-cheat, and using it there can get your account banned. "
-            + "Only continue if you play this game offline, or know its anti-cheat allows it.");
-        var dontShow = new CheckBox { Content = "Don't show this again", FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
+        Para(Loc.GetString("Extras.AntiCheat.OnList", card.GameName));
+        Para(Loc.GetString("Extras.AntiCheat.Body", modName));
+        var dontShow = new CheckBox { Content = Loc.GetString("Dialog.DonTShowThisAgain"), FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
         content.Children.Add(dontShow);
 
         var dialog = new ContentDialog
         {
-            Title = "Anti-cheat game",
+            Title = Loc.GetString("Extras.AntiCheat.Title"),
             Content = content,
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,

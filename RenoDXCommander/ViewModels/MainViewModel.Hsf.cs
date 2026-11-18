@@ -10,22 +10,26 @@ namespace RenoDXCommander.ViewModels;
 
 public partial class MainViewModel
 {
+    // Safe in unit tests / static contexts: with no DI container the key itself is returned.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     /// <summary>Why HSF can't go into this game (a short button label and the full reason), or null when it can.</summary>
     public static (string Short, string Long)? HsfBlock(GameCardViewModel card)
     {
-        if (string.IsNullOrEmpty(card.InstallPath)) return ("No install folder", "This game has no install folder.");
+        if (string.IsNullOrEmpty(card.InstallPath)) return (L("Extras.Hsf.Block.NoInstall.Short"), L("Extras.Hsf.Block.NoInstall.Long"));
         if (card.GraphicsApi == GraphicsApiType.OpenGL && !card.RequiresVulkanInstall)
-            return ("Not for OpenGL", "HSF supports DirectX 9, 11, 12 and Vulkan games, not OpenGL.");
+            return (L("Extras.Hsf.Block.OpenGL.Short"), L("Extras.Hsf.Block.OpenGL.Long"));
         bool vulkan = HsfIsVulkan(card);
         if (vulkan && card.Is32Bit)
-            return ("64-bit Vulkan only", "HSF supports 64-bit Vulkan games only.");
-        if (card.IsDxvkInstalled) return ("Remove DXVK first", "DXVK is installed in this game. HSF needs the game's own DirectX; remove DXVK first.");
-        if (card.IsDxvkBlacklisted) return ("Anti-cheat game", "This game is on RHI's anti-cheat list. Never use HSF in a game with online anti-cheat.");
-        if (!card.IsRsInstalled) return ("Install ReShade first", "Install ReShade first: HSF is a ReShade add-on.");
-        if (card.UseNormalReShade) return ("Needs ReShade with addons", "HSF needs ReShade with add-on support. Change this game's ReShade channel from No Addons.");
+            return (L("Extras.Hsf.Block.Vulkan32.Short"), L("Extras.Hsf.Block.Vulkan32.Long"));
+        if (card.IsDxvkInstalled) return (L("Extras.Hsf.Block.Dxvk.Short"), L("Extras.Hsf.Block.Dxvk.Long"));
+        if (card.IsDxvkBlacklisted) return (L("Extras.Hsf.Block.AntiCheat.Short"), L("Extras.Hsf.Block.AntiCheat.Long"));
+        if (!card.IsRsInstalled) return (L("Extras.Hsf.Block.NoReShade.Short"), L("Extras.Hsf.Block.NoReShade.Long"));
+        if (card.UseNormalReShade) return (L("Extras.Hsf.Block.NoAddons.Short"), L("Extras.Hsf.Block.NoAddons.Long"));
         if (vulkan && File.Exists(Path.Combine(card.InstallPath, "dxgi.dll"))
             && AuxInstallService.IsReShadeFile(Path.Combine(card.InstallPath, "dxgi.dll")))
-            return ("Remove ReShade's dxgi.dll", "A DirectX copy of ReShade (dxgi.dll) is in this game's folder. In a Vulkan game it keeps ReShade's Vulkan layer out, and HSF with it: remove that dxgi.dll first.");
+            return (L("Extras.Hsf.Block.Dxgi.Short"), L("Extras.Hsf.Block.Dxgi.Long"));
         return null;
     }
 
@@ -47,7 +51,7 @@ public partial class MainViewModel
             return null;
         if (v >= new Version(6, 8)) return null;
         if (card.GraphicsApi == GraphicsApiType.DirectX9 && v >= new Version(6, 5)) return null;
-        return $"ReShade {text} is installed here. HSF is tested with ReShade 6.8 (with add-on support); update ReShade if frame generation doesn't start.";
+        return L("Extras.Hsf.Note.ReShadeVersion", text);
     }
 
     /// <summary>
@@ -100,7 +104,7 @@ public partial class MainViewModel
             var error = await Task.Run(async () =>
             {
                 if (!await svc.EnsureStagingAsync().ConfigureAwait(false))
-                    return svc.LastError ?? "Couldn't download HSF. Try again later.";
+                    return svc.LastError ?? L("Extras.Hsf.Error.DownloadFailed");
                 if (launchpadOn && !UpliftService.LaunchpadStaged)
                     await _shaderPackService.EnsurePacksAsync(new[] { UpliftService.LaunchpadPackId }).ConfigureAwait(false);
                 // The global HSF keys go into a new HSF.ini only: an existing one keeps the keys set for this game
@@ -120,8 +124,8 @@ public partial class MainViewModel
         {
             _crashReporter.Log($"[MainViewModel.InstallHsf] '{card.GameName}' — {ex.Message}");
             return ex is UnauthorizedAccessException
-                ? "Couldn't write into the game folder (access denied). Close the game, or try Admin Mode."
-                : $"Couldn't install HSF: {ex.Message}";
+                ? L("Extras.Hsf.Error.WriteAccessDenied")
+                : L("Extras.Hsf.Error.InstallFailed", ex.Message);
         }
     }
 
@@ -152,8 +156,8 @@ public partial class MainViewModel
     /// </summary>
     public async Task<string?> InstallMfgForHsfAsync(GameCardViewModel card, string? proxyName)
     {
-        if (string.IsNullOrEmpty(card.InstallPath)) return "This game has no install folder.";
-        if (card.MfgAdaInstalled) return "MFG Unlock is installed, which conflicts with Universal MFG Unlocker. Remove it from the Extras section first.";
+        if (string.IsNullOrEmpty(card.InstallPath)) return L("Extras.Hsf.Block.NoInstall.Long");
+        if (card.MfgAdaInstalled) return L("Extras.Hsf.Error.MfgConflict");
         var installPath = card.InstallPath;
         try
         {
@@ -164,7 +168,7 @@ public partial class MainViewModel
                     await _rtx40MfgService.EnsureStagingAsync().ConfigureAwait(false);
                 return (_rtx40MfgService.Install(installPath, t), t);
             });
-            if (!ok) return "Couldn't download Universal MFG Unlocker. Try again, or install it from its own row.";
+            if (!ok) return L("Extras.Hsf.Error.MfgDownloadFailed");
             RecordMfgLocation(card, target);
             _crashReporter.Log($"[MainViewModel.InstallMfgForHsf] '{card.GameName}' as {target}");
             return null;
@@ -172,7 +176,7 @@ public partial class MainViewModel
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Net.Http.HttpRequestException)
         {
             _crashReporter.Log($"[MainViewModel.InstallMfgForHsf] '{card.GameName}' — {ex.Message}");
-            return $"Couldn't install Universal MFG Unlocker: {ex.Message}";
+            return L("Extras.Hsf.Error.MfgInstallFailed", ex.Message);
         }
     }
 

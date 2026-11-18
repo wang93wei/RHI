@@ -1,6 +1,7 @@
 // SingleKeyBox.cs — a one-key hotkey box with a ↺ button: click the box and press a key (no modifiers; Backspace =
 // None; Tab / Enter / Esc keep their normal job). Used for HSF's keys in Settings › Components and the HSF ⚙.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using RenoDXCommander.Services;
@@ -9,8 +10,10 @@ namespace RenoDXCommander;
 
 internal static class SingleKeyBox
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     /// <summary>A virtual-key code as RHI shows it ("None" for 0).</summary>
-    public static string Text(int vk) => vk <= 0 ? "None" : HotkeyManager.FormatHotkeyDisplay($"{vk},0,0,0");
+    public static string Text(int vk) => vk <= 0 ? Loc.GetString("Option.None") : HotkeyManager.FormatHotkeyDisplay($"{vk},0,0,0");
 
     /// <summary>
     /// The box and its ↺ button in a Grid [box | ↺]. <paramref name="onKey"/> gets the new key (0 = None) and returns
@@ -25,7 +28,7 @@ internal static class SingleKeyBox
         var box = new TextBox
         {
             IsReadOnly = true,
-            PlaceholderText = "Press a key...",
+            PlaceholderText = Loc.GetString("Xaml.PressAKey"),
             FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
             Text = Text(vk),
         };

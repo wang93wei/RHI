@@ -16,18 +16,17 @@ public partial class DetailPanelBuilder
         if (xamlRoot == null) return true;
         var dialog = new ContentDialog
         {
-            Title = "OptiScaler is installed",
+            Title = Loc.GetString("Extras.Dlssg2030.Checks.OptiScaler.Title"),
             Content = new TextBlock
             {
-                Text = "OptiScaler is installed in this game. Turn off OptiScaler's frame generation: two frame generation mods in one game usually means no generated frames. "
-                     + "OptiScaler used only for upscaling or GPU spoofing is fine.",
+                Text = Loc.GetString("Extras.Dlssg2030.Checks.OptiScaler.Content"),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 13,
                 LineHeight = 20,
                 Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
             },
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,

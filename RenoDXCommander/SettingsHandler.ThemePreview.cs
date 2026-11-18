@@ -21,7 +21,7 @@ public partial class SettingsHandler
         var outer = new StackPanel { Spacing = 6, Width = ThemePreviewWidth, VerticalAlignment = VerticalAlignment.Top };
         outer.Children.Add(new TextBlock
         {
-            Text = "Preview",
+            Text = Loc.GetString("Settings.ThemePreview.Title"),
             FontSize = 12,
             Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
         });
@@ -61,13 +61,13 @@ public partial class SettingsHandler
             BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
             BorderThickness = new Thickness(1),
             Margin = new Thickness(0, 0, 0, 4),
-            Child = new TextBlock { Text = "Search", FontSize = 10, VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock { Text = Loc.GetString("Settings.ThemePreview.SearchPlaceholder"), FontSize = 10, VerticalAlignment = VerticalAlignment.Center,
                                     Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush) },
         });
-        list.Children.Add(MakePreviewListItem("Cyber Racer", selected: true));
-        list.Children.Add(MakePreviewListItem("Dusk Valley", selected: false));
-        list.Children.Add(MakePreviewListItem("Iron Coast", selected: false));
-        list.Children.Add(MakePreviewListItem("Starfall", selected: false));
+        list.Children.Add(MakePreviewListItem(Loc.GetString("Settings.ThemePreview.Game.CyberRacer"), selected: true));
+        list.Children.Add(MakePreviewListItem(Loc.GetString("Settings.ThemePreview.Game.DuskValley"), selected: false));
+        list.Children.Add(MakePreviewListItem(Loc.GetString("Settings.ThemePreview.Game.IronCoast"), selected: false));
+        list.Children.Add(MakePreviewListItem(Loc.GetString("Settings.ThemePreview.Game.Starfall"), selected: false));
         window.Children.Add(list);
 
         // ── Game page ──
@@ -75,14 +75,14 @@ public partial class SettingsHandler
         Grid.SetColumn(page, 1);
         page.Children.Add(new TextBlock
         {
-            Text = "Cyber Racer",
+            Text = Loc.GetString("Settings.ThemePreview.Game.CyberRacer"),
             FontSize = 15,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
         page.Children.Add(new TextBlock
         {
-            Text = "Steam · DirectX 12 · Unreal Engine",
+            Text = Loc.GetString("Settings.ThemePreview.Game.Meta"),
             FontSize = 10,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
         });
@@ -98,34 +98,34 @@ public partial class SettingsHandler
         };
         card.Children.Add(new TextBlock
         {
-            Text = "Components",
+            Text = Loc.GetString("Detail.Components"),
             FontSize = 12,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
         // Same colours as the real rows: installed / update / not installed
-        card.Children.Add(MakePreviewRow("ReShade", "Installed", "#5ECB7D", "Reinstall", "#182840", "#7AACDD", "#2A4468"));
-        card.Children.Add(MakePreviewRow("RenoDX", "Update", "#B898E8", "Update", "#201838", "#B898E8", "#3A2860"));
-        card.Children.Add(MakePreviewRow("OptiScaler", "Ready", "#A0AABB", "Install", null, null, null));
+        card.Children.Add(MakePreviewRow("ReShade", Loc.GetString("Status.Installed"), "#5ECB7D", Loc.GetString("NeuralRendering.Button.Reinstall"), "#182840", "#7AACDD", "#2A4468"));
+        card.Children.Add(MakePreviewRow("RenoDX", Loc.GetString("Status.UpdateShort"), "#B898E8", Loc.GetString("Status.UpdateShort"), "#201838", "#B898E8", "#3A2860"));
+        card.Children.Add(MakePreviewRow("OptiScaler", Loc.GetString("Status.Ready"), "#A0AABB", Loc.GetString("Dialog.Install"), null, null, null));
         page.Children.Add(card);
 
         // Accent, warning and error text as they appear on the page
         page.Children.Add(new TextBlock
         {
-            Text = "Extras",
+            Text = Loc.GetString("Extras.Title"),
             FontSize = 12,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush),
         });
         page.Children.Add(new TextBlock
         {
-            Text = "Remove DXVK first",
+            Text = Loc.GetString("Settings.ThemePreview.RemoveDxvkFirst"),
             FontSize = 10,
             Foreground = UIFactory.Brush(ResourceKeys.AccentAmberBrush),
         });
         page.Children.Add(new TextBlock
         {
-            Text = "Install failed",
+            Text = Loc.GetString("Extras.InstallFailed.Button"),
             FontSize = 10,
             Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush),
         });
@@ -143,9 +143,9 @@ public partial class SettingsHandler
         };
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.Children.Add(new TextBlock { Text = "Last checked: 5m ago", FontSize = 9,
+        footer.Children.Add(new TextBlock { Text = Loc.GetString("Settings.ThemePreview.LastChecked"), FontSize = 9,
             Foreground = UIFactory.Brush(ResourceKeys.FooterTextBrush) });
-        var links = new TextBlock { Text = "Patch Notes   MOTD   Updates", FontSize = 9,
+        var links = new TextBlock { Text = Loc.GetString("Settings.ThemePreview.FooterLinks"), FontSize = 9,
             Foreground = UIFactory.Brush(ResourceKeys.FooterTextBrush) };
         Grid.SetColumn(links, 1);
         footer.Children.Add(links);
@@ -155,7 +155,7 @@ public partial class SettingsHandler
 
         outer.Children.Add(new TextBlock
         {
-            Text = "Changes show here and across RHI as you pick.",
+            Text = Loc.GetString("Settings.ThemePreview.Note"),
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap,
             Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
@@ -217,7 +217,7 @@ public partial class SettingsHandler
         Grid.SetColumn(btn, 2);
         row.Children.Add(btn);
 
-        var info = MakePreviewButton("Info",
+        var info = MakePreviewButton(Loc.GetString("Dialog.Info"),
             UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             UIFactory.Brush(ResourceKeys.AccentBlueBrush),
             UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush));

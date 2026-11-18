@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
@@ -11,6 +12,10 @@ namespace RenoDXCommander.Services;
 /// </summary>
 public class UpdateService : IUpdateService
 {
+    // Safe in unit tests / static contexts: with no DI container the key itself is returned.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     private readonly HttpClient _http;
     private readonly GitHubETagCache _etagCache;
 
@@ -246,7 +251,7 @@ public class UpdateService : IUpdateService
             using var transfer = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             transfer.CancelAfter(TimeSpan.FromMinutes(10));
             var token = transfer.Token;
-            progress?.Report(("Downloading update...", 0));
+            progress?.Report((L("Update.Progress.Downloading"), 0));
 
             using var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
             request.Headers.UserAgent.Add(new ProductInfoHeaderValue("RHI", CurrentVersion.ToString()));
@@ -277,13 +282,13 @@ public class UpdateService : IUpdateService
                 if (totalBytes > 0)
                 {
                     var pct = (double)totalRead / totalBytes * 100;
-                    progress?.Report(($"Downloading update... {pct:F0}%", pct));
+                    progress?.Report((L("Update.Progress.DownloadingPercent", pct), pct));
                 }
             }
 
             if (totalBytes >= 0 && totalRead != totalBytes)
                 throw new IOException($"Incomplete installer download: expected {totalBytes} bytes, received {totalRead}.");
-            progress?.Report(("Download complete.", 100));
+            progress?.Report((L("Update.Progress.Complete"), 100));
             CrashReporter.Log($"[UpdateService.DownloadInstallerAsync] Downloaded installer to {tempPath} ({totalRead:N0} bytes)");
             return tempPath;
         }
@@ -295,7 +300,7 @@ public class UpdateService : IUpdateService
                 try { File.Delete(tempPath); }
                 catch (Exception cleanupError) { CrashReporter.Log($"[UpdateService] Partial download cleanup failed — {cleanupError.Message}"); }
             }
-            progress?.Report(($"Download failed: {ex.Message}", 0));
+            progress?.Report((L("Update.Progress.Failed", ex.Message), 0));
             return null;
         }
     }

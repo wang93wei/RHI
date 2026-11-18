@@ -6,6 +6,11 @@ namespace RenoDXCommander;
 /// </summary>
 public static class HotkeyManager
 {
+    // Safe in unit tests / static contexts: with no DI container the key itself is returned.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService(typeof(RenoDXCommander.Services.ILocalizationService)) is RenoDXCommander.Services.ILocalizationService loc
+            ? loc.GetString(key, args) : key;
+
     // ── Hotkey helper methods ──────────────────────────────────────────
 
     private static readonly Dictionary<int, string> VkNames = new()
@@ -72,13 +77,13 @@ public static class HotkeyManager
     /// </summary>
     public static string FormatHotkeyDisplay(int vk, bool shift, bool ctrl, bool alt)
     {
-        if (vk == 0) return "None";
+        if (vk == 0) return L("Option.None");
 
         var parts = new List<string>();
         if (ctrl) parts.Add("Ctrl");
         if (shift) parts.Add("Shift");
         if (alt) parts.Add("Alt");
-        parts.Add(VkNames.TryGetValue(vk, out var name) ? name : $"Key {vk}");
+        parts.Add(VkNames.TryGetValue(vk, out var name) ? name : L("Hotkey.UnknownKey", vk));
         return string.Join(" + ", parts);
     }
 

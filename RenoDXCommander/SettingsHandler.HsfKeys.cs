@@ -37,7 +37,7 @@ public partial class SettingsHandler
         var card = new Border { Style = FindStyle("SettingsCardStyle") };
         var body = new StackPanel { Spacing = 9 };
         card.Child = body;
-        body.Children.Add(new TextBlock { Text = "HSF", Style = FindStyle("SettingsCardTitleStyle") });
+        body.Children.Add(new TextBlock { Text = Loc.GetString("Extras.Hsf"), Style = FindStyle("SettingsCardTitleStyle") });
 
         var boxes = new Dictionary<string, Grid>();
         foreach (var bind in HsfService.Keybinds)
@@ -45,9 +45,8 @@ public partial class SettingsHandler
             var row = new Grid { ColumnSpacing = 10 };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
-            var tip = bind.Help + " Click the box and press a key; Backspace or ↺ sets it back to None.\n\n"
-                + "RHI writes it into a game's HSF.ini when it installs HSF there. None leaves HSF's own default."
-                + (bind.IniKey == "MfgKey" ? "" : "\n\nNeeds an HSF version with KEYBINDS in its menu (newer than 0.9.8.6).");
+            var tip = bind.Help + " " + Loc.GetString("Settings.HsfKeys.TipSuffix")
+                + (bind.IniKey == "MfgKey" ? "" : "\n\n" + Loc.GetString("Settings.HsfKeys.TipNeedsVersion"));
             var label = new TextBlock { Text = bind.Label, Style = FindStyle("SettingsLabelStyle"), VerticalAlignment = VerticalAlignment.Center };
             ToolTipService.SetToolTip(label, tip);
             row.Children.Add(label);
@@ -56,7 +55,7 @@ public partial class SettingsHandler
             var keyBox = SingleKeyBox.Create(GetGlobalHsfKey(iniKey),
                 vk => { SaveGlobalHsfKey(iniKey, vk, boxes); return vk; },
                 () => { SaveGlobalHsfKey(iniKey, 0, boxes); return 0; },
-                tip, "None (leave HSF's own default)",
+                tip, Loc.GetString("Settings.HsfKeys.None"),
                 FindStyle("SettingsTextBoxStyle"), FindStyle("SettingsIconButtonStyle"));
             Grid.SetColumn(keyBox, 1);
             row.Children.Add(keyBox);
@@ -64,8 +63,8 @@ public partial class SettingsHandler
             body.Children.Add(row);
         }
 
-        var write = MakeCustomFoldersButton("Write keys to all HSF games", primary: true,
-            "Writes the keys that are set into the HSF.ini of every game with HSF. Keys set to None are left as each game has them. Skips hidden games.");
+        var write = MakeCustomFoldersButton(Loc.GetString("Settings.HsfKeys.WriteAll"), primary: true,
+            Loc.GetString("Settings.HsfKeys.WriteAll.Tooltip"));
         write.HorizontalAlignment = HorizontalAlignment.Left;
         write.Click += async (s, e) =>
         {
@@ -99,7 +98,7 @@ public partial class SettingsHandler
         var keys = ViewModel.GlobalHsfKeybinds();
         string message;
         if (keys.Values.All(v => v <= 0))
-            message = "Pick a key first. None leaves each game's own HSF keys alone.";
+            message = Loc.GetString("Settings.HsfKeys.PickKeyFirst");
         else
         {
             var svc = App.Services.GetRequiredService<HsfService>();
@@ -111,13 +110,15 @@ public partial class SettingsHandler
             int count = await Task.Run(() => games.Count(path =>
                 File.Exists(HsfService.IniPath(path)) && svc.ApplyKeybinds(path, keys) > 0));
             CrashReporter.Log($"[SettingsHandler.WriteHsfKeysToAll] Keys written to {count} game(s)");
-            message = $"HSF keys written to {count} game{(count == 1 ? "" : "s")}. Games that are running pick them up straight away.";
+            message = count == 1
+                ? Loc.GetString("Settings.HsfKeys.WrittenOne", count)
+                : Loc.GetString("Settings.HsfKeys.WrittenMany", count);
         }
         await DialogService.ShowSafeAsync(new ContentDialog
         {
-            Title = "HSF",
+            Title = Loc.GetString("Extras.Hsf"),
             Content = message,
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         });

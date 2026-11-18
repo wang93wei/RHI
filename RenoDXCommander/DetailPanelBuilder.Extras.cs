@@ -148,7 +148,7 @@ public partial class DetailPanelBuilder
         CrashReporter.Log($"[BuildExtrasSection] Dlssg2030Row: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
 
         // ── Motion clarity: BFI Presenter (per game; DX add-on or Vulkan layer) ─
-        exBody.Children.Add(MakeExtrasSeparator("Motion Clarity"));
+        exBody.Children.Add(MakeExtrasSeparator(Loc.GetString("Extras.MotionClarity")));
         __t0 = __exSw.ElapsedMilliseconds;
         BuildBfiPresenterRow(card, exBody);
         CrashReporter.Log($"[BuildExtrasSection] BfiPresenterRow: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");

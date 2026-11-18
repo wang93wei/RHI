@@ -38,30 +38,31 @@ public partial class DetailPanelBuilder
         };
         panel.Children.Add(new TextBlock
         {
-            Text = "Presets",
+            Text = Loc.GetString("Dialog.Presets"),
             FontSize = 14,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
-        panel.Children.Add(MainWindow.MakeOsPresetLabel("Your presets (shared by all games)"));
+        panel.Children.Add(MainWindow.MakeOsPresetLabel(Loc.GetString("Dialog.OptiScaler.YourPresets")));
 
         var slots = RtxEncorePresetService.Load();
         int n = RtxEncorePresetService.SlotCount;
         static string SlotLabel(RtxEncorePreset? p, int i) =>
-            p == null ? $"Slot {i + 1} (empty)" : string.IsNullOrWhiteSpace(p.Name) ? $"Slot {i + 1}" : p.Name!;
+            p == null ? Loc.GetString("Dialog.OptiScaler.SlotEmpty", i + 1)
+            : string.IsNullOrWhiteSpace(p.Name) ? Loc.GetString("Dialog.OptiScaler.Slot", i + 1) : p.Name!;
 
         if (_rtxEncoreSelectedSlot < 0 || _rtxEncoreSelectedSlot >= n)
             _rtxEncoreSelectedSlot = Math.Max(0, Array.FindIndex(slots, s => s != null));
 
         var combo = CogDialog.MakeCombo(Enumerable.Range(0, n).Select(i => SlotLabel(slots[i], i)).ToList(), _rtxEncoreSelectedSlot);
         combo.HorizontalAlignment = HorizontalAlignment.Stretch;
-        ToolTipService.SetToolTip(combo, "Your own presets. Pick a slot, then Apply it to this game or save this game's settings into it.");
+        ToolTipService.SetToolTip(combo, Loc.GetString("Dialog.OptiScaler.UserSlotsTooltip"));
 
-        var applyBtn = CogDialog.StyledButton("Apply", CogButtonKind.Primary, compact: true);
-        var saveBtn  = CogDialog.StyledButton("Save current", CogButtonKind.Secondary, compact: true);
+        var applyBtn = CogDialog.StyledButton(Loc.GetString("Common.Apply"), CogButtonKind.Primary, compact: true);
+        var saveBtn  = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.SaveCurrent"), CogButtonKind.Secondary, compact: true);
         var moreBtn  = CogDialog.StyledButton("...", CogButtonKind.Secondary, compact: true);
-        ToolTipService.SetToolTip(moreBtn, "Rename or clear this slot");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(moreBtn, "Rename or clear this slot");
+        ToolTipService.SetToolTip(moreBtn, Loc.GetString("Dialog.OptiScaler.RenameOrClear"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(moreBtn, Loc.GetString("Dialog.OptiScaler.RenameOrClear"));
 
         int Selected() => Math.Clamp(combo.SelectedIndex, 0, n - 1);
 
@@ -73,11 +74,11 @@ public partial class DetailPanelBuilder
             applyBtn.Opacity = canApply ? 1.0 : CogDialog.DisabledOpacity;
             saveBtn.IsEnabled = canEdit;
             saveBtn.Opacity = canEdit ? 1.0 : CogDialog.DisabledOpacity;
-            saveBtn.Content = has ? "Overwrite" : "Save current";
-            ToolTipService.SetToolTip(applyBtn, !canEdit ? "Install RTX Encore to apply a preset."
-                : has ? "Apply this preset to this game" : "This slot is empty. Save this game's settings into it first.");
-            ToolTipService.SetToolTip(saveBtn, !canEdit ? "Install RTX Encore to save its settings."
-                : has ? "Replace this slot with this game's settings (keeps its name)" : "Save this game's settings into this slot");
+            saveBtn.Content = has ? Loc.GetString("Dialog.Overwrite") : Loc.GetString("Dialog.OptiScaler.SaveCurrent");
+            ToolTipService.SetToolTip(applyBtn, !canEdit ? Loc.GetString("Extras.RtxEncorePresets.InstallToApply")
+                : has ? Loc.GetString("Dialog.OptiScaler.ApplyPresetToGame") : Loc.GetString("Dialog.OptiScaler.SlotEmptyTooltip"));
+            ToolTipService.SetToolTip(saveBtn, !canEdit ? Loc.GetString("Extras.RtxEncorePresets.InstallToSave")
+                : has ? Loc.GetString("Dialog.OptiScaler.ReplaceSlotTooltip") : Loc.GetString("Dialog.OptiScaler.SaveSlotTooltip2"));
         }
         void Relabel()
         {
@@ -112,7 +113,7 @@ public partial class DetailPanelBuilder
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
                 CrashReporter.Log($"[RtxEncorePreset.Apply] Slot {i + 1} — {ex.Message}");
-                cog.SetError($"Couldn't apply the preset: {ex.Message}");
+                cog.SetError(Loc.GetString("Dialog.OptiScaler.ApplySlotFailed", ex.Message));
                 return;
             }
             reopen();
@@ -132,26 +133,26 @@ public partial class DetailPanelBuilder
                 slots[i] = preset;
                 if (!RtxEncorePresetService.Save(slots))
                 {
-                    cog.SetError("Couldn't save the preset. See the log for details.");
+                    cog.SetError(Loc.GetString("Extras.RtxEncorePresets.SaveFailedLog"));
                     return;
                 }
                 Relabel();
                 Refresh();
                 CrashReporter.Log($"[RtxEncorePreset.Save] '{gameName}' saved to slot {i + 1} ({values.Count} settings)");
-                cog.SetSuccess($"Saved this game's settings to {SlotLabel(slots[i], i)}. Use ... to name it.");
+                cog.SetSuccess(Loc.GetString("Extras.RtxEncorePresets.Saved", SlotLabel(slots[i], i)));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 CrashReporter.Log($"[RtxEncorePreset.Save] Slot {i + 1} — {ex.Message}");
-                cog.SetError($"Couldn't save the preset: {ex.Message}");
+                cog.SetError(Loc.GetString("Dialog.OptiScaler.SavePresetFailed", ex.Message));
             }
         };
 
         // "..." flyout: rename + clear
-        var nameBox = CogDialog.MakeTextBox("", "Preset name");
+        var nameBox = CogDialog.MakeTextBox("", Loc.GetString("Dialog.OptiScaler.PresetNamePlaceholder"));
         nameBox.MinWidth = 200;
-        var renameBtn = CogDialog.StyledButton("Rename", CogButtonKind.Primary, compact: true);
-        var clearBtn  = CogDialog.StyledButton("Clear slot", CogButtonKind.Danger, compact: true);
+        var renameBtn = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.Rename"), CogButtonKind.Primary, compact: true);
+        var clearBtn  = CogDialog.StyledButton(Loc.GetString("Dialog.OptiScaler.ClearSlot"), CogButtonKind.Danger, compact: true);
         var flyoutPanel = new StackPanel { Spacing = 8 };
         flyoutPanel.Children.Add(CogDialog.Inline(nameBox, renameBtn));
         flyoutPanel.Children.Add(clearBtn);
@@ -170,7 +171,7 @@ public partial class DetailPanelBuilder
             int i = Selected();
             if (slots[i] == null) return; // nothing saved here yet
             slots[i]!.Name = string.IsNullOrWhiteSpace(nameBox.Text) ? null : nameBox.Text.Trim();
-            if (!RtxEncorePresetService.Save(slots)) cog.SetError("Couldn't save the preset. See the log for details.");
+            if (!RtxEncorePresetService.Save(slots)) cog.SetError(Loc.GetString("Extras.RtxEncorePresets.SaveFailedLog"));
             Relabel();
             Refresh();
             flyout.Hide();
@@ -186,11 +187,11 @@ public partial class DetailPanelBuilder
         {
             int i = Selected();
             slots[i] = null;
-            if (!RtxEncorePresetService.Save(slots)) cog.SetError("Couldn't save the preset. See the log for details.");
+            if (!RtxEncorePresetService.Save(slots)) cog.SetError(Loc.GetString("Extras.RtxEncorePresets.SaveFailedLog"));
             Relabel();
             Refresh();
             flyout.Hide();
-            cog.SetSuccess($"Cleared slot {i + 1}.");
+            cog.SetSuccess(Loc.GetString("Dialog.OptiScaler.SlotCleared", i + 1));
         };
 
         Refresh();
@@ -198,7 +199,7 @@ public partial class DetailPanelBuilder
         row.ColumnSpacing = 6;
         panel.Children.Add(row);
         panel.Children.Add(MainWindow.MakeOsPresetCaption(
-            "Save stores every setting below. Apply writes them to this game's rtx-encore.jsonc; the Neural Rendering DLL and Smooth Motion's graphics API stay as they are for each game."));
+            Loc.GetString("Extras.RtxEncorePresets.Caption")));
         return border;
     }
 }

@@ -11,11 +11,12 @@ public partial class HsfService
     public sealed record Keybind(string IniKey, string Label, int Default, string Help);
 
     /// <summary>The keys RHI manages, in the order HSF's KEYBINDS section shows them.</summary>
-    public static readonly Keybind[] Keybinds =
+    /// <remarks>Built on each access so the localised labels follow a live language change.</remarks>
+    public static Keybind[] Keybinds => new[]
     {
-        new("FrameGenKey", "Frame gen on/off", 0, "Turns HSF's frame generation on and off in game. HSF has no key for it by default."),
-        new("MfgKey", "Multiplier", 0x76, "Cycles HSF's multiplier in game (2x up to what your card can do). HSF's default is F7."),
-        new("OsdKey", "Overlay on/off", 0, "Turns HSF's on-screen overlay off, and back to the look it had. HSF has no key for it by default."),
+        new Keybind("FrameGenKey", L("Settings.HsfKeys.Bind.FrameGen.Label"), 0, L("Settings.HsfKeys.Bind.FrameGen.Help")),
+        new Keybind("MfgKey", L("Settings.HsfKeys.Bind.Multiplier.Label"), 0x76, L("Settings.HsfKeys.Bind.Multiplier.Help")),
+        new Keybind("OsdKey", L("Settings.HsfKeys.Bind.Osd.Label"), 0, L("Settings.HsfKeys.Bind.Osd.Help")),
     };
 
     /// <summary>Every [HSF] key HSF uses as a hotkey, so one key never does two things (HSF clears the other one the same way).</summary>

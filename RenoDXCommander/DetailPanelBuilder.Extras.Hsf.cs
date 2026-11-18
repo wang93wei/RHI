@@ -326,9 +326,8 @@ public partial class DetailPanelBuilder
     /// </summary>
     private void AddHsfKeybindRows(CogDialog cog, string installPath, HsfService svc)
     {
-        cog.AddSection("Keys");
-        cog.AddIntro("HSF's keys in this game. Click a box and press a key; Backspace sets None. They're also in the KEYBINDS section "
-            + "of HSF's menu. Frame gen and overlay keys need an HSF version with KEYBINDS in its menu (newer than 0.9.8.6).");
+        cog.AddSection(Loc.GetString("Extras.Hsf.Keys.Section"));
+        cog.AddIntro(Loc.GetString("Extras.Hsf.Keys.Intro"));
         var boxes = new Dictionary<string, Grid>();
         // A key another HSF key had is set to None in HSF.ini: show that in its box too
         void RefreshOthers(string changed)
@@ -342,10 +341,10 @@ public partial class DetailPanelBuilder
             if (svc.WriteKeybind(installPath, bind, vk))
             {
                 RefreshOthers(bind.IniKey);
-                cog.SetSuccess($"{bind.Label} set to {SingleKeyBox.Text(vk)}.");
+                cog.SetSuccess(Loc.GetString("Extras.Hsf.Keys.Set", bind.Label, SingleKeyBox.Text(vk)));
                 return vk;
             }
-            cog.SetError("Couldn't change HSF.ini. Close the game and try again.");
+            cog.SetError(Loc.GetString("Extras.Hsf.Keys.SaveFailed"));
             return HsfService.ReadKeybind(installPath, bind);
         }
         var globals = _window.ViewModel.GlobalHsfKeybinds();
@@ -355,7 +354,7 @@ public partial class DetailPanelBuilder
             var keyBox = SingleKeyBox.Create(HsfService.ReadKeybind(installPath, b),
                 vk => Write(b, vk),
                 () => Write(b, globals.TryGetValue(b.IniKey, out var g) && g > 0 ? g : b.Default),
-                b.Help, "Back to the key from Settings › Components › HSF, or HSF's default");
+                b.Help, Loc.GetString("Extras.Hsf.Keys.BackToGlobal"));
             keyBox.MaxWidth = 260;
             keyBox.HorizontalAlignment = HorizontalAlignment.Left;
             boxes[b.IniKey] = keyBox;

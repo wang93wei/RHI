@@ -62,14 +62,14 @@ public sealed partial class MainWindow
         try
         {
             var menu = new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
-            menu.Items.Add(new MenuFlyoutItem { Text = $"{games.Count} games selected", IsEnabled = false });
+            menu.Items.Add(new MenuFlyoutItem { Text = Loc.GetString("Collections.Bulk.SelectedCount", games.Count), IsEnabled = false });
             menu.Items.Add(new MenuFlyoutSeparator());
 
             var keys = games.Select(MainViewModel.CollectionKeyOf).ToList();
             var names = ViewModel.CollectionNames;
 
             // Add to collection: one item per collection (adds every picked game), then New collection…
-            var add = new MenuFlyoutSubItem { Text = "Add to collection" };
+            var add = new MenuFlyoutSubItem { Text = Loc.GetString("Collections.Menu.AddToCollection") };
             foreach (var name in names)
             {
                 var members = ViewModel.CollectionStore.GetMembers(name);
@@ -77,19 +77,23 @@ public sealed partial class MainWindow
                 string n = name;
                 var item = new MenuFlyoutItem
                 {
-                    Text = missing == 0 ? $"{name} (all already in it)" : missing == games.Count ? name : $"{name} ({missing} not in it yet)",
+                    Text = missing == 0 ? Loc.GetString("Collections.Bulk.AllAlreadyIn", name)
+                        : missing == games.Count ? name
+                        : Loc.GetString("Collections.Bulk.NotInYet", name, missing),
                     IsEnabled = missing > 0,
                 };
                 item.Click += (s, e) =>
                 {
                     int changed = ViewModel.SetCollectionMembership(n, keys, true);
-                    ShowStatusBarMessage($"Added {changed} {(changed == 1 ? "game" : "games")} to {n}.", TimeSpan.FromSeconds(5));
+                    ShowStatusBarMessage(changed == 1
+                        ? Loc.GetString("Collections.Status.AddedOne", changed, n)
+                        : Loc.GetString("Collections.Status.AddedMany", changed, n), TimeSpan.FromSeconds(5));
                     UpdateCollectionEmptyText();
                 };
                 add.Items.Add(item);
             }
             if (names.Count > 0) add.Items.Add(new MenuFlyoutSeparator());
-            var create = new MenuFlyoutItem { Text = "New collection…" };
+            var create = new MenuFlyoutItem { Text = Loc.GetString("Collections.Menu.New") };
             create.Click += async (s, e) =>
             {
                 try { await NewCollectionAsync(anchor.XamlRoot ?? Content?.XamlRoot, games); }
@@ -99,25 +103,27 @@ public sealed partial class MainWindow
             menu.Items.Add(add);
 
             // Remove from collection: only collections that hold at least one of them
-            var remove = new MenuFlyoutSubItem { Text = "Remove from collection" };
+            var remove = new MenuFlyoutSubItem { Text = Loc.GetString("Collections.Bulk.RemoveFromCollection") };
             foreach (var name in names)
             {
                 var members = ViewModel.CollectionStore.GetMembers(name);
                 int inIt = members == null ? 0 : keys.Count(members.Contains);
                 if (inIt == 0) continue;
                 string n = name;
-                var item = new MenuFlyoutItem { Text = inIt == games.Count ? name : $"{name} ({inIt} in it)" };
+                var item = new MenuFlyoutItem { Text = inIt == games.Count ? name : Loc.GetString("Collections.Bulk.InIt", name, inIt) };
                 item.Click += (s, e) =>
                 {
                     int changed = ViewModel.SetCollectionMembership(n, keys, false);
-                    ShowStatusBarMessage($"Removed {changed} {(changed == 1 ? "game" : "games")} from {n}.", TimeSpan.FromSeconds(5));
+                    ShowStatusBarMessage(changed == 1
+                        ? Loc.GetString("Collections.Status.RemovedOne", changed, n)
+                        : Loc.GetString("Collections.Status.RemovedMany", changed, n), TimeSpan.FromSeconds(5));
                     UpdateCollectionEmptyText();
                 };
                 remove.Items.Add(item);
             }
             if (remove.Items.Count > 0) menu.Items.Add(remove);
 
-            var manage = new MenuFlyoutItem { Text = "Manage collections…" };
+            var manage = new MenuFlyoutItem { Text = Loc.GetString("Collections.Menu.Manage") };
             manage.Click += async (s, e) =>
             {
                 try { await ShowCollectionManagerAsync(anchor.XamlRoot ?? Content?.XamlRoot, null); }
@@ -126,7 +132,7 @@ public sealed partial class MainWindow
             menu.Items.Add(manage);
 
             menu.Items.Add(new MenuFlyoutSeparator());
-            var clear = new MenuFlyoutItem { Text = "Clear selection" };
+            var clear = new MenuFlyoutItem { Text = Loc.GetString("Collections.Bulk.ClearSelection") };
             clear.Click += (s, e) => ClearMultiSelection();
             menu.Items.Add(clear);
 

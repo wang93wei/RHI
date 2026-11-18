@@ -53,11 +53,10 @@ public partial class SettingsHandler
             });
             body.Children.Add(head);
 
-            body.Children.Add(new TextBlock { Text = "Custom game folders", Style = FindStyle("SettingsHeadStyle") });
+            body.Children.Add(new TextBlock { Text = Loc.GetString("CustomFolders.Section.Folders"), Style = FindStyle("SettingsHeadStyle") });
             body.Children.Add(new TextBlock
             {
-                Text = "Folders RHI checks for games from outside the supported stores, such as DRM-free downloads. "
-                     + "Each folder inside one is treated as a game. Games found are offered to you to add, never added on their own.",
+                Text = Loc.GetString("CustomFolders.Section.Folders.Help"),
                 Style = FindStyle("SettingsHelpStyle"),
                 TextWrapping = TextWrapping.Wrap,
             });
@@ -117,10 +116,10 @@ public partial class SettingsHandler
             body.Children.Add(_customFoldersStatus);
 
             // Removed games (button added by EnsureRemovedGamesButton)
-            body.Children.Add(new TextBlock { Text = "Removed games", Style = FindStyle("SettingsHeadStyle"), Margin = new Thickness(0, 6, 0, 0) });
+            body.Children.Add(new TextBlock { Text = Loc.GetString("CustomFolders.Section.Removed"), Style = FindStyle("SettingsHeadStyle"), Margin = new Thickness(0, 6, 0, 0) });
             body.Children.Add(new TextBlock
             {
-                Text = "Games you took out with Remove from RHI in a game's Management section. Open the list to put one back.",
+                Text = Loc.GetString("CustomFolders.Section.Removed.Help"),
                 Style = FindStyle("SettingsHelpStyle"),
                 TextWrapping = TextWrapping.Wrap,
             });

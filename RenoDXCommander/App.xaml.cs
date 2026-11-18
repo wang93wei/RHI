@@ -317,7 +317,7 @@ public partial class App : Application
         {
             // Running the task would start a missing or different exe and this copy would exit: nothing would open
             CrashReporter.Log($"[App.OnLaunched] Admin Mode task starts '{adminTask.Command ?? "(unreadable)"}', not '{Environment.ProcessPath}' — starting without admin rights");
-            StartupNotice = "Admin Mode isn't set up for this copy of RHI (it was set up for another location). Turn Admin Mode off and on again in Settings › General.";
+            StartupNotice = Services.GetRequiredService<ILocalizationService>().GetString("Startup.AdminModeTaskMismatch");
         }
         else if (adminTask.Registered)
         {
@@ -358,7 +358,7 @@ public partial class App : Application
                     return;
                 }
                 CrashReporter.Log("[App.OnLaunched] The Admin Mode task didn't start RHI within 8 s — continuing without admin rights");
-                StartupNotice = "Admin Mode couldn't start RHI as administrator, so it's running without admin rights. Turn Admin Mode off and on again in Settings › General.";
+                StartupNotice = Services.GetRequiredService<ILocalizationService>().GetString("Startup.AdminModeElevationFailed");
                 // Clear the hand-off files the elevated copy would have read
                 foreach (var f in new[] { "rhi_start_minimized", "rhi_pending_launch" })
                 {

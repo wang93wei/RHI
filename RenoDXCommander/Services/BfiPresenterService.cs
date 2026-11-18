@@ -20,6 +20,9 @@ public enum BfiRoute { Dx, Vulkan }
 
 public partial class BfiPresenterService
 {
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     private const string LatestApiUrl = "https://api.github.com/repos/artzox/BFI-Presenter/releases/latest";
     public  const string RepoUrl      = "https://github.com/artzox/BFI-Presenter";
     public  const string ReleasesUrl  = RepoUrl + "/releases";
@@ -213,8 +216,8 @@ public partial class BfiPresenterService
                     App.Services.GetRequiredService<IUpdateLogService>().Record(new Models.UpdateLogEntry
                     {
                         Timestamp     = DateTime.UtcNow,
-                        Category      = "BFI Presenter",
-                        ComponentName = route == BfiRoute.Dx ? "BFI Presenter (DX add-on)" : "BFI Presenter (Vulkan layer)",
+                        Category      = L("Extras.BfiPresenter"),
+                        ComponentName = route == BfiRoute.Dx ? L("Extras.Bfi.ComponentName.Dx") : L("Extras.Bfi.ComponentName.Vulkan"),
                         OldVersion    = previous,
                         NewVersion    = version,
                         SizeBytes     = new FileInfo(zipPath).Length,

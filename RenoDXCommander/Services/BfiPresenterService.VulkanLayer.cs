@@ -69,7 +69,7 @@ public partial class BfiPresenterService
     /// </summary>
     public string? InstallOrUpdateLayer()
     {
-        if (!IsStagingReady(BfiRoute.Vulkan)) return "The Vulkan layer couldn't be downloaded.";
+        if (!IsStagingReady(BfiRoute.Vulkan)) return L("Extras.Bfi.Error.LayerDownload");
         try
         {
             Directory.CreateDirectory(LayerDir);
@@ -84,11 +84,11 @@ public partial class BfiPresenterService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _crashReporter.Log($"[BfiPresenterService.InstallOrUpdateLayer] Copy failed — {ex.Message}");
-            return "The Vulkan layer's files are in use. Close any running Vulkan game and try again.";
+            return L("Extras.Bfi.Error.LayerFilesInUse");
         }
 
         if (!RegisterLast(Registry.CurrentUser, force: true))
-            return "Couldn't register the Vulkan layer for your Windows user.";
+            return L("Extras.Bfi.Error.LayerRegisterUser");
         if (VulkanLayerService.IsRunningAsAdmin())
             RegisterLast(Registry.LocalMachine, force: true); // games run as administrator need it there too
         _crashReporter.Log($"[BfiPresenterService.InstallOrUpdateLayer] Layer {StagedVersion(BfiRoute.Vulkan)} in '{LayerDir}' (all users: {IsLayerRegisteredForAllUsers})");
@@ -219,7 +219,7 @@ public partial class BfiPresenterService
     {
         RemoveValues(Registry.CurrentUser);
         if (IsLayerRegisteredForAllUsers && !await SetAllUsersAsync(remove: true).ConfigureAwait(false))
-            return "The layer is still registered for all users: that needs administrator rights.";
+            return L("Extras.Bfi.Error.LayerAllUsersRights");
         try
         {
             foreach (var f in new[] { LayerDll64, LayerDll32, LayerJson64, LayerJson32 })
@@ -231,7 +231,7 @@ public partial class BfiPresenterService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _crashReporter.Log($"[BfiPresenterService.UninstallLayer] {ex.Message}");
-            return "The layer was unregistered, but its files are in use. Close any running Vulkan game.";
+            return L("Extras.Bfi.Error.LayerUnregisterInUse");
         }
         _crashReporter.Log("[BfiPresenterService.UninstallLayer] Removed");
         return null;

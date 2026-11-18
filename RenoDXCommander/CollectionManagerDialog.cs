@@ -9,6 +9,7 @@
 // inline editor's button while it's open, is tagged "PadStart". Buttons whose look changes are
 // replaced, not restyled (WinUI reads hover colours once), and get focus back through _focus.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -21,6 +22,8 @@ namespace RenoDXCommander;
 
 internal sealed class CollectionManagerDialog
 {
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+
     private const int PageSize = 150;
     private const string PadStartTag = "PadStart";
 
@@ -42,7 +45,7 @@ internal sealed class CollectionManagerDialog
     // Left
     private readonly StackPanel _listPanel = new() { Spacing = 4 };
     private readonly StackPanel _editPanel = new() { Spacing = 6, Visibility = Visibility.Collapsed };
-    private readonly TextBox _nameBox = new() { MaxLength = GameCollectionStore.MaxNameLength, PlaceholderText = "e.g. Racing" };
+    private readonly TextBox _nameBox = new() { MaxLength = GameCollectionStore.MaxNameLength, PlaceholderText = Loc.GetString("Collections.Dialog.NamePlaceholder") };
     private readonly TextBlock _nameError = MakeText(12, "#FF9AA8");
     private Button _saveBtn = new();
     private readonly StackPanel _confirmPanel = new() { Spacing = 6, Visibility = Visibility.Collapsed };
@@ -53,7 +56,7 @@ internal sealed class CollectionManagerDialog
     // Right
     private readonly TextBlock _title = new() { FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock _subtitle = MakeText(12, TabsTheme.TextMuted);
-    private readonly TextBox _search = new() { PlaceholderText = "Search games" };
+    private readonly TextBox _search = new() { PlaceholderText = Loc.GetString("Collections.Manager.SearchPlaceholder") };
     private readonly Grid _segmentHost = new() { ColumnSpacing = 4 };
     private readonly StackPanel _gamesPanel = new() { Spacing = 2 };
     private readonly ScrollViewer _gamesScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -89,9 +92,9 @@ internal sealed class CollectionManagerDialog
 
         _dialog = new ContentDialog
         {
-            Title = "Manage collections",
+            Title = Loc.GetString("Collections.Manager.Title"),
             Content = root,
-            CloseButtonText = "Close",
+            CloseButtonText = Loc.GetString("Dialog.Close"),
             DefaultButton = ContentDialogButton.None,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -132,7 +135,7 @@ internal sealed class CollectionManagerDialog
         left.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var heading = MakeText(12, TabsTheme.TextMuted);
-        heading.Text = "COLLECTIONS";
+        heading.Text = Loc.GetString("Collections.Manager.Heading");
         heading.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
         left.Children.Add(heading);
 
@@ -192,7 +195,7 @@ internal sealed class CollectionManagerDialog
         Grid.SetRow(footer, 3);
         _rightContent.Children.Add(footer);
 
-        _noCollections.Text = "You don't have any collections yet. Click New to make one, then tick the games that belong in it. A game can be in as many collections as you like.";
+        _noCollections.Text = Loc.GetString("Collections.Manager.NoCollections");
         _noCollections.VerticalAlignment = VerticalAlignment.Center;
 
         right.Children.Add(_rightContent);
@@ -234,7 +237,9 @@ internal sealed class CollectionManagerDialog
                 Tag = on && _editing == null && !_confirmingDelete ? PadStartTag : null,
             };
             TabsTheme.Apply(btn, on ? RowSelectedLook : RowLook, height: 34, fontSize: 13);
-            ToolTipService.SetToolTip(btn, $"{name}: {count} {(count == 1 ? "game" : "games")}");
+            ToolTipService.SetToolTip(btn, count == 1
+                ? Loc.GetString("Collections.Manager.ItemTooltipOne", name, count)
+                : Loc.GetString("Collections.Manager.ItemTooltipMany", name, count));
             string n = name;
             btn.Click += (s, e) => Select(n);
             _listPanel.Children.Add(btn);
@@ -249,19 +254,19 @@ internal sealed class CollectionManagerDialog
         bool has = _selected != null;
         int index = has ? _vm.CollectionStore.IndexOf(_selected!) : -1;
         int total = _vm.CollectionNames.Count;
-        var newBtn = MakeButton("New", TabsTheme.BlueButton, () => StartEdit(""));
-        ToolTipService.SetToolTip(newBtn, "Make a new collection.");
-        _renameBtn = MakeButton("Rename", TabsTheme.IconButton, () => { if (_selected != null) StartEdit(_selected); });
+        var newBtn = MakeButton(Loc.GetString("Dialog.New"), TabsTheme.BlueButton, () => StartEdit(""));
+        ToolTipService.SetToolTip(newBtn, Loc.GetString("Collections.Manager.NewButtonTooltip"));
+        _renameBtn = MakeButton(Loc.GetString("Collections.Dialog.Rename"), TabsTheme.IconButton, () => { if (_selected != null) StartEdit(_selected); });
         _renameBtn.IsEnabled = has;
-        _upBtn = MakeButton("Move up", TabsTheme.IconButton, () => Move(-1));
+        _upBtn = MakeButton(Loc.GetString("Collections.Manager.MoveUp"), TabsTheme.IconButton, () => Move(-1));
         _upBtn.IsEnabled = has && index > 0;
-        ToolTipService.SetToolTip(_upBtn, "Move this collection earlier in the collection chips.");
-        _downBtn = MakeButton("Move down", TabsTheme.IconButton, () => Move(1));
+        ToolTipService.SetToolTip(_upBtn, Loc.GetString("Collections.Manager.MoveUpTooltip"));
+        _downBtn = MakeButton(Loc.GetString("Collections.Manager.MoveDown"), TabsTheme.IconButton, () => Move(1));
         _downBtn.IsEnabled = has && index >= 0 && index < total - 1;
-        ToolTipService.SetToolTip(_downBtn, "Move this collection later in the collection chips.");
-        _deleteBtn = MakeButton("Delete", TabsTheme.DangerButton, StartDelete);
+        ToolTipService.SetToolTip(_downBtn, Loc.GetString("Collections.Manager.MoveDownTooltip"));
+        _deleteBtn = MakeButton(Loc.GetString("Dialog.Delete"), TabsTheme.DangerButton, StartDelete);
         _deleteBtn.IsEnabled = has;
-        ToolTipService.SetToolTip(_deleteBtn, "Delete this collection. The games stay in your library.");
+        ToolTipService.SetToolTip(_deleteBtn, Loc.GetString("Collections.Manager.DeleteTooltip"));
         _actions.Children.Add(newBtn);
         _actions.Children.Add(_renameBtn);
         _actions.Children.Add(_upBtn);
@@ -285,7 +290,9 @@ internal sealed class CollectionManagerDialog
     {
         if (_selected == null) return;
         int count = _vm.CollectionStore.GetMembers(_selected)?.Count ?? 0;
-        _subtitle.Text = $"{count} {(count == 1 ? "game" : "games")}. Tick a game to add it, untick to take it out. Hidden games stay out of the game list.";
+        _subtitle.Text = count == 1
+            ? Loc.GetString("Collections.Manager.SubtitleOne", count)
+            : Loc.GetString("Collections.Manager.SubtitleMany", count);
     }
 
     /// <summary>In collection / All games switch (rebuilt when it changes; refocuses the pressed side).</summary>
@@ -295,7 +302,11 @@ internal sealed class CollectionManagerDialog
         _segmentHost.ColumnDefinitions.Clear();
         Button? selectedBtn = null;
         int col = 0;
-        foreach (var (text, all) in new[] { ("In collection", false), ("All games", true) })
+        foreach (var (text, all) in new[]
+                 {
+                     (Loc.GetString("Collections.Manager.InCollection"), false),
+                     (Loc.GetString("Collections.Manager.AllGames"), true),
+                 })
         {
             bool on = all == _showAll;
             var b = new Button { Content = text, Padding = new Thickness(12, 0, 12, 0) };
@@ -309,7 +320,9 @@ internal sealed class CollectionManagerDialog
                 RefreshSegment(true);
                 RefreshGames();
             };
-            ToolTipService.SetToolTip(b, all ? "Every game in your library, ticked when it's in this collection." : "Only the games in this collection.");
+            ToolTipService.SetToolTip(b, all
+                ? Loc.GetString("Collections.Manager.AllGamesTooltip")
+                : Loc.GetString("Collections.Manager.InCollectionTooltip"));
             _segmentHost.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             Grid.SetColumn(b, col++);
             _segmentHost.Children.Add(b);
@@ -337,7 +350,7 @@ internal sealed class CollectionManagerDialog
             if (_matches.Count > _limit)
             {
                 int left = _matches.Count - _limit;
-                var more = MakeButton($"Show more ({left} more)", TabsTheme.IconButton, () =>
+                var more = MakeButton(Loc.GetString("Collections.Manager.ShowMore", left), TabsTheme.IconButton, () =>
                 {
                     int firstNew = _limit;
                     _limit += PageSize;
@@ -351,9 +364,9 @@ internal sealed class CollectionManagerDialog
             {
                 var empty = MakeText(13, TabsTheme.TextMuted);
                 empty.Margin = new Thickness(0, 8, 0, 0);
-                empty.Text = query.Length > 0 ? $"No games match \"{query}\"."
-                    : _showAll ? "No games detected yet."
-                    : "No games in this collection yet. Switch to All games and tick the ones you want.";
+                empty.Text = query.Length > 0 ? Loc.GetString("Collections.Manager.NoMatch", query)
+                    : _showAll ? Loc.GetString("Collections.Manager.NoGamesDetected")
+                    : Loc.GetString("Collections.Manager.NoGamesInCollection");
                 _gamesPanel.Children.Add(empty);
             }
             RefreshBulkActions();
@@ -396,8 +409,8 @@ internal sealed class CollectionManagerDialog
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.Children.Add(new TextBlock { Text = entry.Name, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
-        string note = entry.Card == null ? "not detected"
-            : entry.Card.IsHidden ? "hidden"
+        string note = entry.Card == null ? Loc.GetString("Collections.Manager.NotDetected")
+            : entry.Card.IsHidden ? Loc.GetString("Collections.Manager.Hidden")
             : "";
         var store = new TextBlock
         {
@@ -419,7 +432,7 @@ internal sealed class CollectionManagerDialog
             Padding = new Thickness(8, 0, 0, 0),
         };
         if (entry.Card == null)
-            ToolTipService.SetToolTip(box, $"{entry.Name} isn't detected right now. It stays in the collection until you untick it.");
+            ToolTipService.SetToolTip(box, Loc.GetString("Collections.Manager.NotDetectedTooltip", entry.Name));
         // Handlers after IsChecked is set, so building the row changes nothing
         box.Checked += (s, e) => SetMember(entry, true);
         box.Unchecked += (s, e) => SetMember(entry, false);
@@ -437,13 +450,13 @@ internal sealed class CollectionManagerDialog
 
         if (_showAll)
         {
-            var add = MakeButton(searching ? $"Add all matching ({toAdd})" : $"Add all ({toAdd})", TabsTheme.BlueButton, () => Bulk(true));
+            var add = MakeButton(searching ? Loc.GetString("Collections.Manager.AddAllMatching", toAdd) : Loc.GetString("Collections.Manager.AddAll", toAdd), TabsTheme.BlueButton, () => Bulk(true));
             add.IsEnabled = toAdd > 0;
-            ToolTipService.SetToolTip(add, "Add every game in the list below (all matches, not only the ones shown) to this collection.");
+            ToolTipService.SetToolTip(add, Loc.GetString("Collections.Manager.AddAllTooltip"));
             _bulkActions.Children.Add(add);
         }
-        string removeText = _confirmBulkRemove ? $"Click again to remove {toRemove} games"
-            : searching ? $"Remove all matching ({toRemove})" : $"Remove all ({toRemove})";
+        string removeText = _confirmBulkRemove ? Loc.GetString("Collections.Manager.RemoveAllConfirm", toRemove)
+            : searching ? Loc.GetString("Collections.Manager.RemoveAllMatching", toRemove) : Loc.GetString("Collections.Manager.RemoveAll", toRemove);
         var remove = MakeButton(removeText, TabsTheme.DangerButton, () =>
         {
             // Many games at once: ask with a second click (the games themselves are never touched)
@@ -457,7 +470,7 @@ internal sealed class CollectionManagerDialog
             Bulk(false);
         });
         remove.IsEnabled = toRemove > 0;
-        ToolTipService.SetToolTip(remove, "Take every game in the list below out of this collection. The games stay in your library.");
+        ToolTipService.SetToolTip(remove, Loc.GetString("Collections.Manager.RemoveAllTooltip"));
         _bulkActions.Children.Add(remove);
     }
 
@@ -481,7 +494,9 @@ internal sealed class CollectionManagerDialog
         try
         {
             if (_vm.SetCollectionMembership(_selected, new[] { entry.Key }, member) == 0) return;
-            _status.Text = member ? $"Added {entry.Name} to {_selected}." : $"Removed {entry.Name} from {_selected}.";
+            _status.Text = member
+                ? Loc.GetString("Collections.Manager.StatusAdded", entry.Name, _selected)
+                : Loc.GetString("Collections.Manager.StatusRemoved", entry.Name, _selected);
             _confirmBulkRemove = false;
             AfterMembershipChange();
         }
@@ -499,8 +514,12 @@ internal sealed class CollectionManagerDialog
             var keys = _matches.Select(e => e.Key).ToList();
             int changed = _vm.SetCollectionMembership(_selected, keys, member);
             _status.Text = member
-                ? $"Added {changed} {(changed == 1 ? "game" : "games")} to {_selected}."
-                : $"Removed {changed} {(changed == 1 ? "game" : "games")} from {_selected}.";
+                ? (changed == 1
+                    ? Loc.GetString("Collections.Status.AddedOne", changed, _selected)
+                    : Loc.GetString("Collections.Status.AddedMany", changed, _selected))
+                : (changed == 1
+                    ? Loc.GetString("Collections.Status.RemovedOne", changed, _selected)
+                    : Loc.GetString("Collections.Status.RemovedMany", changed, _selected));
             _confirmBulkRemove = false;
             // Keep the rows where they are (unticked ones stay listed until the view changes)
             // The store has already changed, so the rows' own handlers find nothing to do
@@ -530,7 +549,9 @@ internal sealed class CollectionManagerDialog
             if (_listPanel.Children[i] is not Button { Content: Grid row } btn || row.Children.Count < 2 || row.Children[1] is not TextBlock count) continue;
             int n = _vm.CollectionStore.GetMembers(names[i])?.Count ?? 0;
             count.Text = n.ToString();
-            ToolTipService.SetToolTip(btn, $"{names[i]}: {n} {(n == 1 ? "game" : "games")}");
+            ToolTipService.SetToolTip(btn, n == 1
+                ? Loc.GetString("Collections.Manager.ItemTooltipOne", names[i], n)
+                : Loc.GetString("Collections.Manager.ItemTooltipMany", names[i], n));
         }
     }
 
@@ -553,15 +574,15 @@ internal sealed class CollectionManagerDialog
         bool isNew = renaming.Length == 0;
         _editPanel.Children.Clear();
         var label = MakeText(12, TabsTheme.TextSecondary);
-        label.Text = isNew ? "Name for the new collection" : $"New name for {renaming}";
+        label.Text = isNew ? Loc.GetString("Collections.Manager.NewNameLabel") : Loc.GetString("Collections.Manager.RenameNameLabel", renaming);
         _editPanel.Children.Add(label);
         _nameBox.Text = isNew ? SuggestName() : renaming;
         _editPanel.Children.Add(_nameBox);
         _editPanel.Children.Add(_nameError);
         var buttons = new WrapPanel { HorizontalSpacing = 6, VerticalSpacing = 6 };
-        _saveBtn = MakeButton(isNew ? "Create" : "Save", TabsTheme.BlueButton, SaveName);
+        _saveBtn = MakeButton(isNew ? Loc.GetString("Collections.Dialog.Create") : Loc.GetString("Dialog.Save"), TabsTheme.BlueButton, SaveName);
         _saveBtn.Tag = PadStartTag;
-        var cancel = MakeButton("Cancel", TabsTheme.IconButton, () => { CloseEditors(); RefreshList(focusSelected: true); });
+        var cancel = MakeButton(Loc.GetString("Dialog.Cancel"), TabsTheme.IconButton, () => { CloseEditors(); RefreshList(focusSelected: true); });
         buttons.Children.Add(_saveBtn);
         buttons.Children.Add(cancel);
         _editPanel.Children.Add(buttons);
@@ -618,14 +639,14 @@ internal sealed class CollectionManagerDialog
                 if (error != null) { _nameError.Text = error; _nameError.Visibility = Visibility.Visible; return; }
                 _selected = created;
                 _showAll = true; // a new collection is empty: show the library to tick games in
-                _status.Text = $"Created {created}. Tick the games that belong in it.";
+                _status.Text = Loc.GetString("Collections.Manager.StatusCreated", created);
             }
             else
             {
                 var error = _vm.RenameCollection(_editing, _nameBox.Text);
                 if (error != null) { _nameError.Text = error; _nameError.Visibility = Visibility.Visible; return; }
                 _selected = _vm.CollectionStore.GetName(_nameBox.Text.Trim()) ?? _selected;
-                _status.Text = $"Renamed to {_selected}.";
+                _status.Text = Loc.GetString("Collections.Manager.StatusRenamed", _selected);
             }
             CloseEditors();
             _limit = PageSize;
@@ -648,11 +669,14 @@ internal sealed class CollectionManagerDialog
         _confirmingDelete = true;
         int count = _vm.CollectionStore.GetMembers(_selected)?.Count ?? 0;
         _confirmPanel.Children.Clear();
-        _confirmText.Text = $"Delete \"{_selected}\"{(count > 0 ? $" ({count} {(count == 1 ? "game" : "games")})" : "")}? Only the collection is removed. The games stay in your library with their mods and settings.";
+        string countSuffix = count > 0
+            ? Loc.GetString(count == 1 ? "Collections.Dialog.DeleteCountOne" : "Collections.Dialog.DeleteCountMany", count)
+            : "";
+        _confirmText.Text = Loc.GetString("Collections.Dialog.DeleteContent", _selected, countSuffix);
         _confirmPanel.Children.Add(_confirmText);
         var buttons = new WrapPanel { HorizontalSpacing = 6, VerticalSpacing = 6 };
-        var delete = MakeButton("Delete", TabsTheme.DangerButton, ConfirmDelete);
-        var cancel = MakeButton("Cancel", TabsTheme.IconButton, () => { CloseEditors(); RefreshList(focusSelected: true); });
+        var delete = MakeButton(Loc.GetString("Dialog.Delete"), TabsTheme.DangerButton, ConfirmDelete);
+        var cancel = MakeButton(Loc.GetString("Dialog.Cancel"), TabsTheme.IconButton, () => { CloseEditors(); RefreshList(focusSelected: true); });
         cancel.Tag = PadStartTag; // Cancel is the safe default
         buttons.Children.Add(delete);
         buttons.Children.Add(cancel);
@@ -674,7 +698,7 @@ internal sealed class CollectionManagerDialog
             var left = _vm.CollectionNames;
             _selected = left.Count == 0 ? null : left[Math.Clamp(index, 0, left.Count - 1)];
             _showAll = _selected != null && (_vm.CollectionStore.GetMembers(_selected)?.Count ?? 0) == 0;
-            _status.Text = $"Deleted {deleted}.";
+            _status.Text = Loc.GetString("Collections.Manager.StatusDeleted", deleted);
             CloseEditors();
             _limit = PageSize;
             RefreshList(focusSelected: true);
