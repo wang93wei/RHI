@@ -6,10 +6,13 @@ namespace RenoDXCommander;
 /// </summary>
 public static class HotkeyManager
 {
-    // Safe in unit tests / static contexts: with no DI container the key itself is returned.
-    private static string L(string key, params object[] args)
-        => App.Services?.GetService(typeof(RenoDXCommander.Services.ILocalizationService)) is RenoDXCommander.Services.ILocalizationService loc
-            ? loc.GetString(key, args) : key;
+    // Safe in unit tests / static contexts: with no DI container (or no translation) the English fallback is used.
+    private static string L(string key, string fallback, params object[] args)
+    {
+        var text = App.Services?.GetService(typeof(RenoDXCommander.Services.ILocalizationService))
+            is RenoDXCommander.Services.ILocalizationService loc ? loc.GetString(key, args) : null;
+        return string.IsNullOrEmpty(text) || text == key ? fallback : text;
+    }
 
     // ── Hotkey helper methods ──────────────────────────────────────────
 
@@ -77,13 +80,13 @@ public static class HotkeyManager
     /// </summary>
     public static string FormatHotkeyDisplay(int vk, bool shift, bool ctrl, bool alt)
     {
-        if (vk == 0) return L("Option.None");
+        if (vk == 0) return L("Option.None", "None");
 
         var parts = new List<string>();
         if (ctrl) parts.Add("Ctrl");
         if (shift) parts.Add("Shift");
         if (alt) parts.Add("Alt");
-        parts.Add(VkNames.TryGetValue(vk, out var name) ? name : L("Hotkey.UnknownKey", vk));
+        parts.Add(VkNames.TryGetValue(vk, out var name) ? name : L("Hotkey.UnknownKey", $"Key {vk}", vk));
         return string.Join(" + ", parts);
     }
 
