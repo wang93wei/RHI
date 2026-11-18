@@ -84,6 +84,7 @@ public partial class DetailPanelBuilder
         if (!string.IsNullOrEmpty(vm.GetDeInstalledAs(gn, gs)))                            exSummaryEntries.Add((Loc.GetString("Extras.DlssEnabler"), LocOpt.T("On")));
         if (card.IsDxvkInstalled)                                                           exSummaryEntries.Add((Loc.GetString("Detail.DXVK"), card.DxvkInstalledVersion ?? LocOpt.T("On")));
         if (dgvInstalled)                                                                   exSummaryEntries.Add((Loc.GetString("Extras.DgVoodoo2"), vm.GetDgVoodooVersion(gn, gs) ?? _window.ViewModel.Manifest?.DgVoodooVersions?.Keys.FirstOrDefault()));
+        if (vm.GetBfiPresenterInstalledAs(gn, gs) != null)                                  exSummaryEntries.Add((Loc.GetString("Extras.BfiPresenter"), LocOpt.T("On")));
         var exSummary = DetailPanelBuilder.MakeSectionSummaryInlines(exSummaryEntries, Loc.GetString("Extras.Summary.Tooltip"));
         if (exSummary != null)
         {
@@ -146,6 +147,12 @@ public partial class DetailPanelBuilder
         BuildDlssg2030Row(card, exBody);
         CrashReporter.Log($"[BuildExtrasSection] Dlssg2030Row: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
 
+        // ── Motion clarity: BFI Presenter (per game; DX add-on or Vulkan layer) ─
+        exBody.Children.Add(MakeExtrasSeparator("Motion Clarity"));
+        __t0 = __exSw.ElapsedMilliseconds;
+        BuildBfiPresenterRow(card, exBody);
+        CrashReporter.Log($"[BuildExtrasSection] BfiPresenterRow: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
+
         // ── API Upgrades sub-header + DXVK row ────────────────────────────────
         if (card.IsDxvkToggleVisible)
         {
@@ -185,7 +192,9 @@ public partial class DetailPanelBuilder
 
         if (propertyName is "IsOsInstalled" or "OsActionLabel" or "OsStatusText"
             or "OsStatusColor" or "OsDeleteVisibility" or "OsRowVisibility"
-            or "OsInstallEnabled" or "OsBtnBackground" or "OsInstalledFile" or "Is32Bit")
+            or "OsInstallEnabled" or "OsBtnBackground" or "OsInstalledFile" or "Is32Bit"
+            // Installed state the Extras conflict checks read (MFG Unlock can be added from the addon picker)
+            or "MfgAdaInstalled" or "Rtx40MfgInstalled")
         {
             RequestExtrasRebuild(card);
         }
@@ -396,6 +405,8 @@ public partial class DetailPanelBuilder
         // No "◄ see Info" marker in Tabs / Spotlight: it crowds the narrower button, and the Info button is beside it
         installBtn.Content = WithInfoArrow(osLabel, !Layout.IsTabs && HasRealInfoContent(card, AddonType.OptiScaler), card.OsStatus == GameStatus.UpdateAvailable, installBtn);
         installBtn.Click += (s, e) => _window.InstallOsButton_Click(s, e);
+        if (!osGreyed && ExtraBlocker(card, ExtraKind.OptiScaler) is { } osBlocker)
+            ApplyExtraBlock(installBtn, label, ExtraKind.OptiScaler, osBlocker);
         Grid.SetColumn(installBtn, 3);
         row.Children.Add(installBtn);
 

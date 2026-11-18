@@ -39,7 +39,7 @@ using RenoDXCommander.Models;
 
 namespace RenoDXCommander.Services;
 
-public class HsfService
+public partial class HsfService
 {
     // User-visible text goes through the catalog; without DI (unit tests) the key itself is returned.
     private static string L(string key, params object[] args)

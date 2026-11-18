@@ -203,7 +203,8 @@
     "Trine 5: A Clockwork Conspiracy": "Trine 5",
     "L.A. Noire": "L.A. Noire",
     "Sekiro™: Shadows Die Twice": "Sekiro",
-    "Sekiro™: Shadows Die Twice - GOTY Edition": "Sekiro"
+    "Sekiro™: Shadows Die Twice - GOTY Edition": "Sekiro",
+    "NieR Replicant ver.1.22474487139...": "NieR Replicant"
   },
   "installPathOverrides": {
     "Warhammer 40,000: Space Marine 2": "client_pc\\root\\bin\\pc",
@@ -961,6 +962,10 @@
     "Phantom Blade Zero": {
       "reshade": "d3d12.dll",
       "dc": ""
+    },
+    "007 First Light": {
+      "reshade": "dinput8.dll",
+      "dc": ""
     }
   },
   "rtxEncoreDllNames": {
@@ -1588,7 +1593,7 @@
     },
     "mfgunlock": {
       "packageName": "MFG Ada Unlock",
-      "description": "DLSS Multi Frame Generation beyond RTX 50: unlocks 3x/4x/6x on RTX 40, brings DLSS-G and XMX frame generation to RTX 20/30 (experimental), and XeMFG on RTX 20, 30, 40 and 50 cards.",
+      "description": "DLSS multi frame generation beyond RTX 50: unlocks 3x/4x/6x on RTX 40, brings DLSS-G and XeMFG DLSS-G frame generation to RTX 20/30 (experimental), and XeMFG on RTX 20, 30, 40 and 50 cards.",
       "releaseApiUrl": "https://api.github.com/repos/mavismmg/MFGAdaUnlock-RenoDx/releases?per_page=1",
       "repositoryUrl": "https://github.com/mavismmg/MFGAdaUnlock-RenoDx"
     },

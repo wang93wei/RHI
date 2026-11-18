@@ -249,7 +249,12 @@ public sealed partial class MainWindow : Window
         HookAntivirusNotice();
         HookCustomGamesNotice();
         StartStatusBarTimer();
+        // Admin Mode couldn't start RHI elevated (its task points elsewhere, or didn't start it): say why
+        if (App.StartupNotice is { } startupNotice)
+            DispatcherQueue?.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () => ShowStatusBarMessage(startupNotice, TimeSpan.FromSeconds(30)));
         GameList.ItemsSource = ViewModel.DisplayedGames;
+        EnableGameListMultiSelect();
         // When the filtered game list changes, preserve selection if the selected game is still visible
         ViewModel.DisplayedGames.CollectionChanged += (_, _) =>
         {
@@ -707,6 +712,7 @@ public sealed partial class MainWindow : Window
 
     private void GameList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        SyncMultiSelection();
         if (GameList.SelectedItem is GameCardViewModel card)
         {
             ViewModel.SelectedGame = card;

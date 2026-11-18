@@ -1,6 +1,7 @@
-// SettingsHandler.Theme.cs — Settings › General › "Colour theme" card (built in C#, XAML constraint): pick a
-// built-in theme or Custom, where the user picks nine colours with colour pickers. Applied live through
-// ThemeService; the theme id and the custom colours persist in settings (ColorTheme / CustomThemeColors).
+// SettingsHandler.Theme.cs — Settings › General › "Appearance" card (built in C#, XAML constraint). Left column:
+// colour theme, a built-in theme or Custom, where the user picks nine colours with colour pickers (applied live
+// through ThemeService; persisted as ColorTheme / CustomThemeColors). Right column: the interface / top bar /
+// game list size rows, which SettingsHandler.UiScale.cs adds to _appearanceSizes.
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -14,6 +15,8 @@ public partial class SettingsHandler
     private ComboBox? _themeCombo;
     private StackPanel? _themeCustomPanel;
     private TextBlock? _themeContrastNote;
+    /// <summary>The Appearance card's right column, where EnsureUiScaleRow puts the size rows.</summary>
+    private StackPanel? _appearanceSizes;
     private readonly Dictionary<string, (Border Swatch, TextBlock Hex)> _themeSwatches = new();
     private bool _themeCardFailed;
     private bool _themeSelecting;
@@ -49,6 +52,23 @@ public partial class SettingsHandler
             });
             outer.Children.Add(head);
 
+            // Colours left, sizes right (the usual two-column Settings grid)
+            var topCols = new Grid();
+            topCols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            topCols.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            topCols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var colourCol = new StackPanel { Spacing = 9, Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Top };
+            var topDivider = new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush) };
+            _appearanceSizes = new StackPanel { Spacing = 9, Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+            Grid.SetColumn(topDivider, 1);
+            Grid.SetColumn(_appearanceSizes, 2);
+            topCols.Children.Add(colourCol);
+            topCols.Children.Add(topDivider);
+            topCols.Children.Add(_appearanceSizes);
+            colourCol.Children.Add(new TextBlock { Text = "Colours", Style = FindStyle("SettingsHeadStyle") });
+            _appearanceSizes.Children.Add(new TextBlock { Text = "Sizes", Style = FindStyle("SettingsHeadStyle") });
+            outer.Children.Add(topCols);
+
             // Theme row
             var row = MakeThemeRow(Loc.GetString("Settings.Theme.RowLabel"), out var themeCell);
             var combo = new ComboBox { Style = FindStyle("SettingsComboStyle") };
@@ -56,7 +76,7 @@ public partial class SettingsHandler
             combo.Items.Add(Loc.GetString("Option.Custom"));
             ToolTipService.SetToolTip(combo, Loc.GetString("Settings.Theme.Combo.Tooltip"));
             themeCell.Child = combo;
-            outer.Children.Add(row);
+            colourCol.Children.Add(row);
             _themeCombo = combo;
             combo.SelectionChanged += ThemeCombo_SelectionChanged;
 
@@ -113,6 +133,7 @@ public partial class SettingsHandler
         {
             _themeCardFailed = true;
             _themeCombo = null;
+            _appearanceSizes = null;
             CrashReporter.Log($"[SettingsHandler.EnsureColorThemeCard] Failed — {ex.Message}");
         }
     }
@@ -159,10 +180,30 @@ public partial class SettingsHandler
             IsColorChannelTextInputVisible = true,
             IsHexInputVisible = true,
         };
-        var flyout = new Flyout { Content = picker };
+        // Picker | preview of the game page (built on first open; recoloured live by ThemeService)
+        var flyoutContent = new Grid { ColumnSpacing = 20 };
+        flyoutContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        flyoutContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        flyoutContent.Children.Add(picker);
+        var presenterStyle = new Style(typeof(FlyoutPresenter));
+        presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, 1000.0));
+        var flyout = new Flyout { Content = flyoutContent, FlyoutPresenterStyle = presenterStyle };
         bool opening = false;
         flyout.Opening += (_, _) =>
         {
+            if (flyoutContent.Children.Count == 1)
+            {
+                try
+                {
+                    var preview = BuildThemePreview();
+                    Grid.SetColumn(preview, 1);
+                    flyoutContent.Children.Add(preview);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException or ArgumentException)
+                {
+                    CrashReporter.Log($"[SettingsHandler.MakeColourRow] Preview failed — {ex.Message}");
+                }
+            }
             opening = true;
             picker.Color = CurrentCustom().Get(key);
             opening = false;

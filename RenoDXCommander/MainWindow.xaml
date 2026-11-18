@@ -3147,9 +3147,6 @@
                                 <HyperlinkButton NavigateUri="https://discord.gg/gF4GRJWZ2A" Padding="0">
                                     <TextBlock Foreground="{StaticResource AccentBlueBrush}" FontSize="12">RenoDX Discord</TextBlock>
                                 </HyperlinkButton>
-                                <HyperlinkButton NavigateUri="https://discord.gg/k3cDruEQ" Padding="0">
-                                    <TextBlock Foreground="{StaticResource AccentBlueBrush}" FontSize="12">HDR Den Discord</TextBlock>
-                                </HyperlinkButton>
                                 <HyperlinkButton NavigateUri="https://github.com/Filoppi/Luma-Framework/wiki/Mods-List" Padding="0">
                                     <TextBlock Foreground="{StaticResource AccentBlueBrush}" FontSize="12">HDR Den / Luma Wiki</TextBlock>
                                 </HyperlinkButton>
@@ -3231,7 +3228,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" x:Name="StatusBarText" Text=""
-                           FontSize="11" Foreground="{StaticResource TextDisabledBrush}"
+                           FontSize="11" Foreground="{StaticResource FooterTextBrush}"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" MaxLines="1"/>
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -3242,7 +3239,7 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Spacing="8">
                     <Button x:Name="StatusBarVersionText" x:FieldModifier="internal"
-                            FontSize="11" Foreground="{StaticResource TextDisabledBrush}"
+                            FontSize="11" Foreground="{StaticResource FooterTextBrush}"
                             Background="Transparent" BorderThickness="0"
                             Padding="0,2" VerticalAlignment="Center"
                             Click="StatusBarVersion_Click"
@@ -3250,20 +3247,20 @@
                     <Button Content="{Binding [Xaml.PatchNotes], Source={StaticResource Loc}}"
                             Click="PatchNotesLink_Click"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{StaticResource TextDisabledBrush}" FontSize="11"
+                            Foreground="{StaticResource FooterTextBrush}" FontSize="11"
                             Padding="8,2" VerticalAlignment="Center"
                             ToolTipService.ToolTip="{Binding [Xaml.ViewRecentPatchNotes], Source={StaticResource Loc}}"/>
                     <Button Content="{Binding [Xaml.Motd], Source={StaticResource Loc}}"
                             Click="MotdButton_Click"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{StaticResource TextDisabledBrush}" FontSize="11"
+                            Foreground="{StaticResource FooterTextBrush}" FontSize="11"
                             Padding="8,2" VerticalAlignment="Center"
                             ToolTipService.ToolTip="{Binding [Xaml.ShowMessageOfTheDay], Source={StaticResource Loc}}"/>
                     <Button x:Name="UpdateLogBtn" x:FieldModifier="internal"
                             Content="{Binding [Xaml.Updates], Source={StaticResource Loc}}"
                             Click="UpdateLogButton_Click"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{StaticResource TextDisabledBrush}" FontSize="11"
+                            Foreground="{StaticResource FooterTextBrush}" FontSize="11"
                             Padding="8,2" VerticalAlignment="Center"
                             ToolTipService.ToolTip="{Binding [Xaml.ViewComponentUpdateHistory], Source={StaticResource Loc}}"/>
                 </StackPanel>

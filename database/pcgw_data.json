@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "game_count": 56116,
-  "generated": "2026-11-16T11:21:43Z",
+  "game_count": 56129,
+  "generated": "2026-11-18T13:22:47Z",
   "name_overrides": {
     "ACE COMBAT 8: WINGS OF THEVE": "Ace Combat 8: Wings of Theve",
     "AFOP": "Avatar: Frontiers of Pandora",
@@ -10201,6 +10201,7 @@
     "ArachnoSplat": {
       "steam_appid": 1177370
     },
+    "Arafiesta": {},
     "Aragami": {
       "steam_appid": 280160,
       "dx11": true,
@@ -14580,6 +14581,7 @@
       "dx11": true,
       "engine": "Unity"
     },
+    "Back to Baghdad": {},
     "Back to Bed": {
       "steam_appid": 308040,
       "dx9": true,
@@ -15697,7 +15699,8 @@
       "steam_appid": 747160
     },
     "Baptiste": {
-      "steam_appid": 2922250
+      "steam_appid": 2922250,
+      "engine": "Unreal Engine 5"
     },
     "Baptize Billy": {
       "steam_appid": 786950
@@ -31345,7 +31348,10 @@
       "steam_appid": 1150610
     },
     "City Hunter": {
-      "steam_appid": 3984650
+      "steam_appid": 3984650,
+      "dx11": true,
+      "config_path": "<Steam-folder>\\userdata\\<user-id>\\3984650\\remote",
+      "engine": "Unity"
     },
     "City League Softball": {},
     "City Life": {
@@ -33429,6 +33435,7 @@
     "Combat Core": {
       "steam_appid": 405670
     },
+    "Combat Course": {},
     "Combat Force": {
       "steam_appid": 1172430
     },
@@ -38563,6 +38570,7 @@
     },
     "Cyberball": {},
     "Cyberball (1990)": {},
+    "Cyberblast": {},
     "Cyberbykes: Shadow Racer VR": {},
     "CyberClub-2077": {
       "steam_appid": 623050
@@ -39292,7 +39300,8 @@
     },
     "Danganronpa 2x2": {
       "steam_appid": 3751230,
-      "dx12": true
+      "dx12": true,
+      "engine": "Unreal Engine 5"
     },
     "Danganronpa Another Episode: Ultra Despair Girls": {
       "steam_appid": 555950,
@@ -44855,7 +44864,8 @@
     },
     "DevilConnection": {
       "steam_appid": 3054820,
-      "config_path": "<SteamLibrary-folder>/steamapps/common/ÒüºÒü│ÒéïÒé│ÒâìÒé»ÒéÀÒâºÒéô/_storage/DevilConnection_sf.sav"
+      "config_path": "<path-to-game>\\_storage\\DevilConnection_sf.sav",
+      "engine": "Electron"
     },
     "Devilian": {
       "steam_appid": 407510
@@ -45622,6 +45632,7 @@
     "DINO VR": {
       "steam_appid": 1024450
     },
+    "Dino Wars": {},
     "Dinoblade": {
       "steam_appid": 3440070,
       "config_path": "%LOCALAPPDATA%\\DinobladeGame\\Saved\\Config\\Windows\\",
@@ -45804,7 +45815,6 @@
     },
     "DIRT 5": {
       "steam_appid": 1038250,
-      "dx12": true,
       "config_path": "%USERPROFILE%\\Documents\\My Games\\DIRT5\\user0\\profile",
       "engine": "Onrush engine"
     },
@@ -47523,6 +47533,9 @@
       "vulkan": true,
       "config_path": "%LOCALAPPDATA%\\DK64Recompiled\\"
     },
+    "Donkey Kong Bananza (DKB Recomp)": {
+      "vulkan": true
+    },
     "Donkey Kong: Redux": {},
     "Donkey Xote": {
       "dx9": true,
@@ -48207,6 +48220,9 @@
     },
     "DPET : Desktop Pet Engine": {
       "steam_appid": 1980920
+    },
+    "DPS: Desktop Pension Squad": {
+      "steam_appid": 5135440
     },
     "DQ Tycoon": {},
     "Dr Dick Dong: Stripper Underworld": {
@@ -64174,6 +64190,9 @@
     "Fox soldier": {
       "steam_appid": 1076130
     },
+    "Fox Spirit Sweethearts: Complete Edition": {
+      "steam_appid": 5261050
+    },
     "Fox's Holiday": {
       "steam_appid": 1373020
     },
@@ -77256,9 +77275,7 @@
     "Heroes Of Maidan 3: Crimean Battle": {
       "steam_appid": 1179790
     },
-    "Heroes of Might and Magic II": {
-      "config_path": "%LOCALAPPDATA%\\fheroes2\\GAMES"
-    },
+    "Heroes of Might and Magic II": {},
     "Heroes of Might and Magic III": {
       "steam_appid": 4921760,
       "config_path": "HKEY_LOCAL_MACHINE\\Software\\Wow6432Node\\New World Computing\\Heroes of Might and Magic® III\\1.0"
@@ -77927,6 +77944,7 @@
     "High Fidelity": {
       "steam_appid": 390540
     },
+    "High Heat Baseball 1999": {},
     "High Heat Baseball 2000": {},
     "High Heat Major League Baseball 2002": {},
     "High Heat Major League Baseball 2003": {
@@ -78652,7 +78670,7 @@
     "Hogwarts Legacy": {
       "steam_appid": 990080,
       "dx12": true,
-      "config_path": "%LOCALAPPDATA%\\HogwartsLegacy\\Saved\\Config\\WindowsNoEditor, %LOCALAPPDATA%\\Hogwarts\\Saved\\Config\\WindowNoEditor<user-id>, %LOCALAPPDATA%\\Phoenix\\Saved\\Config\\WindowsNoEditor",
+      "config_path": "%LOCALAPPDATA%\\Hogwarts Legacy\\Saved\\Config\\WindowsNoEditor, %LOCALAPPDATA%\\Hogwarts\\Saved\\Config\\WindowNoEditor<user-id>, %LOCALAPPDATA%\\Phoenix\\Saved\\Config\\WindowsNoEditor",
       "engine": "Unreal Engine 4"
     },
     "Hogwash": {},
@@ -89947,11 +89965,11 @@
       "steam_appid": 458710,
       "opengl": true,
       "config_path": "%APPDATA%\\kingdom_rush_frontiers\\",
-      "engine": "L├ûVE"
+      "engine": "LÖVE"
     },
     "Kingdom Rush: Origins": {
       "steam_appid": 816340,
-      "engine": "L├ûVE"
+      "engine": "LÖVE"
     },
     "Kingdom Rush: Vengeance": {
       "steam_appid": 1367550,
@@ -99736,6 +99754,9 @@
     "Majestic Nights": {
       "steam_appid": 284140
     },
+    "Majestic Part 1: Alien Encounter": {
+      "engine": "Director"
+    },
     "Majestic Trials": {
       "steam_appid": 638060
     },
@@ -108282,7 +108303,7 @@
     "MTX: Mototrax": {
       "dx9": true,
       "config_path": "HKEY_CURRENT_USER\\SOFTWARE\\Aspyr Media\\MTX: MotoTrax, <path-to-game>\\Game\\config.cfg",
-      "engine": "RenderWare"
+      "engine": "Neversoft Engine"
     },
     "Mu Cartographer": {
       "steam_appid": 513360,
@@ -114052,6 +114073,9 @@
     "Nivalis Nights": {
       "steam_appid": 1488490,
       "engine": "Unity"
+    },
+    "No Asteroids": {
+      "steam_appid": 5527800
     },
     "No Body Home": {
       "steam_appid": 794420
@@ -122040,8 +122064,9 @@
     },
     "Persona 3 Reload": {
       "steam_appid": 2161700,
-      "config_path": "%LOCALAPPDATA%\\P3R\\Saved\\Config\\WindowsNoEditor\\",
-      "config_path_xbox": "%LOCALAPPDATA%\\P3R\\Saved\\Config\\WinGDK\\",
+      "dx12": true,
+      "config_path": "%LOCALAPPDATA%\\P3R\\Saved\\Config\\WindowsNoEditor",
+      "config_path_xbox": "%LOCALAPPDATA%\\P3R\\Saved\\Config\\WinGDK",
       "engine": "Unreal Engine 4"
     },
     "Persona 4 Arena Ultimax": {
@@ -132440,6 +132465,7 @@
     },
     "Rebel Runner - Operation: Digital Code": {},
     "Rebel Trucker: Cajun Blood Money": {
+      "dx9": true,
       "engine": "RenderWare"
     },
     "Rebel Wings": {
@@ -149351,6 +149377,9 @@
     "Soccer Kid": {
       "steam_appid": 1104480
     },
+    "Soccer Kid Collection": {
+      "steam_appid": 4447890
+    },
     "Soccer Legends": {
       "steam_appid": 340530,
       "engine": "Unity"
@@ -155498,6 +155527,7 @@
       "config_path": "HKEY_LOCAL_MACHINE\\Software\\Infogrames\\Space Circus\\"
     },
     "Starsiege": {
+      "opengl": true,
       "config_path": "<path-to-game>\\defaultPrefs.cs",
       "engine": "Darkstar"
     },
@@ -157189,7 +157219,7 @@
     "Stray": {
       "steam_appid": 1332010,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\Hk_project\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\Hk_project\\Saved\\Config\\WindowsNoEditor\\*.ini",
       "engine": "Unreal Engine 4"
     },
     "Stray Blade": {
@@ -158799,7 +158829,8 @@
     },
     "Super Battle Golf": {
       "steam_appid": 4069520,
-      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Brimstone\\Super Battle Golf"
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Brimstone\\Super Battle Golf",
+      "engine": "Unity"
     },
     "Super Beam": {
       "steam_appid": 1019500
@@ -162969,6 +163000,7 @@
     },
     "TANUKI: Pon's Summer": {
       "steam_appid": 3218570,
+      "config_path": "HKEY_CURRENT_USER\\SOFTWARE\\Denkiworks\\TANUKI: Pon's Summer\\",
       "engine": "Unity"
     },
     "Tanzia": {
@@ -166757,6 +166789,7 @@
     },
     "The Dark Eye (1995)": {
       "steam_appid": 4289030,
+      "config_path": "<path-to-game>\\scummvm.ini",
       "engine": "Director"
     },
     "The Dark Eye: Book of Heroes": {
@@ -188644,6 +188677,9 @@
       "steam_appid": 635590,
       "engine": "Unity"
     },
+    "VVVVK: Road of Eternal Night": {
+      "steam_appid": 5582480
+    },
     "VVVVV": {
       "steam_appid": 1153250
     },
@@ -189993,7 +190029,7 @@
     "Warm Snow": {
       "steam_appid": 1296830,
       "dx11": true,
-      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\BadMudStudio\\WarmSnow\\, HKEY_CURRENT_USER\\Software\\BadMudStudio\\WarmSnow\\",
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\BadMudStudio\\WarmSnow\\Save\\_SettingMenuData, HKEY_CURRENT_USER\\Software\\BadMudStudio\\WarmSnow\\",
       "engine": "Unity"
     },
     "Warm Up!": {
@@ -197069,6 +197105,7 @@
     },
     "Zenzizenzic": {
       "steam_appid": 327500,
+      "config_path": "HKEY_CURRENT_USER\\Software\\Ruud Koorevaar\\Zenzizenzic\\",
       "engine": "Unity"
     },
     "Zeon 25": {

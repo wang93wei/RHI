@@ -51,6 +51,11 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _umfgReShadeWarningDismissed;
     /// <summary>"Don't show this again" on the HSF install notice (anti-cheat, other frame generation).</summary>
     [ObservableProperty] private bool _hsfNoticeDismissed;
+    /// <summary>
+    /// Frame generation mods whose anti-cheat warning was dismissed ("Don't show this again"), as a comma list of
+    /// keys (UniversalMfg, MfgUnlock, Dlssg2030). See DetailPanelBuilder.Extras.AntiCheat.cs.
+    /// </summary>
+    [ObservableProperty] private string _antiCheatNoticesDismissed = "";
     /// <summary>"Don't show this again" on the closed-source notices before installing RTX Encore / 20/30 FG Unlock.</summary>
     [ObservableProperty] private bool _rtxEncoreClosedSourceDismissed;
     /// <summary>"Don't show this again" on the RTX Encore DLSS-FG + ReShade dxgi.dll warning (RTX Encore issue #133).</summary>
@@ -59,6 +64,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _anrFgClosedSourceDismissed;
     /// <summary>GITC Uplift's NR on/off key ([Uplift] EnableKey, a Win32 virtual-key code; 0 = none, Uplift's default).</summary>
     [ObservableProperty] private int _upliftEnableKey;
+    /// <summary>HSF's in-game keys (HSF.ini FrameGenKey / MfgKey / OsdKey, Win32 virtual-key codes) RHI writes into a new HSF.ini. 0 = none: HSF's own default stays.</summary>
+    [ObservableProperty] private int _hsfFrameGenKey;
+    [ObservableProperty] private int _hsfMfgKey;
+    [ObservableProperty] private int _hsfOsdKey;
     /// <summary>"Don't show this again" on the Source engine mod install dialog.</summary>
     [ObservableProperty] private bool _sourceEngineNoticeDismissed;
     /// <summary>Achievements (Spotlight panel and overlay): show the name and description of locked hidden ones.</summary>
@@ -387,6 +396,8 @@ public partial class SettingsViewModel : ObservableObject
             UmfgReShadeWarningDismissed = urwdVal == "true";
         if (s.TryGetValue("HsfNoticeDismissed", out var hsfndVal))
             HsfNoticeDismissed = hsfndVal == "true";
+        if (s.TryGetValue("AntiCheatNoticesDismissed", out var acndVal))
+            AntiCheatNoticesDismissed = acndVal ?? "";
         if (s.TryGetValue("RtxEncoreClosedSourceDismissed", out var recsVal))
             RtxEncoreClosedSourceDismissed = recsVal == "true";
         if (s.TryGetValue("EncoreDlssFgReShadeWarningDismissed", out var edrwVal))
@@ -395,6 +406,9 @@ public partial class SettingsViewModel : ObservableObject
             Dlssg2030ClosedSourceDismissed = d23csVal == "true";
         if (s.TryGetValue("AnrFgClosedSourceDismissed", out var anrcsVal))
             AnrFgClosedSourceDismissed = anrcsVal == "true";
+        foreach (var (hsfName, apply) in new (string, Action<int>)[] { ("HsfFrameGenKey", v => HsfFrameGenKey = v), ("HsfMfgKey", v => HsfMfgKey = v), ("HsfOsdKey", v => HsfOsdKey = v) })
+            if (s.TryGetValue(hsfName, out var hsfKeyVal) && int.TryParse(hsfKeyVal, out var hsfKey) && hsfKey is >= 0 and <= 255)
+                apply(hsfKey);
         if (s.TryGetValue("UpliftEnableKey", out var upKeyVal) && int.TryParse(upKeyVal, out var upKey) && upKey is >= 0 and <= 255)
             UpliftEnableKey = upKey;
 
@@ -637,11 +651,15 @@ public partial class SettingsViewModel : ObservableObject
         s["EngineBadgeWarningDismissed"] = EngineBadgeWarningDismissed ? "true" : "false";
         s["UmfgReShadeWarningDismissed"] = UmfgReShadeWarningDismissed ? "true" : "false";
         s["HsfNoticeDismissed"] = HsfNoticeDismissed ? "true" : "false";
+        s["AntiCheatNoticesDismissed"] = AntiCheatNoticesDismissed;
         s["RtxEncoreClosedSourceDismissed"] = RtxEncoreClosedSourceDismissed ? "true" : "false";
         s["EncoreDlssFgReShadeWarningDismissed"] = EncoreDlssFgReShadeWarningDismissed ? "true" : "false";
         s["Dlssg2030ClosedSourceDismissed"] = Dlssg2030ClosedSourceDismissed ? "true" : "false";
         s["AnrFgClosedSourceDismissed"] = AnrFgClosedSourceDismissed ? "true" : "false";
         s["UpliftEnableKey"] = UpliftEnableKey.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        s["HsfFrameGenKey"] = HsfFrameGenKey.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        s["HsfMfgKey"] = HsfMfgKey.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        s["HsfOsdKey"] = HsfOsdKey.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["SourceEngineNoticeDismissed"] = SourceEngineNoticeDismissed ? "true" : "false";
         s["ShowHiddenAchievements"] = ShowHiddenAchievements ? "true" : "false";
         s["SettingsTabbed"] = SettingsTabbed ? "true" : "false";

@@ -22,22 +22,12 @@ public partial class DetailPanelBuilder
     private const string FeederDeployFile32 = "dlss5-feed.addon32";
 
     /// <summary>
-    /// Strips a display-only parenthetical suffix from a version string so it can be used
-    /// as a staging directory name. e.g. "310.8.0 (50xx)" → "310.8.0".
-    /// Also handles versions like "310.8.2 (20/30/40/50)" where the slash causes
-    /// path mangling on disk — always strips at the first '(' or space before '('.
-    /// </summary>
-    private static string StripVersionSuffix(string version)
-    {
-        var idx = version.IndexOf('(');
-        return idx > 0 ? version[..idx].TrimEnd() : version;
-    }
-
-    /// <summary>
-    /// Resolves the cached nvngx_dlssnr.dll path for a given version string.
-    /// Handles the case where the staging directory name contains forward slashes
-    /// (e.g. "310.8.2 (20/30/40/50)") that Windows mangles into nested folders on disk.
-    /// Searches for any subdirectory that starts with the stripped version number.
+    /// Resolves the cached nvngx_dlssnr.dll for exactly this manifest version, or null when it
+    /// isn't cached (callers then download it with EnsureSpecificDlssnrCachedAsync).
+    /// Looks in the folder DlssStreamlineService caches into ("310.8.2 (20-30-40-50)": the full
+    /// version, '/' and '\' as '-'), then the nested folders older builds made from the slashes
+    /// ("310.8.2 (20\30\40\50)\"). Never matches by prefix: "310.9.16" (NVIDIA's) and
+    /// "310.9.16 (20/30/40/50)" are different DLLs, and a prefix match returned one for the other.
     /// </summary>
     private static string? ResolveCachedNrDllPath(string versionString)
     {
@@ -46,24 +36,13 @@ public partial class DetailPanelBuilder
             "RHI", "DLSS-NR");
         if (!Directory.Exists(nrBase)) return null;
 
-        var stripped = StripVersionSuffix(versionString);
-
-        // 1. Exact match on stripped version
-        var exact = System.IO.Path.Combine(nrBase, stripped, "nvngx_dlssnr.dll");
-        if (File.Exists(exact)) return exact;
-
-        // 2. Full recursive search under any subdir starting with the stripped version.
-        // Handles forward-slash-mangled paths like "310.8.2 (20/30/40/50)" which become
-        // nested dirs "310.8.2 (20\30\40\50\" on disk.
-        foreach (var dir in Directory.GetDirectories(nrBase))
+        var sanitized = versionString.Replace('/', '-').Replace('\\', '-');
+        foreach (var rel in new[] { sanitized, versionString.Replace('/', '\\') })
         {
-            var dirName = System.IO.Path.GetFileName(dir);
-            if (dirName.StartsWith(stripped, StringComparison.OrdinalIgnoreCase))
-            {
-                var found = Directory.GetFiles(dir, "nvngx_dlssnr.dll", SearchOption.AllDirectories)
-                    .FirstOrDefault();
-                if (found != null) return found;
-            }
+            var dir = FileHelper.SafeCombine(nrBase, rel);
+            if (dir == null) continue;
+            var dll = System.IO.Path.Combine(dir, "nvngx_dlssnr.dll");
+            if (File.Exists(dll)) return dll;
         }
         return null;
     }
@@ -159,15 +138,39 @@ public partial class DetailPanelBuilder
 
     // ── Utility helpers ───────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Puts the selected NR DLL in <paramref name="installPath"/> (sentinel pattern):
+    /// missing → copied (a 0-byte <c>.original</c> marks it RHI's, a non-empty one keeps the game's backup);
+    /// RHI's copy (a <c>.original</c> beside it) that differs → replaced, behind the NR Cost Scaler's proxy when
+    /// that's installed; the game's own DLL (no <c>.original</c>) → left alone.
+    /// It used to return as soon as a <c>.original</c> existed, so a DLL deleted since (antivirus, another
+    /// component's uninstall) was never put back and a newly picked version never replaced it (issue #133).
+    /// </summary>
     private static void DeployNrDllSentinel(string installPath, string cachedNrPath)
     {
         var dest     = Path.Combine(installPath, "nvngx_dlssnr.dll");
         var sentinel = dest + ".original";
-        if (File.Exists(sentinel)) return;          // already placed by RHI
-        if (File.Exists(dest))     return;          // game-original — don't touch
-        File.Copy(cachedNrPath, dest, overwrite: false);
-        File.WriteAllBytes(sentinel, Array.Empty<byte>());
-        CrashReporter.Log($"[NeuralRendering] Deployed nvngx_dlssnr.dll to '{installPath}' (sentinel written)");
+        if (!File.Exists(dest))
+        {
+            File.Copy(cachedNrPath, dest, overwrite: false);
+            if (!File.Exists(sentinel)) File.WriteAllBytes(sentinel, Array.Empty<byte>());
+            CrashReporter.Log($"[NeuralRendering] Deployed nvngx_dlssnr.dll to '{installPath}' (sentinel {(new FileInfo(sentinel).Length == 0 ? "RHI-owned" : "keeps the game's backup")})");
+            return;
+        }
+        if (!File.Exists(sentinel))
+        {
+            CrashReporter.Log($"[NeuralRendering] nvngx_dlssnr.dll in '{installPath}' is the game's own — left as is");
+            return;
+        }
+        var real = DlssNrCostScalerService.ResolveRealNrDllPath(dest);
+        if (VulkanLayerService.FilesIdentical(cachedNrPath, real))
+        {
+            CrashReporter.Log($"[NeuralRendering] nvngx_dlssnr.dll in '{installPath}' already the selected version");
+            return;
+        }
+        if (!DlssNrCostScalerService.ReplaceRealNrDll(dest, cachedNrPath))
+            File.Copy(cachedNrPath, dest, overwrite: true);
+        CrashReporter.Log($"[NeuralRendering] Replaced RHI's nvngx_dlssnr.dll in '{installPath}' with the selected version");
     }
 
     private static string? FindStagedAddon(string packageName, string extension)

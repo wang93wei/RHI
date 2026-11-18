@@ -179,6 +179,9 @@ public static class AddonPopupHelper
                 ? "DLSS5 Tool" : null;
             bool peerIsSelected = mutualExclusivePeer != null && selected.Contains(mutualExclusivePeer);
 
+            // Note: "mfgunlock" is hidden from this picker since v2.7.6 (AddonPackService pickerHiddenIds); MFG Unlock
+            // is installed from Extras, where ExtraBlocker / 64-bit / anti-cheat checks apply. These checks only
+            // matter if it is ever shown here again.
             // Universal MFG Unlocker conflict — MFG Ada Unlock blocked when new standalone DLL version is installed
             bool rtx40MfgConflict = entry.SectionId.Equals("mfgunlock", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(installPath)
@@ -209,6 +212,8 @@ public static class AddonPopupHelper
             if (peerIsSelected)
                 ToolTipService.SetToolTip(toggle, rtx40MfgConflict
                     ? Loc.GetString("Dialog.Addon.Rtx40MfgConflict")
+                    : extrasInstalledConflict
+                    ? Loc.GetString("Dialog.Addon.ExtrasConflict")
                     : Loc.GetString("Dialog.Addon.DisablePeerFirst", mutualExclusivePeer));
 
             // Capture for the lambda

@@ -415,6 +415,8 @@ public partial class DetailPanelBuilder
         string installBtnLabel = isInstalled ? Loc.GetString("Extras.RtxEncore.Reinstall.Button") : Loc.GetString("Extras.RtxEncore.Install.Button");
         var installBtn = new Button { Content = installBtnLabel, FontSize = 12, Height = 32, HorizontalAlignment = HorizontalAlignment.Stretch, CornerRadius = new CornerRadius(8), Background = isInstalled ? UIFactory.GetBrush("#182840") : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush), Foreground = isInstalled ? UIFactory.GetBrush("#7AACDD") : UIFactory.Brush(ResourceKeys.AccentBlueBrush), BorderBrush = isInstalled ? UIFactory.GetBrush("#2A4468") : UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush), BorderThickness = new Thickness(1) };
         ToolTipService.SetToolTip(installBtn, isInstalled ? Loc.GetString("Extras.RtxEncore.Reinstall.Tooltip", currentDllName) : Loc.GetString("Extras.RtxEncore.Install.Tooltip"));
+        if (ExtraBlocker(card, ExtraKind.RtxEncore) is { } encoreBlocker)
+            ApplyExtraBlock(installBtn, label, ExtraKind.RtxEncore, encoreBlocker);
         installBtn.Click += async (s, e) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;

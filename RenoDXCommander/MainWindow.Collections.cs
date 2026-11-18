@@ -1,7 +1,7 @@
 // MainWindow.Collections.cs -- game collections in the window: the chip row (one chip per collection
 // plus "+ Collection") under the All / Installed / Favourites switch, the chip's menu (Rename, Move,
-// Delete), the game menu's "Add to collection" submenu, the name / delete dialogs and the empty-list
-// message. Built in C# (XAML constraint). The chips are Buttons so a controller can focus them.
+// Delete, Manage), the game menu's "Add to collection" submenu, the name / delete dialogs and the
+// empty-list message. The Manage window is CollectionManagerDialog; multi-select is .Bulk.cs. Built in C# (XAML constraint). The chips are Buttons so a controller can focus them.
 // Placement: Classic / Tabs = in the sidebar's search stack under the switch; Spotlight = at the right
 // of the search row, just left of the Filters button (an extra first column of _countsGrid).
 
@@ -18,6 +18,7 @@ public sealed partial class MainWindow
 {
     private const string CollectionChipSelectedTag = "CollectionSelected";
     private const string CollectionNewChipTag = "CollectionNew";
+    private const string CollectionManageChipTag = "CollectionManage";
 
     private Border? _collectionsHost;
     private Controls.WrapPanel? _collectionsWrap;
@@ -164,6 +165,15 @@ public sealed partial class MainWindow
             };
             ToolTipService.SetToolTip(add, Loc.GetString("Collections.Chip.AddTooltip"));
             _collectionsWrap.Children.Add(add);
+            var manage = MakeCollectionChip("Manage", false);
+            manage.Tag = CollectionManageChipTag;
+            manage.Click += async (s, e) =>
+            {
+                try { await ShowCollectionManagerAsync(manage.XamlRoot ?? Content?.XamlRoot, null); }
+                catch (Exception ex) { CrashReporter.Log($"[MainWindow.ManageCollectionsChip_Click] {ex.Message}"); }
+            };
+            ToolTipService.SetToolTip(manage, "Create, rename, reorder and delete collections, and tick the games in each one.");
+            _collectionsWrap.Children.Add(manage);
             UpdateCollectionEmptyText();
         }
         catch (Exception ex)
@@ -239,6 +249,14 @@ public sealed partial class MainWindow
                 try { await DeleteCollectionAsync(anchor.XamlRoot ?? Content?.XamlRoot, name); }
                 catch (Exception ex) { CrashReporter.Log($"[MainWindow.CollectionDelete_Click] {ex.Message}"); }
             };
+            var manage = new MenuFlyoutItem { Text = "Manage collections…" };
+            manage.Click += async (s, e) =>
+            {
+                try { await ShowCollectionManagerAsync(anchor.XamlRoot ?? Content?.XamlRoot, name); }
+                catch (Exception ex) { CrashReporter.Log($"[MainWindow.CollectionManage_Click] {ex.Message}"); }
+            };
+            menu.Items.Add(manage);
+            menu.Items.Add(new MenuFlyoutSeparator());
             menu.Items.Add(rename);
             menu.Items.Add(left);
             menu.Items.Add(right);
@@ -300,27 +318,37 @@ public sealed partial class MainWindow
         var create = new MenuFlyoutItem { Text = Loc.GetString("Collections.Menu.New") };
         create.Click += async (s, e) =>
         {
-            try { await NewCollectionAsync((s as FrameworkElement)?.XamlRoot ?? Content?.XamlRoot, card); }
+            try { await NewCollectionAsync((s as FrameworkElement)?.XamlRoot ?? Content?.XamlRoot, new[] { card }); }
             catch (Exception ex) { CrashReporter.Log($"[MainWindow.NewCollectionMenu_Click] {ex.Message}"); }
         };
         sub.Items.Add(create);
+        var manage = new MenuFlyoutItem { Text = "Manage collections…" };
+        manage.Click += async (s, e) =>
+        {
+            try { await ShowCollectionManagerAsync((s as FrameworkElement)?.XamlRoot ?? Content?.XamlRoot, null); }
+            catch (Exception ex) { CrashReporter.Log($"[MainWindow.ManageCollectionsMenu_Click] {ex.Message}"); }
+        };
+        sub.Items.Add(manage);
         return sub;
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
 
-    /// <summary>New collection (with <paramref name="firstGame"/> in it when given).</summary>
-    private async Task NewCollectionAsync(XamlRoot? xamlRoot, GameCardViewModel? firstGame)
+    /// <summary>New collection (with <paramref name="games"/> in it when given).</summary>
+    private async Task NewCollectionAsync(XamlRoot? xamlRoot, IReadOnlyList<GameCardViewModel>? games)
     {
         if (xamlRoot == null) return;
+        int count = games?.Count ?? 0;
         var name = await PromptCollectionNameAsync(xamlRoot, Loc.GetString("Collections.Dialog.NewTitle"),
-            firstGame != null ? Loc.GetString("Collections.Dialog.NewPromptWithGame", firstGame.GameName) : Loc.GetString("Collections.Dialog.NewPrompt"),
+            count == 1 ? Loc.GetString("Collections.Dialog.NewPromptWithGame", games![0].GameName)
+            : count > 1 ? Loc.GetString("Collections.Dialog.NewPromptWithGames", count)
+            : Loc.GetString("Collections.Dialog.NewPrompt"),
             Loc.GetString("Collections.Dialog.Create"), "", null);
         if (name == null) return;
-        var error = ViewModel.CreateCollection(name, firstGame, out var created);
+        var error = ViewModel.CreateCollection(name, games, out var created);
         if (error != null) { CrashReporter.Log($"[MainWindow.NewCollectionAsync] {error}"); return; }
         if (_padHints?.Visibility == Visibility.Visible)
-            ShowPadToast(firstGame != null ? Loc.GetString("Collections.Toast.Added", firstGame.GameName, created) : Loc.GetString("Collections.Toast.Created", created));
+            ShowPadToast(count == 1 ? Loc.GetString("Collections.Toast.Added", games![0].GameName, created) : count > 1 ? Loc.GetString("Collections.Toast.AddedMany", count, created) : Loc.GetString("Collections.Toast.Created", created));
     }
 
     private async Task RenameCollectionAsync(XamlRoot? xamlRoot, string name)

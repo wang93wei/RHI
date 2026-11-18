@@ -207,10 +207,26 @@ public partial class InstallFolderMigrationService
         // ── Universal MFG Unlocker (proxy; the OptiScaler plugin moves with OptiScaler\) ──
         if (!string.IsNullOrEmpty(req.Rtx40MfgInstalledAs) && req.Rtx40MfgInstalledAs.IndexOfAny(new[] { '\\', '/' }) < 0)
         {
-            var g = b.Group("Universal MFG Unlocker", HasSentinelCopy(newDir, req.Rtx40MfgInstalledAs));
-            b.File(g, req.Rtx40MfgInstalledAs, requireBackup: false);
+            var name = req.Rtx40MfgInstalledAs;
+            // Bink names keep the game's own Bink DLL beside the mod as <name>Hooked.dll (moved with it)
+            bool bink = Rtx40MfgService.IsBinkName(name);
+            var newMod = Path.Combine(newDir, name);
+            bool newHas = HasSentinelCopy(newDir, name) || (bink && File.Exists(newMod) && File.Exists(InstallFolderMover.HookedPath(newMod)));
+            var g = b.Group("Universal MFG Unlocker", newHas);
+            b.File(g, name, hooked: bink, requireBackup: false);
             b.Dir(g, Rtx40MfgService.XessFolderName);
         }
+
+        // ── Universal MFG Unlocker RTX Hair files beside the exe (proxy and OptiScaler plugin installs) ──
+        if (File.Exists(Path.Combine(oldDir, Rtx40MfgService.DxcMarkerFile)))
+        {
+            var g = b.Group("Universal MFG Unlocker RTX Hair files", File.Exists(Path.Combine(newDir, Rtx40MfgService.DxcMarkerFile)));
+            foreach (var f in Rtx40MfgService.DxcFilesOwnedIn(oldDir)) b.File(g, f, suffix: null, requireBackup: false);
+            b.File(g, Rtx40MfgService.DxcMarkerFile, suffix: null);
+            b.File(g, Rtx40MfgService.RtxHairIniName, suffix: null);
+        }
+        else if (!string.IsNullOrEmpty(req.Rtx40MfgInstalledAs))
+            b.File(b.Group("Universal MFG Unlocker RTX Hair settings"), Rtx40MfgService.RtxHairIniName, suffix: null);
 
         // ── 20/30 FG Unlock ──────────────────────────────────────────────────
         if (!string.IsNullOrEmpty(req.Dlssg2030InstalledAs) && req.Dlssg2030InstalledAs.IndexOfAny(new[] { '\\', '/' }) < 0)
@@ -219,6 +235,16 @@ public partial class InstallFolderMigrationService
             b.File(g, req.Dlssg2030InstalledAs, requireBackup: false);
             b.File(g, Dlssg20_30Service.IniFileName);
             b.Dir(g, Dlssg20_30Service.ModFolderName);
+        }
+
+        // ── BFI Presenter DX add-on (in the folder itself; in a reshade.ini AddonPath folder it moves with ReShade's
+        //    folder, and the Vulkan route's ini sits next to the exe) ──
+        if (!string.IsNullOrEmpty(req.BfiPresenterInstalledAs) && req.BfiPresenterInstalledAs.IndexOfAny(new[] { '\\', '/' }) < 0
+            && BfiPresenterService.RouteOf(req.BfiPresenterInstalledAs) == BfiRoute.Dx)
+        {
+            var g = b.Group("BFI Presenter", HasSentinelCopy(newDir, req.BfiPresenterInstalledAs));
+            b.File(g, req.BfiPresenterInstalledAs, requireBackup: false);
+            foreach (var f in BfiPresenterService.DxGeneratedFiles) b.File(g, f);
         }
 
         // ── Standalone DLSS Enabler (no backup of its own) ──────────────────
