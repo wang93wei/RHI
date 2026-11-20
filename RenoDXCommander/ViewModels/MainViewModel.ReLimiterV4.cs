@@ -237,7 +237,7 @@ public partial class MainViewModel
 
         var tag = await GetLastV3TagAsync(card.Is32Bit);
         if (tag == null)
-            throw new InvalidOperationException("Couldn't find the last ReLimiter v3 release on GitHub. Try again later.");
+            throw new InvalidOperationException(Loc.GetString("Ul.Error.LastV3Missing"));
         CrashReporter.Log($"[MainViewModel.LastV3TagInsteadOfLatestAsync] '{card.GameName}' stays on v3 ({tag})");
         return tag;
     }

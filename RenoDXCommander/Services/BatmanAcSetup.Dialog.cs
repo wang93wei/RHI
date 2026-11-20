@@ -1,6 +1,7 @@
 // BatmanAcSetup.Dialog.cs -- the pop-up shown before boostedwarr's Batman: Arkham City mod installs: what the mod is,
 // what RHI does with it and the few things to do in the game. Same look as the other games' install pop-ups.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -30,31 +31,26 @@ internal static partial class BatmanAcSetup
                 Text = text, TextWrapping = TextWrapping.Wrap, FontSize = size, Foreground = UIFactory.Brush(brush),
             });
 
-            Body("HDR for the game's DirectX 11 renderer by boostedwarr, with optional DLAA or FSR anti-aliasing at native " +
-                 "resolution. The game is 32-bit, so the anti-aliasing runs in a small 64-bit helper program that the mod starts by itself.");
+            var loc = App.Services.GetRequiredService<ILocalizationService>();
 
-            Heading("Clicking Install will also:");
-            Body("  •  Install the mod's helper (renodx-batmanac-dlaa-host64.exe) next to it\n" +
-                 "  •  Add the newest DLSS (nvngx_dlss.dll) for DLAA and AMD's FSR files for FSR\n" +
-                 "  •  Set the launcher's options the mod needs: DirectX 11, MSAA off, FXAA off, Depth of Field on");
+            Body(loc.GetString("Dialog.BatmanAc.Body.Intro"));
 
-            Heading("In the game:");
-            Body("  •  Turn Anti-Aliasing on in the mod's settings (ReShade menu) once you're in the game, not at the main menu: " +
-                 "it can fail to start there and then stays off until the game restarts\n" +
-                 "  •  Leave the brightness slider at its default and use the mod's Game Brightness instead\n" +
-                 "  •  Keep MSAA and FXAA off and Depth of Field on in the launcher (use the mod's Depth of Field slider for less blur)\n" +
-                 "  •  The game runs borderless; the mod needs that for HDR",
+            Heading(loc.GetString("Dialog.BatmanAc.Heading.Also"));
+            Body(loc.GetString("Dialog.BatmanAc.Body.Also"));
+
+            Heading(loc.GetString("Dialog.BatmanAc.Heading.InGame"));
+            Body(loc.GetString("Dialog.BatmanAc.Body.InGame"),
                  ResourceKeys.InlineDescriptionBrush, 12);
 
-            Body("Removing the mod removes the helper, DLSS and FSR files. The launcher options stay as they are.",
+            Body(loc.GetString("Dialog.BatmanAc.Body.Remove"),
                  ResourceKeys.TextTertiaryBrush, 12);
 
             var dialog = new ContentDialog
             {
-                Title = "Batman: Arkham City — RenoDX Mod",
+                Title = loc.GetString("Dialog.BatmanAc.Title"),
                 Content = new ScrollViewer { Content = content, MaxHeight = 560 },
-                PrimaryButtonText = "Install",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = loc.GetString("Dialog.Install"),
+                CloseButtonText = loc.GetString("Dialog.Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = xamlRoot,
                 RequestedTheme = ElementTheme.Dark,

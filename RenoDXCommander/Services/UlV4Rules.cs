@@ -33,25 +33,43 @@ internal static class UlV4Rules
     /// <summary>Decides whether a game can use ReLimiter v4. Pure.</summary>
     internal static UlV4Verdict Check(bool is32Bit, bool vulkan, bool dxvk, bool openGl, UlGpuState gpu, UlDx12State dx12)
     {
-        if (is32Bit) return Blocked("ReLimiter v4 is 64-bit only. This game stays on v3.");
-        if (vulkan) return Blocked("ReLimiter v4 doesn't work in Vulkan games. This game stays on v3.");
-        if (dxvk) return Blocked("ReLimiter v4 doesn't work with DXVK, which runs the game through Vulkan. This game stays on v3.");
-        if (openGl) return Blocked("ReLimiter v4 doesn't work in OpenGL games. This game stays on v3.");
-        if (gpu == UlGpuState.NotNvidia) return Blocked("ReLimiter v4 needs an NVIDIA graphics card. This game stays on v3.");
+        if (is32Bit) return Blocked("Ul.Version.Blocked32", "ReLimiter v4 is 64-bit only. This game stays on v3.");
+        if (vulkan) return Blocked("Ul.Version.BlockedVulkan", "ReLimiter v4 doesn't work in Vulkan games. This game stays on v3.");
+        if (dxvk) return Blocked("Ul.Version.BlockedDxvk", "ReLimiter v4 doesn't work with DXVK, which runs the game through Vulkan. This game stays on v3.");
+        if (openGl) return Blocked("Ul.Version.BlockedOpenGl", "ReLimiter v4 doesn't work in OpenGL games. This game stays on v3.");
+        if (gpu == UlGpuState.NotNvidia) return Blocked("Ul.Version.BlockedNoNvidia", "ReLimiter v4 needs an NVIDIA graphics card. This game stays on v3.");
 
         var notes = new List<string>();
         if (gpu == UlGpuState.Unknown)
-            notes.Add("RHI couldn't detect your graphics card, so this game isn't moved to v4 automatically. v4 needs an NVIDIA card.");
+            notes.Add(L("Ul.Version.NoteGpuUnknown",
+                "RHI couldn't detect your graphics card, so this game isn't moved to v4 automatically. v4 needs an NVIDIA card."));
         if (dx12 == UlDx12State.No)
-            notes.Add("ReLimiter v4 is built for DirectX 12 and may not work as intended in this game.");
+            notes.Add(L("Ul.Version.NoteNotDx12", "ReLimiter v4 is built for DirectX 12 and may not work as intended in this game."));
         else if (dx12 == UlDx12State.Unknown)
-            notes.Add("RHI can't tell yet whether this game runs DirectX 12. It moves to v4 automatically once the game has run " +
-                      "in DirectX 12 with ReShade, or set the Rendering API in Game Overrides.");
+            notes.Add(L("Ul.Version.NoteDx12Unknown",
+                "RHI can't tell yet whether this game runs DirectX 12. It moves to v4 automatically once the game has run " +
+                "in DirectX 12 with ReShade, or set the Rendering API in Game Overrides."));
 
         bool auto = gpu == UlGpuState.Nvidia && dx12 == UlDx12State.Yes;
         return new UlV4Verdict(true, auto, null, notes.Count == 0 ? null : string.Join(" ", notes));
 
-        static UlV4Verdict Blocked(string reason) => new(false, false, reason, null);
+        static UlV4Verdict Blocked(string reasonKey, string fallback) => new(false, false, L(reasonKey, fallback), null);
+    }
+
+    /// <summary>
+    /// Localized text with an English fallback. Tolerates a missing localization service so the pure rules stay
+    /// unit-testable on a runner without the app's DI container (same pattern as DisplayModeItems.L).
+    /// </summary>
+    internal static string L(string key, string fallback)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            if (loc == null) return fallback;
+            var s = loc.GetString(key);
+            return s == key ? fallback : s;
+        }
+        catch { return fallback; }
     }
 
     /// <summary>

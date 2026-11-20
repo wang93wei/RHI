@@ -14,10 +14,12 @@ namespace RenoDXCommander;
 
 public sealed partial class MainWindow
 {
-    private const string UlLatestItem = "Latest (auto-update)";
-    private const string UlAutoItem = "Automatic";
-    private const string UlV4Item = "v4 (latest)";
-    private const string UlV3Item = "v3 (final)";
+    // Combo entries. Read through Loc each time so the cog follows the current language; they are compared by value
+    // inside one dialog instance, never persisted.
+    private string UlLatestItem => Loc.GetString("Dialog.Ul.Version.Latest");
+    private string UlAutoItem => Loc.GetString("Dialog.Ul.Version.Auto");
+    private string UlV4Item => Loc.GetString("Dialog.Ul.Version.V4");
+    private string UlV3Item => Loc.GetString("Dialog.Ul.Version.V3");
 
     private void AddUlVersionSection(CogDialog cog, GameCardViewModel card)
     {
@@ -26,26 +28,25 @@ public sealed partial class MainWindow
         var choice = ViewModel.GetUlMajorChoice(card.GameName, store);
         bool is32 = card.Is32Bit;
 
-        cog.AddSection("Version");
+        cog.AddSection(Loc.GetString("Dialog.Ul.Version.Section"));
 
         var combo = CogDialog.MakeCombo(new List<string> { pinned ?? UlLatestItem }, 0);
-        cog.AddRow("Version", combo,
-            "Pick a ReLimiter release for this game. Automatic gives DirectX 12 games on an NVIDIA card ReLimiter v4 and " +
-            "every other game the last v3 release. A picked release stays: updates skip this game. Moving between v3 and " +
-            "v4 gives the game a fresh relimiter.ini (the old one is kept as a backup)." + (is32 ? " 32-bit builds start at v3.3.1." : ""));
+        cog.AddRow(Loc.GetString("Dialog.Ul.Version.RowLabel"), combo,
+            Loc.GetString("Dialog.Ul.Version.Tooltip") + (is32 ? Loc.GetString("Dialog.Ul.Version.Tooltip32Bit") : ""));
 
         var installedLine = cog.AddNote(InstalledText());
         var verdictLine = cog.AddNote("");
         verdictLine.Visibility = Visibility.Collapsed;
         var warning = cog.AddWarning("");
         warning.Visibility = Visibility.Collapsed;
-        var switchBtn = CogDialog.StyledButton("Switch to v3", CogButtonKind.Primary);
+        var switchBtn = CogDialog.StyledButton(Loc.GetString("Dialog.Ul.Version.SwitchToV3"), CogButtonKind.Primary);
         var switchRow = cog.AddButtons(switchBtn);
         switchRow.Visibility = Visibility.Collapsed;
 
         string InstalledText() => card.UlStatus == Models.GameStatus.NotInstalled
-            ? "ReLimiter isn't installed on this game. The version you pick is used when you install it."
-            : $"Installed: {(string.IsNullOrEmpty(card.UlInstalledVersion) ? "unknown" : "v" + card.UlInstalledVersion.TrimStart('v', 'V'))}";
+            ? Loc.GetString("Dialog.Ul.Version.NotInstalled")
+            : Loc.GetString("Dialog.Ul.Version.Installed",
+                string.IsNullOrEmpty(card.UlInstalledVersion) ? Loc.GetString("Dialog.Ul.Version.Unknown") : "v" + card.UlInstalledVersion.TrimStart('v', 'V'));
 
         bool filling = false;
         bool hasV4 = false;
@@ -64,9 +65,9 @@ public sealed partial class MainWindow
         {
             string? text = !hasV4 ? null
                 : !verdict.Allowed ? verdict.Reason
-                : verdict.Note ?? (verdict.Auto ? "This game runs DirectX 12 on an NVIDIA card: Automatic gives it ReLimiter v4." : null);
+                : verdict.Note ?? (verdict.Auto ? Loc.GetString("Dialog.Ul.Version.AutoNote") : null);
             if (MainViewModel.UlDevTestVersion() is { } dev)
-                text = $"Dev test: v{UlV4Rules.DisplayVersion(dev)} from relimiter-v4-test is used as the latest ReLimiter. " + (text ?? "");
+                text = Loc.GetString("Dialog.Ul.Version.DevTest", UlV4Rules.DisplayVersion(dev)) + (text ?? "");
             verdictLine.Text = text ?? "";
             verdictLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible;
 
@@ -74,7 +75,7 @@ public sealed partial class MainWindow
             bool onV4 = card.UlStatus != Models.GameStatus.NotInstalled
                 && UlV4Rules.MajorOf(card.UlInstalledVersion) >= UlV4Rules.V4Major;
             bool bad = onV4 && !verdict.Allowed;
-            warning.Text = bad ? $"This game has ReLimiter v4, which won't work here: {verdict.Reason} Switch back to v3 (with a fresh relimiter.ini)." : "";
+            warning.Text = bad ? Loc.GetString("Dialog.Ul.Version.V4Blocked", verdict.Reason) : "";
             warning.Visibility = bad ? Visibility.Visible : Visibility.Collapsed;
             switchRow.Visibility = bad ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -120,7 +121,7 @@ public sealed partial class MainWindow
                 var releases = await UlReleaseService.ListAsync().ConfigureAwait(false);
                 if (releases == null)
                 {
-                    DispatcherQueue.TryEnqueue(() => cog.SetError("Couldn't load ReLimiter's releases from GitHub. Try again later."));
+                    DispatcherQueue.TryEnqueue(() => cog.SetError(Loc.GetString("Dialog.Ul.Version.ReleasesFailed")));
                     return;
                 }
                 DispatcherQueue.TryEnqueue(() => Fill(releases));
@@ -154,25 +155,25 @@ public sealed partial class MainWindow
 
             if (card.UlStatus == Models.GameStatus.NotInstalled)
             {
-                if (newPin == null) { cog.SetSuccess($"This game will get {label} when you install ReLimiter."); return true; }
+                if (newPin == null) { cog.SetSuccess(Loc.GetString("Dialog.Ul.Version.WillGetOnInstall", label)); return true; }
                 // Download it now so the install doesn't wait
-                cog.SetStatus($"Downloading ReLimiter {newPin}...");
+                cog.SetStatus(Loc.GetString("Dialog.Ul.Version.DownloadingPin", newPin));
                 var (path, err) = await Task.Run(() => UlReleaseService.EnsurePinnedAsync(newPin, is32, null, LifetimeToken));
-                if (path != null) cog.SetSuccess($"ReLimiter {newPin} is ready. It will be installed when you install ReLimiter.");
-                else cog.SetError($"Couldn't download {newPin} ({err}). It will be tried again when you install.");
+                if (path != null) cog.SetSuccess(Loc.GetString("Dialog.Ul.Version.PinReady", newPin));
+                else cog.SetError(Loc.GetString("Dialog.Ul.Version.PinDownloadFailed", newPin, err));
                 return true;
             }
 
-            cog.SetStatus($"Installing ReLimiter {label}...");
+            cog.SetStatus(Loc.GetString("Dialog.Ul.Version.Installing", label));
             var (error, iniReset) = await ViewModel.SwitchUlVersionAsync(card);
             if (error == null)
             {
                 var ini = iniReset
-                    ? " v3 and v4 settings don't mix, so this game got a fresh relimiter.ini; the old one is saved next to it as a backup."
-                    : " Your relimiter.ini settings were kept.";
+                    ? Loc.GetString("Dialog.Ul.Version.IniReset")
+                    : Loc.GetString("Dialog.Ul.Version.IniKept");
                 cog.SetSuccess(newPin != null
-                    ? $"Installed ReLimiter {newPin}. Updates will skip this game.{ini}"
-                    : $"Installed {label}. This game gets updates.{ini}");
+                    ? Loc.GetString("Dialog.Ul.Version.SuccessPin", newPin, ini)
+                    : Loc.GetString("Dialog.Ul.Version.SuccessLabel", label, ini));
                 // The card's version is set on the dispatcher; read it after that has run
                 DispatcherQueue.TryEnqueue(() => { installedLine.Text = InstalledText(); RefreshNotes(); });
                 return true;
@@ -183,18 +184,18 @@ public sealed partial class MainWindow
             ViewModel.SetUlPinnedVersion(card.GameName, prevPin, store);
             (choice, pinned) = (prevChoice, prevPin);
             SelectCurrent();
-            cog.SetError($"Couldn't install ReLimiter {label}: {error} If the game is running, close it and try again.");
+            cog.SetError(Loc.GetString("Dialog.Ul.Version.InstallFailed", label, error));
             return false;
         }
 
         async Task SwitchToV3Async()
         {
             switchBtn.IsEnabled = false;
-            try { await ApplyAsync("3", null, "ReLimiter v3"); SelectCurrent(); }
+            try { await ApplyAsync("3", null, Loc.GetString("Dialog.Ul.Version.LabelV3")); SelectCurrent(); }
             catch (Exception ex)
             {
                 CrashReporter.Log($"[MainWindow.UlVersion] Switch to v3 failed for '{card.GameName}' — {ex.Message}");
-                cog.SetError($"Couldn't switch to v3: {ex.Message}");
+                cog.SetError(Loc.GetString("Dialog.Ul.Version.SwitchFailed", ex.Message));
             }
             finally { switchBtn.IsEnabled = true; }
         }
@@ -205,13 +206,34 @@ public sealed partial class MainWindow
             if (filling || busy || combo.SelectedItem is not string sel) return;
             if (sel.Equals(CurrentItem(), StringComparison.OrdinalIgnoreCase)) return;
 
-            (string? newChoice, string? newPin, string label) = sel switch
+            // The combo shows localized labels, so map them back to choices by value instead of pattern matching.
+            string? newChoice;
+            string? newPin;
+            string label;
+            if (sel.Equals(UlLatestItem, StringComparison.OrdinalIgnoreCase) || sel.Equals(UlAutoItem, StringComparison.OrdinalIgnoreCase))
             {
-                UlLatestItem or UlAutoItem => ((string?)null, (string?)null, hasV4 ? "the automatic ReLimiter version" : "the latest ReLimiter"),
-                UlV4Item => ("4", null, "ReLimiter v4"),
-                UlV3Item => ("3", null, "ReLimiter v3"),
-                _ => (null, sel, sel),
-            };
+                newChoice = null;
+                newPin = null;
+                label = hasV4 ? Loc.GetString("Dialog.Ul.Version.LabelAuto") : Loc.GetString("Dialog.Ul.Version.LabelLatest");
+            }
+            else if (sel.Equals(UlV4Item, StringComparison.OrdinalIgnoreCase))
+            {
+                newChoice = "4";
+                newPin = null;
+                label = Loc.GetString("Dialog.Ul.Version.LabelV4");
+            }
+            else if (sel.Equals(UlV3Item, StringComparison.OrdinalIgnoreCase))
+            {
+                newChoice = "3";
+                newPin = null;
+                label = Loc.GetString("Dialog.Ul.Version.LabelV3");
+            }
+            else
+            {
+                newChoice = null;
+                newPin = sel;
+                label = sel;
+            }
 
             busy = true;
             combo.IsEnabled = false;
@@ -222,7 +244,7 @@ public sealed partial class MainWindow
             catch (Exception ex)
             {
                 CrashReporter.Log($"[MainWindow.UlVersion] Version change failed for '{card.GameName}' — {ex.Message}");
-                cog.SetError($"Couldn't change the version: {ex.Message}");
+                cog.SetError(Loc.GetString("Dialog.Ul.Version.ChangeFailed", ex.Message));
             }
             finally
             {

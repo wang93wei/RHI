@@ -24,6 +24,10 @@ internal static class UlReleaseService
 
     internal static readonly string PinnedRoot = Path.Combine(DownloadPaths.FrameLimiter, "pinned");
 
+    // Safe with no DI container (unit tests): falls back to the key instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
+
     // Fetched once per session (the ⚙ is reopened often); ETag-cached on top of that
     private static List<UlRelease>? _cached;
     private static readonly object _lock = new();
@@ -111,24 +115,24 @@ internal static class UlReleaseService
         var dest = PinnedPath(tag, is32Bit);
         if (File.Exists(dest) && new FileInfo(dest).Length > 0)
         {
-            progress?.Report(("Installing from cache...", 50));
+            progress?.Report((L("Status.InstallingFromCache"), 50));
             return (dest, null);
         }
 
         var releases = Cached ?? await ListAsync().ConfigureAwait(false);
         var rel = releases?.FirstOrDefault(r => string.Equals(r.Tag, tag, StringComparison.OrdinalIgnoreCase));
-        if (rel == null) return (null, $"ReLimiter {tag} wasn't found on GitHub.");
+        if (rel == null) return (null, L("Ul.Error.ReleaseMissing", tag));
         var url = rel.UrlFor(is32Bit);
-        if (url == null) return (null, $"ReLimiter {tag} has no {(is32Bit ? "32-bit" : "64-bit")} build.");
+        if (url == null) return (null, L(is32Bit ? "Ul.Error.NoBuild32" : "Ul.Error.NoBuild64", tag));
 
         var tmp = dest + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            progress?.Report(($"Downloading ReLimiter {tag}...", 0));
+            progress?.Report((L("Dialog.Ul.Version.DownloadingPin", tag), 0));
             var http = App.Services.GetRequiredService<HttpClient>();
             using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode) return (null, $"Download failed (HTTP {(int)resp.StatusCode}).");
+            if (!resp.IsSuccessStatusCode) return (null, L("Ul.Error.DownloadFailedHttp", (int)resp.StatusCode));
             var total = resp.Content.Headers.ContentLength ?? -1L;
             long done = 0;
             var buf = new byte[1024 * 1024];
@@ -140,10 +144,10 @@ internal static class UlReleaseService
                 {
                     await file.WriteAsync(buf.AsMemory(0, read), ct).ConfigureAwait(false);
                     done += read;
-                    if (total > 0) progress?.Report(($"Downloading ReLimiter {tag}... {done / 1024} KB", (double)done / total * 100));
+                    if (total > 0) progress?.Report((L("Ul.Status.DownloadingPinKb", tag, done / 1024), (double)done / total * 100));
                 }
             }
-            if (new FileInfo(tmp).Length == 0) return (null, "The download was empty.");
+            if (new FileInfo(tmp).Length == 0) return (null, L("Ul.Error.DownloadEmpty"));
             File.Move(tmp, dest, overwrite: true);
             CrashReporter.Log($"[UlReleaseService.EnsurePinnedAsync] Downloaded {tag} ({(is32Bit ? "32" : "64")}-bit) to '{dest}'");
             return (dest, null);

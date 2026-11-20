@@ -314,12 +314,12 @@ public class ModInstallService : IModInstallService
         try { previousVersion = AuxInstallService.ReadInstalledVersion(addonDir, addonName); }
         catch (Exception ex) { CrashReporter.Log($"[ModInstallService.InstallZipPackageAsync] Could not read previous addon version — {ex.Message}"); }
 
-        progress?.Report(("Downloading...", 0));
+        progress?.Report((L("Status.Downloading"), 0));
         var tmp = cachePath + ".tmp";
         using (var resp = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
         {
             if (!resp.IsSuccessStatusCode)
-                throw new HttpRequestException($"Failed to download '{url}' (HTTP {(int)resp.StatusCode}).");
+                throw new HttpRequestException(L("Mod.Error.DownloadFailedHttp", url, (int)resp.StatusCode));
             var total = resp.Content.Headers.ContentLength ?? -1L;
             long done = 0;
             var buf = new byte[1024 * 1024];
@@ -331,19 +331,19 @@ public class ModInstallService : IModInstallService
                 {
                     await file.WriteAsync(buf.AsMemory(0, read)).ConfigureAwait(false);
                     done += read;
-                    if (total > 0) progress?.Report(($"Downloading... {done / 1024} KB", (double)done / total * 100));
+                    if (total > 0) progress?.Report((L("Status.DownloadingProgressWithKb", done / 1024), (double)done / total * 100));
                 }
             }
         }
         File.Move(tmp, cachePath, overwrite: true);
 
-        progress?.Report(("Installing...", 90));
+        progress?.Report((L("Status.Installing"), 90));
         string installedAddon;
         try { installedAddon = RenoDxZipPackage.Extract(cachePath, addonDir); }
         catch (InvalidDataException ex)
         {
             File.Delete(cachePath);
-            throw new InvalidOperationException($"The download from '{url}' is not a valid zip. Please try again. ({ex.Message})");
+            throw new InvalidOperationException(L("Mod.Error.NotValidZip", url, ex.Message));
         }
 
         AddonFileNames.RemoveDuplicates(addonDir, installedAddon);
@@ -361,7 +361,7 @@ public class ModInstallService : IModInstallService
         };
         SaveRecord(record);
         try { InstallCompleted?.Invoke(record); } catch (Exception ex) { CrashReporter.Log($"[ModInstallService.InstallZipPackageAsync] InstallCompleted event handler failed — {ex.Message}"); }
-        progress?.Report(("Installed!", 100));
+        progress?.Report((L("Status.InstalledOk"), 100));
         return record;
     }
 

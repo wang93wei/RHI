@@ -335,13 +335,13 @@ public partial class MainViewModel
     /// <summary>Error is null on success, else why it didn't install. IniReset = relimiter.ini was replaced (v3 ↔ v4).</summary>
     private async Task<(string? Error, bool IniReset)> InstallUlCoreAsync(GameCardViewModel card, bool binaryOnly)
     {
-        if (string.IsNullOrEmpty(card.InstallPath)) return ("The game has no install folder.", false);
+        if (string.IsNullOrEmpty(card.InstallPath)) return (Loc.GetString("Ul.Error.NoInstallFolder"), false);
 
         // Mutual exclusion guard: ReLimiter cannot be installed when DC is installed
-        if (card.IsDcInstalled) return ("Display Commander is installed on this game.", false);
+        if (card.IsDcInstalled) return (Loc.GetString("Ul.Error.DcInstalled"), false);
 
         // Check for manifest-driven install warning
-        if (!binaryOnly && !await CheckInstallWarningAsync(card.GameName, "relimiter")) return ("Cancelled.", false);
+        if (!binaryOnly && !await CheckInstallWarningAsync(card.GameName, "relimiter")) return (Loc.GetString("Ul.Error.Cancelled"), false);
 
         card.UlIsInstalling = true;
         card.UlActionMessage = Loc.GetString("Status.DownloadingRelimiter");
@@ -367,7 +367,7 @@ public partial class MainViewModel
             {
                 var (pinnedPath, pinErr) = await UlReleaseService.EnsurePinnedAsync(pinnedTag, card.Is32Bit, ulProgress);
                 if (pinnedPath == null)
-                    throw new InvalidOperationException($"Couldn't get ReLimiter {pinnedTag}: {pinErr}");
+                    throw new InvalidOperationException(Loc.GetString("Ul.Error.PinnedFetch", pinnedTag, pinErr));
                 sourcePath = pinnedPath;
             }
             else
