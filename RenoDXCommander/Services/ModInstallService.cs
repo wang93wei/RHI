@@ -83,7 +83,7 @@ public class ModInstallService : IModInstallService
         string? store = null)
     {
         if (mod.SnapshotUrl == null)
-            throw new InvalidOperationException($"{mod.Name} has no Snapshot download URL.");
+            throw new InvalidOperationException(L("Mod.Error.NoSnapshotUrl", mod.Name));
 
         // Apply URL override before anything else — this ensures the correct CDN is
         // used for both the HEAD size check and the actual download.
@@ -104,7 +104,7 @@ public class ModInstallService : IModInstallService
          && !ext.Equals(".addon32", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                $"Unsupported file type '{ext}' for {mod.Name}. Only .addon64 and .addon32 files are supported.");
+                L("Mod.Error.UnsupportedFileType", ext, mod.Name));
         }
 
         var destPath  = Path.Combine(GetAddonDeployPath(gameInstallPath), fileName);
@@ -224,7 +224,7 @@ public class ModInstallService : IModInstallService
             {
                 response?.Dispose();
                 throw new HttpRequestException(
-                    $"Failed to download snapshot. Tried: {string.Join(", ", tried)}");
+                    L("Mod.Error.SnapshotDownloadFailed", string.Join(", ", tried)));
             }
             using var downloadResponse = response;
 
@@ -262,7 +262,7 @@ public class ModInstallService : IModInstallService
                 var badSize = new FileInfo(cachePath).Length;
                 File.Delete(cachePath);
                 throw new InvalidOperationException(
-                    $"Downloaded file from '{resolvedUrl}' is not a valid addon ({badSize} bytes). The server may have returned an error page. Please try again.");
+                    L("Mod.Error.InvalidAddonDownload", resolvedUrl, badSize));
             }
 
             File.Copy(cachePath, destPath, overwrite: true);

@@ -243,7 +243,7 @@ public partial class MainViewModel
                         _crashReporter.Log($"[MainViewModel.DownloadAndDeployNexusFileAsync] 7z extraction {(timedOut ? "timed out" : $"failed (exit {proc.ExitCode})")} for '{card.GameName}' — not deploying. {err}");
                         DispatcherQueue?.TryEnqueue(() =>
                         {
-                            card.ActionMessage = timedOut ? "Extraction timed out. Nothing was installed." : "Extraction failed. Nothing was installed.";
+                            card.ActionMessage = Loc.GetString(timedOut ? "Status.NexusExtractTimeout" : "Status.NexusExtractFailed");
                             card.IsInstalling = false;
                         });
                         return;

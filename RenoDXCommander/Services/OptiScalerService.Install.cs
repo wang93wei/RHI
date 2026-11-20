@@ -1376,7 +1376,7 @@ public partial class OptiScalerService
                 {
                     // Nothing new to put in the game: leave it as it is
                     CrashReporter.Log($"[OptiScalerService.UpdateAsync] {variant} update couldn't be downloaded — '{card.GameName}' left on {before}");
-                    progress?.Report(($"OptiScaler {variant} update couldn't be downloaded", 0));
+                    progress?.Report((L("Status.OptiScalerUpdateNotDownloaded", variant), 0));
                     return;
                 }
             }

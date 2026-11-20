@@ -5,6 +5,7 @@
 // (e.g. BatmanAcSetup's DLSS / FSR files) add their files to the same list.
 
 using System.IO.Compression;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RenoDXCommander.Services;
 
@@ -21,6 +22,10 @@ internal static class RenoDxZipPackage
     { ".addon64", ".addon32", ".exe", ".dll", ".json", ".ini", ".fx", ".fxh" };
 
     internal const string ListSuffix = ".rhi-package.txt";
+
+    // Safe without the DI container (unit tests): falls back to the key instead of throwing.
+    private static string L(string key, params object[] args)
+        => App.Services?.GetService<ILocalizationService>()?.GetString(key, args) ?? key;
 
     /// <summary>True when a URL or file name is a .zip package.</summary>
     internal static bool IsZip(string? urlOrName) =>
@@ -49,7 +54,7 @@ internal static class RenoDxZipPackage
             .ToList();
         var addon = files.FirstOrDefault(e => e.Name.EndsWith(".addon64", StringComparison.OrdinalIgnoreCase)
                                            || e.Name.EndsWith(".addon32", StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"'{Path.GetFileName(zipPath)}' has no ReShade addon in it.");
+            ?? throw new InvalidOperationException(L("Mod.Error.NoAddonInZip", Path.GetFileName(zipPath)));
 
         var extras = new List<string>();
         foreach (var entry in files)

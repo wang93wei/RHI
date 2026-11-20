@@ -301,7 +301,7 @@ card.DxvkActionMessage = Loc.GetString("Status.DxvkInstalled");
         if (enabled && card.Mod?.IsGenericSource == true && card.InstalledRecord != null && card.DxvkRecord == null)
         {
             card.DxvkEnabled = false;
-            card.DxvkActionMessage = "The RenoDX Source mod already sets up DXVK for this game.";
+            card.DxvkActionMessage = Loc.GetString("Status.DxvkHandledBySource");
             _crashReporter.Log($"[MainViewModel.HandleDxvkToggleAsync] '{card.GameName}': skipped, Source mod's DXVK proxy is installed");
             return;
         }

@@ -101,8 +101,8 @@ public partial class SettingsHandler
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
         row.Children.Add(new TextBlock { Text = Loc.GetString("Settings.OsNightlyCleanup.Label"), Style = FindStyle("SettingsLabelStyle") });
         var combo = new ComboBox { Style = FindStyle("SettingsComboStyle") };
-        combo.Items.Add("Off");
-        combo.Items.Add("On");
+        combo.Items.Add(LocOpt.T("Off"));
+        combo.Items.Add(LocOpt.T("On"));
         combo.SelectedIndex = ViewModel.Settings.OsNightlyCleanup ? 1 : 0;
         ToolTipService.SetToolTip(combo, Loc.GetString("Settings.OsNightlyCleanup.Tooltip"));
         combo.SelectionChanged += (s, e) =>

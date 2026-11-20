@@ -528,7 +528,7 @@ public partial class MainViewModel
         var url = currentUrl;
         if (string.IsNullOrEmpty(url))
         {
-            throw new InvalidOperationException("Could not determine ReLimiter download URL from GitHub releases.");
+            throw new InvalidOperationException(Loc.GetString("Ul.Error.DownloadUrlMissing"));
         }
 
         Directory.CreateDirectory(DownloadPaths.FrameLimiter);
@@ -749,7 +749,7 @@ public partial class MainViewModel
         var url = currentUrl;
         if (string.IsNullOrEmpty(url))
         {
-            throw new InvalidOperationException("Could not determine Display Commander download URL from GitHub releases.");
+            throw new InvalidOperationException(Loc.GetString("Dc.Error.DownloadUrlMissing"));
         }
 
         Directory.CreateDirectory(DownloadPaths.FrameLimiter);

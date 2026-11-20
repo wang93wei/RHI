@@ -225,7 +225,7 @@ public sealed partial class MainWindow
                 if (card.DxvkStatus is GameStatus.Installed or GameStatus.UpdateAvailable)
                 {
                     // Not removed (game running): the installed variant stays, so its override does too
-                    cog.SetError(card.DxvkActionMessage is { Length: > 0 } m ? m : "DXVK couldn't be uninstalled.");
+                    cog.SetError(card.DxvkActionMessage is { Length: > 0 } m ? m : Loc.GetString("Dialog.Dxvk.UninstallFailed"));
                     CrashReporter.Log($"[MainWindow.DxvkCogChangeVariantAsync] '{gameName}' uninstall refused — variant left unchanged");
                     PopulateDetailPanel(card);
                     return false;

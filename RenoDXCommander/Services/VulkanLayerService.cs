@@ -115,7 +115,7 @@ public static class VulkanLayerService
         var stagedDll = AuxInstallService.RsStagedPath64;
         if (!File.Exists(stagedDll))
             throw new FileNotFoundException(
-                "Staged ReShade64.dll not found. Ensure ReShade has been downloaded first.", stagedDll);
+                Loc.GetString("VulkanLayer.Error.StagedDllMissing"), stagedDll);
 
         try
         {

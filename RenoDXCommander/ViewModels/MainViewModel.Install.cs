@@ -959,7 +959,7 @@ public partial class MainViewModel
             bool isSourceInstall = card.Mod.IsGenericSource;
             if (isSourceInstall)
             {
-                card.ActionMessage = "Setting up DXVK...";
+                card.ActionMessage = Loc.GetString("Status.SettingUpDxvk");
                 await ApplySourceSetupAsync(card);
                 AddSourceLaunchArg(card);
             }
