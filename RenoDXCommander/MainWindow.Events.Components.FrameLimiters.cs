@@ -86,6 +86,9 @@ public sealed partial class MainWindow
 
             var cog = new CogDialog(Loc.GetString("Detail.ReLimiter"), Content.XamlRoot);
 
+            // ── Version ───────────────────────────────────────────────────────────
+            AddUlVersionSection(cog, card);
+
             // ── Frame Limiter ─────────────────────────────────────────────────────
             cog.AddSection(Loc.GetString("Dialog.FrameLimiter"));
             if (!ulIniExists)

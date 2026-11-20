@@ -10,6 +10,9 @@
 - Added "Get beta updates" in Settings › General › Updates: RHI offers test builds of the next version, then moves you to the full release. Turning it off doesn't downgrade you.
 - RTX Encore's ⚙ has a Presets panel at the top: save a game's RTX Encore settings into one of six slots, name them, and apply them to any other game. Presets are shared by all games.
 - Browse SteamGridDB covers and banners in Spotlight (right-click a game › Artwork). Needs your own free SteamGridDB API key (Settings › Accounts & Data).
+- ReLimiter's ⚙ has a new Version section: pick any ReLimiter release for a game, or Latest. A game on a picked version is left out of update checks, Update All and automatic updates; picking Latest puts it back. If ReLimiter is installed, the new version goes in straight away and the game's relimiter.ini settings are kept.
+- boostedwarr's RenoDX mod for Batman: Arkham City installs from RHI, with its DLAA and FSR anti-aliasing: RHI unpacks the mod's package (the add-on and its 64-bit helper) and adds the newest DLSS and AMD's FSR files (FidelityFX SDK 2.4.0) next to it, and sets the launcher options the mod needs (DirectX 11, MSAA and FXAA off, Depth of Field on). A pop-up before the install explains what it does and the few things to do in the game. Removing the mod removes the helper, DLSS and FSR files. RenoDX mods that come as a .zip now install like any other.
+- Support for ReLimiter v4, which needs an NVIDIA graphics card and is built for DirectX 12. Once v4 is out, RHI updates only DirectX 12 games on an NVIDIA card to it; every other game stays on the last v3 release. DirectX 9, 10 and 11 games can pick v4 in ReLimiter's ⚙ › Version (Automatic, v4 or v3). 32-bit, Vulkan, DXVK and OpenGL games, and PCs without an NVIDIA card, stay on v3. To tell which API a game really uses, RHI checks your Rendering API override, then PCGamingWiki, then which API the game last started with ReShade. Moving a game between v3 and v4 gives it a new relimiter.ini with only RHI's settings (on-screen display key, shared presets, DLSS info, frame rate cap); the old file is kept as relimiter.ini.v3-backup or relimiter.ini.v4-backup. ReLimiter's version on each game now comes from the file in that game's folder.
 - Added "Built-in add-ons" in Settings › ReShade to keep ReShade's Generic Depth and Effect Runtime Sync add-ons on (RHI turns them off by default). "Write these to all games" applies it straight away.
 
 ### Changes
@@ -51,6 +54,8 @@
 ### Bug Fixes
 
 **General**
+- Steam games whose install data only has a number for the name ("appid_244160") now show their real name (e.g. Homeworld Remastered Collection), read from Steam's own library cache.
+- Fixed automatic component updates installing the same updates again when RHI was restarted soon after.
 - Fixed RHI not opening at all with Admin Mode on when Admin Mode had been set up for another copy of RHI (after a reinstall in another folder, or the portable version), or when it couldn't start RHI as administrator. RHI now opens without admin rights and says how to set Admin Mode up again. Uninstalling RHI also removes Admin Mode's scheduled task.
 - Fixed Microsoft Store apps that aren't games showing in the game list as Xbox games. RHI now lists only what Xbox Gaming Services has registered as a game, the same list the Xbox app uses. Thanks to the Special K team, whose SKIF launcher showed how.
 - Fixed Epic games not launching from RHI in Admin Mode while the Epic launcher was running as administrator.
@@ -67,6 +72,7 @@
 - Fixed Unreal Engine games played from both Steam and Game Pass getting UE-Extended's Engine.ini changes in the other store's settings folder, so they had no effect. Each copy now uses its own store's folder.
 
 **ReShade and shaders**
+- Fixed ReShade not loading in DOOM Eternal (Vulkan). The game switches ReShade's Vulkan layer off through the layer's off-switch, so RHI now gives that switch a different name. Other Vulkan games are not affected.
 - Fixed renaming ReShade to dxgi.dll in Game Overrides not renaming the file.
 - Fixed RHI sometimes deleting your own reshade-shaders folder.
 - Fixed installing ReShade under another name (opengl32, d3d12, version, winmm, .asi) overwriting another mod's file without asking. RHI now asks and keeps a backup.
@@ -130,6 +136,7 @@
 - Updated MFG Unlock's description for its new method names.
 - 007 First Light: ReShade now installs as dinput8.dll, as the RenoDX mod's instructions say (with dxgi.dll the game may not start). Already installed? Reinstall ReShade.
 - NieR Replicant ver.1.22474487139... now finds its Luma mod.
+- Batman: Arkham City GOTY: ReShade now installs as dxgi.dll (DirectX 11), which its RenoDX mod needs. Already installed? Reinstall ReShade.
 
 ## v2.9.4
 
