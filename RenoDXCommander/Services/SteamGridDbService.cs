@@ -42,10 +42,23 @@ internal static class SteamGridDbService
     private static readonly TimeSpan ListMaxAge = TimeSpan.FromHours(24);
     private static readonly SemaphoreSlim ThumbGate = new(6);
     private static readonly ConcurrentDictionary<string, Task<string?>> ThumbsInFlight = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, Task<bool>> FullInFlight = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object ChosenLock = new();
 
     private static string? _key;
     private static DateTime _keyStamp = DateTime.MinValue;
+
+    /// <summary>Localized text with an English fallback (this static service has no Loc).</summary>
+    private static string L(string key, string fallback)
+    {
+        try
+        {
+            var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+            var s = loc?.GetString(key);
+            return string.IsNullOrEmpty(s) || s == key ? fallback : s;
+        }
+        catch { return fallback; }
+    }
 
     // ── API key ───────────────────────────────────────────────────────────────
 
@@ -317,16 +330,25 @@ internal static class SteamGridDbService
         var dest = Path.Combine(Root, "full", $"{art.Id}{ext}");
         try
         {
-            if (!File.Exists(dest) && !await DownloadAsync(art.Url, dest, ct).ConfigureAwait(false))
-                return (null, "Couldn't download the image. Check your connection and try again.");
+            // Two games can want the same image at once (e.g. "Diablo" and "Diablo (DX)"): one download, shared
+            if (!File.Exists(dest))
+            {
+                var download = FullInFlight.GetOrAdd(dest, _ => Task.Run(async () =>
+                {
+                    try { return await DownloadAsync(art.Url, dest, ct).ConfigureAwait(false); }
+                    finally { FullInFlight.TryRemove(dest, out Task<bool>? _); }
+                }, CancellationToken.None));
+                if (!await download.ConfigureAwait(false))
+                    return (null, L("SteamArt.DownloadFailed", "Couldn't download the image. Check your connection and try again."));
+            }
             if (ext != ".webp") return (dest, null);
 
             var png = Path.ChangeExtension(dest, ".png");
             if (File.Exists(png)) return (png, null);
             if (await ConvertToPngAsync(dest, png).ConfigureAwait(false)) return (png, null);
-            return (null, "This image is in WebP format, which Windows can't open on this PC. Pick another one.");
+            return (null, L("SteamArt.WebpUnsupported", "This image is in WebP format, which Windows can't open on this PC. Pick another one."));
         }
-        catch (OperationCanceledException) { return (null, "Cancelled."); }
+        catch (OperationCanceledException) { return (null, L("Ul.Error.Cancelled", "Cancelled.")); }
     }
 
     private static async Task<bool> ConvertToPngAsync(string src, string dest)
@@ -388,6 +410,81 @@ internal static class SteamGridDbService
         catch (IOException ex) { CrashReporter.Log($"[SteamGridDbService.DownloadAsync] Can't save {dest}: {ex.Message}"); }
         catch (UnauthorizedAccessException ex) { CrashReporter.Log($"[SteamGridDbService.DownloadAsync] Can't save {dest}: {ex.Message}"); }
         return false;
+    }
+
+    // ── Automatic art for games Steam has none for ──────────────────────────
+    // The top image SteamGridDB lists for the game, saved as artwork\sgdb\auto\{hash of game key}_{kind}.{ext}.
+    // A game SteamGridDB has nothing for is asked again after a week.
+
+    private static readonly TimeSpan AutoMissRetry = TimeSpan.FromDays(7);
+    private static readonly SemaphoreSlim AutoGate = new(2);
+    private static readonly ConcurrentDictionary<string, Task<string?>> AutoInFlight = new(StringComparer.Ordinal);
+
+    private static string AutoStem(string gameKey, SteamArtworkService.Kind kind) =>
+        Path.Combine(Root, "auto", $"{Hash(gameKey)}_{(kind == SteamArtworkService.Kind.Cover ? "cover" : "hero")}");
+
+    /// <summary>The automatically picked image already on disk, or null. Cheap (file checks only).</summary>
+    internal static string? TryGetAuto(string gameKey, SteamArtworkService.Kind kind)
+    {
+        var stem = AutoStem(gameKey, kind);
+        foreach (var ext in new[] { ".png", ".jpg", ".jpeg" })
+            if (File.Exists(stem + ext)) return stem + ext;
+        return null;
+    }
+
+    /// <summary>
+    /// Picks and downloads SteamGridDB's top cover or banner for the game. Null without a key, when SteamGridDB has
+    /// none, or when it can't be reached (asked again next time; only "none" is remembered).
+    /// </summary>
+    internal static Task<string?> GetAutoAsync(string gameKey, int? appId, string gameName, SteamArtworkService.Kind kind, CancellationToken ct)
+    {
+        if (!HasKey) return Task.FromResult<string?>(null);
+        if (TryGetAuto(gameKey, kind) is { } done) return Task.FromResult<string?>(done);
+        var stem = AutoStem(gameKey, kind);
+        return AutoInFlight.GetOrAdd(stem, _ => Task.Run(async () =>
+        {
+            try { return await PickAutoAsync(stem, appId, gameName, kind, ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return null; }
+            finally { AutoInFlight.TryRemove(stem, out Task<string?>? _); }
+        }, CancellationToken.None));
+    }
+
+    private static async Task<string?> PickAutoAsync(string stem, int? appId, string gameName, SteamArtworkService.Kind kind, CancellationToken ct)
+    {
+        var miss = stem + ".miss";
+        try
+        {
+            if (File.Exists(miss) && DateTime.UtcNow - File.GetLastWriteTimeUtc(miss) < AutoMissRetry) return null;
+        }
+        catch (IOException ex) { CrashReporter.Log($"[SteamGridDbService.PickAutoAsync] {ex.Message}"); }
+
+        await AutoGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var page = await GetArtAsync(appId, gameName, kind, 0, ct).ConfigureAwait(false);
+            if (page.Status != Status.Ok) return null;
+            foreach (var art in page.Items.Take(3)) // the next one if the top image can't be used (e.g. WebP without the codec)
+            {
+                var (file, _) = await DownloadFullAsync(art, ct).ConfigureAwait(false);
+                if (file == null) continue;
+                var dest = stem + Path.GetExtension(file).ToLowerInvariant();
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                File.Copy(file, dest, overwrite: true);
+                CrashReporter.Log($"[SteamGridDbService.PickAutoAsync] {gameName} {kind}: image {art.Id}" +
+                                  (string.IsNullOrEmpty(art.Author) ? "" : $" by {art.Author}"));
+                return dest;
+            }
+            if (page.Items.Count == 0)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(miss)!);
+                File.WriteAllText(miss, DateTime.UtcNow.ToString("O"));
+            }
+            return null;
+        }
+        catch (IOException ex) { CrashReporter.Log($"[SteamGridDbService.PickAutoAsync] {gameName}: {ex.Message}"); }
+        catch (UnauthorizedAccessException ex) { CrashReporter.Log($"[SteamGridDbService.PickAutoAsync] {gameName}: {ex.Message}"); }
+        finally { AutoGate.Release(); }
+        return null;
     }
 
     // ── Which SteamGridDB image a game uses (for the picker's highlight) ─────

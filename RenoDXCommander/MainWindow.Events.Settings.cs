@@ -707,6 +707,27 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// Text for a DLDSR failure. DLDSR writes its state to C:\ProgramData\RHI and the driver's registry keys, which
+    /// need admin rights: without them every apply fails, so say that instead of "check logs".
+    /// </summary>
+    private static string DldsrFailureText(string action)
+    {
+        var loc = App.Services?.GetService(typeof(ILocalizationService)) as ILocalizationService;
+        string S(string key, string fallback)
+        {
+            var v = loc?.GetString(key);
+            return string.IsNullOrEmpty(v) || v == key ? fallback : v;
+        }
+        return VulkanLayerService.IsRunningAsAdmin()
+            ? string.Format(S("Settings.Dldsr.Failure.Admin",
+                "RHI couldn't {0}. The log (Settings › Tools & Maintenance › Logs) has the details."), action)
+            : string.Format(S("Settings.Dldsr.Failure.NoAdmin",
+                "RHI couldn't {0} because it isn't running as administrator. DLDSR changes need admin rights.\n\n"
+                + "Turn on Admin Mode in Settings › General (one Windows prompt, then RHI always starts with admin rights), "
+                + "or close RHI and start it with Run as administrator, then try again."), action);
+    }
+
     private async void ExportNvidiaProfiles_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -1840,7 +1861,7 @@ public sealed partial class MainWindow
                     var dlg = new ContentDialog
                     {
                         Title = Loc.GetString("Settings.Dldsr.ApplyFailed.Title"),
-                        Content = Loc.GetString("Settings.Dldsr.ApplyFailed.Content"),
+                        Content = DldsrFailureText(Loc.GetString("Settings.Dldsr.Action.Apply")),
                         CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = Content.XamlRoot,
                     };
@@ -2020,7 +2041,7 @@ public sealed partial class MainWindow
                     var dlg = new ContentDialog
                     {
                         Title = Loc.GetString("Settings.Dldsr.SmoothnessFailed.Title"),
-                        Content = Loc.GetString("Settings.Dldsr.SmoothnessFailed.Content"),
+                        Content = DldsrFailureText(Loc.GetString("Settings.Dldsr.Action.Smoothness")),
                         CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = Content.XamlRoot,
                     };

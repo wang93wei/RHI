@@ -65,6 +65,13 @@ public partial class SettingsHandler
                 TextWrapping = TextWrapping.Wrap,
             });
 
+            body.Children.Add(MakeArtOnOffRow(Loc.GetString("SteamArt.UseLibrary.Label"), ViewModel.Settings.UseSteamLibraryArt,
+                Loc.GetString("SteamArt.UseLibrary.Tooltip"),
+                on => ViewModel.Settings.UseSteamLibraryArt = on));
+            body.Children.Add(MakeArtOnOffRow(Loc.GetString("SteamArt.AutoFill.Label"), ViewModel.Settings.AutoSteamGridDbArt,
+                Loc.GetString("SteamArt.AutoFill.Tooltip"),
+                on => ViewModel.Settings.AutoSteamGridDbArt = on));
+
             // Setting row: label | [key box | Save]
             var row = new Grid { ColumnSpacing = 10 };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -137,6 +144,45 @@ public partial class SettingsHandler
             _sgdbKeyBox = null;
             CrashReporter.Log($"[SettingsHandler.EnsureSteamGridDbCard] Failed — {ex.Message}");
         }
+    }
+
+    /// <summary>An Off / On setting row for the Artwork card. A change saves and reloads the shown covers and banner.</summary>
+    private Grid MakeArtOnOffRow(string label, bool value, string tooltip, Action<bool> set)
+    {
+        var row = new Grid { ColumnSpacing = 10 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
+        row.Children.Add(new TextBlock
+        {
+            Text = label,
+            Style = FindStyle("SettingsLabelStyle"),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        var combo = new ComboBox { Style = FindStyle("SettingsComboStyle") };
+        combo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.Off") });
+        combo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.On") });
+        combo.SelectedIndex = value ? 1 : 0;
+        ToolTipService.SetToolTip(combo, tooltip);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(combo, label);
+        combo.SelectionChanged += (s, e) =>
+        {
+            try
+            {
+                if (combo.SelectedIndex < 0) return;
+                bool on = combo.SelectedIndex == 1;
+                set(on);
+                ViewModel.SaveSettingsPublic();
+                CrashReporter.Log($"[SettingsHandler.Artwork] {label}: {(on ? "On" : "Off")}");
+                _window.ReloadAllArt();
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.Log($"[SettingsHandler.Artwork] {label} failed — {ex.Message}");
+            }
+        };
+        Grid.SetColumn(combo, 1);
+        row.Children.Add(combo);
+        return row;
     }
 
     private static Button MakeSgdbButton(string text, string style, string brushKey, string tooltip)

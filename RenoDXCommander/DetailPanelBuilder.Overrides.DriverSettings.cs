@@ -31,7 +31,8 @@ public partial class DetailPanelBuilder
         uint ReBarMode,
         ulong GlobalReBarSizeLimit,
         uint? PerGameFpsLimit, uint GlobalFpsLimit,
-        bool IsAdmin);
+        bool IsAdmin,
+        int? LodBias = null, uint AnisoLevel = 0, uint? TextureQuality = null);
 
     private const string DriverSummaryTag = "DriverSummary";   // collapsed-only header summary
 
@@ -198,7 +199,10 @@ public partial class DetailPanelBuilder
                         GlobalReBarSizeLimit:     svc.GetGlobalReBarSizeLimit(),
                         PerGameFpsLimit:          svc.GetPerGameFpsLimit(gameName, installPath),
                         GlobalFpsLimit:           svc.GetGlobalFpsLimit(),
-                        IsAdmin:                  VulkanLayerService.IsRunningAsAdmin());
+                        IsAdmin:                  VulkanLayerService.IsRunningAsAdmin(),
+                        LodBias:                  svc.GetLodBias(gameName, installPath),
+                        AnisoLevel:               svc.GetAnisoLevel(gameName, installPath),
+                        TextureQuality:           svc.GetTextureQuality(gameName, installPath));
                 }, scanCt);
                 using var delayCts = new CancellationTokenSource();
                 var delayTask = Task.Delay(5000, delayCts.Token);
@@ -295,6 +299,10 @@ public partial class DetailPanelBuilder
                 summaryEntries.Add((Loc.GetString("Overrides.Summary.GSync"), Loc.GetString("Xaml.Off")));
             if (data.PerGameFpsLimit is uint capFps)
                 summaryEntries.Add((Loc.GetString("Xaml.FpsLimit"), capFps == 0 ? Loc.GetString("Xaml.Off") : $"{capFps}"));
+            if (data.LodBias is int lod)
+                summaryEntries.Add((Loc.GetString("Overrides.Summary.LodBias"), DlssPresetService.FormatLodBias(lod)));
+            if (data.AnisoLevel != 0)
+                summaryEntries.Add((Loc.GetString("Overrides.Summary.Aniso"), $"{data.AnisoLevel}x"));
             var summaryTb = DetailPanelBuilder.MakeSectionSummaryInlines(summaryEntries,
                 Loc.GetString("Overrides.DriverSummary.Tooltip"));
             if (summaryTb != null)
@@ -1022,6 +1030,15 @@ public partial class DetailPanelBuilder
             Grid.SetColumn(rebarCol, 2);
             nvidiaGrid.Children.Add(rebarCol);
             nvidiaGrid.Children.Add(MakeDlssDivider(3));
+
+            // ── Row 2: Texture Filtering (LOD bias, anisotropic filtering, quality) ──
+            nvidiaGrid.RowSpacing = 12;
+            nvidiaGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            nvidiaGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var textureCol = BuildTextureFilteringColumn(d, nvidiaPresetService, capturedName, installPathSafe);
+            Grid.SetRow(textureCol, 1);
+            Grid.SetColumn(textureCol, 0);
+            nvidiaGrid.Children.Add(textureCol);
             _window.ViewModel.SetLastUiAction($"BuildDriverProfileSectionWithData:ReBAR done({capturedName})");
 
             // Defer adding the fully-built driver grid to the visual tree so WinUI can
