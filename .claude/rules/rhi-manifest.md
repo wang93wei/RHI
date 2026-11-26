@@ -46,6 +46,7 @@ paths:
 |-------|---------|
 | `legacyReShadeVersions` | Game → forced RS version string |
 | `legacyReShadeAvailable` | Array of picker versions |
+| `noAddonReShadeGames` | Array — ReShade without add-on support (No Addons) by default; applied once per game (`ManifestNoAddonApplied`), an installed add-on ReShade is swapped, the user's later choice sticks (`MainViewModel.NoAddonReShade.cs`) |
 | `lumaDefaultGames` | Array — auto-enable Luma mode on first detection |
 | `lumaRenodxCompat` | Array — games where RenoDX coexists with Luma |
 | `nativeHdrGames` | Array — UE-Extended with Set_Path=0 (supersedes `ueExtendedGames`) |
@@ -134,3 +135,4 @@ All resolved via `AddonInfoResolver.cs` — routes by `AddonType` enum to the co
 
 ## dgVoodoo2 versions
 - **`dgVoodooVersions`**: added by hand for each dgVoodoo2 release (RHI doesn't check GitHub for new ones). Newest goes first; the first entry is the default for new installs and Luma's auto-install. Copy the asset URL from the release (`gh release view <tag> -R dege-diosg/dgVoodoo2`): the tag prefix isn't consistent (`v2.87.5` but `2.87.6`), so building the URL from the version gives 404s. Compare the zip's file list with the previous version before adding.
+- **`featureFlags.experimentalHidden`** (`["urti"]`): pulls an Experimental section item for everyone (not offered for new installs; still shown where installed, for removal). Ids in `FeatureFlags` (`ExperimentalUrti` "urti", `ExperimentalFrameWarp` "framewarp"). `componentUrls.latewarp` + `latewarpSha256` move FrameWarp's NVIDIA Latewarp download (both needed). Field reference: `docs/manifest-field-reference.md` › featureFlags.

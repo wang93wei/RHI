@@ -124,6 +124,7 @@ public partial class DetailPanelBuilder
                     ? Loc.GetString("Extras.Umfg.Dlss5.RemovedShared")
                     : Loc.GetString("Extras.RtxEncore.Nr.Removed"));
                 RequestExtrasRebuild(card);
+                await RefreshDlssAfterNrDllChangeAsync(card); // #174: NR column / NR section
                 return;
             }
             if (combo != null) combo.IsEnabled = false;
@@ -164,6 +165,7 @@ public partial class DetailPanelBuilder
                 dlssS.RecordDlssFound(card.GameName);
                 on = true;
                 RequestExtrasRebuild(card);
+                await RefreshDlssAfterNrDllChangeAsync(card); // #174: NR column / NR section
             }
             finally
             {

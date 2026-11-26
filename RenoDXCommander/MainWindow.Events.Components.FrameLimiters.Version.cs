@@ -39,6 +39,10 @@ public sealed partial class MainWindow
         verdictLine.Visibility = Visibility.Collapsed;
         var warning = cog.AddWarning("");
         warning.Visibility = Visibility.Collapsed;
+        // ReLimiter v4 doesn't support NVIDIA Dynamic MFG: shown when DMFG is on and v4 is installed or can be picked
+        var dmfgWarning = cog.AddWarning(MainViewModel.UlDmfgWarning);
+        dmfgWarning.Visibility = Visibility.Collapsed;
+        bool dmfgOn = false;
         var switchBtn = CogDialog.StyledButton(Loc.GetString("Dialog.Ul.Version.SwitchToV3"), CogButtonKind.Primary);
         var switchRow = cog.AddButtons(switchBtn);
         switchRow.Visibility = Visibility.Collapsed;
@@ -78,6 +82,21 @@ public sealed partial class MainWindow
             warning.Text = bad ? Loc.GetString("Dialog.Ul.Version.V4Blocked", verdict.Reason) : "";
             warning.Visibility = bad ? Visibility.Visible : Visibility.Collapsed;
             switchRow.Visibility = bad ? Visibility.Visible : Visibility.Collapsed;
+
+            bool showDmfg = dmfgOn && (onV4 || (hasV4 && verdict.Allowed));
+            dmfgWarning.Visibility = showDmfg ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // The driver profile is read through NVAPI, off the UI thread
+        _ = ReadDmfgAsync();
+        async Task ReadDmfgAsync()
+        {
+            try
+            {
+                dmfgOn = await Task.Run(() => ViewModel.IsDmfgOn(card));
+                if (dmfgOn) RefreshNotes();
+            }
+            catch (Exception ex) { CrashReporter.Log($"[MainWindow.AddUlVersionSection] DMFG read failed — {ex.Message}"); }
         }
 
         void Fill(List<UlRelease> releases)

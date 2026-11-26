@@ -36,6 +36,8 @@ public partial class DetailPanelBuilder
             AddLabel(Loc.GetString("Texture.LodBias"));
             var options = DlssPresetService.LodBiasOptions;
             var items = options.Select(o => o.Name).ToList();
+            // Default follows the global (base profile) value: show it
+            if (d.GlobalLodBias is int globalLod) items[0] = $"Global ({DlssPresetService.FormatLodBias(globalLod)})";
             int idx = Array.FindIndex(options, o => o.Eighths == d.LodBias);
             if (idx < 0 && d.LodBias is int own)
             {
@@ -68,6 +70,7 @@ public partial class DetailPanelBuilder
             AddLabel(Loc.GetString("Texture.AnisotropicFiltering"));
             var options = DlssPresetService.AnisoOptions;
             var items = options.Select(o => o.Name).ToList();
+            if (d.GlobalAnisoLevel != 0) items[0] = $"Global ({d.GlobalAnisoLevel}x)";
             int idx = Array.FindIndex(options, o => o.Level == d.AnisoLevel);
             if (idx < 0)
             {
@@ -99,6 +102,11 @@ public partial class DetailPanelBuilder
             AddLabel(Loc.GetString("Extras.RtxEncore.Opt.Quality"));
             var options = DlssPresetService.TextureQualityOptions;
             var items = options.Select(o => o.Name).ToList();
+            if (d.GlobalTextureQuality is uint globalQ)
+            {
+                int gi = Array.FindIndex(options, o => o.Value == globalQ);
+                items[0] = $"Global ({(gi > 0 ? options[gi].Name : $"0x{globalQ:X8}")})";
+            }
             int idx = Array.FindIndex(options, o => o.Value == d.TextureQuality);
             if (idx < 0)
             {

@@ -1076,20 +1076,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- ── Game Overrides section ── -->
-                        <Border x:Name="OverridesContainer" x:FieldModifier="internal"
-                                Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
-                                BorderBrush="{StaticResource BorderDefaultBrush}" BorderThickness="1"
-                                Padding="14,12" Visibility="Collapsed">
-                            <StackPanel Spacing="8">
-                                <!-- Collapse header — wired in BuildOverridesPanel -->
-                                <StackPanel x:Name="OverridesHeaderRow" x:FieldModifier="internal"
-                                            Orientation="Horizontal" Spacing="0"/>
-                                <!-- Body — all overrides content added here by builder -->
-                                <StackPanel x:Name="OverridesPanel" x:FieldModifier="internal" Spacing="6"/>
-                            </StackPanel>
-                        </Border>
-
                         <!-- ── Neural Rendering section ── -->
                         <Border x:Name="NeuralRenderingContainer" x:FieldModifier="internal"
                                 Background="{StaticResource SurfaceComponentTableBrush}" CornerRadius="12"
@@ -3085,6 +3071,21 @@
                                     </StackPanel>
                                 </Border>
 
+                                <!-- RHI -->
+                                <Border Background="{StaticResource SurfaceStatusBarBrush}" CornerRadius="8" Padding="12,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock FontSize="12">
+                                            <Run Text="RHI" FontWeight="SemiBold" Foreground="{StaticResource AccentGreenBrush}"/>
+                                            <Run Text=" by RankFTW" Foreground="{StaticResource TextTertiaryBrush}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource InlineDescriptionBrush}" TextWrapping="Wrap"
+                                                   Text="{Binding [Xaml.IndependentAppNotAffiliated], Source={StaticResource Loc}}"/>
+                                        <HyperlinkButton NavigateUri="https://github.com/RankFTW" Padding="0,2,0,0" FontSize="11">
+                                            <TextBlock Foreground="{StaticResource AccentTealDimBrush}" Text="github.com/RankFTW"/>
+                                        </HyperlinkButton>
+                                    </StackPanel>
+                                </Border>
+
                                 <!-- Lazorr -->
                                 <Border Background="{StaticResource SurfaceStatusBarBrush}" CornerRadius="8" Padding="12,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                     <StackPanel Spacing="3">
@@ -3116,17 +3117,17 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- RHI -->
+                                <!-- RHI DB (RenoDX mod database) -->
                                 <Border Background="{StaticResource SurfaceStatusBarBrush}" CornerRadius="8" Padding="12,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                     <StackPanel Spacing="3">
                                         <TextBlock FontSize="12">
-                                            <Run Text="RHI" FontWeight="SemiBold" Foreground="{StaticResource AccentGreenBrush}"/>
-                                            <Run Text=" by RankFTW" Foreground="{StaticResource TextTertiaryBrush}"/>
+                                            <Run Text="RHI DB" FontWeight="SemiBold" Foreground="{StaticResource AccentGreenBrush}"/>
+                                            <Run Text=" by Scrungus" Foreground="{StaticResource TextTertiaryBrush}"/>
                                         </TextBlock>
                                         <TextBlock FontSize="11" Foreground="{StaticResource InlineDescriptionBrush}" TextWrapping="Wrap"
-                                                   Text="{Binding [Xaml.UnofficialCompanionAppNotAffiliated], Source={StaticResource Loc}}"/>
-                                        <HyperlinkButton NavigateUri="https://github.com/RankFTW" Padding="0,2,0,0" FontSize="11">
-                                            <TextBlock Foreground="{StaticResource AccentTealDimBrush}" Text="github.com/RankFTW"/>
+                                                   Text="{Binding [Xaml.RhiDbCreditDescription], Source={StaticResource Loc}}"/>
+                                        <HyperlinkButton NavigateUri="https://github.com/RankFTW/rhi-repo" Padding="0,2,0,0" FontSize="11">
+                                            <TextBlock Foreground="{StaticResource AccentTealDimBrush}" Text="github.com/RankFTW/rhi-repo"/>
                                         </HyperlinkButton>
                                     </StackPanel>
                                 </Border>

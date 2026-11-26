@@ -17,26 +17,12 @@ namespace RenoDXCommander;
 
 public sealed partial class MainWindow
 {
-    /// <summary>VRR frame rate caps (same as the global settings), used by the ReLimiter and Display Commander ⚙.</summary>
-    /// <remarks>Built on each access, not in a static initializer: the type initializer must not touch DI
-    /// (MainWindowStaticInitTests runs it without a service provider).</remarks>
-    private static (int Fps, string Label)[] VrrFpsPresets => new[]
-    {
-        (59,  LocOpt.T("59 (60Hz VRR)")),
-        (73,  LocOpt.T("73 (75Hz VRR)")),
-        (97,  LocOpt.T("97 (100Hz VRR)")),
-        (116, LocOpt.T("116 (120Hz VRR)")),
-        (138, LocOpt.T("138 (144Hz VRR)")),
-        (157, LocOpt.T("157 (165Hz VRR)")),
-        (171, LocOpt.T("171 (180Hz VRR)")),
-        (189, LocOpt.T("189 (200Hz VRR)")),
-        (224, LocOpt.T("224 (240Hz VRR)")),
-        (258, LocOpt.T("258 (280Hz VRR)")),
-        (275, LocOpt.T("275 (300Hz VRR)")),
-        (324, LocOpt.T("324 (360Hz VRR)")),
-        (416, LocOpt.T("416 (480Hz VRR)")),
-        (431, LocOpt.T("431 (500Hz VRR)")),
-    };
+    /// <summary>
+    /// VRR frame rate caps (same as the global settings), used by the ReLimiter and Display Commander ⚙.
+    /// Computed like ReLimiter from the displays' exact refresh rates (<see cref="VrrCaps"/>); read once per dialog.
+    /// </summary>
+    private static (int Fps, string Label)[] VrrFpsPresets
+        => VrrCaps.Presets().Select(p => (p.Fps, $"{p.Fps} ({p.Hz}Hz VRR)")).ToArray();
 
     private async void UlCogButton_Click(object sender, RoutedEventArgs e)
     {
@@ -97,10 +83,10 @@ public sealed partial class MainWindow
             var vrrPresets = VrrFpsPresets;
             var vrrFpsSet = new HashSet<int>(vrrPresets.Select(p => p.Fps));
 
-            // Items: Off, presets, "<n> (Custom)" when the current value isn't a preset, "Custom..."
+            // Items: Auto VRR (0 = ReLimiter's automatic VRR cap since 4.0.4), presets, "<n> (Custom)" when the current value isn't a preset, "Custom..."
             List<string> BuildFpsItems(int fps)
             {
-                var items = new List<string> { LocOpt.T("Off") };
+                var items = new List<string> { LocOpt.T(SettingsHandler.UlAutoVrrLabel) };
                 items.AddRange(vrrPresets.Select(p => p.Label));
                 if (fps > 0 && !vrrFpsSet.Contains(fps))
                     items.Add(Loc.GetString("Dialog.CustomFpsFormat", fps));
@@ -109,9 +95,9 @@ public sealed partial class MainWindow
             }
             int FpsIndex(List<string> items, int fps)
             {
-                if (fps == 0) return 0; // Off
+                if (fps == 0) return 0; // Auto VRR
                 int matchIdx = Array.FindIndex(vrrPresets, p => p.Fps == fps);
-                return matchIdx >= 0 ? matchIdx + 1 : items.Count - 2; // +1 for "Off"; custom item sits before "Custom..."
+                return matchIdx >= 0 ? matchIdx + 1 : items.Count - 2; // +1 for "Auto VRR"; custom item sits before "Custom..."
             }
 
             var fpsItems = BuildFpsItems(currentTargetFps);
@@ -258,13 +244,15 @@ public sealed partial class MainWindow
                 dlssHooksCombo.IsTabStop = false;
             }
 
+            AddUpdateAllSection(cog, card, UpdateAllComponent.ReLimiter);
+
             // ── Files ─────────────────────────────────────────────────────────────
             cog.AddSection(Loc.GetString("Dialog.Ul.SectionFiles"));
             var openIniBtn = cog.MakeOpenFileButton(Loc.GetString("Dialog.Ul.OpenIni"), ulIniFile);
             var deployBtn = cog.MakeButton(Loc.GetString("Dialog.DeployRelimiterIni"), CogButtonKind.Primary, () =>
             {
                 if (string.IsNullOrEmpty(card.InstallPath)) return;
-                AuxInstallService.CopyUlIni(card.InstallPath);
+                AuxInstallService.CopyUlIni(card.InstallPath, MainViewModel.UlInstalledMajor(card));
                 openIniBtn.IsEnabled = ulIniFile != null && File.Exists(ulIniFile);
                 cog.SetSuccess(Loc.GetString("Dialog.Ul.IniCopied"));
                 CrashReporter.Log($"[MainWindow.UlCogButton_Click] Deployed relimiter.ini for '{card.GameName}'");

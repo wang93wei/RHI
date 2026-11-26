@@ -61,7 +61,6 @@ public partial class DetailPanelBuilder
         _window = window;
         _dispatcherQueue = window.DispatcherQueue;
         Layout = new DetailLayoutHost(window);
-        Layout.SummariesStale += RefreshGameOverridesSummary;
         _gameNameService = gameNameService;
         _peHeaderService = peHeaderService;
         _dlssPresetService = dlssPresetService;
@@ -74,7 +73,7 @@ public partial class DetailPanelBuilder
         _optiScalerService = optiScalerService;
 
         // Set hand cursor on link buttons so they feel like clickable links
-        var handCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
+        var handCursor = HandCursor;
         var cursorProp = DetailPanelBuilder.CursorProp;
         cursorProp?.SetValue(_window.DetailNexusModsBtn, handCursor);
         cursorProp?.SetValue(_window.DetailPcgwBtn, handCursor);
@@ -191,8 +190,8 @@ public partial class DetailPanelBuilder
                 {
                     badge.PointerPressed += async (s, e) =>
                         await Windows.System.Launcher.LaunchUriAsync(new Uri(donationUrl));
-                    var handCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-                    var arrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+                    var handCursor = HandCursor;
+                    var arrowCursor = ArrowCursor;
                     var cursorProp = DetailPanelBuilder.CursorProp;
                     badge.PointerEntered += (s, e) => cursorProp?.SetValue(badge, handCursor);
                     badge.PointerExited += (s, e) => cursorProp?.SetValue(badge, arrowCursor);
@@ -433,12 +432,53 @@ public partial class DetailPanelBuilder
     {
         window.DetailGraphicsApiBadgePanel.Children.Clear();
 
-        if (!card.HasGraphicsApiBadge)
+        // The game's Graphics API override (game settings ⚙) replaces the detected APIs, marked as an override
+        var vm = window.ViewModel;
+        var overrideApis = vm.GetApiOverride(card.GameName, card.Source ?? "");
+        if (overrideApis is { Count: > 0 })
         {
-            window.DetailGraphicsApiBadgePanel.Visibility = Visibility.Collapsed;
-            return;
+            var detected = card.HasGraphicsApiBadge ? card.GraphicsApiLabel : "unknown";
+            foreach (var name in overrideApis)
+            {
+                var label = Enum.TryParse<GraphicsApiType>(name, ignoreCase: true, out var api) ? Services.GraphicsApiDetector.GetLabel(api) : name;
+                if (string.IsNullOrEmpty(label)) label = name;
+                AddHeaderBadge(window, $"{label} (override)",
+                    $"Graphics API set in the game's settings ⚙ (detected: {detected}). RHI installs for this API.");
+            }
         }
+        else if (card.HasGraphicsApiBadge)
+            AddDetectedApiBadges(window, card);
 
+        // Launch arguments (game settings ⚙): a tag when set, the arguments on hover
+        var args = vm.GetLaunchArgsOverride(card.GameName);
+        if (!string.IsNullOrWhiteSpace(args))
+            AddHeaderBadge(window, "Launch args", $"Launch arguments, used when you start the game from RHI (game settings ⚙): {args}");
+
+        window.DetailGraphicsApiBadgePanel.Visibility =
+            window.DetailGraphicsApiBadgePanel.Children.Count > 0
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>A small header tag in the API badge panel (same look as the API tags).</summary>
+    private static void AddHeaderBadge(MainWindow window, string text, string tooltip)
+    {
+        var badge = new Border
+        {
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(6, 2, 6, 2),
+            Background = UIFactory.Brush(ResourceKeys.ChipDefaultBrush),
+            BorderBrush = UIFactory.Brush(ResourceKeys.BorderDefaultBrush),
+            BorderThickness = new Thickness(1),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock { Text = text, FontSize = 11, Foreground = UIFactory.Brush(ResourceKeys.ChipTextBrush) },
+        };
+        ToolTipService.SetToolTip(badge, tooltip);
+        window.DetailGraphicsApiBadgePanel.Children.Add(badge);
+    }
+
+    /// <summary>The detected graphics APIs as header tags.</summary>
+    private static void AddDetectedApiBadges(MainWindow window, GameCardViewModel card)
+    {
         var rawApis = card.DetectedApis.Count > 0
             ? card.DetectedApis
             : new HashSet<GraphicsApiType> { card.GraphicsApi };
@@ -504,16 +544,7 @@ public partial class DetailPanelBuilder
             ToolTipService.SetToolTip(badge, Loc.GetString("Detail.GraphicsApi.Tooltip", apiName));
             window.DetailGraphicsApiBadgePanel.Children.Add(badge);
         }
-
-        window.DetailGraphicsApiBadgePanel.Visibility =
-            window.DetailGraphicsApiBadgePanel.Children.Count > 0
-            ? Visibility.Visible : Visibility.Collapsed;
     }
-
-    // ── OverridesHeaderRow event handler refs — stored so we can unsubscribe on rebuild ──
-    private Microsoft.UI.Xaml.Input.PointerEventHandler? _ovHeaderPressedHandler;
-    private Microsoft.UI.Xaml.Input.PointerEventHandler? _ovHeaderEnteredHandler;
-    private Microsoft.UI.Xaml.Input.PointerEventHandler? _ovHeaderExitedHandler;
 
     // ── Section order / drag-reorder ─────────────────────────────────────────
 
@@ -615,8 +646,8 @@ public partial class DetailPanelBuilder
         };
         ToolTipService.SetToolTip(handle, Loc.GetString("Detail.DragHandle.Tooltip"));
 
-        var handCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var arrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var handCursor  = HandCursor;
+        var arrowCursor = ArrowCursor;
         var cursorProp  = DetailPanelBuilder.CursorProp;
 
         handle.PointerEntered += (s, e) =>
@@ -775,7 +806,7 @@ public partial class DetailPanelBuilder
     private void ComponentsHeader_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         _window.DetailComponentsTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
-        var handCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
+        var handCursor = HandCursor;
         DetailPanelBuilder.CursorProp
             ?.SetValue(_window.DetailComponentsHeader, handCursor);
     }
@@ -783,7 +814,7 @@ public partial class DetailPanelBuilder
     private void ComponentsHeader_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
     {
         _window.DetailComponentsTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-        var arrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var arrowCursor = ArrowCursor;
         DetailPanelBuilder.CursorProp
             ?.SetValue(_window.DetailComponentsHeader, arrowCursor);
     }
@@ -870,101 +901,22 @@ public partial class DetailPanelBuilder
 
         if (card.IsRefInstalled)
             entries.Add(("RE Framework", card.RefInstalledVersion));
+        // Each component's overrides in brackets after its version (DLL name, channel, Update All and so on)
+        var vm = App.Services.GetService(typeof(MainViewModel)) as MainViewModel;
+        string? With(string key, string? version) =>
+            vm != null && ComponentOverrideNotes.Line(vm, card, key) is { } notes
+                ? $"{version} ({notes.Replace(" · ", ", ")})" : version;
         if (card.IsRsInstalled && card.LumaStatus is not GameStatus.Installed and not GameStatus.UpdateAvailable)
-            entries.Add(("ReShade", card.RsInstalledVersion));
+            entries.Add(("ReShade", With("Rs", card.RsInstalledVersion)));
         if (card.IsRdxInstalled)
-            entries.Add(("RenoDX", card.RdxInstalledVersion));
+            entries.Add(("RenoDX", With("Rdx", card.RdxInstalledVersion)));
         if (card.IsUlInstalled)
-            entries.Add(("ReLimiter", card.UlInstalledVersion));
+            entries.Add(("ReLimiter", With("Ul", card.UlInstalledVersion)));
         if (card.IsDcInstalled)
-            entries.Add(("DC", card.DcInstalledVersion));
+            entries.Add(("DC", With("Dc", card.DcInstalledVersion)));
         if (card.IsLumaInstalled)
             entries.Add(("Luma", "On"));
 
         return MakeSectionSummaryInlines(entries, Loc.GetString("Detail.Components.Summary.Tooltip"));
-    }
-
-    /// <summary>
-    /// Rebuilds the Game Overrides header summary for the selected game (it's otherwise only
-    /// rebuilt with the panel or when the Classic section is collapsed).
-    /// </summary>
-    private void RefreshGameOverridesSummary()
-    {
-        try
-        {
-            if (_window.ViewModel.SelectedGame is not { } card) return;
-            var row = _window.OverridesHeaderRow;
-            // index 3 onwards = summary (after drag handle + arrow + title)
-            while (row.Children.Count > 3) row.Children.RemoveAt(3);
-            if (BuildGameOverridesSummary(card) is { } summary)
-            {
-                summary.Visibility = _window.OverridesPanel.Visibility == Visibility.Collapsed
-                    ? Visibility.Visible : Visibility.Collapsed;
-                row.Children.Add(summary);
-            }
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[DetailPanelBuilder.RefreshGameOverridesSummary] {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Builds the summary for the Game Overrides section.
-    /// Shows active non-default per-game overrides: RS channel, API, launch args.
-    /// Returns null when everything is at default.
-    /// </summary>
-    internal TextBlock? BuildGameOverridesSummary(GameCardViewModel card)
-    {
-        var entries = new List<(string Label, string? Version)>();
-
-        var channel = _window.ViewModel.GetReShadeChannelOverride(card.GameName, card.Source ?? "");
-        if (!string.IsNullOrEmpty(channel))
-            entries.Add((Loc.GetString("Overrides.Summary.RsChannel"), channel));
-
-        var apis = _window.ViewModel.GetApiOverride(card.GameName, card.Source ?? "");
-        if (apis is { Count: > 0 })
-            entries.Add((Loc.GetString("Overrides.Summary.Api"), string.Join("+", apis)));
-
-        // Shaders / Addons — show when set to non-default
-        var shaderMode = _window.ViewModel.GetPerGameShaderMode(card.GameName, card.Source ?? "");
-        if (!string.IsNullOrEmpty(shaderMode) && shaderMode != "Global")
-            entries.Add((Loc.GetString("Overrides.Summary.Shaders"), shaderMode));
-
-        var addonMode = _window.ViewModel.GetPerGameAddonMode(card.GameName, card.Source ?? "");
-        if (!string.IsNullOrEmpty(addonMode) && addonMode != "Global")
-            entries.Add((Loc.GetString("Overrides.Summary.Addons"), addonMode));
-
-        // Update inclusion — show only when any component is excluded
-        var excluded = new List<string>();
-        if (_window.ViewModel.IsUpdateAllExcludedReShade(card.GameName, card.Source ?? "")) excluded.Add("RS");
-        if (_window.ViewModel.IsUpdateAllExcludedRenoDx(card.GameName, card.Source ?? "")) excluded.Add("RDX");
-        if (_window.ViewModel.IsUpdateAllExcludedUl(card.GameName, card.Source ?? ""))     excluded.Add("RL");
-        if (_window.ViewModel.IsUpdateAllExcludedDc(card.GameName, card.Source ?? ""))     excluded.Add("DC");
-        if (_window.ViewModel.IsUpdateAllExcludedOs(card.GameName, card.Source ?? ""))     excluded.Add("OS");
-        if (excluded.Count > 0)
-            entries.Add((Loc.GetString("Overrides.Summary.Excluded"), string.Join(" ", excluded)));
-
-        var launchArgs = _gameNameService.LaunchArgsOverrides.TryGetValue(card.GameName, out var la)
-            ? la : null;
-        if (!string.IsNullOrWhiteSpace(launchArgs))
-            entries.Add((Loc.GetString("Overrides.Summary.Args"), launchArgs));
-
-        // DLL naming overrides — show each custom filename that's set
-        if (_window.ViewModel.HasDllOverride(card.GameName))
-        {
-            var cfg = _window.ViewModel.GetDllOverride(card.GameName);
-            if (cfg != null)
-            {
-                if (!string.IsNullOrEmpty(cfg.ReShadeFileName) && cfg.ReShadeFileName != "--------")
-                    entries.Add((Loc.GetString("Overrides.Summary.RsDll"), cfg.ReShadeFileName));
-                if (!string.IsNullOrEmpty(cfg.DcFileName) && cfg.DcFileName != "--------")
-                    entries.Add((Loc.GetString("Overrides.Summary.DcDll"), cfg.DcFileName));
-                if (!string.IsNullOrEmpty(cfg.OsFileName) && cfg.OsFileName != "--------")
-                    entries.Add((Loc.GetString("Overrides.Summary.OsDll"), cfg.OsFileName));
-            }
-        }
-
-        return MakeSectionSummaryInlines(entries, Loc.GetString("Detail.Overrides.Summary.Tooltip"));
     }
 }

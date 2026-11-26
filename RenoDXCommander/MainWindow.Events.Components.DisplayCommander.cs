@@ -80,6 +80,31 @@ public sealed partial class MainWindow
             if (card.IsRunning)
                 cog.AddWarning(Loc.GetString("Dialog.Dc.GameRunningWarning"));
 
+            // ── DLL name (a pick that has to ask first
+            //    closes this dialog, runs, then reopens it, because dialogs can't open over each other) ──
+            Func<Task>? runAfterClose = null;
+            if (_detailPanelBuilder is { } dp)
+            {
+                var capturedName = card.GameName;
+                cog.AddSection("Setup");
+                AddSharedOverrideCombo(cog, "DLL name",
+                    "Renames Display Commander's DLL in this game's folder. -------- uses the default name. Names used by ReShade or OptiScaler aren't listed.",
+                    () => { var (items, sel) = dp.GetDcDllNameChoices(card); return (items, sel); },
+                    sel => DetailPanelBuilder.DcNamePickNeedsDialog(card, sel),
+                    async sel =>
+                    {
+                        bool ok = await dp.ApplyDcDllNameAsync(card, capturedName, sel);
+                        if (ok)
+                        {
+                            dp.UpdateDetailComponentRows(card);
+                            dp.QueueOverridesRebuild(capturedName);
+                        }
+                        return ok;
+                    },
+                    reopenItem: null,
+                    closeThenRun: action => { runAfterClose = action; cog.Hide(); });
+            }
+
             // ── Frame rate ─────────────────────────────────────────────────────────
             cog.AddSection(Loc.GetString("Dialog.Dc.SectionFrameRate"));
             AddDcFpsLimitRow(cog, fpsLimit, fps => Write("fps_limit",
@@ -129,6 +154,8 @@ public sealed partial class MainWindow
                 null);
             cog.AddNote(Loc.GetString("Dialog.Dc.TargetDisplayNote"));
 
+            AddUpdateAllSection(cog, card, UpdateAllComponent.DisplayCommander);
+
             // ── Files ─────────────────────────────────────────────────────────────
             cog.AddSection(Loc.GetString("Dialog.Dc.SectionFiles"));
             var openIniBtn = cog.MakeOpenFileButton(Loc.GetString("Dialog.Dc.OpenIni"), dcIniFile);
@@ -145,6 +172,13 @@ public sealed partial class MainWindow
             // No default button: Enter in the FPS box must not close the dialog
             cog.Build().DefaultButton = ContentDialogButton.None;
             await cog.ShowAsync();
+
+            if (runAfterClose != null)
+            {
+                try { await runAfterClose(); }
+                catch (Exception ex) { CrashReporter.Log($"[MainWindow.DcCogButton_Click] DLL name change failed — {ex}"); }
+                DcCogButton_Click(sender, e);
+            }
         }
         catch (Exception ex)
         {

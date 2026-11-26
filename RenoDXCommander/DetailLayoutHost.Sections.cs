@@ -1,4 +1,4 @@
-﻿// DetailLayoutHost.Sections.cs -- Tabs layout (mockup A): how each section tab is laid out.
+// DetailLayoutHost.Sections.cs -- Tabs layout (mockup A): how each section tab is laid out.
 // The section builders still create every control, with its handlers and state, exactly as in
 // Classic. In Tabs they hand their finished (not yet shown) content to an Arrange* method here,
 // which moves those same controls into the mockup's arrangement and restyles them. Nothing is
@@ -69,8 +69,37 @@ internal sealed partial class DetailLayoutHost
         var items = body.Children.ToList();
         body.Children.Clear();
         body.Spacing = 20;
+        // Detailed / Compact switch: Compact hides each row's description, requirements and reason lines
+        _extrasDetails.Clear();
+        _extrasRows.Clear();
+        body.Children.Add(BuildExtrasDensitySwitch());
+        AddListGroups(body, items, Loc.GetString("Detail.LoadersAndUpscalers"), _extrasDetails, _extrasRows);
+        ApplyExtrasDensity();
+    }
 
-        string title = Loc.GetString("Detail.LoadersAndUpscalers");
+    /// <summary>
+    /// Tabs / Spotlight Experimental: the one-line notice on top, then a titled card per group (the builder's
+    /// separators), with Extras' list rows. Always detailed (no Compact switch: each item's warnings stay visible).
+    /// </summary>
+    internal void ArrangeExperimental(StackPanel body, FrameworkElement notice)
+    {
+        var items = body.Children.Where(c => !ReferenceEquals(c, notice)).ToList();
+        body.Children.Clear();
+        body.Spacing = 20;
+        TabsTheme.Restyle(notice);
+        body.Children.Add(notice);
+        AddListGroups(body, items, Loc.GetString("Detail.Experimental"), new List<UIElement>(), new List<Border>());
+    }
+
+    /// <summary>
+    /// Moves Classic 6-column component rows into titled list cards: each separator row starts a new card (its label
+    /// is the title; rows before the first one go under <paramref name="firstTitle"/>). Lines Compact hides go in
+    /// <paramref name="details"/>, the list rows in <paramref name="rowsOut"/>.
+    /// </summary>
+    private static void AddListGroups(StackPanel body, IEnumerable<UIElement> items, string firstTitle,
+        List<UIElement> details, List<Border> rowsOut)
+    {
+        string title = firstTitle;
         var list = new StackPanel();
         var rows = new List<Border>();
 
@@ -101,16 +130,45 @@ internal sealed partial class DetailLayoutHost
             }
             if (byCol.TryGetValue(0, out var c0) && c0.FirstOrDefault() is TextBlock)
                 g.Children.Clear(); // free the controls for their new row (WinUI allows one parent)
-            var row = MakeListRow(byCol);
+            var row = MakeListRow(byCol, details);
             if (row == null) { list.Children.Add(g); continue; }
             rows.Add(row);
+            rowsOut.Add(row);
             list.Children.Add(row);
         }
         Flush();
     }
 
-    /// <summary>One mockup list row from a Classic 6-column component row.</summary>
-    private static Border? MakeListRow(Dictionary<int, List<FrameworkElement>> byCol)
+    private readonly List<UIElement> _extrasDetails = new();
+    private readonly List<Border> _extrasRows = new();
+
+    /// <summary>"Detailed | Compact" at the top right of Extras; switching only changes visibility (no rebuild).</summary>
+    private FrameworkElement BuildExtrasDensitySwitch()
+    {
+        var host = new Border { Width = 200, HorizontalAlignment = HorizontalAlignment.Right };
+        ToolTipService.SetToolTip(host, "Compact shows just the names and buttons, to save space. Hover a name for its details.");
+        void Fill() => host.Child = TabsTheme.MakeSegmented(new[] { "Detailed", "Compact" },
+            _window.ViewModel.Settings.ExtrasCompact ? 1 : 0, i =>
+            {
+                _window.ViewModel.Settings.ExtrasCompact = i == 1;
+                _window.ViewModel.SaveSettingsPublic();
+                Services.CrashReporter.Log($"[DetailLayoutHost.Extras] {(i == 1 ? "Compact" : "Detailed")}");
+                ApplyExtrasDensity();
+                Fill();
+            }, track: TabsTheme.Card);
+        Fill();
+        return host;
+    }
+
+    private void ApplyExtrasDensity()
+    {
+        bool compact = _window.ViewModel.Settings.ExtrasCompact;
+        foreach (var d in _extrasDetails) d.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var r in _extrasRows) r.Padding = compact ? new Thickness(0, 6, 0, 6) : new Thickness(0, 12, 0, 12);
+    }
+
+    /// <summary>One mockup list row from a Classic 6-column component row. Lines Compact hides go in <paramref name="details"/>.</summary>
+    private static Border? MakeListRow(Dictionary<int, List<FrameworkElement>> byCol, List<UIElement> details)
     {
         FrameworkElement? Col(int i) => byCol.TryGetValue(i, out var l) ? l.FirstOrDefault() : null;
         if (Col(0) is not TextBlock label) return null;
@@ -124,18 +182,21 @@ internal sealed partial class DetailLayoutHost
         nameCol.Children.Add(label);
         if (TooltipText(label) is { Length: > 0 } tip)
         {
-            nameCol.Children.Add(new TextBlock
+            var desc = new TextBlock
             {
                 Text = FirstSentence(tip),
                 FontSize = 13,
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = TabsTheme.B(TabsTheme.TextSecondary),
-            });
+            };
+            nameCol.Children.Add(desc);
+            details.Add(desc);
             // Requirement lines from the tooltip ("GPU: …", "Game: …", "API: …"), so what each
             // frame generation tool needs is visible without hovering
             if (RequirementLines(tip) is { } req)
             {
                 nameCol.Children.Add(req);
+                details.Add(req);
                 req.Margin = new Thickness(0, 2, 0, 0);
             }
         }
@@ -176,14 +237,18 @@ internal sealed partial class DetailLayoutHost
         }
 
         if (blockedReason != null)
-            nameCol.Children.Add(new TextBlock
+        {
+            var reason = new TextBlock
             {
                 Text = BlockedSentence(blockedReason),
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = TabsTheme.B("#F0C35A"),
                 Margin = new Thickness(0, 2, 0, 0),
-            });
+            };
+            nameCol.Children.Add(reason);
+            details.Add(reason);
+        }
 
         foreach (var main in mains)
         {
@@ -595,76 +660,6 @@ internal sealed partial class DetailLayoutHost
             content.Children.Add(other);
         }
         body.Children.Add(TabsTheme.TitledCard(Loc.GetString("Detail.DlssStreamline"), content, actions.Children.Count > 0 ? actions : null));
-    }
-
-    // ── Game Overrides: grouped cards ─────────────────────────────────────────
-
-    /// <summary>
-    /// Tabs Game Overrides (mockup A): the section's six groups (Classic's three rows of two
-    /// columns) as the mockup's four cards: Names and matching, ReShade (bitness, API, channel,
-    /// shaders, addons), DLL names, Updates and launch. Two cards per row at most, so the groups'
-    /// own side-by-side controls keep enough room.
-    /// </summary>
-    internal void ArrangeOverrides(StackPanel panel)
-    {
-        var items = panel.Children.ToList();
-        panel.Children.Clear();
-
-        static (UIElement? Left, UIElement? Right) Split(Grid g)
-        {
-            var kids = g.Children.OfType<FrameworkElement>().ToList();
-            var left = kids.FirstOrDefault(k => Grid.GetColumn(k) == 0 && k is Panel);
-            var right = kids.FirstOrDefault(k => Grid.GetColumn(k) == 2 && k is Panel);
-            g.Children.Clear();
-            return (left, right);
-        }
-
-        var rows = items.OfType<Grid>()
-            .Where(g => g.Children.OfType<FrameworkElement>().Any(k => Grid.GetColumn(k) == 2 && k is Panel))
-            .ToList();
-        var rest = items.Where(i => !rows.Contains(i) && !(i is Border { Child: null })).ToList();
-
-        var cards = new AutoFitGrid { MinColumnWidth = 320, MaxColumns = 2 };
-        Border Card(string title, params UIElement?[] parts)
-        {
-            var content = new StackPanel { Spacing = 14 };
-            foreach (var p in parts)
-                if (p != null) { TabsTheme.Restyle(p); content.Children.Add(p); }
-            return TabsTheme.TitledCard(title, content);
-        }
-
-        if (rows.Count == 3)
-        {
-            var top = Split(rows[0]);
-            var middle = Split(rows[1]);
-            var bottom = Split(rows[2]);
-            DropHeading(top.Right, Loc.GetString("Detail.DllNamingOverrides"));
-            cards.Children.Add(Card(Loc.GetString("Detail.Card.NamesAndMatching"), top.Left));
-            cards.Children.Add(Card("ReShade", middle.Left, bottom.Left));
-            cards.Children.Add(Card(Loc.GetString("Detail.Card.DllNames"), top.Right));
-            cards.Children.Add(Card(Loc.GetString("Detail.Card.UpdatesAndLaunch"), middle.Right, bottom.Right));
-        }
-        else
-        {
-            // Unexpected shape (a builder changed): one untitled card per group, nothing lost
-            foreach (var g in rows)
-            {
-                var (l, r) = Split(g);
-                if (l != null) cards.Children.Add(Card("", l));
-                if (r != null) cards.Children.Add(Card("", r));
-            }
-        }
-
-        panel.Children.Add(cards);
-        foreach (var r in rest) { TabsTheme.Restyle(r); panel.Children.Add(r); }
-    }
-
-    /// <summary>Removes a group's own heading when the card title already says it.</summary>
-    private static void DropHeading(UIElement? group, string text)
-    {
-        if (group is Panel p && p.Children.FirstOrDefault() is TextBlock tb
-            && string.Equals(tb.Text?.Trim(), text, StringComparison.OrdinalIgnoreCase))
-            p.Children.Remove(tb);
     }
 
     // ── Neural Rendering: method cards + setup ────────────────────────────────

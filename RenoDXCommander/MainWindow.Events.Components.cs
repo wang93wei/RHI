@@ -63,6 +63,64 @@ public sealed partial class MainWindow
             var reshadeLogPath = Path.Combine(installPath, "ReShade.log");
             var cog = new CogDialog(Loc.GetString("Detail.ReShade"), Content.XamlRoot);
 
+            // ── Setup, then Shaders and addons (pickers close the dialog first, then
+            // it reopens), Hotkeys, Updates, Files ──
+            Func<Task>? runAfterClose = null;
+            // Load ReShade as ASI (not for Vulkan: ReShade is a global layer there), added to the Setup section under
+            // the DLL name it replaces
+            void AddLoadingRows(ComboBox? dllNameCombo)
+            {
+                if (!card.RequiresVulkanInstall)
+                {
+                    var asiName = AuxInstallService.RsAsiName(card.Is32Bit);
+                    ComboBox? asiCombo = null;
+                    bool asiReverting = false;
+                    asiCombo = cog.AddCombo("Load ReShade as ASI",
+                        $"On renames ReShade to {asiName} so an ASI loader (such as ASI Loader in Extras) loads it. "
+                        + "RHI doesn't install a loader for you. Installs and updates keep the name, and ReShade's DLL name is greyed out while this is on.",
+                        new[] { "Off", "On" },
+                        ViewModel.GetRsAsiMode(card.GameName, card.Source ?? "") ? 1 : 0,
+                        i =>
+                        {
+                            if (asiReverting) return true;
+                            bool on = i == 1;
+                            _ = ApplyAsiModeAsync(on);
+                            return true;
+
+                            async Task ApplyAsiModeAsync(bool turnOn)
+                            {
+                                try
+                                {
+                                    var error = await ViewModel.SetRsAsiModeAsync(card, turnOn);
+                                    if (error != null)
+                                    {
+                                        cog.SetError(error);
+                                        asiReverting = true;
+                                        if (asiCombo != null) asiCombo.SelectedIndex = turnOn ? 0 : 1;
+                                        asiReverting = false;
+                                        return;
+                                    }
+                                    bool installed = card.RsRecord != null;
+                                    cog.SetSuccess(turnOn
+                                        ? (installed ? $"ReShade is now {asiName}. Make sure an ASI loader is installed in this game." : $"ReShade will be installed as {asiName}.")
+                                        : (installed ? $"ReShade is back to {card.RsInstalledFile}." : "ReShade will be installed under its normal DLL name."));
+                                    card.NotifyAll();
+                                    if (dllNameCombo != null) dllNameCombo.IsEnabled = !turnOn;
+                                    _detailPanelBuilder?.UpdateDetailComponentRows(card);
+                                    _detailPanelBuilder?.BuildOverridesPanel(card); // sections that show ReShade's file name follow the change
+                                }
+                                catch (Exception ex)
+                                {
+                                    _crashReporter.Log($"[RsCogButton_Click] ASI mode change failed — {ex}");
+                                    cog.SetError($"Couldn't change Load ReShade as ASI: {ex.Message}");
+                                }
+                            }
+                        });
+                }
+            }
+
+            AddRsPerGameSections(cog, card, action => { runAfterClose = action; cog.Hide(); }, AddLoadingRows);
+
             // ── Hotkeys ───────────────────────────────────────────────────────────
             // Capture box + Apply per key: a key press only fills the box, Apply writes it.
             cog.AddSection(Loc.GetString("Dialog.Rs.SectionHotkeys"));
@@ -166,95 +224,42 @@ public sealed partial class MainWindow
             cog.AddRow(Loc.GetString("Dialog.ScreenshotKey2"), CogDialog.Inline(screenshotHotkeyBox, applyScreenshotKeyBtn),
                 Loc.GetString("Dialog.Rs.ScreenshotKeyHelp"));
 
-            // ── Load ReShade as ASI (not for Vulkan: ReShade is a global layer there) ──
-            if (!card.RequiresVulkanInstall)
-            {
-                cog.AddSection(Loc.GetString("Dialog.Rs.SectionLoading"));
-                var asiName = AuxInstallService.RsAsiName(card.Is32Bit);
-                ComboBox? asiCombo = null;
-                bool asiReverting = false;
-                asiCombo = cog.AddCombo(Loc.GetString("Dialog.Rs.LoadAsAsi"),
-                    Loc.GetString("Dialog.Rs.LoadAsAsiHelp", asiName),
-                    new[] { LocOpt.T("Off"), LocOpt.T("On") },
-                    ViewModel.GetRsAsiMode(card.GameName, card.Source ?? "") ? 1 : 0,
-                    i =>
-                    {
-                        if (asiReverting) return true;
-                        bool on = i == 1;
-                        _ = ApplyAsiModeAsync(on);
-                        return true;
-
-                        async Task ApplyAsiModeAsync(bool turnOn)
-                        {
-                            try
-                            {
-                                var error = await ViewModel.SetRsAsiModeAsync(card, turnOn);
-                                if (error != null)
-                                {
-                                    cog.SetError(error);
-                                    asiReverting = true;
-                                    if (asiCombo != null) asiCombo.SelectedIndex = turnOn ? 0 : 1;
-                                    asiReverting = false;
-                                    return;
-                                }
-                                bool installed = card.RsRecord != null;
-                                cog.SetSuccess(turnOn
-                                    ? (installed ? Loc.GetString("Dialog.Rs.AsiNowOnInstalled", asiName) : Loc.GetString("Dialog.Rs.AsiWillInstall", asiName))
-                                    : (installed ? Loc.GetString("Dialog.Rs.AsiRestored", card.RsInstalledFile) : Loc.GetString("Dialog.Rs.AsiNormalName")));
-                                card.NotifyAll();
-                                _detailPanelBuilder?.UpdateDetailComponentRows(card);
-                                _detailPanelBuilder?.BuildOverridesPanel(card); // greys/ungreys the ReShade DLL name dropdown
-                            }
-                            catch (Exception ex)
-                            {
-                                _crashReporter.Log($"[RsCogButton_Click] ASI mode change failed — {ex}");
-                                cog.SetError(Loc.GetString("Dialog.Rs.ChangeAsiFailed", ex.Message));
-                            }
-                        }
-                    });
-            }
-
-            // ── Keep ReShade.ini Updated ──────────────────────────────────────────
-            cog.AddSection(Loc.GetString("Dialog.Rs.SectionIni"));
-            var capturedKeepGameName = card.GameName;
-            var capturedKeepSource = card.Source ?? "";
-            cog.AddCombo(Loc.GetString("Dialog.KeepReshadeIniUpdated"),
-                Loc.GetString("Dialog.Rs.KeepIniUpdatedHelp"),
-                new[] { LocOpt.T("Yes"), LocOpt.T("No") },
-                ViewModel.GetKeepRsIniUpdated(capturedKeepGameName, capturedKeepSource) ? 0 : 1,
-                i =>
-                {
-                    ViewModel.SetKeepRsIniUpdated(capturedKeepGameName, i == 0, capturedKeepSource);
-                    cog.SetSuccess(i == 0
-                        ? Loc.GetString("Dialog.Rs.KeepUpdated")
-                        : Loc.GetString("Dialog.Rs.KeepLeftAlone"));
-                });
+            AddRsUpdatesSection(cog, card);
 
             // ── Files ─────────────────────────────────────────────────────────────
             cog.AddSection(Loc.GetString("Dialog.SectionFiles"));
             var openIniBtn = cog.MakeOpenFileButton(Loc.GetString("Dialog.OpenReshadeIni"), reshadeIniPath);
 
-            var deployIniBtn = cog.MakeButton(Loc.GetString("Dialog.DeployReshadeIni"), CogButtonKind.Primary, () =>
+            var deployIniBtn = cog.MakeButton(Loc.GetString("Dialog.DeployReshadeIni"), CogButtonKind.Primary, async () =>
             {
                 var screenshotPath = BuildScreenshotSavePath(card.GameName);
                 var overlayHotkey = ViewModel.Settings.OverlayHotkey;
                 var screenshotHotkey = ViewModel.Settings.ScreenshotHotkey;
-                if (card.RequiresVulkanInstall)
+                var installPath = card.InstallPath;
+                var gameName = card.GameName;
+                bool vulkan = card.RequiresVulkanInstall;
+                bool nativeHdr = card.UseUeExtended && card.Status == GameStatus.Installed;
+
+                // File work off the UI thread (peak nits may read the RenoDX addon to find its key spelling)
+                await Task.Run(() =>
                 {
-                    AuxInstallService.MergeRsVulkanIni(card.InstallPath, card.GameName, screenshotPath, overlayHotkey, screenshotHotkey);
-                    VulkanFootprintService.Create(card.InstallPath);
-                    ViewModel.DeployShadersForCard(card.GameName);
-                }
-                else
-                    AuxInstallService.MergeRsIni(card.InstallPath, screenshotPath, overlayHotkey, screenshotHotkey);
+                    if (vulkan)
+                    {
+                        AuxInstallService.MergeRsVulkanIni(installPath, gameName, screenshotPath, overlayHotkey, screenshotHotkey);
+                        VulkanFootprintService.Create(installPath);
+                    }
+                    else
+                        AuxInstallService.MergeRsIni(installPath, screenshotPath, overlayHotkey, screenshotHotkey);
 
-                if (card.UseUeExtended && card.Status == GameStatus.Installed)
-                    AuxInstallService.ApplyRenoDxNativeHdrSettings(card.InstallPath);
+                    if (nativeHdr)
+                        AuxInstallService.ApplyRenoDxNativeHdrSettings(installPath);
 
-                // Force-apply manifest [renodx] INI overrides on redeploy
-                if (AuxInstallService.GlobalManifest?.RenodxIniOverrides != null
-                    && AuxInstallService.GlobalManifest.RenodxIniOverrides.TryGetValue(card.GameName, out var cogIniOvr))
-                    AuxInstallService.ApplyRenodxIniOverrides(card.InstallPath, cogIniOvr, forceOverwrite: true);
+                    // Force-apply manifest [renodx] INI overrides on redeploy
+                    if (AuxInstallService.GlobalManifest?.RenodxIniOverrides != null
+                        && AuxInstallService.GlobalManifest.RenodxIniOverrides.TryGetValue(gameName, out var cogIniOvr))
+                        AuxInstallService.ApplyRenodxIniOverrides(installPath, cogIniOvr, forceOverwrite: true);
+                });
+                if (vulkan) ViewModel.DeployShadersForCard(gameName);
 
                 openIniBtn.IsEnabled = File.Exists(reshadeIniPath);
                 cog.SetSuccess(Loc.GetString("Rs.Status.ReshadeIniDeployed"));
@@ -285,6 +290,14 @@ public sealed partial class MainWindow
             // No default button: Enter in the key/number boxes must not close the dialog
             cog.Build().DefaultButton = ContentDialogButton.None;
             await cog.ShowAsync();
+
+            // A Game overrides pick that opens a dialog closed the cog: run it now, then open the cog again
+            if (runAfterClose != null)
+            {
+                try { await runAfterClose(); }
+                catch (Exception ex) { CrashReporter.Log($"[MainWindow.RsCogButton_Click] Game overrides change failed — {ex}"); }
+                RsCogButton_Click(sender, e);
+            }
         }
         catch (Exception ex)
         {
@@ -304,6 +317,7 @@ public sealed partial class MainWindow
             bool storageExists = Directory.Exists(storageDir);
 
             var cog = new CogDialog(Loc.GetString("Detail.REFramework"), Content.XamlRoot);
+            AddUpdateAllSection(cog, card, UpdateAllComponent.ReFramework);
             cog.AddSection(Loc.GetString("Dialog.SectionFiles"));
             cog.AddIntro(Loc.GetString("Dialog.Ref.StorageIntro"));
             var foundNote = cog.AddNote(storageExists ? Loc.GetString("Dialog.RefSettings.StorageFound", storageDir) : Loc.GetString("Dialog.RefSettings.StorageNotInGame"));

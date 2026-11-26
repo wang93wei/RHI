@@ -120,13 +120,6 @@ internal sealed partial class DetailLayoutHost
         RefreshGlance();
     }
 
-    /// <summary>
-    /// Raised before section summaries are shown again after the user may have changed settings
-    /// (Tabs: back to Overview; Spotlight: the side panel closes). The builder rebuilds summaries
-    /// that aren't kept up to date as settings change (Game Overrides).
-    /// </summary>
-    internal event Action? SummariesStale;
-
     /// <summary>A section's collapsed-header summary changed (some are filled in later, in the background).</summary>
     internal void SummaryChanged()
     {
@@ -138,12 +131,12 @@ internal sealed partial class DetailLayoutHost
 
     private static string GlanceFallback(string key) => key switch
     {
-        "GameOverrides"       => Loc.GetString("Detail.GameOverridesDesc"),
         "NeuralRendering"     => Loc.GetString("Detail.NotSetUp"),
         "NvidiaProfileDlss"   => Loc.GetString("Detail.NoDlssStreamlineFoundShort"),
         "NvidiaProfileDriver" => Loc.GetString("Detail.NvidiaDriverSettingsDesc"),
         "Management"          => Loc.GetString("Detail.ManagementDesc"),
         "Extras"              => Loc.GetString("Detail.ExtrasDesc"),
+        "Experimental"        => Loc.GetString("Detail.ExperimentalDesc"),
         _                     => "",
     };
 
@@ -268,7 +261,11 @@ internal sealed partial class DetailLayoutHost
         {
             case "Rs":
             {
-                if (card.UseNormalReShade) return Loc.GetString("Detail.NoAddonsChannel");
+                if (card.UseNormalReShade)
+                    return vm.GetReShadeChannelOverride(card.GameName, store) is { } legacyNoAddon
+                           && Services.AuxInstallService.IsLegacyNoAddonChannel(legacyNoAddon)
+                        ? Loc.GetString("Detail.LegacyNoAddonChannel", legacyNoAddon)
+                        : Loc.GetString("Detail.NoAddonsChannel");
                 var channel = vm.GetReShadeChannelOverride(card.GameName, store) ?? Settings.ReShadeChannel;
                 if (string.IsNullOrWhiteSpace(channel)) channel = "Stable";
                 var shaders = vm.GetPerGameShaderMode(card.GameName, store);
@@ -276,13 +273,14 @@ internal sealed partial class DetailLayoutHost
                 var line = string.Equals(shaders, addons, StringComparison.OrdinalIgnoreCase)
                     ? Loc.GetString("Detail.ReShadeChannelLine", channel, shaders.ToLowerInvariant())
                     : Loc.GetString("Detail.ReShadeChannelLineSplit", channel, shaders.ToLowerInvariant(), addons.ToLowerInvariant());
-                return card.RequiresVulkanInstall ? line + Loc.GetString("Detail.VulkanLayerSuffix") : line;
+                if (card.RequiresVulkanInstall) line += Loc.GetString("Detail.VulkanLayerSuffix");
+                return WithNotes(line, "Rs");
             }
             case "Rdx":
-                return !string.IsNullOrEmpty(card.InstalledAddonFileName) ? card.InstalledAddonFileName
+                return WithNotes(!string.IsNullOrEmpty(card.InstalledAddonFileName) ? card.InstalledAddonFileName
                     : card.IsRtxHdrEnabled  ? Loc.GetString("Detail.RtxHdrIsOn")
                     : card.IsAutoHdrEnabled ? Loc.GetString("Detail.AutoHdrIsOn")
-                    : Loc.GetString("Detail.HdrModForGame");
+                    : Loc.GetString("Detail.HdrModForGame"), "Rdx");
             case "Luma":
             {
                 // The mod's Name is just the game's name, so describe it instead
@@ -298,9 +296,17 @@ internal sealed partial class DetailLayoutHost
             }
             case "Ref":    return Loc.GetString("Detail.ReframeworkDesc");
             case "DofFix": return Loc.GetString("Detail.DofFixDesc");
-            default:       return null;
+            default:       return OverrideNotes(rowKey); // ReLimiter / Display Commander: only their overrides
         }
+
+        // The card line, then the component's overrides (DLL name, channel, Update All and so on), " · " between
+        string WithNotes(string line, string key) =>
+            ComponentOverrideNotes.Line(vm, card, key, rsModes: false) is { } notes ? $"{line} · {notes}" : line;
     }
+
+    /// <summary>A component's overrides as one line ("d3d12.dll · not in Update All"), or null. See <see cref="ComponentOverrideNotes"/>.</summary>
+    internal string? OverrideNotes(string rowKey, bool rsModes = false) =>
+        _window.ViewModel.SelectedGame is { } card ? ComponentOverrideNotes.Line(_window.ViewModel, card, rowKey, rsModes) : null;
 
     private bool _lumaBuildRequested;
 
@@ -558,7 +564,8 @@ internal sealed partial class DetailLayoutHost
             // Description, or the ReLimiter / Display Commander switch
             bool showSwitch = visible.Count > 1;
             UpdateSwitch(showSwitch ? visible : null, r);
-            var desc = showSwitch ? null : _host.DescribeRow(r.Key);
+            // (with the switch showing, the shown limiter's overrides still get their line)
+            var desc = showSwitch ? _host.OverrideNotes(r.Key) : _host.DescribeRow(r.Key);
             _desc.Text = desc ?? "";
             _desc.Visibility = string.IsNullOrEmpty(desc) ? Visibility.Collapsed : Visibility.Visible;
 

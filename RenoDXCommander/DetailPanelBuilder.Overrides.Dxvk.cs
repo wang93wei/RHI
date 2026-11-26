@@ -16,10 +16,10 @@ public partial class DetailPanelBuilder
         "vulkan-1.dll", "winmm.dll",
     ];
 
-    private void BuildManagementSection(GameCardViewModel card, string capturedName, OverridesPanelCtx ctx)
+    private void BuildManagementSection(GameCardViewModel card, string capturedName)
     {
         _window.ViewModel.SetLastUiAction($"BuildManagementSection({card.GameName})");
-        // ── Management section (single row: 5 buttons side by side with separators) ──
+        // ── Management section (single row: buttons side by side with separators; Reset is in the game settings ⚙) ──
         _window.ManagementPanel.Children.Clear();
 
         // Collapsible header
@@ -57,8 +57,8 @@ public partial class DetailPanelBuilder
 
         mgmtHeaderRow.PointerEntered += (s, e) => mgmtTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
         mgmtHeaderRow.PointerExited  += (s, e) => mgmtTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-        var mgmtHandCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var mgmtArrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var mgmtHandCursor  = HandCursor;
+        var mgmtArrowCursor = ArrowCursor;
         var mgmtCursorProp  = DetailPanelBuilder.CursorProp;
         mgmtHeaderRow.PointerEntered += (s, e) => mgmtCursorProp?.SetValue(mgmtHeaderRow, mgmtHandCursor);
         mgmtHeaderRow.PointerExited  += (s, e) => mgmtCursorProp?.SetValue(mgmtHeaderRow, mgmtArrowCursor);
@@ -71,8 +71,6 @@ public partial class DetailPanelBuilder
         };
 
         var mgmtRow = new Grid { ColumnSpacing = 0 };
-        mgmtRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        mgmtRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         mgmtRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         mgmtRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         mgmtRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -152,31 +150,6 @@ public partial class DetailPanelBuilder
         Grid.SetColumn(sep2, 5);
         mgmtRow.Children.Add(sep2);
 
-        var mgmtResetOverridesBtn = new Button
-        {
-            Content = Loc.GetString("Shader.ResetOverrides"),
-            FontSize = 11,
-            Height = 32,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Background = UIFactory.Brush(ResourceKeys.AccentRedBgBrush),
-            Foreground = UIFactory.Brush(ResourceKeys.AccentRedBrush),
-            BorderBrush = UIFactory.Brush(ResourceKeys.AccentPurpleBorderBrush),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-        };
-        mgmtResetOverridesBtn.Click += (s, ev) =>
-        {
-            // Call reset action directly — automation peer invoke fails on Visibility.Collapsed buttons
-            ctx.ResetAction?.Invoke();
-        };
-        Grid.SetColumn(mgmtResetOverridesBtn, 6);
-        ToolTipService.SetToolTip(mgmtResetOverridesBtn, Loc.GetString("Overrides.ResetOverrides.Tooltip"));
-        mgmtRow.Children.Add(mgmtResetOverridesBtn);
-
-        var sep3 = new Border { Width = 1, Background = UIFactory.Brush(ResourceKeys.BorderDefaultBrush), Margin = new Thickness(8, 4, 8, 4) };
-        Grid.SetColumn(sep3, 7);
-        mgmtRow.Children.Add(sep3);
-
         var reportBtn = new Button
         {
             Content = Loc.GetString("Dialog.CopyReport"),
@@ -204,22 +177,18 @@ public partial class DetailPanelBuilder
             }
         }
         reportBtn.Click += (s, ev) => CopyReport();
-        Grid.SetColumn(reportBtn, 8);
+        Grid.SetColumn(reportBtn, 6);
         ToolTipService.SetToolTip(reportBtn, Loc.GetString("Overrides.CopyReport.Tooltip"));
         mgmtRow.Children.Add(reportBtn);
 
         if (Layout.IsTabs)
         {
-            // Tabs (mockup A): the same four actions as tiles
+            // Tabs (mockup A): the same actions as tiles
             var tiles = new Controls.AutoFitGrid { MinColumnWidth = 220 };
             tiles.Children.Add(TabsTheme.MakeTile(
                 Loc.GetString("Dialog.ChangeInstallFolder"),
                 Loc.GetString("Overrides.Management.Tile.ChangeFolder.Desc"), false,
                 (s, ev) => _window.BrowseFolder_Click(changeFolderBtn, ev), TabsTooltip(changeFolderBtn)));
-            tiles.Children.Add(TabsTheme.MakeTile(
-                Loc.GetString("Dialog.ResetOverrides"),
-                Loc.GetString("Overrides.Management.Tile.ResetOverrides.Desc"), false,
-                (s, ev) => ctx.ResetAction?.Invoke(), TabsTooltip(mgmtResetOverridesBtn)));
             tiles.Children.Add(TabsTheme.MakeTile(
                 Loc.GetString("Dialog.CopyReport"),
                 Loc.GetString("Overrides.Management.Tile.CopyReport.Desc"), false,

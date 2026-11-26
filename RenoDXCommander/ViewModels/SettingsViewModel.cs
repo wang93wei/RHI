@@ -26,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _ulSharedPresets = false;
     [ObservableProperty] private bool _ulDlssHooks = true;
     [ObservableProperty] private int _ulTargetFps; // 0 = off/disabled
+    [ObservableProperty] private string _ulPacingPreference = UlV4Rules.DefaultPacingPreference; // v4 pacing_preference: latency | balanced | smooth
     [ObservableProperty] private string _osHotkey = "Insert";
     [ObservableProperty] private string _osGpuType = "NVIDIA";
     /// <summary>OptiScaler version for games that don't have one chosen: "Stable", "Nightly", "DlssNr" or "F5".</summary>
@@ -43,6 +44,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _ueExtendedWarningDismissed;
     [ObservableProperty] private bool _perGameScreenshotFolders;
     [ObservableProperty] private bool _rsVariableListUseTabs = true; // Group effect files with tabs instead of a tree
+    [ObservableProperty] private string _rsOverlaySide = "Default"; // ReShade menu position in every game: Default (leave alone) | Left | Right
     [ObservableProperty] private bool _rsShippedAddonsEnabled; // false = reshade.ini disables Generic Depth + Effect Runtime Sync (RHI default)
     [ObservableProperty] private bool _addonWarningDismissed;
     [ObservableProperty] private bool _dxvkWarningDismissed;
@@ -51,6 +53,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _umfgReShadeWarningDismissed;
     /// <summary>"Don't show this again" on the HSF install notice (anti-cheat, other frame generation).</summary>
     [ObservableProperty] private bool _hsfNoticeDismissed;
+    /// <summary>"Don't show this again" on the ReLimiter install notice about the Extras MFG mods (InstallEventHandler).</summary>
+    [ObservableProperty] private bool _ulMfgModsNoticeDismissed;
     /// <summary>
     /// Frame generation mods whose anti-cheat warning was dismissed ("Don't show this again"), as a comma list of
     /// keys (UniversalMfg, MfgUnlock, Dlssg2030). See DetailPanelBuilder.Extras.AntiCheat.cs.
@@ -154,8 +158,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _spotlightShelfAtBottom;
     /// <summary>Spotlight: the search / filters / covers strip has no panel colour of its own (it shows the page colour).</summary>
     [ObservableProperty] private bool _spotlightShelfPlain;
+    /// <summary>Extras (Tabs / Spotlight): names and buttons only, no descriptions or requirements.</summary>
+    [ObservableProperty] private bool _extrasCompact;
     /// <summary>Spotlight banner height set by dragging its bottom edge; 0 = automatic (follows the window width).</summary>
     [ObservableProperty] private double _spotlightHeroHeight;
+    /// <summary>Spotlight side panel width in layout units; 0 = automatic (62% of the page, 560-980).</summary>
+    [ObservableProperty] private double _spotlightPanelWidth;
     /// <summary>Spotlight cover size set by dragging the cover strip's edge (1 = 120 x 180).</summary>
     [ObservableProperty] private double _spotlightCoverScale = 1.0;
     /// <summary>Top bar size in percent (every layout), on top of the interface size. Drag its bottom edge or Settings › General.</summary>
@@ -210,7 +218,7 @@ public partial class SettingsViewModel : ObservableObject
     // ── Detail panel section collapse state ───────────────────────────────────
     /// <summary>
     /// Section keys that are currently collapsed in the detail panel.
-    /// Keys: "Components", "GameOverrides", "NeuralRendering", "NvidiaProfile", "Management"
+    /// Keys: the section keys in DefaultSectionOrder
     /// Absent = expanded (default).
     /// </summary>
     public HashSet<string> CollapsedDetailSections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -218,11 +226,12 @@ public partial class SettingsViewModel : ObservableObject
     // ── Detail panel section order ────────────────────────────────────────────
     /// <summary>
     /// Ordered list of section keys for the detail panel.
-    /// Default order: Components, GameOverrides, NeuralRendering, NvidiaProfileDlss, NvidiaProfileDriver, Management.
+    /// Default order: Components, NeuralRendering, NvidiaProfileDlss, NvidiaProfileDriver, Experimental, Management, Extras.
+    /// (Game Overrides was removed in 2.9.6.3: its key is dropped from saved orders and collapse states on load.)
     /// Absent or incomplete = use default order.
     /// </summary>
     public static readonly IReadOnlyList<string> DefaultSectionOrder = new[]
-        { "Components", "GameOverrides", "NeuralRendering", "NvidiaProfileDlss", "NvidiaProfileDriver", "Management", "Extras" };
+        { "Components", "NeuralRendering", "NvidiaProfileDlss", "NvidiaProfileDriver", "Experimental", "Management", "Extras" };
 
     public List<string> DetailSectionOrder { get; set; } = new(DefaultSectionOrder);
 
@@ -358,6 +367,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("UlTargetFps", out var ultfVal) && int.TryParse(ultfVal, out var ultfInt))
             UlTargetFps = ultfInt;
 
+        if (s.TryGetValue("UlPacingPreference", out var ulppVal) && UlV4Rules.NormalizePacing(ulppVal) is { } ulpp)
+            UlPacingPreference = ulpp;
+
         if (s.TryGetValue("OsHotkey", out var oshVal))
             OsHotkey = oshVal ?? "Insert";
 
@@ -389,6 +401,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("RsShippedAddonsEnabled", out var rsShipVal))
             RsShippedAddonsEnabled = rsShipVal == "true";
 
+        if (s.TryGetValue("RsOverlaySide", out var rsSideVal))
+            RsOverlaySide = Services.ReShadeOverlayDock.Normalize(rsSideVal);
+
         if (s.TryGetValue("AddonWarningDismissed", out var awdVal))
             AddonWarningDismissed = awdVal == "true";
 
@@ -405,6 +420,8 @@ public partial class SettingsViewModel : ObservableObject
             UmfgReShadeWarningDismissed = urwdVal == "true";
         if (s.TryGetValue("HsfNoticeDismissed", out var hsfndVal))
             HsfNoticeDismissed = hsfndVal == "true";
+        if (s.TryGetValue("UlMfgModsNoticeDismissed", out var ulmfgVal))
+            UlMfgModsNoticeDismissed = ulmfgVal == "true";
         if (s.TryGetValue("AntiCheatNoticesDismissed", out var acndVal))
             AntiCheatNoticesDismissed = acndVal ?? "";
         if (s.TryGetValue("RtxEncoreClosedSourceDismissed", out var recsVal))
@@ -522,7 +539,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("RhiOverlayPauseGame", out var ropVal)) RhiOverlayPauseGame = ropVal == "true"; // default false
         if (s.TryGetValue("SpotlightShelfAtBottom", out var ssbVal)) SpotlightShelfAtBottom = ssbVal == "true"; // default false (top)
         if (s.TryGetValue("SpotlightShelfPlain", out var sshpVal)) SpotlightShelfPlain = sshpVal == "true"; // default false (panel colour)
+        if (s.TryGetValue("ExtrasCompact", out var excVal)) ExtrasCompact = excVal == "true"; // default false (detailed)
         if (s.TryGetValue("SpotlightHeroHeight", out var shhVal) && double.TryParse(shhVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var shh)) SpotlightHeroHeight = shh;
+        if (s.TryGetValue("SpotlightPanelWidth", out var spwVal) && double.TryParse(spwVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spw)) SpotlightPanelWidth = spw;
         if (s.TryGetValue("PatchNotesFontSize", out var pnfVal) && double.TryParse(pnfVal, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pnf) && pnf > 0) PatchNotesFontSize = pnf;
         if (s.TryGetValue("PatchNotesNavHidden", out var pnhVal)) PatchNotesNavHidden = pnhVal == "true";
         if (s.TryGetValue("ColorTheme", out var ctVal) && !string.IsNullOrWhiteSpace(ctVal)) ColorTheme = ctVal;
@@ -590,6 +609,8 @@ public partial class SettingsViewModel : ObservableObject
                     CollapsedDetailSections.Add("NvidiaProfileDlss");
                     CollapsedDetailSections.Add("NvidiaProfileDriver");
                 }
+                // Game Overrides was removed in 2.9.6.3
+                CollapsedDetailSections.Remove("GameOverrides");
             }
             catch { CollapsedDetailSections = new(StringComparer.OrdinalIgnoreCase); }
         }
@@ -616,6 +637,12 @@ public partial class SettingsViewModel : ObservableObject
                 {
                     var known = new HashSet<string>(DefaultSectionOrder, StringComparer.OrdinalIgnoreCase);
                     var merged = loaded.Where(k => known.Contains(k)).ToList();
+                    // Experimental (v2.9.6) goes just before Management in a saved order, as in the default
+                    if (!merged.Contains("Experimental", StringComparer.OrdinalIgnoreCase))
+                    {
+                        int mgmt = merged.FindIndex(k => k.Equals("Management", StringComparison.OrdinalIgnoreCase));
+                        if (mgmt >= 0) merged.Insert(mgmt, "Experimental");
+                    }
                     foreach (var def in DefaultSectionOrder)
                         if (!merged.Contains(def, StringComparer.OrdinalIgnoreCase)) merged.Add(def);
                     DetailSectionOrder = merged;
@@ -647,6 +674,7 @@ public partial class SettingsViewModel : ObservableObject
         s["UlOsdHotkey"] = UlOsdHotkey;
         s["UlSharedPresets"] = UlSharedPresets ? "true" : "false";
         s["UlDlssHooks"] = UlDlssHooks ? "true" : "false";
+        s["UlPacingPreference"] = UlPacingPreference;
         if (UlTargetFps > 0) s["UlTargetFps"] = UlTargetFps.ToString();
         else s.Remove("UlTargetFps"); // 0 = off — remove stale value
         s["OsHotkey"] = OsHotkey;
@@ -660,12 +688,14 @@ public partial class SettingsViewModel : ObservableObject
         s["PerGameScreenshotFolders"] = PerGameScreenshotFolders ? "true" : "false";
         s["RsVariableListUseTabs"]    = RsVariableListUseTabs ? "true" : "false";
         s["RsShippedAddonsEnabled"]   = RsShippedAddonsEnabled ? "true" : "false";
+        s["RsOverlaySide"]            = Services.ReShadeOverlayDock.Normalize(RsOverlaySide);
         s["AddonWarningDismissed"] = AddonWarningDismissed ? "true" : "false";
         s["DxvkWarningDismissed"] = DxvkWarningDismissed ? "true" : "false";
         s["MfgWarningDismissed"] = MfgWarningDismissed ? "true" : "false";
         s["EngineBadgeWarningDismissed"] = EngineBadgeWarningDismissed ? "true" : "false";
         s["UmfgReShadeWarningDismissed"] = UmfgReShadeWarningDismissed ? "true" : "false";
         s["HsfNoticeDismissed"] = HsfNoticeDismissed ? "true" : "false";
+        s["UlMfgModsNoticeDismissed"] = UlMfgModsNoticeDismissed ? "true" : "false";
         s["AntiCheatNoticesDismissed"] = AntiCheatNoticesDismissed;
         s["RtxEncoreClosedSourceDismissed"] = RtxEncoreClosedSourceDismissed ? "true" : "false";
         s["EncoreDlssFgReShadeWarningDismissed"] = EncoreDlssFgReShadeWarningDismissed ? "true" : "false";
@@ -733,7 +763,9 @@ public partial class SettingsViewModel : ObservableObject
         s["RhiOverlayPauseGame"] = RhiOverlayPauseGame ? "true" : "false";
         s["SpotlightShelfAtBottom"] = SpotlightShelfAtBottom ? "true" : "false";
         s["SpotlightShelfPlain"] = SpotlightShelfPlain ? "true" : "false";
+        s["ExtrasCompact"] = ExtrasCompact ? "true" : "false";
         s["SpotlightHeroHeight"] = SpotlightHeroHeight.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+        s["SpotlightPanelWidth"] = SpotlightPanelWidth.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
         s["PatchNotesFontSize"] = PatchNotesFontSize.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
         s["PatchNotesNavHidden"] = PatchNotesNavHidden ? "true" : "false";
         s["SpotlightCoverScale"] = SpotlightCoverScale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);

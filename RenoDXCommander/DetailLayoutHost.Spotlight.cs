@@ -38,12 +38,22 @@ internal sealed partial class DetailLayoutHost
     private StackPanel? _spotBody;
     private AutoFitGrid? _statusGrid;
     private AutoFitGrid? _tuneGrid;
+    /// <summary>Second row of Tune tiles: Neural Rendering, Experimental, Management.</summary>
+    private AutoFitGrid? _tuneGrid2;
+
+    /// <summary>Tiles in the first Tune row; the rest go in the second.</summary>
+    private const int TuneFirstRow = 3;
+
+    /// <summary>Every Tune tile, both rows, in order.</summary>
+    private IEnumerable<UIElement> TuneTiles =>
+        (_tuneGrid?.Children ?? Enumerable.Empty<UIElement>()).Concat(_tuneGrid2?.Children ?? Enumerable.Empty<UIElement>());
     private readonly List<StatusTile> _statusTiles = new();
 
     // Slide-in panel
     private Grid? _panelOverlay;
     private Border? _panelSheet;
     private TextBlock? _panelTitle;
+    private Button? _panelPrev, _panelNext; // previous / next section arrows in the panel header
     private StackPanel? _panelHost;
     private ScrollViewer? _panelScroll;
     private string? _panelKey;
@@ -187,8 +197,10 @@ internal sealed partial class DetailLayoutHost
             _statusGrid.Children.Add(tile.Root);
         }
 
-        // Six tiles: three per row (two when narrow), so each summary has room
-        _tuneGrid = new AutoFitGrid { MinColumnWidth = 260, MaxColumns = 3, ColumnSpacing = 10, RowSpacing = 10 };
+        // Six tiles, three per row (fewer per row when narrow): Extras, DLSS / Streamline, Driver Settings,
+        // then Neural Rendering, Experimental, Management (the order of FixedTabOrder)
+        _tuneGrid = new AutoFitGrid { MinColumnWidth = 260, MaxColumns = TuneFirstRow, ColumnSpacing = 10, RowSpacing = 10 };
+        _tuneGrid2 = new AutoFitGrid { MinColumnWidth = 260, MaxColumns = TuneFirstRow, ColumnSpacing = 10, RowSpacing = 10 };
 
         _spotBody = new StackPanel { Spacing = 18 };
         var status = new StackPanel { Spacing = 10 };
@@ -197,6 +209,7 @@ internal sealed partial class DetailLayoutHost
         var tune = new StackPanel { Spacing = 10 };
         tune.Children.Add(TabsTheme.SectionHeading(Loc.GetString("Detail.TuneThisGame")));
         tune.Children.Add(_tuneGrid);
+        tune.Children.Add(_tuneGrid2);
         _spotBody.Children.Add(status);
         _spotBody.Children.Add(tune);
     }
@@ -238,10 +251,16 @@ internal sealed partial class DetailLayoutHost
 
     internal void RefreshTuneTiles()
     {
-        if (_tuneGrid == null || !IsSpotlight) return;
+        if (_tuneGrid == null || _tuneGrid2 == null || !IsSpotlight) return;
         _tuneGrid.Children.Clear();
+        _tuneGrid2.Children.Clear();
+        int n = 0;
         foreach (var key in TabKeys)
-            if (key != OverviewKey) _tuneGrid.Children.Add(MakeGlanceTile(key)); // a tap opens the panel (SelectTab)
+        {
+            if (key == OverviewKey) continue;
+            // a tap opens the panel (SelectTab)
+            (n++ < TuneFirstRow ? _tuneGrid : _tuneGrid2).Children.Add(MakeGlanceTile(key));
+        }
     }
 
     // ── Hero artwork ──────────────────────────────────────────────────────────
@@ -313,12 +332,21 @@ internal sealed partial class DetailLayoutHost
         var close = TabsTheme.MakeIconButton(TabsTheme.GlyphClose, TabsTheme.IconButton, 12);
         close.Click += (s, e) => ClosePanel();
         ToolTipService.SetToolTip(close, Loc.GetString("Dialog.Close"));
+        // Previous / next section without leaving the panel (same order as LB / RB: Components, then the Tune tiles)
+        _panelPrev = TabsTheme.MakeIconButton(TabsTheme.GlyphChevronLeft, TabsTheme.IconButton, 12);
+        _panelPrev.Click += (s, e) => StepPanel(-1);
+        _panelNext = TabsTheme.MakeIconButton(TabsTheme.GlyphChevronRight, TabsTheme.IconButton, 12);
+        _panelNext.Click += (s, e) => StepPanel(1);
+        var headButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        headButtons.Children.Add(_panelPrev);
+        headButtons.Children.Add(_panelNext);
+        headButtons.Children.Add(close);
         var head = new Grid { Padding = new Thickness(24, 20, 20, 12) };
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         head.Children.Add(_panelTitle);
-        Grid.SetColumn(close, 1);
-        head.Children.Add(close);
+        Grid.SetColumn(headButtons, 1);
+        head.Children.Add(headButtons);
 
         _panelHost = new StackPanel { Spacing = 20 };
         _panelScroll = new ScrollViewer
@@ -348,11 +376,58 @@ internal sealed partial class DetailLayoutHost
         _panelOverlay = new Grid { Visibility = Visibility.Collapsed };
         _panelOverlay.Children.Add(scrim);
         _panelOverlay.Children.Add(_panelSheet);
-        _panelOverlay.SizeChanged += (s, e) =>
-            _panelSheet.Width = Math.Min(e.NewSize.Width, Math.Clamp(e.NewSize.Width * 0.62, 560, 980));
+        _panelOverlay.SizeChanged += (s, e) => ApplyPanelWidth(e.NewSize.Width);
+
+        // Drag the sheet's left edge to set its width (saved; only the width changes, nothing is scaled);
+        // double-click goes back to automatic
+        var settings = _window.ViewModel.Settings;
+        var grip = new Controls.ResizeGrip(horizontal: true)
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(-5, 0, 0, 0), // half outside the sheet, so it doesn't cover the content
+            Reference = () => _window.LayoutRoot,
+        };
+        ToolTipService.SetToolTip(grip, Loc.GetString("Detail.Spotlight.PanelResize.Tooltip"));
+        double dragStart = 0;
+        grip.DragStarted += () => dragStart = _panelSheet.ActualWidth;
+        grip.DragDelta += dx =>
+        {
+            // The edge is on the left: dragging left (negative) makes the sheet wider
+            settings.SpotlightPanelWidth = Math.Round(Math.Clamp(dragStart - dx, PanelMinWidth, MaxPanelWidth()));
+            ApplyPanelWidth(_panelOverlay.ActualWidth);
+        };
+        grip.DragCompleted += () =>
+        {
+            _window.ViewModel.SaveSettingsPublic();
+            CrashReporter.Log($"[Spotlight.Panel] Width set to {settings.SpotlightPanelWidth:0}");
+        };
+        grip.Reset += () =>
+        {
+            settings.SpotlightPanelWidth = 0;
+            ApplyPanelWidth(_panelOverlay.ActualWidth);
+            _window.ViewModel.SaveSettingsPublic();
+            CrashReporter.Log("[Spotlight.Panel] Width back to automatic");
+        };
+        sheetGrid.Children.Add(grip);
+        Grid.SetRowSpan(grip, 2);
         Grid.SetColumnSpan(_panelOverlay, 2);
         Grid.SetRowSpan(_panelOverlay, 2);
         _window.GameViewPanel.Children.Add(_panelOverlay);
+    }
+
+    private const double PanelMinWidth = 420;
+
+    /// <summary>The widest the panel may be: leaves a strip of the page showing so the scrim can close it.</summary>
+    private double MaxPanelWidth() => Math.Max(PanelMinWidth, (_panelOverlay?.ActualWidth ?? 0) - 80);
+
+    /// <summary>The user's dragged width (kept inside the page), else automatic: 62% of the page, 560-980.</summary>
+    private void ApplyPanelWidth(double pageWidth)
+    {
+        if (_panelSheet == null || pageWidth <= 0) return;
+        double w = _window.ViewModel.Settings.SpotlightPanelWidth;
+        _panelSheet.Width = w > 0
+            ? Math.Min(pageWidth, Math.Clamp(w, PanelMinWidth, Math.Max(PanelMinWidth, pageWidth - 80)))
+            : Math.Min(pageWidth, Math.Clamp(pageWidth * 0.62, 560, 980));
     }
 
     /// <summary>Opens a section (or Overview's component cards) in the slide-in panel.</summary>
@@ -389,8 +464,8 @@ internal sealed partial class DetailLayoutHost
         _panelHost!.Children.Add(content);
         content.Visibility = Visibility.Visible;
         _panelKey = key;
-        _panelTitle!.Text = key == OverviewKey ? Loc.GetString("Detail.Components") : key == AchievementsKey ? Loc.GetString("Detail.Achievements")
-            : key == ScreenshotsKey ? Loc.GetString("Overlay.Screenshots.Title") : key == ArtworkPickerKey ? Loc.GetString("Detail.Artwork") : key == GameSettingsKey ? Loc.GetString("Detail.GameSettings") : GetTitle(key);
+        _panelTitle!.Text = PanelTitleFor(key);
+        RefreshPanelSteps();
         if (key == OverviewKey) RefreshOverviewCards();
 
         // Re-adding the sheet replays its slide-in transition
@@ -401,6 +476,29 @@ internal sealed partial class DetailLayoutHost
             _panelOverlay.Visibility = Visibility.Visible;
         }
         _panelScroll?.ChangeView(null, 0, null, disableAnimation: true);
+    }
+
+    private static string PanelTitleFor(string key) =>
+        key == OverviewKey ? Loc.GetString("Detail.Components") : key == AchievementsKey ? Loc.GetString("Detail.Achievements")
+        : key == ScreenshotsKey ? Loc.GetString("Overlay.Screenshots.Title") : key == ArtworkPickerKey ? Loc.GetString("Detail.Artwork") : key == GameSettingsKey ? Loc.GetString("Detail.GameSettings") : GetTitle(key);
+
+    /// <summary>
+    /// Shows the previous / next arrows for sections in the step order (not for Achievements, Screenshots, Artwork or
+    /// Game settings), with the neighbours' names as tooltips.
+    /// </summary>
+    private void RefreshPanelSteps()
+    {
+        if (_panelPrev == null || _panelNext == null) return;
+        var keys = PanelStepKeys();
+        int index = _panelKey == null ? -1 : keys.IndexOf(_panelKey);
+        var show = index >= 0 && keys.Count >= 2 ? Visibility.Visible : Visibility.Collapsed;
+        _panelPrev.Visibility = _panelNext.Visibility = show;
+        if (show == Visibility.Collapsed) return;
+        string Neighbour(int delta) => PanelTitleFor(keys[((index + delta) % keys.Count + keys.Count) % keys.Count]);
+        ToolTipService.SetToolTip(_panelPrev, Loc.GetString("Detail.PanelPrevious", Neighbour(-1)));
+        ToolTipService.SetToolTip(_panelNext, Loc.GetString("Detail.PanelNext", Neighbour(1)));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_panelPrev, Loc.GetString("Detail.PanelPrevious", Neighbour(-1)));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_panelNext, Loc.GetString("Detail.PanelNext", Neighbour(1)));
     }
 
     /// <summary>Closes the panel and puts its section back on the (hidden) page.</summary>
@@ -445,7 +543,6 @@ internal sealed partial class DetailLayoutHost
             SectionsPanel.Children.Add(container); // ApplySectionOrder puts it back in order
         }
         // Settings changed in the panel: bring the Tune tiles up to date
-        SummariesStale?.Invoke();
         RefreshTuneTiles();
     }
 
@@ -491,6 +588,9 @@ internal sealed partial class DetailLayoutHost
                 FontSize = 12,
                 Foreground = TabsTheme.B(TabsTheme.TextSecondary),
                 TextTrimming = TextTrimming.CharacterEllipsis,
+                // two lines: the version, then the component's overrides when it has any
+                TextWrapping = TextWrapping.Wrap,
+                MaxLines = 2,
             };
             var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
             text.Children.Add(_name);
@@ -537,10 +637,25 @@ internal sealed partial class DetailLayoutHost
             var tone = TabsTheme.ToneOf(r.Status.Foreground);
             bool notInstalled = status.Length == 0 || status == "—"
                 || string.Equals(status, Loc.GetString("Dialog.Ready"), StringComparison.OrdinalIgnoreCase);
-            _status.Text = notInstalled ? Loc.GetString("Status.NotInstalled")
-                : tone != TabsTheme.Tone.Purple ? status
-                : status.StartsWith(Loc.GetString("Status.UpdateShort"), StringComparison.OrdinalIgnoreCase) ? Loc.GetString("Status.UpdateAvailable")
-                : Loc.GetString("Detail.UpdateAvailableWithStatus", status);
+            // Values in the Tune tiles' green (the version, then the component's overrides: channel, DLL name,
+            // Update All), " · " between them in the normal text colour
+            _status.Inlines.Clear();
+            var parts = new List<(string Text, bool Value)>();
+            if (notInstalled) parts.Add((Loc.GetString("Status.NotInstalled"), false));
+            else if (tone != TabsTheme.Tone.Purple) parts.Add((status, true));
+            else if (status.StartsWith(Loc.GetString("Status.UpdateShort"), StringComparison.OrdinalIgnoreCase)) parts.Add((Loc.GetString("Status.UpdateAvailable"), false));
+            else { parts.Add((Loc.GetString("Status.UpdateAvailable"), false)); parts.Add((status, true)); }
+            if (!notInstalled && _host._window.ViewModel is { SelectedGame: { } game } vm)
+                foreach (var note in ComponentOverrideNotes.For(vm, game, r.Key, rsModes: true))
+                    parts.Add((note, true));
+            for (int i = 0; i < parts.Count; i++)
+            {
+                if (i > 0) _status.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = " · " });
+                var run = new Microsoft.UI.Xaml.Documents.Run { Text = parts[i].Text };
+                if (parts[i].Value && tone is not (TabsTheme.Tone.Amber or TabsTheme.Tone.Red))
+                    run.Foreground = TabsTheme.B(TabsTheme.Value);
+                _status.Inlines.Add(run);
+            }
             _dot.Fill = TabsTheme.B(notInstalled ? "#3A4458" : tone switch
             {
                 TabsTheme.Tone.Purple => "#B898E8",

@@ -6,7 +6,7 @@ namespace RenoDXCommander.Services;
 /// Toggles Windows HDR (Advanced Color) on the primary display using the CCD API.
 /// No admin required. Uses DisplayConfigGetDeviceInfo / DisplayConfigSetDeviceInfo.
 /// </summary>
-public static class HdrToggleService
+public static partial class HdrToggleService
 {
     // ── Win32 P/Invoke ────────────────────────────────────────────────────────
 
@@ -132,18 +132,9 @@ public static class HdrToggleService
             var (adapterId, targetId) = GetPrimaryTarget();
             if (targetId == 0 && adapterId.LowPart == 0) return false;
 
-            var info = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
-            info.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
-            info.header.size = (uint)Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>();
-            info.header.adapterId = adapterId;
-            info.header.id = targetId;
-
-            int result = DisplayConfigGetDeviceInfo(ref info);
-            CrashReporter.Log($"[HdrToggleService.IsHdrEnabled] result={result}, value=0x{info.value:X8}, adapterId=({adapterId.LowPart},{adapterId.HighPart}), targetId={targetId}");
-            if (result != 0) return false;
-
-            // bit 0 = advancedColorSupported, bit 1 = advancedColorEnabled
-            bool enabled = (info.value & 0x2) != 0;
+            // HDR itself, not advanced colour (on with Auto Colour Management in SDR on Windows 11 24H2+)
+            var (_, enabled) = ReadHdrState(adapterId, targetId);
+            CrashReporter.Log($"[HdrToggleService.IsHdrEnabled] {enabled}, adapterId=({adapterId.LowPart},{adapterId.HighPart}), targetId={targetId}");
             return enabled;
         }
         catch (Exception ex)
@@ -161,14 +152,7 @@ public static class HdrToggleService
             var (adapterId, targetId) = GetPrimaryTarget();
             if (targetId == 0 && adapterId.LowPart == 0) return false;
 
-            var setState = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE();
-            setState.header.type = DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE;
-            setState.header.size = (uint)Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>();
-            setState.header.adapterId = adapterId;
-            setState.header.id = targetId;
-            setState.value = 1; // enableAdvancedColor = 1
-
-            int result = DisplayConfigSetDeviceInfo(ref setState);
+            int result = SetHdrState(adapterId, targetId, true);
             if (result == 0)
             {
                 CrashReporter.Log("[HdrToggleService.EnableHdr] HDR enabled successfully");
@@ -192,14 +176,7 @@ public static class HdrToggleService
             var (adapterId, targetId) = GetPrimaryTarget();
             if (targetId == 0 && adapterId.LowPart == 0) return false;
 
-            var setState = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE();
-            setState.header.type = DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE;
-            setState.header.size = (uint)Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>();
-            setState.header.adapterId = adapterId;
-            setState.header.id = targetId;
-            setState.value = 0; // enableAdvancedColor = 0
-
-            int result = DisplayConfigSetDeviceInfo(ref setState);
+            int result = SetHdrState(adapterId, targetId, false);
             if (result == 0)
             {
                 CrashReporter.Log("[HdrToggleService.DisableHdr] HDR disabled successfully");
@@ -233,6 +210,38 @@ public static class HdrToggleService
             return (paths[0].targetInfo.adapterId, paths[0].targetInfo.id);
 
         return (default, 0);
+    }
+
+    /// <summary>
+    /// Exact refresh rates (e.g. 239.96) of every active display, from the active paths' target modes:
+    /// the same source ReLimiter uses for its VRR cap. Empty on failure.
+    /// </summary>
+    public static List<double> GetActiveRefreshRates()
+    {
+        var result = new List<double>();
+        try
+        {
+            int err = GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out uint pathCount, out uint modeCount);
+            if (err != 0) return result;
+
+            var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
+            var modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
+            err = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero);
+            if (err != 0) return result;
+
+            for (int i = 0; i < pathCount; i++)
+            {
+                var rate = paths[i].targetInfo.refreshRate;
+                if (rate.Denominator == 0) continue;
+                double hz = (double)rate.Numerator / rate.Denominator;
+                if (hz >= 1.0) result.Add(hz);
+            }
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or MarshalDirectiveException)
+        {
+            CrashReporter.Log($"[HdrToggleService.GetActiveRefreshRates] Failed — {ex.Message}");
+        }
+        return result;
     }
 
     /// <summary>Returns all active display targets (adapterId + targetId + friendly name + HDR supported).</summary>
@@ -326,14 +335,7 @@ public static class HdrToggleService
             }
 
             // Check HDR support
-            var colorInfo = new DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO();
-            colorInfo.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO;
-            colorInfo.header.size = (uint)Marshal.SizeOf<DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO>();
-            colorInfo.header.adapterId = adapterId;
-            colorInfo.header.id = targetId;
-            bool hdrSupported = false;
-            if (DisplayConfigGetDeviceInfo(ref colorInfo) == 0)
-                hdrSupported = (colorInfo.value & 0x1) != 0; // bit 0 = advancedColorSupported
+            var (hdrSupported, _) = ReadHdrState(adapterId, targetId);
 
             result.Add(new DisplayTarget(targetId, name, hdrSupported));
         }
@@ -360,14 +362,7 @@ public static class HdrToggleService
         {
             if (!targetIds.Contains(path.targetInfo.id)) continue;
 
-            var setState = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE();
-            setState.header.type = DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE;
-            setState.header.size = (uint)Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>();
-            setState.header.adapterId = path.targetInfo.adapterId;
-            setState.header.id = path.targetInfo.id;
-            setState.value = 1;
-
-            if (DisplayConfigSetDeviceInfo(ref setState) == 0)
+            if (SetHdrState(path.targetInfo.adapterId, path.targetInfo.id, true) == 0)
                 anySuccess = true;
         }
 
@@ -395,14 +390,7 @@ public static class HdrToggleService
         {
             if (!targetIds.Contains(path.targetInfo.id)) continue;
 
-            var setState = new DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE();
-            setState.header.type = DISPLAYCONFIG_DEVICE_INFO_SET_ADVANCED_COLOR_STATE;
-            setState.header.size = (uint)Marshal.SizeOf<DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE>();
-            setState.header.adapterId = path.targetInfo.adapterId;
-            setState.header.id = path.targetInfo.id;
-            setState.value = 0;
-
-            if (DisplayConfigSetDeviceInfo(ref setState) == 0)
+            if (SetHdrState(path.targetInfo.adapterId, path.targetInfo.id, false) == 0)
                 anySuccess = true;
         }
 

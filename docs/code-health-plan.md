@@ -117,6 +117,7 @@ Measured from logs on a 102-game library.
 - [x] Manifest `optiScalerDllOverrides` never worked (its loader was never called). Removed from the app and the Manifest Editor, along with the unused per-game Auto HDR launch toggle (the card's HDR button covers it).
 - [x] Found while removing: `SaveNameMappingsImmediate` and `PcgwService.FlushCacheAsync` had no callers despite comments saying to call them at rename/shutdown (removed). Checked: shutdown flushes settings (`FlushPendingSaves`); PCGW's 500 ms debounced cache write can be lost at exit, which only means those lookups are fetched again.
 - [ ] Skipped: `DlssPresetService._nativeSetSettingLegacy` (set from NVAPI lookup), `UeExtendedWarningDismissed` setting key (no reader now), constructor parameters that no longer feed a field.
+- [ ] **WindowsApps ReShade reinstall** (found 25 Nov 2026): `MainViewModel.ReinstallPendingWindowsAppsReShade` (`MainViewModel.BackgroundScan.cs`, called from both init paths), the `_pendingRsReinstall` set and the marking in `BuildCards` (`MainViewModel.BuildCards.cs` ~line 638: a game whose new folder is inside `\WindowsApps\` and has ReShade at neither path), plus the "keep the record while pending" exception just below it. Effectively dead: Xbox cards now use the real install folder behind the WindowsApps junction, which doesn't move on game updates, so nothing is ever marked (no "Auto-reinstalling ReShade" line in any log, ours or users'). It also goes against the "never write into WindowsApps" rule. Remove it all together; keep the rest of the RS path reconciliation (copy to the new folder), which Steam / GOG / manual games still use.
 - [x] **Duplicates to merge:** Done: `AppPaths` (`ExeDir`, `InExeDir`, `Bundled7Zip`, `Find7Zip`) replaces the three finders and every `AppContext.BaseDirectory` path; `MainViewModel.IsLegacyVersion` delegates to `AuxInstallService`. The "version comparers" are one-line `Version.TryParse` calls, not worth merging. Was: three `Find7Zip` copies + inline `AppContext.BaseDirectory` 7-Zip paths; `IsLegacyVersion` twice; several version comparers. Also `EnsureInisDir` seeds templates from `AppContext.BaseDirectory` (CLAUDE.md says use `Environment.ProcessPath`).
 
 ---
@@ -129,7 +130,7 @@ Measured from logs on a 102-game library.
 - [ ] **The installer doesn't install the .NET runtime.**
   - Add a runtime check and install to `RHI Setup.iss`, or publish self-contained.
   - It currently installs the Windows App Runtime, which isn't needed if the app is self-contained. Pick one approach.
-- [ ] Fix the wrong `PublishDir` default in `RHI Setup.iss`.
+- [x] Fix the wrong `PublishDir` default in `RHI Setup.iss`. (25 Nov 2026: now the `Publish\RHI` folder publish.bat writes to.)
 
 ---
 
@@ -193,9 +194,23 @@ These make future features cheaper to build. Do them in this order; each is safe
 
 - [ ] `BuildCards`, `CacheLoad` and the background scan share about 48 property assignments by copy-paste. The RTX 40 MFG block is duplicated.
   - Use a `CardFactory` plus `ICardEnricher`s (one per component), so a new feature is added in one place.
-- [ ] **Check first:** some newer components are set only in the background scan, not in the `InitializeAsync(forceRescan: true)` path that Refresh uses. Fix that as a bug fix before the refactor.
+- [x] **Check first:** some newer components are set only in the background scan, not in the `InitializeAsync(forceRescan: true)` path that Refresh uses. Fix that as a bug fix before the refactor. (25 Nov 2026: the real gaps were the other way round, in the background merge after a cached start: anti-cheat / DXVK API flags, DOF Fix fields and the DXVK update badge weren't merged, and the WindowsApps ReShade reinstall only ran on Refresh. Fixed. Still only in the background scan, harmless on Refresh because launch already ran them: DLSS auto-update, OptiPatcher move, MFG placement, ASI Loader auto-update, Streamline redeploy; they matter only on a first launch with no saved library.)
 
 ---
+
+## Remove Game Overrides in 2.9.6.3 (user decision, 22 Nov 2026; moved up from 2.9.8 on 25 Nov 2026)
+
+Done 26 Nov 2026 (`fef8f826`). Checked in Classic+, Tabs and Spotlight with the dev screenshot hook.
+- [x] Reset Overrides' logic is now `DetailPanelBuilder.ResetGameSettings(card)` (`DetailPanelBuilder.Overrides.GameShared.cs`), which the game settings ⚙'s Reset calls directly. It no longer builds a panel first.
+- [x] Section removed: key `GameOverrides` out of `SettingsViewModel.DefaultSectionOrder` (saved orders drop it on load, saved collapse states too; a saved `DetailSelectedTab` of it falls back to Overview), `OverridesContainer` / `OverridesPanel` / `OverridesHeaderRow` out of `MainWindow.xaml`, `DetailLayoutHost.GetContainer` / `GetTitle`, the Tabs `FixedTabOrder` tab, Spotlight's Tune tile, `ArrangeOverrides`, its header summary (`BuildGameOverridesSummary`, `RefreshGameOverridesSummary`, the `SummariesStale` event).
+- [x] `BuildOverridesPanel` keeps its name (about 25 callers) but only builds the sections below Components. Deleted: `DetailPanelBuilder.Overrides.RsChannel.cs`, `DetailPanelBuilder.Overrides.ShadersAddons.cs`, `UpdateInclusionHelper.cs`, `OverridesPanelCtx`, `MakeOverridesMovingNote`, `ApplyResetButtonStyle`. Kept: the shared files (`RsShared`, `DllShared`, `ApiShared`, `GameShared`) and the DLSS / Driver Settings / Management builders.
+- [-] Callers of `BuildOverridesPanel` / `QueueOverridesRebuild` still rebuild: the sections that are left (Extras, Neural Rendering, Experimental, DLSS, Driver) depend on the API, the ReShade channel and the DLL names, so the rebuild after a change in a ⚙ is still needed. Only the comments changed.
+- [x] "Same setting as in Game Overrides" wording removed from the cogs, the FAQ, the OptiScaler / frame generation hints and the Source engine message. The header Launch menu's Executable / Launch arguments items open the game settings instead of the old tab.
+- [x] `.claude/rules/rhi-ui.md` (+ `.kiro` copy), `rhi-reshade.md`, `.claude/CLAUDE.md` (7 sections, per-game override steps 8 and 9), `docs/DETAILED_GUIDE.md`.
+- [x] Patch notes (2.9.6.3 Beta).
+- Not done: `.kiro/steering/rhi-knowledge.md` still describes Game Overrides in its history sections.
+
+New homes (2.9.6): game settings ⚙ = Game name, Bitness, Graphics API, Launch executable / arguments, Reset (`DetailLayoutHost.GameSettings.Identity.cs`); RenoDX ⚙ = Mod matching (wiki mod name, wiki lookup; `MainWindow.Events.Components.Rdx.ModMatching.cs`); ReShade ⚙ = Graphics API, channel, DLL name, Load as ASI, Shaders, Addons, preset, Update All, Keep ReShade.ini updated; Display Commander / OptiScaler ⚙ = their DLL names; every component ⚙ = Update All (`MainWindow.Events.Components.UpdateAll.cs`: ReShade, RenoDX, ReLimiter, Display Commander, OptiScaler, RE Framework, DXVK).
 
 ## Tooling and release
 

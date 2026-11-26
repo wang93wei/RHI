@@ -66,12 +66,12 @@ internal sealed partial class DetailLayoutHost
     internal Border? GetContainer(string key) => key switch
     {
         "Components"          => _window.DetailComponentSection,
-        "GameOverrides"       => _window.OverridesContainer,
         "NeuralRendering"     => _window.NeuralRenderingContainer,
         "NvidiaProfileDlss"   => _window.NvidiaProfileDlssContainer,
         "NvidiaProfileDriver" => _window.NvidiaProfileDriverContainer,
         "Management"          => _window.ManagementContainer,
         "Extras"              => _window.ExtrasContainer,
+        "Experimental"        => _window.ExperimentalContainer,
         _                     => null,
     };
 
@@ -87,14 +87,14 @@ internal sealed partial class DetailLayoutHost
     /// <summary>Short name for a section, used on tabs.</summary>
     internal static string GetTitle(string key) => key switch
     {
-        "Components" => Loc.GetString("Detail.Components"),
-        "GameOverrides" => Loc.GetString("Dialog.GameOverrides"),
-        "NeuralRendering" => Loc.GetString("Dialog.NeuralRendering"),
-        "NvidiaProfileDlss" => Loc.GetString("Detail.DlssStreamline"),
+        "Components"          => Loc.GetString("Detail.Components"),
+        "NeuralRendering"     => Loc.GetString("Dialog.NeuralRendering"),
+        "NvidiaProfileDlss"   => Loc.GetString("Detail.DlssStreamline"),
         "NvidiaProfileDriver" => Loc.GetString("Overrides.Section.DriverSettings"),
-        "Management" => Loc.GetString("Xaml.Management"),
-        "Extras" => Loc.GetString("Extras.Title"),
-        OverviewKey => Loc.GetString("Detail.Overview"),
+        "Management"          => Loc.GetString("Xaml.Management"),
+        "Extras"              => Loc.GetString("Extras.Title"),
+        "Experimental"        => Loc.GetString("Detail.Experimental"),
+        OverviewKey           => Loc.GetString("Detail.Overview"),
         _                     => key,
     };
 
@@ -149,7 +149,7 @@ internal sealed partial class DetailLayoutHost
     /// <summary>Tabs in order: Overview, then every section except Components (shown by Overview).</summary>
     // Tabs has its own fixed order; Classic's drag order (DetailSectionOrder) doesn't apply
     private static readonly string[] FixedTabOrder =
-        { OverviewKey, "GameOverrides", "Extras", "NvidiaProfileDlss", "NvidiaProfileDriver", "NeuralRendering", "Management" };
+        { OverviewKey, "Extras", "NvidiaProfileDlss", "NvidiaProfileDriver", "NeuralRendering", "Experimental", "Management" };
 
     private IEnumerable<string> TabKeys =>
         FixedTabOrder.Where(k => k == OverviewKey || GetContainer(k) != null);
@@ -299,7 +299,7 @@ internal sealed partial class DetailLayoutHost
         if (_overview != null)
         {
             _overview.Visibility = selected == OverviewKey ? Visibility.Visible : Visibility.Collapsed;
-            if (selected == OverviewKey) { SummariesStale?.Invoke(); RefreshOverview(); }
+            if (selected == OverviewKey) RefreshOverview();
         }
     }
 

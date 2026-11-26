@@ -51,7 +51,7 @@ Workspace-specific config: no `opencode.json` at root — opencode config lives 
 
 ## Build / Test / Publish
 
-**After every code change on the Windows machine, run `publish.bat`.** That is the build the user actually runs (`C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI\RHI.exe`); plain `dotnet build` output is not the running app. `publish.bat` force-closes any running RHI first.
+**After every code change on the Windows machine, run `publish.bat`.** That is the build the user actually runs (`C:\Users\Mark\OneDrive\Documents\RDXC\Publish\RHI\RHI.exe`); plain `dotnet build` output is not the running app. `publish.bat` closes any running RHI first (shutdown signal file, force-stop after 10 s) and exits with code 1 when the build fails.
 
 ```bash
 & "g:\RDXC\publish.bat"                                                          # build + deploy (Release, win-x64, single file)
@@ -143,7 +143,7 @@ Other databases (`RenoDXdb*.json`, `engine-files/`) live in the separate `RankFT
 
 **Naming**: internal string values are PascalCase without spaces (`"LiliumHdr"`); display labels are human-readable (`"Lilium HDR"`); fields `_camelCase`. Interface `I{Name}Service` + `NameService` in `RenoDXCommander.Services`; small services may skip the interface (e.g. `DofFixService`). A new service must be registered in `App.xaml.cs`, or `GetRequiredService` throws at runtime.
 
-**Per-game override (all 10 steps)**: (1) field in `GameNameService.cs`; (2) public accessor; (3) `LoadNameMappings()`/`SaveNameMappings()`; (4) `RenameGame()` migration (`MigrateDict`/`MigrateHashSet` or composite variants); (5) `IGameNameService.cs`; (6) expose in `MainViewModel.cs`; (7) Get/Set/Resolve in `MainViewModel.Settings.cs`; (8) UI in `DetailPanelBuilder.Overrides.cs`; (9) reset overrides handler; (10) `GameReportEncoder.cs`.
+**Per-game override (all 10 steps)**: (1) field in `GameNameService.cs`; (2) public accessor; (3) `LoadNameMappings()`/`SaveNameMappings()`; (4) `RenameGame()` migration (`MigrateDict`/`MigrateHashSet` or composite variants); (5) `IGameNameService.cs`; (6) expose in `MainViewModel.cs`; (7) Get/Set/Resolve in `MainViewModel.Settings.cs`; (8) UI in the matching ⚙ (game settings ⚙ or the component's ⚙; logic in a `DetailPanelBuilder.Overrides.*Shared.cs` partial; the Game Overrides section was removed in 2.9.6.3); (9) `DetailPanelBuilder.ResetGameSettings`; (10) `GameReportEncoder.cs`.
 
 **Composite keys**: per-store settings use `"GameName|Store"` via `GameKey.FromCard(name, source).ToKey()` / `GameKey.From(name, store).ToKey()`, with an optional `string store = ""` parameter on Get/Set methods. Legacy keys migrate by appending `|`. Name-only exceptions: wiki exclusions, UE-Extended opt-in/out, RTX HDR. `SavedGameLibrary` collections need `StringComparer.OrdinalIgnoreCase`.
 

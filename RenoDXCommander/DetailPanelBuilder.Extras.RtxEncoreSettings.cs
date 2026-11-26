@@ -452,6 +452,7 @@ public partial class DetailPanelBuilder
                         cog.SetError(Loc.GetString("Extras.RtxEncore.Nr.CopyFailed"));
                     }
                     RequestExtrasRebuild(card);
+                    await RefreshDlssAfterNrDllChangeAsync(card);
                 }
                 finally
                 {
@@ -464,6 +465,7 @@ public partial class DetailPanelBuilder
                 nrOn = false;
                 cog.SetSuccess(Loc.GetString("Extras.RtxEncore.Nr.Removed"));
                 RequestExtrasRebuild(card);
+                await RefreshDlssAfterNrDllChangeAsync(card);
             }
         }
 

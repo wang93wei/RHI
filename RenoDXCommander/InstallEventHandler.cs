@@ -178,12 +178,105 @@ public class InstallEventHandler
             var card = (sender as FrameworkElement)?.Tag as GameCardViewModel;
             if (card == null) return;
             if (!await EnsureGameFolderAsync(card, sender)) return;
+            if (!await ConfirmUlV4WarningsAsync(card, sender)) return;
+            if (!card.IsUlInstalled && !await ConfirmLimiterWithFrameWarpAsync(card, sender, "ReLimiter")) return;
             await ViewModel.InstallUlAsync(card);
         }
         catch (Exception unhandledEx)
         {
             CrashReporter.Log($"[InstallEventHandler.InstallUlButton_Click] Unhandled error — {unhandledEx.Message}\n{unhandledEx.StackTrace}");
         }
+    }
+
+    /// <summary>
+    /// Before an install that would put ReLimiter v4 in a game: NVIDIA Dynamic MFG on = warning (Install anyway / Cancel);
+    /// any Extras MFG mod installed (Universal MFG Unlocker, MFG Ada Unlock, 20/30 FG Unlock, DLSS Enabler) = one shared
+    /// notice (Continue / Cancel / Don't show this again). True = go ahead.
+    /// </summary>
+    private async Task<bool> ConfirmUlV4WarningsAsync(GameCardViewModel card, object sender)
+    {
+        if (!await ViewModel.UlInstallWillBeV4Async(card)) return true;
+        bool noticeDismissed = ViewModel.Settings.UlMfgModsNoticeDismissed;
+        var (dmfgOn, mods) = await Task.Run(() => (ViewModel.IsDmfgOn(card),
+            noticeDismissed ? new List<string>() : ViewModel.InstalledMfgModsForUl(card)));
+        if (!dmfgOn && mods.Count == 0) return true;
+
+        CrashReporter.Log($"[InstallEventHandler.ConfirmUlV4WarningsAsync] '{card.GameName}': ReLimiter v4 install with "
+            + $"DMFG={(dmfgOn ? "on" : "off")}, MFG mods=[{string.Join(", ", mods)}]");
+        var xamlRoot = (sender as FrameworkElement)?.XamlRoot ?? _window.Content?.XamlRoot;
+        if (xamlRoot == null) return true;
+
+        if (dmfgOn)
+        {
+            var dmfgDialog = new ContentDialog
+            {
+                Title = "Dynamic MFG is on",
+                Content = new TextBlock { Text = MainViewModel.UlDmfgWarning, TextWrapping = TextWrapping.Wrap, MaxWidth = 460 },
+                PrimaryButtonText = "Install anyway",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = xamlRoot,
+                RequestedTheme = ElementTheme.Dark,
+            };
+            bool goDmfg = await DialogService.ShowSafeAsync(dmfgDialog) == ContentDialogResult.Primary;
+            CrashReporter.Log($"[InstallEventHandler.ConfirmUlV4WarningsAsync] '{card.GameName}': DMFG warning — {(goDmfg ? "installing anyway" : "cancelled")}");
+            if (!goDmfg) return false;
+        }
+
+        if (mods.Count == 0) return true;
+        var content = new StackPanel { Spacing = 8, MaxWidth = 460 };
+        content.Children.Add(new TextBlock { Text = MainViewModel.UlMfgModsNotice, TextWrapping = TextWrapping.Wrap });
+        var dontShow = new CheckBox { Content = "Don't show this again", FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
+        content.Children.Add(dontShow);
+        var dialog = new ContentDialog
+        {
+            Title = "ReLimiter and frame generation mods",
+            Content = content,
+            PrimaryButtonText = "Continue",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = xamlRoot,
+            RequestedTheme = ElementTheme.Dark,
+        };
+        bool go = await DialogService.ShowSafeAsync(dialog) == ContentDialogResult.Primary;
+        if (go && dontShow.IsChecked == true)
+        {
+            ViewModel.Settings.UlMfgModsNoticeDismissed = true;
+            ViewModel.SaveSettingsPublic();
+        }
+        CrashReporter.Log($"[InstallEventHandler.ConfirmUlV4WarningsAsync] '{card.GameName}': MFG mods notice — {(go ? "continue" : "cancelled")}"
+            + (go && dontShow.IsChecked == true ? " (won't show again)" : ""));
+        return go;
+    }
+
+    /// <summary>
+    /// FrameWarp (Experimental) paces the game itself and asks for frame rate limiters to be off. A fresh ReLimiter /
+    /// Display Commander install in a game that has it asks first (Install anyway / Cancel). True = go ahead.
+    /// </summary>
+    private async Task<bool> ConfirmLimiterWithFrameWarpAsync(GameCardViewModel card, object sender, string limiter)
+    {
+        if (string.IsNullOrEmpty(card.InstallPath) || !FrameWarpService.IsInstalledIn(card.InstallPath)) return true;
+        var xamlRoot = (sender as FrameworkElement)?.XamlRoot ?? _window.Content?.XamlRoot;
+        if (xamlRoot == null) return true;
+        var dialog = new ContentDialog
+        {
+            Title = "FrameWarp is installed in this game",
+            Content = new TextBlock
+            {
+                Text = $"FrameWarp paces the game itself and asks for frame rate limiters to be off. With {limiter}, reprojection may not reach your refresh rate: "
+                     + $"keep {limiter}'s frame rate cap off, or remove FrameWarp (Experimental).",
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 460,
+            },
+            PrimaryButtonText = "Install anyway",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = xamlRoot,
+            RequestedTheme = ElementTheme.Dark,
+        };
+        bool go = await DialogService.ShowSafeAsync(dialog) == ContentDialogResult.Primary;
+        CrashReporter.Log($"[InstallEventHandler.ConfirmLimiterWithFrameWarpAsync] '{card.GameName}': {limiter} with FrameWarp — {(go ? "installing anyway" : "cancelled")}");
+        return go;
     }
 
     public void UninstallUlButton_Click(object sender, RoutedEventArgs e)
@@ -199,6 +292,7 @@ public class InstallEventHandler
             var card = (sender as FrameworkElement)?.Tag as GameCardViewModel;
             if (card == null) return;
             if (!await EnsureGameFolderAsync(card, sender)) return;
+            if (!card.IsDcInstalled && !await ConfirmLimiterWithFrameWarpAsync(card, sender, "Display Commander")) return;
             await ViewModel.InstallDcAsync(card);
         }
         catch (Exception unhandledEx)

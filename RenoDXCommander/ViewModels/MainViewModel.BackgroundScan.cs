@@ -257,10 +257,8 @@ public partial class MainViewModel
             (_addonPackService as AddonPackService)?.ApplyManifestOverrides(_manifest);
             DlssPresetService.ApplyManifestPresets(_manifest);
 
-            // Run addon update check AFTER manifest overrides are applied so releaseApiUrl entries are available
-            try { await _addonPackService.CheckAndUpdateAllAsync(); }
-            catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Addon update check failed — {ex.Message}"); }
-            await EnsureSelectedAddonsDownloadedAsync(); // selected but never downloaded (after a restore / purge)
+            // The addon update check needs the manifest overrides applied above (releaseApiUrl entries).
+            // It is started further down, alongside card building, and awaited after the merge.
             _dlssPresetService.ApplyManifestProfileConfig(_manifest);
             FeatureFlags.ApplyManifest(_manifest?.FeatureFlags);
             OsForkService.SetDefinitions(_manifest?.OsForks); // recommended OptiScaler forks
@@ -271,6 +269,7 @@ public partial class MainViewModel
             if (_manifest?.ComponentUrls?.TryGetValue("dc", out var dcApiUrl2) == true && !string.IsNullOrEmpty(dcApiUrl2))
                 DcReleasesApiUrlOverride = dcApiUrl2;
             WikiService.ApplyManifestUnityUrls(_manifest?.ComponentUrls); // generic Unity addon links
+            FrameWarpService.ApplyManifestUrls(_manifest?.ComponentUrls); // NVIDIA Latewarp link / hash
 
             // Extract wiki/luma results
             var wikiResult = !wikiFetchFailed ? await wikiTask : default;
@@ -449,6 +448,16 @@ public partial class MainViewModel
 
             // Build fresh cards
             _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Building cards for {allGames.Count} games...");
+            // Addon update check: runs while the cards are built instead of holding them up. Started only
+            // here, after the folder migrations above, because it can copy updated addons into game folders.
+            // Everything after the merge (shader / addon sync, update checks) still waits for it.
+            var addonCheckTask = Task.Run(async () =>
+            {
+                try { await _addonPackService.CheckAndUpdateAllAsync(); }
+                catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Addon update check failed — {ex.Message}"); }
+                await EnsureSelectedAddonsDownloadedAsync(); // selected but never downloaded (after a restore / purge)
+            });
+
             var freshCards = await Task.Run(() => BuildCards(allGames, records, auxRecords, addonCache, _genericNotes));
             _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] BuildCards complete: {freshCards.Count} cards");
             GraphicsApiDetector.SaveCache();
@@ -466,7 +475,10 @@ public partial class MainViewModel
 
             // Merge fresh cards into displayed cards
             await MergeCardsAsync(freshCards);
+            await addonCheckTask; // never throws (both steps catch their own errors)
             PublishFolderMigrationNotices();
+            ReinstallPendingWindowsAppsReShade("RunBackgroundScanAndMergeAsync"); // marked by BuildCards above
+            ApplyManifestNoAddonReShade("RunBackgroundScanAndMergeAsync"); // manifest noAddonReShadeGames, once per game
 
             // Save updated library
             _ = Task.Run(() => { try { SaveLibrary(); } catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Fire-and-forget SaveLibrary failed — {ex.Message}"); } });
@@ -517,6 +529,12 @@ public partial class MainViewModel
 
                 // HSF: same for the frame generation add-on
                 await RefreshHsfInstallsAsync("RunBackgroundScanAndMergeAsync");
+
+                // URTI: same for the ray-traced reflections add-on
+                await RefreshUrtiInstallsAsync("RunBackgroundScanAndMergeAsync");
+            // CRCGI: same for the global illumination effect + add-on
+            await RefreshCrcgiInstallsAsync("RunBackgroundScanAndMergeAsync");
+                await RefreshFrameWarpInstallsAsync("RunBackgroundScanAndMergeAsync");
 
                 // Start periodic update check timer (fires every 4h while app is running)
                 StartPeriodicUpdateCheckTimer();
@@ -747,6 +765,39 @@ public partial class MainViewModel
     /// cached cards. Updates existing cards in-place (so WinUI bindings fire),
     /// adds new games, and removes stale games.
     /// </summary>
+    /// <summary>
+    /// Reinstalls ReShade for WindowsApps (Game Pass) games whose folder changed during this BuildCards (it marks them in
+    /// <c>_pendingRsReinstall</c>). Windows deletes the old folder on a game update, so the DLL can't be moved across.
+    /// Both card paths call it: the full scan (InitializeAsync, Refresh) and the background merge after a cached start,
+    /// which until Nov 2026 marked the games and never reinstalled (Installed shown, no DLL, until Refresh).
+    /// </summary>
+    private void ReinstallPendingWindowsAppsReShade(string caller)
+    {
+        if (_pendingRsReinstall.Count == 0) return;
+        var toReinstall = _allCards
+            .Where(c => _pendingRsReinstall.Contains(GameKey.FromCard(c.GameName, c.Source).ToKey())
+                     && !string.IsNullOrEmpty(c.InstallPath))
+            .ToList();
+        _pendingRsReinstall.Clear();
+        if (toReinstall.Count == 0) return;
+        _crashReporter.Log($"[MainViewModel.{caller}] Auto-reinstalling ReShade for {toReinstall.Count} WindowsApps game(s) after path update");
+        _ = Task.Run(async () =>
+        {
+            foreach (var card in toReinstall)
+            {
+                try
+                {
+                    _crashReporter.Log($"[MainViewModel.{caller}] Auto-reinstalling ReShade for '{card.GameName}' at new path '{card.InstallPath}'");
+                    await InstallReShadeInternalAsync(card, forceFilename: null);
+                }
+                catch (Exception ex)
+                {
+                    _crashReporter.Log($"[MainViewModel.{caller}] Auto-reinstall failed for '{card.GameName}' — {ex.Message}");
+                }
+            }
+        });
+    }
+
     private async Task MergeCardsAsync(List<GameCardViewModel> freshCards)
     {
         _crashReporter.Log($"[MergeCards] Merging {freshCards.Count} fresh cards into {_allCards.Count} existing cards...");
@@ -776,6 +827,8 @@ public partial class MainViewModel
 
         // Collect update actions — we'll batch them on the UI thread to avoid cross-thread PropertyChanged
         var updateActions = new List<Action>();
+        // Fresh cards whose DLSS state is copied onto an existing card (files are re-read below, off the UI thread)
+        var dlssFresh = new List<GameCardViewModel>();
 
         // For each fresh card: update existing or mark as new
         foreach (var fresh in freshCards)
@@ -863,22 +916,32 @@ public partial class MainViewModel
                     e.RefRecord               = f.RefRecord;
                     e.RefInstalledVersion     = f.RefInstalledVersion;
 
+                    // ── Manifest per-game flags ──────────────────────────────
+                    // The cache phase has no manifest yet (ApplyManifestCardOverrides is a no-op there), so
+                    // without these the anti-cheat list / DXVK API overrides stayed off until Refresh.
+                    e.IsDxvkBlacklisted       = f.IsDxvkBlacklisted;
+                    e.HasDxvkApiOverride      = f.HasDxvkApiOverride;
+
+                    // ── DOF Fix (eligibility uses the manifest's skip / force lists, unknown in the cache phase) ──
+                    e.IsDofFixEligible        = f.IsDofFixEligible;
+                    e.DofFixStatus            = (e.DofFixStatus == GameStatus.UpdateAvailable && f.DofFixStatus == GameStatus.Installed) ? GameStatus.UpdateAvailable : f.DofFixStatus;
+                    e.DofFixInstalledVersion  = f.DofFixInstalledVersion;
+
                     // ── DXVK fields ──────────────────────────────────────────
-                    e.DxvkStatus              = f.DxvkStatus;
+                    // Keep an update the check already found, like the other components
+                    e.DxvkStatus              = (e.DxvkStatus == GameStatus.UpdateAvailable && f.DxvkStatus == GameStatus.Installed) ? GameStatus.UpdateAvailable : f.DxvkStatus;
                     e.DxvkInstalledVersion    = f.DxvkInstalledVersion;
                     e.DxvkRecord              = f.DxvkRecord;
                     e.DxvkEnabled             = f.DxvkEnabled;
                     e.ExcludeFromUpdateAllDxvk = f.ExcludeFromUpdateAllDxvk;
 
                     // ── DLSS / Streamline fields ─────────────────────────────
+                    // The fresh card's versions and backup flags were re-read from disk just before this
+                    // UI step (see below), so this only copies values: no file access on the UI thread.
                     if (f.DlssDetection != null)
-                    {
-                        e.ApplyDlssDetection(f.DlssDetection);
-                        // Re-read versions from disk so a user swap that happened during the scan
-                        // isn't overwritten by the stale pre-swap version captured in f.DlssDetection.
-                        e.RefreshDlssVersions(_dlssStreamlineService);
-                    }
+                        e.CopyDlssStateFrom(f);
                 });
+                if (f.DlssDetection != null) dlssFresh.Add(f);
             }
             else
             {
@@ -897,12 +960,35 @@ public partial class MainViewModel
 
         _crashReporter.Log($"[MergeCards] Updated {freshCards.Count - cardsToAdd.Count} existing, added {cardsToAdd.Count} new, removed {cardsToRemove.Count} stale");
 
+        // Re-read DLSS / Streamline versions and backup flags from disk on the fresh cards, so a swap the user
+        // made during the scan isn't overwritten by the pre-swap version the scan captured. This used to run
+        // per game inside the UI step below (measured: 455 of its 457 ms for 71 games).
+        var dlssRead = System.Diagnostics.Stopwatch.StartNew();
+        if (dlssFresh.Count > 0)
+        {
+            await Task.Run(() => Parallel.ForEach(dlssFresh, f =>
+            {
+                try
+                {
+                    f.RefreshDlssVersions(_dlssStreamlineService);
+                    f.RefreshBackupState();
+                }
+                catch (Exception ex)
+                {
+                    _crashReporter.Log($"[MergeCards] DLSS re-read failed for '{f.GameName}' — {ex.Message}");
+                }
+            }));
+        }
+        dlssRead.Stop();
+
         // Execute all mutations on the UI thread to prevent cross-thread PropertyChanged issues
         await UiDispatch.InvokeAsync(action => DispatcherQueue?.TryEnqueue(() => action()) == true, () =>
         {
             // Apply all property updates
+            var uiStep = System.Diagnostics.Stopwatch.StartNew();
             foreach (var action in updateActions)
                 action();
+            _crashReporter.Log($"[MergeCards] UI step: {updateActions.Count} card updates in {uiStep.ElapsedMilliseconds} ms (DLSS files for {dlssFresh.Count} game(s) re-read beforehand, off the UI thread, in {dlssRead.ElapsedMilliseconds} ms)");
 
             // Remove stale cards
             foreach (var stale in cardsToRemove)

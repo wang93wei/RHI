@@ -209,6 +209,7 @@ public partial class SettingsHandler
             var currentScreenshotHotkey = _currentScreenshotHotkeyString;
             var rsVariableListUseTabs = ViewModel.Settings.RsVariableListUseTabs;
             var shippedAddonsEnabled = ViewModel.Settings.RsShippedAddonsEnabled;
+            var overlaySide = ViewModel.Settings.RsOverlaySide;
 
             await Task.Run(() =>
             {
@@ -247,6 +248,9 @@ public partial class SettingsHandler
                         keepModes?.Invoke();
                         // Built-in add-ons setting, both ways (reshade.ini + ReShadeN.ini only, not presets)
                         AuxInstallService.WriteShippedAddonsSetting(card.InstallPath, shippedAddonsEnabled);
+                        if (!shippedAddonsEnabled) AuxInstallService.ApplyShippedAddonsSettingToGame(card.InstallPath); // URTI keeps Generic Depth
+                        // ReShade menu position (nothing is written for "ReShade default")
+                        AuxInstallService.WriteOverlaySide(card.InstallPath, overlaySide);
                         updatedCount++;
                     }
                     catch (Exception ex)

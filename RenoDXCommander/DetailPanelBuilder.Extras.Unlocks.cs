@@ -266,7 +266,11 @@ public partial class DetailPanelBuilder
 
                 // RHI's copies of Intel's XeSS files (hashing runs off the UI thread)
                 var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
-                _ = Task.Run(() => mfgSvc.RemoveAdaXessFiles(installPath));
+                _ = Task.Run(() =>
+                {
+                    mfgSvc.RemoveAdaXessFiles(installPath);
+                    mfgSvc.RemoveNrDll(installPath, Rtx40MfgService.MfgUnlockNrOwnerName); // DLSS 5's NR DLL, if RHI installed it for the mod
+                });
 
                 // Also remove from addon selections so SyncGameFolder doesn't redeploy it.
                 // MFG Ada Unlock installed via Extras greys out the picker toggle — the user
@@ -462,6 +466,10 @@ public partial class DetailPanelBuilder
         }
         cog.AddNote(Loc.GetString("Extras.MfgAdaUnlock.Settings.XessDuplicateNote"));
 
+        // [DLSS5] (1.12.0): NVIDIA's DLSS 5 neural rendering, plus the NR DLL it needs
+        AddMfgUnlockDlss5Section(cog, card, iniPath, apis);
+
+        cog.AddSection(Loc.GetString("Dialog.SectionFiles"));
         cog.AddNote(Loc.GetString("Extras.MfgAdaUnlock.Settings.OtherSettings"));
         openIniBtn = cog.MakeOpenFileButton(Loc.GetString("Extras.MfgAdaUnlock.Settings.OpenIni"), string.IsNullOrEmpty(iniPath) ? null : iniPath);
         cog.AddButtons(

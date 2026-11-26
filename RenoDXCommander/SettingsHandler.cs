@@ -73,14 +73,20 @@ public partial class SettingsHandler
             // Initialize screenshot hotkey display
             _currentScreenshotHotkeyString = ViewModel.Settings.ScreenshotHotkey;
             _window.ScreenshotHotkeyBox.Text = HotkeyManager.FormatHotkeyDisplay(ViewModel.Settings.ScreenshotHotkey);
+            // ReLimiter boxes show the global relimiter.ini's values (copied into settings first)
+            SyncUlSettingsFromTemplate();
             // Initialize ReLimiter OSD hotkey display
             _currentUlHotkeyString = ViewModel.Settings.UlOsdHotkey;
             _window.UlHotkeyBox.Text = ViewModel.Settings.UlOsdHotkey;
             // Initialize ReLimiter shared presets toggle
             _window.UlSharedPresetsCombo.SelectedIndex = ViewModel.Settings.UlSharedPresets ? 1 : 0;
             _window.UlDlssHooksCombo.SelectedIndex = ViewModel.Settings.UlDlssHooks ? 1 : 0;
+            EnsureUlPacingRow(); // v4 pacing preference, under DLSS hooks
             // Initialize ReLimiter Target FPS dropdown
             InitializeUlTargetFpsCombo();
+            // Preset / Move OSD / blackout / OLED Care keys, read from ReLimiter's shared presets file
+            EnsureUlPresetKeyRows();
+            EnsureUlSaveTemplateButton();
             // Initialize OptiScaler hotkey display
             _currentOsHotkeyString = ViewModel.Settings.OsHotkey;
             var osCombo = _window.OsHotkeyCombo;
@@ -299,7 +305,8 @@ public partial class SettingsHandler
         // G-Sync Indicator (uses snapshot value now)
         _window.GSyncIndicatorCombo.SelectedIndex = snapshot.GSyncIndicator == true ? 1 : 0; // 0=Off, 1=On
 
-        // G-Sync Enable
+        // G-Sync Enable (+ the per-monitor ⚙)
+        EnsureGSyncMonitorsCog();
         _window.GSyncEnableCombo.ItemsSource = DlssPresetService.GSyncEnableOptions.Select(o => LocOpt.T(o.Name)).ToArray();
         var gsyncEnableIdx = Array.FindIndex(DlssPresetService.GSyncEnableOptions, o => o.Value == snapshot.GSyncEnabled);
         _window.GSyncEnableCombo.SelectedIndex = gsyncEnableIdx >= 0 ? gsyncEnableIdx : 0;

@@ -54,8 +54,8 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
 
         nvHeaderRow.PointerEntered += (s, e) => nvTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
         nvHeaderRow.PointerExited  += (s, e) => nvTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-        var nvHandCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var nvArrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var nvHandCursor  = HandCursor;
+        var nvArrowCursor = ArrowCursor;
         var nvCursorProp  = DetailPanelBuilder.CursorProp;
         nvHeaderRow.PointerEntered += (s, e) => nvCursorProp?.SetValue(nvHeaderRow, nvHandCursor);
         nvHeaderRow.PointerExited  += (s, e) => nvCursorProp?.SetValue(nvHeaderRow, nvArrowCursor);
@@ -201,6 +201,14 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
             var presetService = _dlssPresetService;
             var capturedGameName = card.GameName;
             var capturedInstallPath = card.InstallPath ?? "";
+            // Values shown in the header summary (and Spotlight's Tune tile); the preset and render
+            // scale callbacks update them so the summary follows changes made in the panel.
+            var nvSummaryData = dlssData ?? new DlssProfileData(false, false, false, false, 0, 0, 0, 0, 0, 0, 0);
+            void PatchNvSummary(Func<DlssProfileData, DlssProfileData> change)
+            {
+                nvSummaryData = change(nvSummaryData);
+                UpdateNvSummary(card, nvSummaryData);
+            }
             // hasDlss/hasDlssd/hasDlssg/hasStreamline/hasDlssnr passed as method params
 
             var dlssRowGrid = new Grid { ColumnSpacing = 12 };
@@ -247,9 +255,9 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
-                (preset) => { _ = Task.Run(() => presetService.SetSrPreset(capturedGameName, capturedInstallPath, preset)); },
+                (preset) => { _ = Task.Run(() => presetService.SetSrPreset(capturedGameName, capturedInstallPath, preset)); PatchNvSummary(d => d with { SrPreset = preset }); },
                 currentRenderScale: presetService.IsSupported && srEnabled ? (dlssData?.SrRenderScale ?? 0u) : 0u,
-                onRenderScaleSelected: (pct) => { _ = Task.Run(() => presetService.SetSrRenderScale(capturedGameName, capturedInstallPath, pct)); },
+                onRenderScaleSelected: (pct) => { _ = Task.Run(() => presetService.SetSrRenderScale(capturedGameName, capturedInstallPath, pct)); PatchNvSummary(d => d with { SrRenderScale = pct }); },
                 originalVersion: card.DlssDetection?.OriginalDlssVersion,
                 driverOverrideActive: srDriverOverride,
                 onDriverOverrideToggled: presetService.IsSupported && hasDlss ? (enable) =>
@@ -278,9 +286,9 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
-                (preset) => { _ = Task.Run(() => presetService.SetRrPreset(capturedGameName, capturedInstallPath, preset)); },
+                (preset) => { _ = Task.Run(() => presetService.SetRrPreset(capturedGameName, capturedInstallPath, preset)); PatchNvSummary(d => d with { RrPreset = preset }); },
                 currentRenderScale: presetService.IsSupported && hasDlssd ? (dlssData?.RrRenderScale ?? 0u) : 0u,
-                onRenderScaleSelected: (pct) => { _ = Task.Run(() => presetService.SetRrRenderScale(capturedGameName, capturedInstallPath, pct)); },
+                onRenderScaleSelected: (pct) => { _ = Task.Run(() => presetService.SetRrRenderScale(capturedGameName, capturedInstallPath, pct)); PatchNvSummary(d => d with { RrRenderScale = pct }); },
                 originalVersion: card.DlssDetection?.OriginalDlssdVersion,
                 driverOverrideActive: rrDriverOverride,
                 onDriverOverrideToggled: presetService.IsSupported && hasDlssd ? (enable) =>
@@ -310,7 +318,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                     await Task.Run(() => tc.RefreshDlssVersions(dlssService)); // sync disk I/O — keep off UI thread
                     _window.DispatcherQueue?.TryEnqueue(() => BuildNvidiaProfileSection(tc, tc.GameName));
                 },
-                (preset) => { _ = Task.Run(() => presetService.SetFgPreset(capturedGameName, capturedInstallPath, preset)); },
+                (preset) => { _ = Task.Run(() => presetService.SetFgPreset(capturedGameName, capturedInstallPath, preset)); PatchNvSummary(d => d with { FgPreset = preset }); },
                 originalVersion: card.DlssDetection?.OriginalDlssgVersion,
                 driverOverrideActive: fgDriverOverride,
                 onDriverOverrideToggled: presetService.IsSupported && hasDlssg ? (enable) =>
@@ -434,7 +442,7 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
                             BuildOverridesPanel(tc);
                         });
                     },
-                    (preset) => { _ = Task.Run(() => presetService.SetNrPreset(capturedGameName, capturedInstallPath, preset)); },
+                    (preset) => { _ = Task.Run(() => presetService.SetNrPreset(capturedGameName, capturedInstallPath, preset)); PatchNvSummary(d => d with { NrPreset = preset }); },
                     originalVersion: card.DlssDetection?.OriginalDlssnrVersion,
                     driverOverrideActive: nrDriverOverride);
 
@@ -715,8 +723,15 @@ var headerText = Loc.GetString("Detail.DlssStreamline");
 
         CrashReporter.Log($"[BuildNvidiaProfileBody] DLSS grid built for '{card.GameName}'");
 
-        // ── Update collapsed summary now that DLSS versions are known ─────────
-        // Remove any stale summary TextBlocks (index > 2: drag handle + arrow + title = indices 0-2)
+        UpdateNvSummary(card, dlssData);
+    }
+
+    /// <summary>
+    /// (Re)builds the DLSS / Streamline header summary (Classic's collapsed header, Tabs' At a glance
+    /// and Spotlight's Tune tile). Called after the section builds and when a preset or render scale changes.
+    /// </summary>
+    private void UpdateNvSummary(GameCardViewModel card, DlssProfileData? dlssData)
+    {
         if (_nvHeaderRow != null)
         {
             while (_nvHeaderRow.Children.Count > 3)
@@ -782,8 +797,8 @@ var nvOverride = Loc.GetString("Overrides.Summary.NvOverride");
                 var nvCollapsed = Layout.IsCollapsed("NvidiaProfileDlss");
                 nvSummaryTb.Visibility = nvCollapsed ? Visibility.Visible : Visibility.Collapsed;
                 _nvHeaderRow.Children.Add(nvSummaryTb);
-                Layout.SummaryChanged(); // Tabs: refresh the Overview tile
             }
+            Layout.SummaryChanged(); // Tabs / Spotlight: refresh the tile
         }
     }
 }

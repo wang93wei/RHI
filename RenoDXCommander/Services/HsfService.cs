@@ -59,10 +59,11 @@ public partial class HsfService
     private const string MarkerName     = "rhi-hsf.txt"; // in HSF_streamline\
     public const string LicenseFile     = "LICENSE.txt";
 
-    /// <summary>Files HSF writes next to its add-on (removed with it).</summary>
+    /// <summary>Files HSF writes next to its add-on (removed with it; HSF 0.10 installers.md › Uninstall adds HSF_safe_try.ini).</summary>
     private static readonly string[] HsfLogs =
     {
         "HSF_sl_bring.log", "HSF_sl_bring.old.log", "HSF_sl_probe.log", "HSF_sl_probe.old.log",
+        "HSF_safe_try.ini", // HSF.log / HSF.previous.log are kept on purpose (user decision 25 Nov 2026: logs stay for troubleshooting)
     };
     private const string ProfilesFolder = "HSF_profiles";
 
@@ -662,7 +663,11 @@ public partial class HsfService
     private void RemoveStale(string addonDir, IEnumerable<string> previous, List<string> current)
     {
         foreach (var rel in previous.Except(current, StringComparer.OrdinalIgnoreCase))
-            if (FileHelper.SafeCombine(addonDir, rel) is { } path) TryDelete(path);
+            if (FileHelper.SafeCombine(addonDir, rel) is { } path)
+            {
+                TryDelete(path);
+                RestoreGameCopy(path); // a test build's file next to HSF.ini may have replaced the game's own
+            }
     }
 
     /// <summary>
@@ -673,6 +678,9 @@ public partial class HsfService
     public bool UpdateInstalled(string installPath, bool is32Bit)
     {
         if (!IsStagingReady || !IsRhiInstalled(installPath)) return false;
+        // A test build dropped on RHI stays until a newer release than the one staged when it went in
+        var beta = ReadBeta(installPath);
+        if (KeepBeta(beta.Label, beta.Over, StagedVersion)) return false;
         var addonDir = AddonDir(installPath);
         var previous = RhiInstallManifest.GetComponentFiles(installPath, Component);
         var recorded = new List<string>();
@@ -702,7 +710,9 @@ public partial class HsfService
         if (failed) return changed; // try the rest next time; keep the old record and version
 
         RemoveStale(addonDir, previous, recorded);
-        RhiInstallManifest.SetComponent(installPath, Component, recorded);
+        // Unchanged list = no rewrite of the game's rhi_install.txt (this runs for every HSF game at each check)
+        if (!previous.SequenceEqual(recorded, StringComparer.OrdinalIgnoreCase))
+            RhiInstallManifest.SetComponent(installPath, Component, recorded);
         var marker = ReadMarker(installPath);
         if (changed || marker.Version != StagedVersion)
         {
@@ -730,7 +740,11 @@ public partial class HsfService
         if (string.IsNullOrEmpty(installPath)) return;
         var addonDir = AddonDir(installPath);
         foreach (var rel in RhiInstallManifest.GetComponentFiles(installPath, Component))
-            if (FileHelper.SafeCombine(addonDir, rel) is { } path) TryDelete(path);
+            if (FileHelper.SafeCombine(addonDir, rel) is { } path)
+            {
+                TryDelete(path);
+                RestoreGameCopy(path);
+            }
         foreach (var name in new[] { Addon64, Addon32, IniName }.Concat(HsfLogs))
             TryDelete(Path.Combine(addonDir, name));
         foreach (var dir in new[] { StreamlineFolder, ProfilesFolder })

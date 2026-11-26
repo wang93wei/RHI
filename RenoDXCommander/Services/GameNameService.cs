@@ -43,6 +43,8 @@ public partial class GameNameService : IGameNameService
     /// <summary>Games where Luma TAA Engine.ini settings are enabled (r.DefaultFeature.AntiAliasing=2, r.PostProcessAAQuality=4).</summary>
     private HashSet<string> _lumaTaaEnabled = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _normalReShadeGames = new(StringComparer.OrdinalIgnoreCase);
+    // "Game|Store" keys the manifest's noAddonReShadeGames default was applied to (once each; the user's choice then sticks)
+    private HashSet<string> _manifestNoAddonApplied = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Games where RHI should NOT automatically re-merge reshade.ini. Composite-keyed "GameName|Store".</summary>
     private HashSet<string> _rsIniLockedGames = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _rsAsiGames = new(StringComparer.OrdinalIgnoreCase);
@@ -62,6 +64,9 @@ public partial class GameNameService : IGameNameService
 
     /// <summary>Per-game pinned ReLimiter version. Key = "GameName|Store", Value = release tag e.g. "v3.3.4". Absent = Latest (auto-update).</summary>
     private Dictionary<string, string> _ulPinnedVersion = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Per-game custom screenshot folder (Spotlight's Screenshots panel, RHI overlay). Key = "GameName|Store", Value = folder path. Absent = ReShade's folder.</summary>
+    private Dictionary<string, string> _screenshotFolderOverrides = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Per-game ReLimiter major version choice. Key = "GameName|Store", Value = "3" or "4". Absent = Automatic (v4 where it qualifies).</summary>
     private Dictionary<string, string> _ulMajorChoice = new(StringComparer.OrdinalIgnoreCase);
@@ -212,6 +217,7 @@ public partial class GameNameService : IGameNameService
     /// <summary>Games where Luma TAA Engine.ini settings are deployed.</summary>
     public HashSet<string> LumaTaaEnabled => _lumaTaaEnabled;
     public HashSet<string> NormalReShadeGames => _normalReShadeGames;
+    public HashSet<string> ManifestNoAddonApplied => _manifestNoAddonApplied;
     /// <summary>Games where reshade.ini auto-update is locked (Keep ReShade.ini Updated = No).</summary>
     public HashSet<string> RsIniLockedGames => _rsIniLockedGames;
     public HashSet<string> RsAsiGames => _rsAsiGames;
@@ -234,6 +240,8 @@ public partial class GameNameService : IGameNameService
     public Dictionary<string, string> OsNightlyBuild => _osNightlyBuild;
     /// <summary>Per-game pinned ReLimiter version. Key = "GameName|Store", Value = release tag. Absent = Latest.</summary>
     public Dictionary<string, string> UlPinnedVersion => _ulPinnedVersion;
+    /// <summary>Per-game custom screenshot folder. Key = "GameName|Store", Value = folder path. Absent = ReShade's folder.</summary>
+    public Dictionary<string, string> ScreenshotFolderOverrides => _screenshotFolderOverrides;
     /// <summary>Per-game ReLimiter major version choice ("3" / "4"). Absent = Automatic.</summary>
     public Dictionary<string, string> UlMajorChoice => _ulMajorChoice;
     /// <summary>Per-game NR runtime version override. Key = "GameName|Store", Value e.g. "310.8.2". Absent = default.</summary>
@@ -394,6 +402,7 @@ public partial class GameNameService : IGameNameService
         _lumaEnabledGames       = new(StringComparer.OrdinalIgnoreCase);
         _lumaDisabledGames      = new(StringComparer.OrdinalIgnoreCase);
         _normalReShadeGames     = new(StringComparer.OrdinalIgnoreCase);
+        _manifestNoAddonApplied = new(StringComparer.OrdinalIgnoreCase);
         _rsIniLockedGames       = new(StringComparer.OrdinalIgnoreCase);
         _rsAsiGames             = new(StringComparer.OrdinalIgnoreCase);
         _hiddenGames            ??= new(StringComparer.OrdinalIgnoreCase);
@@ -531,6 +540,9 @@ public partial class GameNameService : IGameNameService
         _normalReShadeGames = new HashSet<string>(
             Load<List<string>>("NormalReShadeGames", new()),
             StringComparer.OrdinalIgnoreCase);
+        _manifestNoAddonApplied = new HashSet<string>(
+            Load<List<string>>("ManifestNoAddonApplied", new()),
+            StringComparer.OrdinalIgnoreCase);
 
         _rsIniLockedGames = new HashSet<string>(
             Load<List<string>>("RsIniLockedGames", new()),
@@ -616,6 +628,11 @@ public partial class GameNameService : IGameNameService
             new(StringComparer.OrdinalIgnoreCase));
         _ulPinnedVersion = new(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in ulPinnedDict) _ulPinnedVersion[kv.Key] = kv.Value;
+
+        var shotFolderDict = Load<Dictionary<string, string>>("ScreenshotFolderOverrides",
+            new(StringComparer.OrdinalIgnoreCase));
+        _screenshotFolderOverrides = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in shotFolderDict) _screenshotFolderOverrides[kv.Key] = kv.Value;
 
         var ulMajorDict = Load<Dictionary<string, string>>("UlMajorChoice",
             new(StringComparer.OrdinalIgnoreCase));
@@ -942,6 +959,7 @@ public partial class GameNameService : IGameNameService
                 s["LumaEnabledGames"]   = JsonSerializer.Serialize(_lumaEnabledGames.ToList());
                 s["LumaDisabledGames"]  = JsonSerializer.Serialize(_lumaDisabledGames.ToList());
                 s["NormalReShadeGames"] = JsonSerializer.Serialize(_normalReShadeGames.ToList());
+                s["ManifestNoAddonApplied"] = JsonSerializer.Serialize(_manifestNoAddonApplied.ToList());
                 s["RsIniLockedGames"]   = JsonSerializer.Serialize(_rsIniLockedGames.ToList());
                 s["RsAsiGames"]         = JsonSerializer.Serialize(_rsAsiGames.ToList());
                 s["GameRenames"]         = JsonSerializer.Serialize(_gameRenames);
@@ -959,6 +977,8 @@ public partial class GameNameService : IGameNameService
                 else s.Remove("OsNightlyBuild");
                 if (_ulPinnedVersion.Count > 0) s["UlPinnedVersion"] = JsonSerializer.Serialize(_ulPinnedVersion);
                 else s.Remove("UlPinnedVersion");
+                if (_screenshotFolderOverrides.Count > 0) s["ScreenshotFolderOverrides"] = JsonSerializer.Serialize(_screenshotFolderOverrides);
+                else s.Remove("ScreenshotFolderOverrides");
                 if (_ulMajorChoice.Count > 0) s["UlMajorChoice"] = JsonSerializer.Serialize(_ulMajorChoice);
                 else s.Remove("UlMajorChoice");
                 s["NrMethodOverrides"] = JsonSerializer.Serialize(_nrMethodOverrides);
@@ -1160,6 +1180,7 @@ public partial class GameNameService : IGameNameService
         MigrateCompositeHashSet(_lumaEnabledGames, oldName, newName);
         MigrateCompositeHashSet(_lumaDisabledGames, oldName, newName);
         MigrateCompositeHashSet(_normalReShadeGames, oldName, newName);
+        MigrateCompositeHashSet(_manifestNoAddonApplied, oldName, newName);
         MigrateCompositeHashSet(_rsIniLockedGames, oldName, newName);
         MigrateCompositeHashSet(_rsAsiGames, oldName, newName);
         MigrateCompositeHashSet(_osDeployStreamline, oldName, newName);
@@ -1215,6 +1236,7 @@ public partial class GameNameService : IGameNameService
         MigrateCompositeDict(_osVariantOverrides, oldName, newName);
         MigrateCompositeDict(_osNightlyBuild, oldName, newName);
         MigrateCompositeDict(_ulPinnedVersion, oldName, newName);
+        MigrateCompositeDict(_screenshotFolderOverrides, oldName, newName);
         MigrateCompositeDict(_ulMajorChoice, oldName, newName);
         MigrateCompositeDict(_nrMethodOverrides, oldName, newName);
         MigrateCompositeDict(_upliftLaunchpad, oldName, newName);

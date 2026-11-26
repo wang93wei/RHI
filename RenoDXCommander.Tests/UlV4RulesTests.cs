@@ -29,29 +29,36 @@ public class UlV4RulesTests
         Assert.False(string.IsNullOrEmpty(v.Reason));
     }
 
+    // Since 23 Nov 2026 (user decision) v4 is the default for every game on an NVIDIA card
     [Theory]
     [InlineData(true, false, false, false)]   // 32-bit
     [InlineData(false, true, false, false)]   // Vulkan
     [InlineData(false, false, true, false)]   // DXVK
     [InlineData(false, false, false, true)]   // OpenGL
-    public void Untested_Setups_Are_Allowed_With_A_Note_But_Never_Automatic(bool is32, bool vulkan, bool dxvk, bool openGl)
+    public void Untested_Setups_Are_Automatic_With_A_Note(bool is32, bool vulkan, bool dxvk, bool openGl)
     {
-        var v = Check(is32, vulkan, dxvk, openGl);   // even when the game also lists DX12
+        var v = Check(is32, vulkan, dxvk, openGl);
         Assert.True(v.Allowed);
-        Assert.False(v.Auto);
+        Assert.True(v.Auto);
         Assert.Null(v.Reason);
         Assert.Contains("untested", v.Note);
+        Assert.Contains("pick v3", v.Note);
     }
 
-    [Theory]
-    [InlineData(false)]  // not DX12
-    [InlineData(true)]   // unknown
-    public void Not_Dx12_Is_Allowed_With_A_Note_But_Not_Automatic(bool unknown)
+    [Fact]
+    public void Not_Dx12_Is_Automatic_With_A_Note()
     {
-        var v = Check(dx12: unknown ? UlDx12State.Unknown : UlDx12State.No);
-        Assert.True(v.Allowed);
-        Assert.False(v.Auto);
-        Assert.False(string.IsNullOrEmpty(v.Note));
+        var v = Check(dx12: UlDx12State.No);
+        Assert.True(v.Auto);
+        Assert.Contains("DirectX 12", v.Note);
+    }
+
+    [Fact]
+    public void Unknown_Api_Is_Automatic_Without_A_Note()
+    {
+        var v = Check(dx12: UlDx12State.Unknown);
+        Assert.True(v.Auto);
+        Assert.Null(v.Note);
     }
 
     [Fact]
@@ -67,7 +74,7 @@ public class UlV4RulesTests
     public void WantsV4_Follows_Choice_Within_The_Verdict()
     {
         var auto = Check();
-        var manualOnly = Check(dx12: UlDx12State.No);
+        var manualOnly = Check(gpu: UlGpuState.Unknown);   // GPU not detected: never moved automatically
         var blocked = Check(gpu: UlGpuState.NotNvidia);
         var untested = Check(is32: true);
 
@@ -76,8 +83,8 @@ public class UlV4RulesTests
         Assert.True(UlV4Rules.WantsV4("4", manualOnly));
         Assert.False(UlV4Rules.WantsV4("4", blocked));   // a v4 choice can't beat a block
         Assert.False(UlV4Rules.WantsV4("3", auto));
-        Assert.False(UlV4Rules.WantsV4(null, untested));   // never moved automatically
-        Assert.True(UlV4Rules.WantsV4("4", untested));     // but the user can pick it
+        Assert.True(UlV4Rules.WantsV4(null, untested));    // moved automatically since 23 Nov 2026
+        Assert.False(UlV4Rules.WantsV4("3", untested));    // the user can go back to v3
     }
 
     // Lines as ReShade 6.8 / ReLimiter write them (taken from real logs)
@@ -221,4 +228,97 @@ public class UlV4RulesTests
     [Fact]
     public void BackupName_Names_The_Old_Major() =>
         Assert.Equal("relimiter.ini.v3-backup", UlV4Rules.BackupName(3));
+
+    private const string Template = "[FrameLimiter]\nosd_toggle_key=F12\nadaptive_smoothing=true\nsmoothing_window=dual\n"
+        + "pacing_preference=latency\nnative_pcl_enabled=true\nconfig_version=6\ntarget_fps=0\n\n"
+        + "[OSD_Preset_1]\nshow_gpu_power=true\nshow_jitter=true\nshow_fps=true\n";
+
+    [Fact]
+    public void SeededIni_V4_DropsV3OnlyKeys_KeepsTheRest()
+    {
+        var ini = UlV4Rules.BuildSeededIni(Template, 4, "PageUp", sharedPresets: false, dlssHooks: false, targetFps: 0);
+        Assert.DoesNotContain("adaptive_smoothing", ini);
+        Assert.DoesNotContain("smoothing_window", ini);
+        Assert.DoesNotContain("show_gpu_power", ini);
+        Assert.Contains("pacing_preference=latency", ini);
+        Assert.Contains("show_jitter=true", ini);
+        Assert.Contains("show_fps=true", ini);
+        Assert.Contains("osd_toggle_key=F12", ini); // the template's key wins over RHI's setting
+        Assert.DoesNotContain("PageUp", ini);
+    }
+
+    [Fact]
+    public void SeededIni_V3_DropsV4OnlyKeys()
+    {
+        var ini = UlV4Rules.BuildSeededIni(Template, 3, null, sharedPresets: true, dlssHooks: true, targetFps: 141);
+        Assert.DoesNotContain("pacing_preference", ini);
+        Assert.DoesNotContain("native_pcl_enabled", ini);
+        Assert.DoesNotContain("config_version", ini);
+        Assert.DoesNotContain("show_jitter", ini);
+        Assert.Contains("adaptive_smoothing=true", ini);
+        Assert.Contains("show_gpu_power=true", ini);
+        Assert.Contains("shared_presets=true", ini);
+        Assert.Contains("dlss_info_hooks=true", ini);
+        Assert.Contains("target_fps=141", ini);
+        Assert.DoesNotContain("target_fps=0", ini);
+    }
+
+    [Fact]
+    public void SeededIni_NoTemplateOrEmpty_IsTheFreshIni()
+    {
+        var fresh = UlV4Rules.BuildFreshIni("F1", true, true, 60, nativePcl: true);
+        Assert.Equal(fresh, UlV4Rules.BuildSeededIni(null, 4, "F1", true, true, 60, nativePcl: true));
+        Assert.Equal(fresh, UlV4Rules.BuildSeededIni("[UltraLimiter]", 4, "F1", true, true, 60, nativePcl: true));
+    }
+
+    [Fact]
+    public void SeededIni_V4WithPcl_AddsNativePcl() =>
+        Assert.Contains("native_pcl_enabled=true",
+            UlV4Rules.BuildSeededIni("[FrameLimiter]\nosd_toggle_key=F12\n", 4, null, false, false, 0, nativePcl: true));
+
+    [Fact]
+    public void ApplyNativePcl_TurnsItOnAndOff_KeepingOtherKeys()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "rhi-pcl-" + Guid.NewGuid().ToString("N") + ".ini");
+        try
+        {
+            File.WriteAllText(path, "[FrameLimiter]\r\ntarget_fps=116\r\nnative_pcl_enabled=true\r\n");
+            AuxInstallService.ApplyUlNativePcl(path, on: false);
+            var off = File.ReadAllText(path);
+            Assert.Contains("native_pcl_enabled=false", off);
+            Assert.Contains("target_fps=116", off);
+            AuxInstallService.ApplyUlNativePcl(path, on: true);
+            Assert.Contains("native_pcl_enabled=true", File.ReadAllText(path));
+            Assert.DoesNotContain("native_pcl_enabled=false", File.ReadAllText(path));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("smooth", "smooth")]
+    [InlineData("Latency", "latency")]
+    [InlineData(" balanced ", "balanced")]
+    [InlineData("smoother", null)]
+    [InlineData(null, null)]
+    public void NormalizePacing_AcceptsOnlyReLimitersValues(string? input, string? expected)
+        => Assert.Equal(expected, UlV4Rules.NormalizePacing(input));
+
+    [Fact]
+    public void Seeding_WritesPacingForV4Only_AndNotWhenBalanced()
+    {
+        const string template = "[FrameLimiter]\r\ntarget_fps=116\r\npacing_preference=latency\r\n";
+        var v4 = UlV4Rules.BuildSeededIni(template, 4, null, false, false, 0, pacingPreference: "smooth");
+        Assert.Contains("pacing_preference=smooth", v4);
+        Assert.DoesNotContain("pacing_preference=latency", v4);
+
+        var v3 = UlV4Rules.BuildSeededIni(template, 3, null, false, false, 0, pacingPreference: "smooth");
+        Assert.DoesNotContain("pacing_preference", v3);
+
+        // Balanced = ReLimiter's default: the template's own value is left as it is
+        var balanced = UlV4Rules.BuildSeededIni(template, 4, null, false, false, 0, pacingPreference: "balanced");
+        Assert.Contains("pacing_preference=latency", balanced);
+
+        Assert.Contains("pacing_preference=smooth", UlV4Rules.BuildSeededIni(null, 4, null, false, false, 0, pacingPreference: "smooth"));
+        Assert.DoesNotContain("pacing_preference", UlV4Rules.BuildSeededIni(null, 3, null, false, false, 0, pacingPreference: "smooth"));
+    }
 }

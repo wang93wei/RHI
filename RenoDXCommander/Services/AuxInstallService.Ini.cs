@@ -16,6 +16,7 @@ public partial class AuxInstallService
         try { MergeRsIniCore(gameDir, screenshotSavePath, overlayHotkey, screenshotHotkey, gameName, peakNits); }
         finally { keepModes?.Invoke(); }
         ApplyShippedAddonsSettingToGame(gameDir);
+        ApplyOverlaySideToGame(gameDir);
     }
 
     private static void MergeRsIniCore(string gameDir, string? screenshotSavePath, string? overlayHotkey, string? screenshotHotkey, string? gameName, int peakNits)
@@ -116,6 +117,7 @@ public partial class AuxInstallService
         try { MergeRsVulkanIniCore(gameDir, gameName, screenshotSavePath, overlayHotkey, screenshotHotkey, peakNits); }
         finally { keepModes?.Invoke(); }
         ApplyShippedAddonsSettingToGame(gameDir);
+        ApplyOverlaySideToGame(gameDir);
     }
 
     private static void MergeRsVulkanIniCore(string gameDir, string? gameName, string? screenshotSavePath, string? overlayHotkey, string? screenshotHotkey, int peakNits)
@@ -270,6 +272,7 @@ public partial class AuxInstallService
             throw new FileNotFoundException("reshade.ini not found in inis folder.", RsIniPath);
         File.Copy(RsIniPath, Path.Combine(gameDir, "ReShade.ini"), overwrite: true);
         ApplyShippedAddonsSettingToGame(gameDir);
+        ApplyOverlaySideToGame(gameDir);
     }
 
     /// <summary>
@@ -290,34 +293,6 @@ public partial class AuxInstallService
         }
     }
 
-    /// <summary>
-    /// Copies relimiter.ini from the inis folder to the game directory (addon deploy path)
-    /// only when the file does not already exist at the destination. Never throws.
-    /// </summary>
-    public static void DeployUlIniIfAbsent(string gameInstallPath)
-    {
-        try
-        {
-            var deployPath = ModInstallService.GetAddonDeployPath(gameInstallPath);
-            var destFile = Path.Combine(deployPath, "relimiter.ini");
-
-            if (File.Exists(destFile))
-                return;
-
-            if (!File.Exists(UlIniPath))
-            {
-                CrashReporter.Log($"[AuxInstallService.DeployUlIniIfAbsent] Source relimiter.ini not found at '{UlIniPath}' — skipping");
-                return;
-            }
-
-            File.Copy(UlIniPath, destFile);
-            CrashReporter.Log($"[AuxInstallService.DeployUlIniIfAbsent] Deployed relimiter.ini to '{deployPath}'");
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[AuxInstallService.DeployUlIniIfAbsent] Failed for '{gameInstallPath}' — {ex.Message}");
-        }
-    }
 
     /// <summary>
     /// Copies DisplayCommander.ini from the inis folder to the game directory (addon deploy path)
@@ -349,14 +324,21 @@ public partial class AuxInstallService
     }
 
     /// <summary>
-    /// Copies relimiter.ini from the inis folder to the game directory (addon deploy path).
+    /// Copies relimiter.ini from the inis folder to the game directory (addon deploy path). With the game's ReLimiter
+    /// major version, the keys only the other version uses are left out (UlV4Rules.StripOtherVersionKeys).
     /// </summary>
-    public static void CopyUlIni(string gameInstallPath)
+    public static void CopyUlIni(string gameInstallPath, int? major = null)
     {
         if (!File.Exists(UlIniPath))
             throw new FileNotFoundException("relimiter.ini not found in inis folder.", UlIniPath);
-        var deployPath = ModInstallService.GetAddonDeployPath(gameInstallPath);
-        File.Copy(UlIniPath, Path.Combine(deployPath, "relimiter.ini"), overwrite: true);
+        var dest = Path.Combine(ModInstallService.GetAddonDeployPath(gameInstallPath), "relimiter.ini");
+        if (major is not int m)
+        {
+            File.Copy(UlIniPath, dest, overwrite: true);
+            return;
+        }
+        var lines = UlV4Rules.StripOtherVersionKeys(File.ReadAllLines(UlIniPath), m);
+        File.WriteAllText(dest, string.Join("\r\n", lines) + "\r\n");
     }
 
     /// <summary>
@@ -1348,44 +1330,17 @@ public partial class AuxInstallService
     }
 
     /// <summary>
-    /// Writes the ToneMapPeakNits value to all [renodx-preset*] sections in the given
-    /// reshade.ini file. If no preset section exists, creates [renodx-preset1].
+    /// Writes the peak nits value to the checked [renodx-preset*] sections in the given reshade.ini
+    /// (creating checked sections that are missing). Line by line, in both key spellings: Unity mods
+    /// read "toneMapPeakNits", others "ToneMapPeakNits" (see RenoDxPresetIni).
     /// </summary>
     public static void ApplyPeakNits(string iniFilePath, int peakNits)
     {
         if (peakNits <= 0 || !File.Exists(iniFilePath)) return;
         if (!GlobalPeakNitsEnabled) return;
 
-        var ini = ParseIni(File.ReadAllLines(iniFilePath));
-
-        // Write to existing preset sections that are checked
-        var written = new HashSet<int>();
-        foreach (var section in ini)
-        {
-            if (section.Key.StartsWith("renodx-preset", StringComparison.OrdinalIgnoreCase))
-            {
-                var numPart = section.Key.Substring("renodx-preset".Length);
-                if (int.TryParse(numPart, out var presetNum))
-                {
-                    if (!GlobalPeakNitsPresets.Contains(presetNum))
-                        continue; // Skip presets the user didn't check
-
-                    section.Value["ToneMapPeakNits"] = peakNits.ToString();
-                    written.Add(presetNum);
-                }
-            }
-        }
-
-        // Auto-create missing preset sections that are checked
-        foreach (var presetNum in GlobalPeakNitsPresets)
-        {
-            if (!written.Contains(presetNum))
-            {
-                ini[$"renodx-preset{presetNum}"] = new OrderedDict { ["ToneMapPeakNits"] = peakNits.ToString() };
-            }
-        }
-
-        WriteIni(iniFilePath, ini);
+        RenoDxPresetIni.Write(iniFilePath, "toneMapPeakNits",
+            peakNits.ToString(System.Globalization.CultureInfo.InvariantCulture), GlobalPeakNitsPresets.ToList());
     }
 
     /// <summary>
@@ -1537,11 +1492,29 @@ public partial class AuxInstallService
         WriteIni(iniFilePath, ini);
     }
 
+    /// <summary>Writes ReLimiter v4's pacing_preference (latency | balanced | smooth) to [FrameLimiter]. v3 doesn't read it.</summary>
+    public static void ApplyUlPacingPreference(string iniFilePath, string value)
+    {
+        if (UlV4Rules.NormalizePacing(value) is not { } pacing) return;
+        var ini = File.Exists(iniFilePath)
+            ? ParseIni(File.ReadAllLines(iniFilePath))
+            : new Dictionary<string, OrderedDict>(StringComparer.OrdinalIgnoreCase);
+
+        const string section = "FrameLimiter";
+
+        if (!ini.ContainsKey(section))
+            ini[section] = new OrderedDict();
+
+        ini[section][UlV4Rules.PacingKey] = pacing;
+
+        WriteIni(iniFilePath, ini);
+    }
+
     /// <summary>
-    /// Turns ReLimiter v4's native PC Latency on (native_pcl_enabled=true in [FrameLimiter]).
-    /// Only for v4 games whose Windows account has the PCL permission (Settings › Components › ReLimiter).
+    /// Turns ReLimiter v4's native PC Latency on or off (native_pcl_enabled=true / false in [FrameLimiter]).
+    /// On only for v4 games whose Windows account has the PCL permission (Settings › Components › ReLimiter).
     /// </summary>
-    public static void ApplyUlNativePcl(string iniFilePath)
+    public static void ApplyUlNativePcl(string iniFilePath, bool on = true)
     {
         var ini = File.Exists(iniFilePath)
             ? ParseIni(File.ReadAllLines(iniFilePath))
@@ -1552,7 +1525,7 @@ public partial class AuxInstallService
         if (!ini.ContainsKey(section))
             ini[section] = new OrderedDict();
 
-        ini[section]["native_pcl_enabled"] = "true";
+        ini[section]["native_pcl_enabled"] = on ? "true" : "false";
 
         WriteIni(iniFilePath, ini);
     }
@@ -1735,7 +1708,8 @@ public partial class AuxInstallService
                     return trimmed[(key.Length + 1)..].Trim();
             }
         }
-        catch { /* best-effort */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { CrashReporter.Log($"[AuxInstallService.GetLumaReshadeIniValue] Failed to read reshade.ini in '{gameDir}' — {ex.Message}"); }
         return null;
     }
 

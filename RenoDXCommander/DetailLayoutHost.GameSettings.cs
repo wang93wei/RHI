@@ -20,7 +20,8 @@ internal sealed partial class DetailLayoutHost
         var root = new StackPanel { Spacing = 14 };
         root.Children.Add(MutedText(Loc.GetString("Detail.GameSettings.Intro")));
 
-        root.Children.Add(TabsTheme.MakeCard(BuildGameSettingsRows(card, openDisplayModes: null), 16));
+        foreach (var (title, rows) in BuildGameSettingsGroups(card, openDisplayModes: null))
+            root.Children.Add(TabsTheme.TitledCard(title, rows));
         return root;
     }
 
@@ -34,18 +35,41 @@ internal sealed partial class DetailLayoutHost
         bool openDisplayModes = false;
         var cog = new CogDialog(Loc.GetString("Detail.GameSettings"), xamlRoot);
         cog.AddIntro(Loc.GetString("Detail.GameSettings.Intro"));
-        cog.AddContent(BuildGameSettingsRows(card, () => { openDisplayModes = true; cog.Hide(); }));
+        foreach (var (title, rows) in BuildGameSettingsGroups(card, () => { openDisplayModes = true; cog.Hide(); }))
+        {
+            cog.AddSection(title);
+            cog.AddContent(rows);
+        }
         await cog.ShowAsync();
         if (openDisplayModes) await _window.ShowDisplayModeGameDialogAsync(card);
     }
 
-    private StackPanel BuildGameSettingsRows(GameCardViewModel card, Action? openDisplayModes)
+    /// <summary>The settings in groups (a titled card each in Spotlight, a section each in the cog). New rows go in the matching group.</summary>
+    private List<(string Title, StackPanel Rows)> BuildGameSettingsGroups(GameCardViewModel card, Action? openDisplayModes)
     {
-        var rows = new StackPanel { Spacing = 16 };
-        AddOverlayRow(rows, card);
-        AddDisplayModeRow(rows, card, openDisplayModes);
-        AddSteamUpdateBlockRow(rows, card);
-        return rows;
+        StackPanel Group() => new() { Spacing = 16 };
+
+        var game = Group();
+        AddIdentityRows(game, card);          // name, bitness, Graphics API
+
+        var launching = Group();
+        AddLaunchRows(launching, card);
+        AddSteamUpdateBlockRow(launching, card);
+
+        var overlay = Group();
+        AddOverlayRow(overlay, card);
+        AddDisplayModeRow(overlay, card, openDisplayModes);
+
+        var reset = Group();
+        AddResetRow(reset, card);
+
+        return new()
+        {
+            ("Game", game),
+            ("Launching", launching),
+            ("Overlay and display", overlay),
+            ("Reset", reset),
+        };
     }
 
     /// <summary>
@@ -88,6 +112,93 @@ internal sealed partial class DetailLayoutHost
         };
         AddGameSettingRow(rows, Loc.GetString("Detail.GameSettings.SteamBlock.Label"), baseDesc, toggle);
         rows.Children.Add(status);
+    }
+
+    /// <summary>
+    /// Launch executable and launch arguments (MainViewModel.LaunchOptions.cs).
+    /// Text boxes save on Enter and when focus leaves.
+    /// </summary>
+    private void AddLaunchRows(StackPanel rows, GameCardViewModel card)
+    {
+        var vm = _window.ViewModel;
+        string name = card.GameName;
+        const double boxWidth = 280;
+
+        void Saved() => _window.DetailPanelBuilderInstance.QueueOverridesRebuild(name);
+
+        // ── Launch executable: box + Browse / Reset ──
+        var exeBox = new TextBox
+        {
+            Text = vm.GetLaunchExeOverride(name),
+            PlaceholderText = "Auto-detect (or paste path)",
+            FontSize = 12,
+            Width = boxWidth,
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(exeBox, "Launch executable");
+        void SaveExe()
+        {
+            if (exeBox.Text.Trim() == vm.GetLaunchExeOverride(name)) return;
+            vm.SetLaunchExeOverride(name, exeBox.Text);
+            Saved();
+        }
+        exeBox.LostFocus += (s, e) => SaveExe();
+        exeBox.KeyDown += (s, e) => { if (e.Key == Windows.System.VirtualKey.Enter) SaveExe(); };
+
+        var browseBtn = new Button { Content = "Browse", Padding = new Thickness(14, 0, 14, 0) };
+        TabsTheme.Apply(browseBtn, TabsTheme.BlueButton, height: 32, fontSize: 12);
+        browseBtn.Click += async (s, e) =>
+        {
+            try
+            {
+                var path = await MainViewModel.BrowseForLaunchExeAsync(WinRT.Interop.WindowNative.GetWindowHandle(_window), card);
+                if (string.IsNullOrEmpty(path)) return;
+                exeBox.Text = path;
+                SaveExe();
+            }
+            catch (Exception ex) { CrashReporter.Log($"[DetailLayoutHost.GameSettings] Browse for launch exe failed — {ex.Message}"); }
+        };
+        var resetBtn = new Button { Content = "Reset launch options", Padding = new Thickness(14, 0, 14, 0) };
+        TabsTheme.Apply(resetBtn, TabsTheme.DangerButton, height: 32, fontSize: 12);
+
+        var exePanel = new StackPanel { Spacing = 8, Width = boxWidth };
+        exePanel.Children.Add(exeBox);
+        var btnRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        btnRow.Children.Add(browseBtn);
+        btnRow.Children.Add(resetBtn);
+        exePanel.Children.Add(btnRow);
+        AddGameSettingRow(rows, "Launch executable",
+            "The program RHI starts when you launch this game. Leave blank to detect it automatically.", exePanel);
+
+        // ── Launch arguments ──
+        var argsBox = new TextBox
+        {
+            Text = vm.GetLaunchArgsOverride(name),
+            PlaceholderText = "Launch arguments",
+            FontSize = 12,
+            Width = boxWidth,
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(argsBox, "Launch arguments");
+        void SaveArgs()
+        {
+            if (argsBox.Text.Trim() == vm.GetLaunchArgsOverride(name)) return;
+            vm.SetLaunchArgsOverride(name, argsBox.Text);
+            Saved();
+        }
+        argsBox.LostFocus += (s, e) => SaveArgs();
+        argsBox.KeyDown += (s, e) => { if (e.Key == Windows.System.VirtualKey.Enter) SaveArgs(); };
+        string argsDesc = "Command-line arguments passed to the game when RHI launches it.";
+        if (string.Equals(card.Source, "Epic", StringComparison.OrdinalIgnoreCase))
+            argsDesc += " Setting arguments turns off Epic's own launch link; games with Epic's anti-cheat may not start with them.";
+        AddGameSettingRow(rows, "Launch arguments", argsDesc, argsBox);
+
+        resetBtn.Click += (s, e) =>
+        {
+            exeBox.Text = "";
+            argsBox.Text = "";
+            vm.SetLaunchExeOverride(name, "");
+            vm.SetLaunchArgsOverride(name, "");
+            Saved();
+        };
     }
 
     private void AddOverlayRow(StackPanel rows, GameCardViewModel card)

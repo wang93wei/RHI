@@ -113,6 +113,16 @@ public partial class MainViewModel
                 if (freshIni) svc.ApplyKeybinds(installPath, GlobalHsfKeybinds());
                 route = HsfRouteFor(card);
                 svc.PresetRoute(installPath, route);
+                // HSF 0.10 reads depth through ReShade's Generic Depth add-on (RHI's reshade.ini turns it off by default;
+                // HSF says PROBLEM without it)
+                AuxInstallService.WriteShippedAddonsSetting(installPath, enabled: true, [AuxInstallService.GenericDepth]);
+                // LaunchPad makes the flow HSF_Motion reads: tick it at the top now, so HSF's own effects (added at the
+                // first start) come after it instead of ReShade listing it last
+                if (launchpadOn)
+                {
+                    App.Services.GetRequiredService<UpliftService>().EnableTechnique(installPath, UpliftService.LaunchpadToken);
+                    UpliftService.KeepLaunchpadFirst(installPath); // already ticked lower down (a reinstall)
+                }
                 return null;
             });
             if (error != null) return error;
@@ -128,6 +138,59 @@ public partial class MainViewModel
                 : L("Extras.Hsf.Error.InstallFailed", ex.Message);
         }
     }
+
+    /// <summary>
+    /// Installs an HSF test build dropped on RHI (<paramref name="packageRoot"/> = the extracted folder with its
+    /// add-on). The release is staged first, so HSF.fx is there for the shader sync and the build is kept until a newer
+    /// release (<see cref="HsfService.InstallBeta"/>). Returns an error message, or null.
+    /// </summary>
+    public async Task<string?> InstallHsfBetaAsync(GameCardViewModel card, string packageRoot, string label)
+    {
+        if (HsfBlockReason(card) is { } reason) return reason;
+        if (string.IsNullOrEmpty(card.InstallPath)) return "This game has no install folder.";
+        var installPath = card.InstallPath;
+        var svc = App.Services.GetRequiredService<HsfService>();
+        bool launchpadOn = !HsfService.IsRhiInstalled(installPath) || HsfService.ReadMarker(installPath).LaunchpadOn;
+        try
+        {
+            await Task.Run(async () =>
+            {
+                // The release's HSF.fx and the version the build is measured against; a failed download still installs
+                if (!svc.IsStagingReady) await svc.EnsureStagingAsync().ConfigureAwait(false);
+                if (launchpadOn && !UpliftService.LaunchpadStaged)
+                    await _shaderPackService.EnsurePacksAsync(new[] { UpliftService.LaunchpadPackId }).ConfigureAwait(false);
+                bool freshIni = !File.Exists(HsfService.IniPath(installPath));
+                svc.InstallBeta(packageRoot, label, installPath, card.Is32Bit, launchpadOn);
+                if (freshIni) svc.ApplyKeybinds(installPath, GlobalHsfKeybinds());
+                svc.PresetRoute(installPath, HsfRouteFor(card));
+                // Same as a release install: Generic Depth on (HSF 0.10 needs it), LaunchPad ticked first
+                AuxInstallService.WriteShippedAddonsSetting(installPath, enabled: true, [AuxInstallService.GenericDepth]);
+                if (launchpadOn)
+                {
+                    App.Services.GetRequiredService<UpliftService>().EnableTechnique(installPath, UpliftService.LaunchpadToken);
+                    UpliftService.KeepLaunchpadFirst(installPath);
+                }
+            });
+            await DeployShadersForCardAsync(card.GameName);
+            _crashReporter.Log($"[MainViewModel.InstallHsfBeta] '{label}' installed for '{card.GameName}' (engine {HsfService.ReadFgEngine(installPath)})");
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _crashReporter.Log($"[MainViewModel.InstallHsfBeta] '{card.GameName}' — {ex.Message}");
+            return ex is UnauthorizedAccessException
+                ? "Couldn't write into the game folder (access denied). Close the game, or try Admin Mode."
+                : ex is IOException
+                    ? $"Couldn't copy the files. If the game is running, close it and try again. ({ex.Message})"
+                    : ex.Message;
+        }
+    }
+
+    /// <summary>True when XeMFG is set for this game but neither unlocker is installed (XeMFG then stays at 2x).</summary>
+    public static bool HsfXeMfgNeedsUnlocker(GameCardViewModel card) =>
+        !string.IsNullOrEmpty(card.InstallPath)
+        && HsfService.ReadFgEngine(card.InstallPath) == HsfService.EngineXeMfg
+        && !card.Rtx40MfgInstalled && !card.MfgAdaInstalled;
 
     /// <summary>
     /// Where Universal MFG Unlocker goes with HSF (HSF's installer guide): next to the exe of a 64-bit game, any
@@ -181,6 +244,37 @@ public partial class MainViewModel
     }
 
     /// <summary>
+    /// The Universal MFG Unlocker name for an HSF game, chosen without asking (HSF 0.10: "In DirectX 12 games it loads
+    /// only when it is named version.dll"): 64-bit = version.dll; when another file holds version.dll, a DirectX 12 game
+    /// gets an error (Item2), other APIs the first free of winmm / dinput8 (HSF's helper finds it by product name).
+    /// 32-bit = null (HSF_streamline\mods).
+    /// </summary>
+    /// <summary>A 64-bit DirectX 12 HSF game: Universal MFG Unlocker must be version.dll there (HSF 0.10), so no name picker.</summary>
+    public bool HsfMfgNeedsVersionDll(GameCardViewModel card) => HsfMfgNextToExe(card) && HsfIsDx12(card);
+
+    public (string? Name, string? Error) HsfMfgAutoName(GameCardViewModel card)
+    {
+        if (!HsfMfgNextToExe(card)) return (null, null);
+        var dir = card.InstallPath ?? "";
+        if (!File.Exists(Path.Combine(dir, "version.dll"))) return ("version.dll", null);
+        if (HsfIsDx12(card))
+            return (null, "version.dll in this game belongs to another mod. In DirectX 12 games Universal MFG Unlocker only loads as version.dll "
+                + "(HSF 0.10), so free that name first, then install it from its row in Extras.");
+        var free = new[] { "winmm.dll", "dinput8.dll" }.FirstOrDefault(n => !File.Exists(Path.Combine(dir, n)));
+        return free != null ? (free, null)
+            : (null, "version.dll, winmm.dll and dinput8.dll are all taken in this game. Install Universal MFG Unlocker from its row in Extras and pick a name.");
+    }
+
+    /// <summary>Installs Universal MFG Unlocker for HSF under <see cref="HsfMfgAutoName"/>'s name (the HSF ⚙'s XeMFG offer). Returns an error, or null.</summary>
+    public async Task<string?> InstallMfgForHsfAutoAsync(GameCardViewModel card)
+    {
+        if (card.Rtx40MfgInstalled) return null;
+        var (name, error) = HsfMfgAutoName(card);
+        if (error != null) return error;
+        return await InstallMfgForHsfAsync(card, name);
+    }
+
+    /// <summary>
     /// Removes HSF from the game, then syncs its shaders so HSF.fx (and LaunchPad, if only HSF needed it) leave too.
     /// Universal MFG Unlocker in HSF_streamline\mods goes with it; a proxy copy next to the game stays (its own row removes it).
     /// </summary>
@@ -196,6 +290,7 @@ public partial class MainViewModel
         {
             if (mfgInMods) _rtx40MfgService.Uninstall(installPath, mfg);
             svc.Uninstall(installPath);
+            AuxInstallService.RestoreGenericDepthDefault(installPath); // RHI's default (off) again, unless URTI / CRCGI / FrameWarp need it
         });
         if (mfgInMods)
         {
@@ -248,6 +343,8 @@ public partial class MainViewModel
                 // A DirectX 12 game whose route isn't set yet (the DLSS scan hadn't run at install, or HSF took it
                 // back after a DirectX 11 run) gets it now, so its next launch generates without a restart
                 svc.PresetRoute(c.InstallPath!, HsfRouteFor(c));
+                // HSF 0.10 needs Generic Depth: games installed before keep it on from now (GenericDepthNeededResolver)
+                AuxInstallService.ApplyShippedAddonsSettingToGame(c.InstallPath!);
                 // HSF switches LaunchPad on itself and ReShade lists it last, after HSF_Motion, which reads its flow:
                 // put it first (only the order; the game must be closed, ReShade rewrites the preset on exit)
                 UpliftService.KeepLaunchpadFirst(c.InstallPath!);

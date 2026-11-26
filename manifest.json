@@ -269,7 +269,8 @@
     "Portal": "bin",
     "Watch_Dogs": "bin",
     "Far Cry New Dawn": "bin",
-    "Far Cry 6": "bin"
+    "Far Cry 6": "bin",
+    "HELLDIVERS™ 2": "bin"
   },
   "installPathMigrations": {
     "Phantom Blade Zero": "platform\\steam"
@@ -1017,6 +1018,9 @@
   "legacyReShadeVersions": {
     "Max Payne 3": "6.4.1"
   },
+  "noAddonReShadeGames": [
+    "HELLDIVERS™ 2"
+  ],
   "legacyReShadeAvailable": [
     "6.7.3",
     "6.7.2",
@@ -1313,7 +1317,8 @@
     "spiwar": "https://ko-fi.com/spiwar",
     "Vaxis": "https://ko-fi.com/vaxistaa",
     "vietnick": "https://ko-fi.com/vietnick",
-    "Voosh": "https://ko-fi.com/notvoosh"
+    "Voosh": "https://ko-fi.com/notvoosh",
+    "Ostad": "https://ko-fi.com/ostadgaming"
   },
   "patreonUrls": {
     "Lazorr": "https://patreon.com/Lazorr",
@@ -1347,7 +1352,8 @@
     "spiwar": "RenoDX mods",
     "Vaxis": "Ultra+",
     "vietnick": "RenoDX mods",
-    "Voosh": "RenoDX mods"
+    "Voosh": "RenoDX mods",
+    "Ostad": "RenoDX mods, Luma mods"
   },
   "authorOverrides": {
     "Assassin\u0027s Creed": "Musa",
@@ -1551,7 +1557,7 @@
       "displayName": "SD Shaders by Starodubysko",
       "kind": "DirectUrl",
       "url": "https://github.com/Starodubysko/sd-reshade-shaders/archive/refs/heads/main.zip",
-      "description": "Colour grading for SDR and HDR: SD Subtractive Saturation (lowers brightness as colours get more saturated, keeping them dense) and SD Color Density (darkens saturated colours without shifting hues or neutral tones).",
+      "description": "Color grading and post-processing effects for SDR and HDR",
       "category": "Extra"
     },
     "ZenteonPlus": {

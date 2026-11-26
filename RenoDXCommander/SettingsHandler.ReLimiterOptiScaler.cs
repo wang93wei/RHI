@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using RenoDXCommander.Models;
@@ -11,35 +11,27 @@ public partial class SettingsHandler
 {
     // ── ReLimiter Target FPS ──────────────────────────────────────────────────
 
-    /// <summary>VRR cap presets matching the MFG dialog pattern.</summary>
-    private static readonly (int Fps, string Label)[] _ulTargetFpsPresets =
-    {
-        (59,  "59 FPS (60Hz VRR Cap)"),
-        (73,  "73 FPS (75Hz VRR Cap)"),
-        (97,  "97 FPS (100Hz VRR Cap)"),
-        (116, "116 FPS (120Hz VRR Cap)"),
-        (138, "138 FPS (144Hz VRR Cap)"),
-        (157, "157 FPS (165Hz VRR Cap)"),
-        (171, "171 FPS (180Hz VRR Cap)"),
-        (189, "189 FPS (200Hz VRR Cap)"),
-        (224, "224 FPS (240Hz VRR Cap)"),
-        (258, "258 FPS (280Hz VRR Cap)"),
-        (275, "275 FPS (300Hz VRR Cap)"),
-        (324, "324 FPS (360Hz VRR Cap)"),
-        (416, "416 FPS (480Hz VRR Cap)"),
-        (431, "431 FPS (500Hz VRR Cap)"),
-    };
-    private static readonly HashSet<int> _ulTargetFpsPresetValues = new(_ulTargetFpsPresets.Select(p => p.Fps));
+    /// <summary>
+    /// VRR cap presets, computed like ReLimiter from the displays' exact refresh rates (<see cref="VrrCaps"/>).
+    /// Rebuilt with the combo so the selection handler indexes the same list.
+    /// </summary>
+    private (int Fps, string Label)[] _ulTargetFpsPresets = Array.Empty<(int, string)>();
+    private HashSet<int> _ulTargetFpsPresetValues = new();
 
     private bool _suppressUlTargetFpsChange;
+
+    /// <summary>ReLimiter's frame rate cap 0 (no target_fps): since ReLimiter 4.0.4 there's no Off, it holds the display's VRR cap.</summary>
+    public const string UlAutoVrrLabel = "Auto VRR";
 
     private void InitializeUlTargetFpsCombo()
     {
         _suppressUlTargetFpsChange = true;
+        _ulTargetFpsPresets = VrrCaps.Presets().Select(p => (p.Fps, $"{p.Fps} FPS ({p.Hz}Hz VRR Cap)")).ToArray();
+        _ulTargetFpsPresetValues = new(_ulTargetFpsPresets.Select(p => p.Fps));
         var combo = _window.UlTargetFpsCombo;
         combo.Items.Clear();
 
-        combo.Items.Add(LocOpt.T("Off"));
+        combo.Items.Add(LocOpt.T(UlAutoVrrLabel)); // ReLimiter 4.0.4+: 0 / no target_fps = its automatic VRR cap (no Off)
         foreach (var preset in _ulTargetFpsPresets)
             combo.Items.Add(LocOpt.T(preset.Label));
 
@@ -52,12 +44,12 @@ public partial class SettingsHandler
 
         // Select based on current value
         if (currentFps == 0)
-            combo.SelectedIndex = 0; // Off
+            combo.SelectedIndex = 0; // Auto VRR
         else
         {
             int matchIdx = Array.FindIndex(_ulTargetFpsPresets, p => p.Fps == currentFps);
             if (matchIdx >= 0)
-                combo.SelectedIndex = matchIdx + 1; // +1 for "Off" at index 0
+                combo.SelectedIndex = matchIdx + 1; // +1 for "Auto VRR" at index 0
             else
             {
                 // Custom value — select the "(Custom)" item
@@ -121,7 +113,7 @@ public partial class SettingsHandler
             // Handle preset/Off selection
             int newFps;
             if (combo.SelectedIndex == 0)
-                newFps = 0; // Off
+                newFps = 0; // Auto VRR
             else if (combo.SelectedIndex - 1 < _ulTargetFpsPresets.Length)
                 newFps = _ulTargetFpsPresets[combo.SelectedIndex - 1].Fps;
             else

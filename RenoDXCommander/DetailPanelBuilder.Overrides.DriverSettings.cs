@@ -32,7 +32,8 @@ public partial class DetailPanelBuilder
         ulong GlobalReBarSizeLimit,
         uint? PerGameFpsLimit, uint GlobalFpsLimit,
         bool IsAdmin,
-        int? LodBias = null, uint AnisoLevel = 0, uint? TextureQuality = null);
+        int? LodBias = null, uint AnisoLevel = 0, uint? TextureQuality = null,
+        int? GlobalLodBias = null, uint GlobalAnisoLevel = 0, uint? GlobalTextureQuality = null);
 
     private const string DriverSummaryTag = "DriverSummary";   // collapsed-only header summary
 
@@ -115,8 +116,8 @@ public partial class DetailPanelBuilder
 
         driverHeaderRow.PointerEntered += (s, e) => driverTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
         driverHeaderRow.PointerExited  += (s, e) => driverTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-        var driverHandCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var driverArrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var driverHandCursor  = HandCursor;
+        var driverArrowCursor = ArrowCursor;
         var driverCursorProp  = DetailPanelBuilder.CursorProp;
         driverHeaderRow.PointerEntered += (s, e) => driverCursorProp?.SetValue(driverHeaderRow, driverHandCursor);
         driverHeaderRow.PointerExited  += (s, e) => driverCursorProp?.SetValue(driverHeaderRow, driverArrowCursor);
@@ -202,7 +203,10 @@ public partial class DetailPanelBuilder
                         IsAdmin:                  VulkanLayerService.IsRunningAsAdmin(),
                         LodBias:                  svc.GetLodBias(gameName, installPath),
                         AnisoLevel:               svc.GetAnisoLevel(gameName, installPath),
-                        TextureQuality:           svc.GetTextureQuality(gameName, installPath));
+                        TextureQuality:           svc.GetTextureQuality(gameName, installPath),
+                        GlobalLodBias:            svc.GetGlobalLodBias(),
+                        GlobalAnisoLevel:         svc.GetGlobalAnisoLevel(),
+                        GlobalTextureQuality:     svc.GetGlobalTextureQuality());
                 }, scanCt);
                 using var delayCts = new CancellationTokenSource();
                 var delayTask = Task.Delay(5000, delayCts.Token);
@@ -264,6 +268,14 @@ public partial class DetailPanelBuilder
     private DriverProfileData? _driverSummaryData;
     private string? _driverSummaryVer;
     private StackPanel? _driverSummaryBody;
+
+    /// <summary>Applies a setting change made in the panel to the summary values and redraws the summary.</summary>
+    private void PatchDriverSummary(Func<DriverProfileData, DriverProfileData> change)
+    {
+        if (_driverSummaryData == null) return;
+        _driverSummaryData = change(_driverSummaryData);
+        UpdateDriverSummary();
+    }
 
     /// <summary>
     /// (Re)builds the Driver Settings header summary from <see cref="_driverSummaryData"/>. The same
@@ -414,6 +426,7 @@ public partial class DetailPanelBuilder
                         // Inherit from global — write the global value
                         var valueToWrite = globalVSync ?? options[0].Value;
                         _ = Task.Run(() => nvidiaPresetService.SetVSyncMode(capturedName, installPathSafe, valueToWrite));
+                        PatchDriverSummary(d => d with { VSyncMode = valueToWrite });
                     }
                     else
                     {
@@ -422,6 +435,7 @@ public partial class DetailPanelBuilder
                         {
                             var valueToWrite = options[optIdx].Value;
                             _ = Task.Run(() => nvidiaPresetService.SetVSyncMode(capturedName, installPathSafe, valueToWrite));
+                            PatchDriverSummary(d => d with { VSyncMode = valueToWrite });
                         }
                     }
                 };
@@ -543,6 +557,7 @@ public partial class DetailPanelBuilder
                     if (i < 0 || i >= options.Length) return;
                     var selectedValue = options[i].Value;
                     bool enabling = selectedValue != 0;
+                    PatchDriverSummary(d => d with { SmoothMotionEnable = selectedValue });
                     const uint LowLatencyOff   = 0x00000000;
                     const uint LowLatencyUltra = 0x00000002;
                     _ = Task.Run(() =>
@@ -784,6 +799,7 @@ public partial class DetailPanelBuilder
                         {
                             currentFps = null;
                             _ = Task.Run(() => nvidiaPresetService.ClearPerGameFpsLimit(capturedName, installPathSafe));
+                            PatchDriverSummary(d => d with { PerGameFpsLimit = null });
                             return;
                         }
                         if (i == customFpsIdx)
@@ -796,6 +812,7 @@ public partial class DetailPanelBuilder
                             var value = presets[presetIdx].Value;
                             currentFps = value;
                             _ = Task.Run(() => nvidiaPresetService.SetPerGameFpsLimit(capturedName, installPathSafe, value));
+                            PatchDriverSummary(d => d with { PerGameFpsLimit = value });
                             return;
                         }
 
@@ -819,6 +836,7 @@ public partial class DetailPanelBuilder
                         {
                             currentFps = chosen;
                             _ = Task.Run(() => nvidiaPresetService.SetPerGameFpsLimit(capturedName, installPathSafe, chosen));
+                            PatchDriverSummary(d => d with { PerGameFpsLimit = chosen });
                         }
                         // Rebuild the list (adds the custom entry, or reverts the selection on cancel)
                         var (newItems, newIdx) = BuildFpsItems(currentFps);

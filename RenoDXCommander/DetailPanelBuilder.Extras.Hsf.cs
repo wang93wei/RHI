@@ -25,9 +25,13 @@ public partial class DetailPanelBuilder
         bool isInstalled  = HsfService.IsInstalledIn(installPath, card.Is32Bit);
         bool rhiInstalled = isInstalled && HsfService.IsRhiInstalled(installPath);
         var installedVer  = rhiInstalled ? HsfService.ReadMarker(installPath).Version : null;
+        var betaLabel     = rhiInstalled ? HsfService.ReadBeta(installPath).Label : null;
         var block         = MainViewModel.HsfBlock(card);
 
-        string statusText  = !isInstalled ? Loc.GetString("Status.Ready") : rhiInstalled ? (installedVer ?? Loc.GetString("Status.Installed")) : Loc.GetString("Extras.Hsf.Status.Manual");
+        string statusText  = !isInstalled ? Loc.GetString("Status.Ready")
+            : betaLabel != null ? Loc.GetString("Extras.Hsf.Status.Beta")
+            : rhiInstalled ? (installedVer ?? Loc.GetString("Status.Installed"))
+            : Loc.GetString("Extras.Hsf.Status.Manual");
         string statusColor = isInstalled ? "#5ECB7D" : "#A0AABB";
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -46,7 +50,9 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(label, HsfTooltip);
+        // URTI (Experimental) doesn't draw while HSF is in the game: say so on the row ("Game:" lines show in Tabs / Spotlight)
+        var hsfTip = UrtiService.IsInstalledIn(installPath) ? $"{HsfTooltip}\n{UrtiHsfClashLine}" : HsfTooltip;
+        ToolTipService.SetToolTip(label, hsfTip);
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
 
@@ -109,13 +115,15 @@ public partial class DetailPanelBuilder
             installBtn.Opacity   = 0.35;
             installBtn.Content   = b.Short;
             // Disabled buttons show no tooltip: the label carries the reason too
-            ToolTipService.SetToolTip(label, $"{HsfTooltip}\n\n{b.Long}");
+            ToolTipService.SetToolTip(label, $"{hsfTip}\n\n{b.Long}");
         }
         else
         {
             var versionNote = MainViewModel.HsfReShadeVersionNote(card);
             ToolTipService.SetToolTip(installBtn, (isInstalled
-                ? Loc.GetString("Extras.Hsf.Reinstall.Tooltip")
+                ? betaLabel != null
+                    ? Loc.GetString("Extras.Hsf.Reinstall.TestBuildTooltip", betaLabel)
+                    : Loc.GetString("Extras.Hsf.Reinstall.Tooltip")
                 : Loc.GetString("Extras.Hsf.Install.Tooltip"))
                 + (versionNote != null ? "\n\n" + versionNote : ""));
             if (ExtraBlocker(card, ExtraKind.Hsf) is { } hsfBlocker)
@@ -145,6 +153,7 @@ public partial class DetailPanelBuilder
                             await ShowHsfErrorAsync(mfgError, installBtn.XamlRoot, Loc.GetString("Extras.Hsf.MfgNotInstalled.Title"));
                     }
                     RequestExtrasRebuild(card);
+                    RequestExperimentalRebuild(card); // URTI's HSF warning
                     return;
                 }
                 installBtn.Content   = Loc.GetString("Extras.InstallFailed.Button");
@@ -195,6 +204,7 @@ public partial class DetailPanelBuilder
                 removeBtn.IsEnabled = false;
                 await _window.ViewModel.UninstallHsfAsync(card);
                 RequestExtrasRebuild(card);
+                RequestExperimentalRebuild(card); // URTI's HSF warning
             }
             catch (Exception ex)
             {
@@ -217,7 +227,8 @@ public partial class DetailPanelBuilder
     {
         xamlRoot ??= _window.Content.XamlRoot;
         bool osInstalled = card.IsOsInstalled;
-        if (xamlRoot == null || (_window.ViewModel.Settings.HsfNoticeDismissed && !osInstalled)) return true;
+        bool urtiInstalled = UrtiService.IsInstalledIn(card.InstallPath ?? "");
+        if (xamlRoot == null || (_window.ViewModel.Settings.HsfNoticeDismissed && !osInstalled && !urtiInstalled)) return true;
 
         var content = new StackPanel { Spacing = 8 };
         void Para(string text) => content.Children.Add(new TextBlock
@@ -232,8 +243,10 @@ public partial class DetailPanelBuilder
         Para(Loc.GetString("Extras.Hsf.Notice.FrameGen"));
         if (osInstalled)
             Para(Loc.GetString("Extras.Hsf.Notice.OptiScaler"));
+        if (urtiInstalled)
+            Para(UrtiHsfClashText);
         var dontShow = new CheckBox { Content = Loc.GetString("Dialog.DonTShowThisAgain"), FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
-        if (!osInstalled) content.Children.Add(dontShow);
+        if (!osInstalled && !urtiInstalled) content.Children.Add(dontShow);
 
         var dialog = new ContentDialog
         {
@@ -255,18 +268,20 @@ public partial class DetailPanelBuilder
     }
 
     /// <summary>
-    /// Asked on every HSF install: should Universal MFG Unlocker go in too (RTX 20 / 30 / 40 cards need it)?
-    /// Not asked when it's already in the game, MFG Unlock (add-on) is, or the card is RTX 50 or newer.
+    /// Asked on every HSF install, on every card: should Universal MFG Unlocker go in too? XeMFG relies on it for 3x-6x on
+    /// every RTX card; RTX 20 / 30 / 40 also need it for DLSS-G. Not asked when it or MFG Unlock (add-on) is already in the game.
     /// The detected card sets the default answer. A yes in a 64-bit game (any API) goes on to the DLL name
     /// picker, next to the exe; 32-bit games get it in HSF_streamline\mods. Cancelled = install nothing.
     /// </summary>
-    private async Task<(bool Cancelled, bool Install, string? ProxyName)> AskHsfMfgUnlockerAsync(GameCardViewModel card, XamlRoot? xamlRoot)
+    internal async Task<(bool Cancelled, bool Install, string? ProxyName)> AskHsfMfgUnlockerAsync(GameCardViewModel card, XamlRoot? xamlRoot)
     {
         xamlRoot ??= _window.Content.XamlRoot;
         if (xamlRoot == null || card.Rtx40MfgInstalled || card.MfgAdaInstalled) return (false, false, null);
+        // Asked on every HSF install, RTX 50 too (user decision, 25 Nov 2026): HSF 0.10's XeMFG (Intel's XeSS frame generation)
+        // relies on the unlocker for 3x to 6x on every RTX card, and RTX 20 / 30 / 40 need it for DLSS-G as well.
         var gpu = GpuInfoService.Primary(await GpuInfoService.GetNvidiaGpusAsync());
-        if (gpu is { Family: GpuFamily.Rtx50 or GpuFamily.Newer }) return (false, false, null);
-        bool needs = gpu != null && GpuInfoService.NeedsMfgUnlocker(gpu.Family);
+        bool rtx = gpu != null && gpu.Family != GpuFamily.NotRtx;
+        bool needsForDlssg = gpu != null && GpuInfoService.NeedsMfgUnlocker(gpu.Family);
         bool nextToExe = MainViewModel.HsfMfgNextToExe(card);
 
         var content = new StackPanel { Spacing = 8 };
@@ -278,14 +293,20 @@ public partial class DetailPanelBuilder
             LineHeight = 20,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
         });
-        Para(Loc.GetString("Extras.Hsf.Mfg.Why"));
+        Para(Loc.GetString("Extras.Hsf.Mfg.XeMfgWhy"));
+        Para(Loc.GetString("Extras.Hsf.Mfg.DlssgWhy"));
         Para(gpu == null
             ? Loc.GetString("Extras.Hsf.Mfg.NoGpu")
-            : Loc.GetString("Extras.Hsf.Mfg.YourGpu", gpu.Name, gpu.FamilyLabel,
-                needs ? Loc.GetString("Extras.Hsf.Mfg.NeedsUnlocker") : Loc.GetString("Extras.Hsf.Mfg.NotRtx")));
-        Para(nextToExe
-            ? Loc.GetString("Extras.Hsf.Mfg.NextToExe")
-            : Loc.GetString("Extras.Hsf.Mfg.InStreamlineMods"));
+            : !rtx
+                ? Loc.GetString("Extras.Hsf.Mfg.YourGpuNotRtx", gpu.Name)
+                : Loc.GetString("Extras.Hsf.Mfg.YourGpu", gpu.Name, gpu.FamilyLabel,
+                    needsForDlssg ? Loc.GetString("Extras.Hsf.Mfg.NeedsUnlockerForHsf") : Loc.GetString("Extras.Hsf.Mfg.NeedsUnlockerForXeMfg")));
+        bool versionDll = _window.ViewModel.HsfMfgNeedsVersionDll(card);
+        Para(!nextToExe
+            ? Loc.GetString("Extras.Hsf.Mfg.InStreamlineMods")
+            : versionDll
+                ? Loc.GetString("Extras.Hsf.Mfg.VersionDll")
+                : Loc.GetString("Extras.Hsf.Mfg.NextToExe"));
 
         var dialog = new ContentDialog
         {
@@ -294,7 +315,7 @@ public partial class DetailPanelBuilder
             PrimaryButtonText = Loc.GetString("Extras.Hsf.Mfg.InstallBoth"),
             SecondaryButtonText = Loc.GetString("Extras.Hsf.Mfg.HsfOnly"),
             CloseButtonText = Loc.GetString("Dialog.Cancel"),
-            DefaultButton = needs ? ContentDialogButton.Primary : ContentDialogButton.Secondary,
+            DefaultButton = rtx ? ContentDialogButton.Primary : ContentDialogButton.Secondary,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -302,6 +323,16 @@ public partial class DetailPanelBuilder
         if (result == ContentDialogResult.Secondary) return (false, false, null);
         if (result != ContentDialogResult.Primary) return (true, false, null);
         if (!nextToExe) return (false, true, null);
+        if (versionDll)
+        {
+            var (auto, err) = _window.ViewModel.HsfMfgAutoName(card);
+            if (err != null)
+            {
+                await ShowHsfErrorAsync(err, xamlRoot, "Universal MFG Unlocker can't go in");
+                return (false, false, null); // HSF still installs
+            }
+            return (false, true, auto);
+        }
 
         var name = await ShowMfgDllPickerAsync(card, null);
         return name == null ? (true, false, null) : (false, true, name);
@@ -369,15 +400,21 @@ public partial class DetailPanelBuilder
         cog.AddIntro(Loc.GetString("Extras.Hsf.Settings.Intro"));
 
         cog.AddSection(Loc.GetString("Overlay.Game.Title"));
+        if (UrtiService.IsInstalledIn(installPath)) cog.AddWarning(UrtiHsfClashText);
         if (!isInstalled)
             cog.AddNote(Loc.GetString("Extras.Hsf.Settings.NotInstalled"));
         else
         {
-            cog.AddNote(rhiInstalled
-                ? Loc.GetString("Extras.Hsf.Settings.Installed", HsfService.ReadMarker(installPath).Version ?? Loc.GetString("Extras.Hsf.Settings.UnknownVersion"))
-                : Loc.GetString("Extras.Hsf.Settings.InstalledByHand"));
+            var beta = rhiInstalled ? HsfService.ReadBeta(installPath).Label : null;
+            cog.AddNote(beta != null
+                ? Loc.GetString("Extras.Hsf.Settings.InstalledBeta", beta)
+                : rhiInstalled
+                    ? Loc.GetString("Extras.Hsf.Settings.Installed", HsfService.ReadMarker(installPath).Version ?? Loc.GetString("Extras.Hsf.Settings.UnknownVersion"))
+                    : Loc.GetString("Extras.Hsf.Settings.InstalledByHand"));
             cog.AddNote(Loc.GetString("Extras.Hsf.Settings.Route", HsfService.RouteText(installPath)));
         }
+
+        if (isInstalled) AddHsfFgEngineSection(cog, card, svc);
 
         // D3D12 route: HSF can only start it before the game makes its device, so on its own it asks for a restart
         // after the first DirectX 12 run. Setting it here (RHI does it by itself for DirectX 12 games) avoids that.

@@ -59,8 +59,8 @@ public partial class DetailPanelBuilder
 
         exHeaderRow.PointerEntered += (s, e) => exTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
         exHeaderRow.PointerExited  += (s, e) => exTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-        var exHandCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var exArrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var exHandCursor  = HandCursor;
+        var exArrowCursor = ArrowCursor;
         var exCursorProp  = DetailPanelBuilder.CursorProp;
         exHeaderRow.PointerEntered += (s, e) => exCursorProp?.SetValue(exHeaderRow, exHandCursor);
         exHeaderRow.PointerExited  += (s, e) => exCursorProp?.SetValue(exHeaderRow, exArrowCursor);
@@ -77,7 +77,9 @@ public partial class DetailPanelBuilder
         if (vm.GetRtx40MfgInstalled(gn, gs))                                               exSummaryEntries.Add((Loc.GetString("Extras.Rtx40Mfg"), LocOpt.T("On")));
         if (card.MfgAdaInstalled)                                                          exSummaryEntries.Add((Loc.GetString("Extras.MfgAdaUnlock"), LocOpt.T("On")));
         if (vm.GetDlssg2030Installed(gn, gs))                                              exSummaryEntries.Add((Loc.GetString("Extras.Dlssg2030Short"), LocOpt.T("On")));
-        if (card.IsOsInstalled)                                                             exSummaryEntries.Add((Loc.GetString("Detail.OptiScaler"), card.OsInstalledVersion));
+        if (card.IsOsInstalled)
+            exSummaryEntries.Add((Loc.GetString("Detail.OptiScaler"), ComponentOverrideNotes.Line(vm, card, "Os") is { } osNotes
+                ? $"{card.OsInstalledVersion} ({osNotes.Replace(" · ", ", ")})" : card.OsInstalledVersion));
         if (HsfService.IsInstalledIn(installPath, card.Is32Bit))                           exSummaryEntries.Add((Loc.GetString("Extras.Hsf"), LocOpt.T("On")));
         var encoreSvc = App.Services.GetRequiredService<RtxEncoreService>();
         if (encoreSvc.IsInstalledIn(installPath, vm.GetRtxEncoreInstalledAs(gn, gs)))      exSummaryEntries.Add((Loc.GetString("Extras.RtxEncore.Label"), encoreSvc.StagedVersion ?? LocOpt.T("On")));
@@ -179,7 +181,7 @@ public partial class DetailPanelBuilder
 
         UpdateOsFeedback(card);
         // Tabs / Spotlight: refresh the tiles. Extras is built last in BuildOverridesPanel, so this
-        // also covers the Game Overrides and Management summaries after a full rebuild.
+        // also covers the Management summary after a full rebuild.
         Layout.SummaryChanged();
         __exSw.Stop();
         CrashReporter.Log($"[BuildExtrasSection] Total: {__exSw.ElapsedMilliseconds}ms '{card.GameName}'");
@@ -213,6 +215,34 @@ public partial class DetailPanelBuilder
     
     private bool _extrasRebuildPending;
 
+    /// <summary>
+    /// After an Extras ⚙ adds or removes nvngx_dlssnr.dll (Universal MFG Unlocker, MFG Unlock DLSS 5, RTX Encore):
+    /// re-detect the game's DLSS files as the Neural Rendering installer does, then rebuild the DLSS / Streamline and
+    /// Neural Rendering sections for the shown game. Without it the NR column stayed greyed out with "None" and the NR
+    /// section had no ✓ until switching games (issue #174).
+    /// </summary>
+    internal async Task RefreshDlssAfterNrDllChangeAsync(GameCardViewModel card)
+    {
+        var dlssSvc = App.Services.GetRequiredService<IDlssStreamlineService>();
+        var path = card.InstallPath ?? "";
+        if (path.Length == 0) return;
+        var detection = await Task.Run(() => dlssSvc.Detect(path));
+        if (detection.HasAny)
+        {
+            dlssSvc.RecordDlssFound(card.GameName);
+            dlssSvc.RecordTrustedPath(card.GameName, detection);
+        }
+        _window.DispatcherQueue?.TryEnqueue(() =>
+        {
+            card.DlssDetection = detection;
+            card.ApplyDlssDetection(detection);
+            card.RefreshDlssVersions(dlssSvc);
+            if (_currentDetailCard != card) return;
+            BuildNvidiaProfileSection(card, card.GameName);
+            BuildNeuralRenderingSection(card);
+        });
+    }
+
     public void RequestExtrasRebuild(GameCardViewModel card)
     {
         if (_extrasRebuildPending) return;
@@ -232,14 +262,15 @@ public partial class DetailPanelBuilder
         statusBlock.PointerExited  += (s, e) => _window.LinkText_PointerExited(s, e);
     }
 
-    private Grid MakeExtrasSeparator(string label)
+    private Grid MakeExtrasSeparator(string label, Border? container = null)
     {
+        container ??= _window.ExtrasContainer;
         var grid = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 4, 0, 2) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         // Same width as the rows' button column, so the label centres over the buttons
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, _window.ExtrasContainer.ActualWidth)) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelColW(1, 0, 350, container.ActualWidth)) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
 
@@ -287,9 +318,13 @@ public partial class DetailPanelBuilder
             Tag = card,
         };
         // osGreyed == 32-bit: the install button and cog are disabled (no tooltips), so say why here.
+        // The game's OptiScaler overrides (DLL name, Update All) as a Game: line, shown under the name in Tabs / Spotlight
+        var osNotes2 = ComponentOverrideNotes.For(_window.ViewModel, card, "Os");
+        var osNoteLine = osNotes2.Count == 0 ? ""
+            : "\nGame: " + string.Join(" · ", osNotes2.Select(n => n.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || n.EndsWith(".asi", StringComparison.OrdinalIgnoreCase) ? "installs as " + n : n));
         ToolTipService.SetToolTip(label, osGreyed
-            ? Loc.GetString("Extras.OptiScaler.Label.DisabledTooltip")
-            : Loc.GetString("Extras.OptiScaler.Label.Tooltip"));
+            ? Loc.GetString("Extras.OptiScaler.Label.DisabledTooltip") + osNoteLine
+            : Loc.GetString("Extras.OptiScaler.Label.Tooltip") + osNoteLine);
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
 

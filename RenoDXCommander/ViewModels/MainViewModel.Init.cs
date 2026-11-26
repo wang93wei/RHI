@@ -299,6 +299,8 @@ public partial class MainViewModel
         AuxInstallService.RsIniLockedResolver = (gameName, store) => !GetKeepRsIniUpdated(gameName, store);
         // Settings > ReShade: keep Generic Depth / Effect Runtime Sync enabled (templates disable them)
         AuxInstallService.ShippedAddonsEnabledResolver = () => _settingsViewModel.RsShippedAddonsEnabled;
+        // Settings > ReShade: which side ReShade's menu is docked on in every game (Default = left alone)
+        AuxInstallService.OverlaySideResolver = () => _settingsViewModel.RsOverlaySide;
         UpdateOrchestrationService.AfterSourceAddonUpdate = ApplySourceSetupAsync;
 
         // Universal MFG Unlocker moves in and out of OptiScaler\plugins with OptiScaler 10 builds
@@ -627,6 +629,7 @@ public partial class MainViewModel
             if (_manifest?.ComponentUrls?.TryGetValue("dc", out var dcApiUrl) == true && !string.IsNullOrEmpty(dcApiUrl))
                 DcReleasesApiUrlOverride = dcApiUrl;
             WikiService.ApplyManifestUnityUrls(_manifest?.ComponentUrls); // generic Unity addon links
+            FrameWarpService.ApplyManifestUrls(_manifest?.ComponentUrls); // NVIDIA Latewarp link / hash
 
             // 5. Extract wiki/luma results
             var wikiResult = !wikiFetchFailed ? await wikiTask : default;
@@ -827,36 +830,10 @@ public partial class MainViewModel
             GraphicsApiDetector.SaveCache();
             SaveGameApiCache();
 
-            // Auto-reinstall ReShade for WindowsApps games whose path changed during this build.
-            // The old WindowsApps folder is deleted by Windows on game update so the DLL
-            // can't be copied across — reinstall it fresh at the new path instead.
-            if (_pendingRsReinstall.Count > 0)
-            {
-                var toReinstall = _allCards
-                    .Where(c => _pendingRsReinstall.Contains(GameKey.FromCard(c.GameName, c.Source).ToKey())
-                             && !string.IsNullOrEmpty(c.InstallPath))
-                    .ToList();
-                _pendingRsReinstall.Clear();
-                if (toReinstall.Count > 0)
-                {
-                    _crashReporter.Log($"[MainViewModel.InitializeAsync] Auto-reinstalling ReShade for {toReinstall.Count} WindowsApps game(s) after path update");
-                    _ = Task.Run(async () =>
-                    {
-                        foreach (var card in toReinstall)
-                        {
-                            try
-                            {
-                                _crashReporter.Log($"[MainViewModel.InitializeAsync] Auto-reinstalling ReShade for '{card.GameName}' at new path '{card.InstallPath}'");
-                                await InstallReShadeInternalAsync(card, forceFilename: null);
-                            }
-                            catch (Exception ex)
-                            {
-                                _crashReporter.Log($"[MainViewModel.InitializeAsync] Auto-reinstall failed for '{card.GameName}' — {ex.Message}");
-                            }
-                        }
-                    });
-                }
-            }
+            // Auto-reinstall ReShade for WindowsApps games whose path changed during this build
+            ReinstallPendingWindowsAppsReShade("InitializeAsync");
+            // Manifest noAddonReShadeGames: ReShade without add-ons by default (once per game)
+            ApplyManifestNoAddonReShade("InitializeAsync");
 
             // Apply manifest DLL name overrides to any existing installs whose filenames don't match
             ApplyManifestDllRenames();

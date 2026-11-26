@@ -3,18 +3,168 @@
 1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) and choose **Generate new token (classic)**. Any name and expiry will do; leave every box unticked.
 2. In RHI open **Settings → Accounts & Data → GitHub token**, paste it and click **Save**.
 
-## v2.9.6 Beta 2
+## v2.9.6.3 Beta 1
 
 ### New
-- **Your Steam library artwork in Spotlight.** The covers and banners you've set for your games in Steam now show in Spotlight too, including games from other stores that you've added to Steam as non-Steam games. Art you pick in RHI still comes first. Turn it off in Settings › Accounts & Data › Artwork.
-- **Missing artwork filled in from SteamGridDB.** If you've added a SteamGridDB API key, games Steam has no cover or banner for get the top-rated one from SteamGridDB. Turn it off in Settings › Accounts & Data › Artwork.
-- **Texture Filtering in Driver Settings.** Three new per-game NVIDIA settings from Profile Inspector: LOD Bias, Anisotropic Filtering and texture filtering Quality. A negative LOD bias sharpens the blurry textures some games' DLSS leaves behind (Dead Space Remake, the RE4 DLSS mod); the list marks a starting value for each DLSS mode. RHI also turns on the transparency supersampling setting DX10, DX11 and DX12 games need for the bias to work. Anisotropic Filtering forces 2x to 16x, and High Quality turns off the driver's texture filtering shortcuts.
+- **ReShade menu position.** Settings › ReShade › Keys and screenshots has a new ReShade menu position setting: ReShade default, Left or Right. Left or Right docks ReShade's menu on that side of the screen in every game, for example on the right so it doesn't cover a frame rate display on the left. It applies whenever RHI writes a game's reshade.ini, or to every game at once with Write these to all games (close the games first). A game where you undocked the menu or arranged it another way keeps your layout.
+- **Legacy No Addons ReShade channel.** The ReShade ⚙ › ReShade channel list has a new choice, Legacy No Addons..., for an older ReShade version without add-on support (for games whose anti-cheat blocks add-ons and that need an older ReShade). Pick a version and RHI downloads it, installs it and keeps the game on it: it is left out of ReShade updates, like the other legacy versions. As with the No Addons channel, RenoDX, ReLimiter and Display Commander need add-ons and are removed from the game. Not available for Vulkan games.
 
 ### Changes
-- ReLimiter v4 can now be picked in every game in the ReLimiter cog › Version, including 32-bit, Vulkan, DXVK and OpenGL games. v4 is only tested in 64-bit DirectX 12, so these games stay on v3 unless you choose v4, and the cog says it's untested there.
+- **Game Overrides is gone.** Its settings have been in their new places since 2.9.6, and those are now the only places:
+  - Game name, Bitness, Graphics API, Launch executable and arguments, and Reset: the game's ⚙ beside its name.
+  - Wiki mod name and wiki lookup: the RenoDX ⚙ (Mod matching).
+  - ReShade channel, ReShade DLL name, Shaders, Addons and Select ReShade Preset: the ReShade ⚙.
+  - Display Commander and OptiScaler DLL names: their own ⚙.
+  - Update inclusion: the Update All row in each component's ⚙.
+- Spotlight: Tune this game now has six tiles, three per row: Extras, DLSS / Streamline and Driver Settings, then Neural Rendering, Experimental and Management.
+- The Launch button's menu (Executable, Launch arguments) now opens the game's settings, where those two are set.
+- **Smaller download.** RHI is about a quarter smaller (128 MB instead of 175 MB), so the installer and every update download faster. Windows machine-learning files that RHI never used are no longer included.
+- **Faster start.** RHI's game list is up to date about two seconds sooner after launch: add-on update checks now run together and alongside the game scan instead of holding it up, the ReShade and Luma pages are each downloaded once instead of twice, and install records are read once instead of once per game.
+- RHI no longer hitches for about half a second when the scan at launch finishes: DLSS files are now read in the background instead of while the window is being updated.
+- The selected game's page now redraws its component rows once after a change instead of hundreds of times, which makes startup and the moment after an install or uninstall smoother.
+- Update checks are several seconds quicker, both the background ones and Check for updates: checks that don't depend on each other now run at the same time, and each shader pack is checked once per pass rather than once for every game that uses it.
+- Add-on update checks use fewer of GitHub's hourly requests (an unchanged release costs none) and keep working from the last answer while GitHub's limit is used up.
+- Launching RHI no longer rewrites files that haven't changed: OptiScaler's Streamline files in game folders, HSF's list of installed files and RHI's add-on record are only written when something is different.
 
 ### Bug Fixes
+- Fixed new RE Framework versions not being noticed until RHI was restarted, which mattered when RHI sat in the tray for days.
+- Fixed Luma mods that are only on Luma's releases page (not its wiki) no longer matching their games after the first background update check, until the next Refresh.
+- Fixed RHI sometimes losing track of an add-on it put in a game when several games changed in the same pass, which could leave an old add-on file behind in that game.
+- Fixed a RenoDX install record staying behind when the game's name or folder differed from the record only in upper and lower case.
+- Fixed session logs missing their first lines when RHI was started with Admin Mode on.
+- Several of RHI's saved files (add-on versions, Nexus update baselines, new-mod markers, chosen artwork, window position and others) could be left cut off by a crash or power cut mid-save. They are now saved in one step.
+
+### Maintenance
+- Session logs are about 20% smaller: large diagnostic dumps are only written with verbose logging on.
+- Folder paths that come from the online manifest (DLSS and Streamline locations, games split into several entries) are checked to stay inside the game's folder.
+- DLSS detection's saved paths are now safe to use from several scans at once.
+- The installer no longer picks up leftover .old, .tmp or .bak files.
+- RHI's saved GitHub answers (several MB) are loaded in the background at launch and only saved again when something changed.
+
+## v2.9.6.2
+
+### New
+- **RTX Video in Settings.** Settings › Display & HDR now has the NVIDIA App's video settings, for videos in browsers and video players: RTX Video Super Resolution (Off, Auto or a fixed quality) and RTX Video HDR (with peak brightness, middle grey, contrast and saturation). Changes apply straight away, without opening the NVIDIA App. Needs the NVIDIA App and an RTX graphics card; Video HDR also needs Windows HDR on.
+- **Monitors in Settings.** Settings › Display & HDR now lists every monitor you have connected: change its resolution and refresh rate, and turn Windows HDR on or off for that monitor alone. It also shows the exact refresh rate in use. A resolution or refresh rate you don't keep within 15 seconds goes back by itself, so a monitor that goes blank fixes itself.
+- **CRCGI global illumination (Experimental).** Adds bounced light and soft contact shadows to your games: light from lit surfaces spills onto everything around them. CRCGI is a ReShade effect by FlibbertigibbetLollygagger, with an add-on that hands it the game's own buffers so it can leave the UI and fog alone. Install it from Experimental › Global Illumination and RHI sets it up, turns it on and keeps it updated. Its ⚙ has the main settings (strength, shadows, quality and more), the author's own preset for games that have one (Batman: Arkham Knight, The Witcher 3) and a reset; everything else is in ReShade's overlay. Works in DirectX 10, 11 and 12, Vulkan and OpenGL games (DirectX 9 through DXVK), 32 and 64-bit. Single player only.
+
+### Changes
+
+**HSF**
+- Ready for HSF 0.10 and its new XeMFG engine (Intel's frame generation). Installing HSF now asks whether to add Universal MFG Unlocker too, on every RTX card including RTX 50, because XeMFG needs it for 3x to 6x. Picking XeMFG in HSF's ⚙ also offers it if the game doesn't have it yet. In 64-bit DirectX 12 games it goes in as version.dll, the only name HSF loads it under there.
+
+**ReShade**
+- Games whose anti-cheat blocks ReShade's add-on support now get ReShade without add-ons automatically, starting with HELLDIVERS 2. It happens once per game: an add-on ReShade already there is swapped (along with RenoDX, ReLimiter and Display Commander, which need add-ons), and if you switch the game back in ReShade's ⚙, your choice stays.
+
+**ReLimiter**
+- New **Pacing preference** in Settings › Components › ReLimiter (Lower latency, Balanced or Smoother), the same setting as in ReLimiter v4's overlay. New ReLimiter v4 installs get it, and Write to all ReLimiter games puts it in every game with ReLimiter v4.
+- New **Save to global relimiter.ini** button: saves your ReLimiter settings for new installs only, leaving games that already have ReLimiter as they are. The settings there now show what that file holds. Write to all ReLimiter games works as before.
+- The frame rate cap now shows **Auto VRR** instead of Off, as ReLimiter itself does since 4.0.4: it follows your display's VRR range.
+
+**BFI Presenter**
+- BFI Presenter's ⚙ can now give its presenter realtime GPU priority, which stops flicker in GPU-heavy moments, without needing BFI Presenter's Manager. Choose Allow for my account (one administrator prompt, then sign out of Windows and back in). Presenter GPU priority (Normal, High or Realtime) sets it per game.
+
+**General**
+- Screenshots from Steam, the NVIDIA App, Game Bar or any other tool can now show in a game's Screenshots panel and in the RHI overlay: press **Choose folder…** in the Screenshots panel and pick the folder that tool saves to. Each game keeps its own folder; Use default goes back to ReShade's.
+- Game Overrides now goes away in RHI 2.9.6.3 (it said 2.9.8). Its settings are already in their new places.
+- Scrungus, who made RHI's database of RenoDX mods, is now in the About page's credits.
+
+### Bug Fixes
+
+**General**
+- Fixed OptiScaler Nightly never updating: RHI reinstalled the build it already had and offered the same update again on every check. It now downloads the new nightly first.
+- Fixed games given a ReShade file name by RHI, such as 007 First Light (dinput8.dll), having ReShade renamed to dxgi.dll on every start and back a few seconds later. A game started in those seconds could load ReShade under the wrong name.
+- Fixed a file RHI couldn't delete while removing a mod (usually because the game was still running) being left behind as if it were the game's own, so RHI never removed it later.
+- Fixed games on RHI's anti-cheat list not being treated as such until you pressed Refresh: DXVK wasn't blocked in them and the anti-cheat warnings didn't show.
+- Fixed HDR switching on Windows 11 24H2 and later: RHI saw HDR as on whenever Auto Colour Management was on, and switched Auto Colour Management instead of HDR. Turning HDR on for a game, and off again afterwards, now works as it should.
+- Fixed the DXVK update badge disappearing shortly after start, and DOF Fix sometimes showing the wrong status until Refresh.
+
+**NVIDIA settings**
+- Fixed driver settings and DLSS presets from RHI not reaching some games, such as FINAL FANTASY VII REBIRTH. NVIDIA has two profiles for these games with nearly the same name, and RHI was changing the one the game doesn't use.
+- Fixed a game's Driver Settings not showing the FPS limit change after installing or removing ReLimiter or Display Commander, until you picked another game and came back.
+- Fixed the Neural Rendering column in DLSS / Streamline staying greyed out after adding the NR DLL from Universal MFG Unlocker's, MFG Unlock's or RTX Encore's ⚙, until you picked another game.
+
+**ReShade and mods**
+- Fixed installing DLSS5 Feeder from Neural Rendering removing the game's other ReShade shaders. Feeder's shader is now added alongside them. If Feeder already did this in a game, set its shaders back to Global in ReShade's ⚙ › Shaders.
+- Fixed HSF 0.10 showing PROBLEM: "ReShade's Generic Depth add-on is off". Generic Depth now stays on in every game with HSF, and goes back off when HSF is removed.
+- Fixed iMMERSE LaunchPad sometimes sitting below HSF's effects after a new HSF install. It now goes to the top straight away.
+- Fixed removing HSF leaving HSF_safe_try.ini behind (HSF's logs are kept on purpose).
+
+### Manifest Updates
+- HELLDIVERS 2 now gets ReShade without add-on support by default, because its anti-cheat blocks add-on ReShade.
+- Fixed PCGamingWiki info (engine, graphics API, config folders) missing for about 970 games with accents, ™ / ® or Japanese / Chinese characters in their names, such as Sekiro™: Shadows Die Twice, Stellar Blade™ and games made with LÖVE.
+
+## v2.9.6.1
+
+### Changes
+- **One notice for ReLimiter v4 with frame generation mods.** Installing ReLimiter v4 in a game with Universal MFG Unlocker, MFG Ada Unlock, 20/30 FG Unlock or DLSS Enabler no longer says it won't work. Instead you get one notice: they aren't guaranteed to work together, but work on making them compatible is ongoing. Choose Continue or Cancel, or tick Don't show this again. The Dynamic MFG warning hasn't changed.
+
+## v2.9.6
+
+### New
+- **Experimental section.** A new section for features that are new and still being tested, in Classic+, Tabs and Spotlight (between Neural Rendering and Management). Each item says what it needs before you install it, and removes cleanly.
+- **FrameWarp (Experimental).** Turning and moving feel as smooth as your display's refresh rate, whatever frame rate the game runs at: on every refresh, FrameWarp (XPAR) by xPoiler re-projects the game's newest frame to where the camera is now, and its own frame generation keeps moving characters smooth too. Works in 64-bit DirectX 12, DirectX 11 and Vulkan games, and uses the game's DLSS or FSR when it has them. RHI installs and updates it and sets up Unreal Engine games for it; for Unreal Engine games with DLSS it also adds the launch options -slforcetagging -slviewextension to RHI's launch arguments (add them to Steam's launch options too if you start the game there). Before installing, it warns you about anything in FrameWarp's way: a frame rate limiter (ReLimiter, Display Commander, or the NVIDIA limit, which it can turn off for the game), GPU scheduling being off, or a missing Visual C++ runtime. On NVIDIA cards its ⚙ can also add NVIDIA Latewarp (Reflex 2 Frame Warp). Run the game in a borderless window and use the XPAR tab in ReShade's overlay. Single player only.
+- **URTI (Experimental).** URTI by Skynizz adds ray-traced reflections to DirectX 12 games that don't have them: puddles, wet streets, windows and polished floors. RHI installs, updates and switches it on, so it works as soon as the game starts; F7 turns it on and off in the game. Its ⚙ has URTI's settings, with a button to go back to the recommended profile. Needs a 64-bit DirectX 12 game, ReShade 6.8 or newer with add-on support, and a ray tracing graphics card (NVIDIA RTX 20 or newer, AMD RX 6000 or newer). Only tested in Red Dead Redemption 2 so far, and it doesn't draw while HSF is in the same game (RHI warns you). Single player only.
+- **G-SYNC on each monitor.** A new ⚙ beside Settings › Driver Settings › G-Sync lists your monitors and lets you allow G-SYNC on each one. It's the same switch as in the NVIDIA app (System › Displays), which G-SYNC Compatible monitors that NVIDIA hasn't validated need before G-SYNC works on them; RHI's G-Sync setting couldn't turn it on for those monitors. Changes save straight away and apply when the graphics driver next starts: restart Windows, or use Restart driver now (screens go black for a few seconds; needs Admin Mode). A driver restart resets GPU overclocks and undervolts (MSI Afterburner, the NVIDIA app's Performance tuning), so reapply them afterwards.
+- **DLSS 5 with MFG Unlock.** MFG Unlock 1.12.0 can run NVIDIA's DLSS 5 neural rendering in DirectX 12 and Vulkan games, and its ⚙ has a new DLSS 5 section to turn it on. RHI puts NVIDIA's nvngx_dlssnr.dll beside the game's exe for it (MFG Unlock doesn't include it) and takes it out again when you turn DLSS 5 off or remove MFG Unlock, unless something else still uses it. Restart the game once after turning it on; Ctrl+F8 then turns it on and off in the game. The ⚙ warns when another DLSS 5 add-on is installed, because MFG Unlock's DLSS 5 stands aside while one is loaded.
+- **Texture Filtering in Driver Settings.** Three new per-game NVIDIA settings from Profile Inspector: LOD Bias, Anisotropic Filtering and texture filtering Quality. A negative LOD bias sharpens the blurry textures some games' DLSS leaves behind (Dead Space Remake, the RE4 DLSS mod), and the list marks a starting value for each DLSS mode. RHI also turns on the transparency supersampling setting DirectX 10, 11 and 12 games need for the bias to work. Anisotropic Filtering forces 2x to 16x, and High Quality turns off the driver's texture filtering shortcuts.
+- **HSF frame generation engine.** HSF builds with XeMFG (Intel's XeSS frame generation, run inside DLSS-G) get an Engine choice in HSF's ⚙: DLSS-G or XeMFG. It applies the next time the game starts. XeMFG needs Universal MFG Unlocker for 3x to 6x on every RTX card, RTX 50 included; without it XeMFG stays at 2x, and the ⚙ says so.
+- **HSF test builds by drag and drop.** Drop an HSF build's zip on RHI, straight from Discord or as a saved file, and pick the game. RHI installs it like a release, keeps your HSF settings, and leaves it in place until the next HSF release instead of putting the current release back over it. A build set to XeMFG offers Universal MFG Unlocker too.
+- **Your Steam library artwork in Spotlight.** The covers and banners you've set for your games in Steam now show in Spotlight, including games from other stores that you've added to Steam as non-Steam games. Art you pick in RHI still comes first. Turn it off in Settings › Accounts & Data › Artwork.
+- **Missing artwork filled in from SteamGridDB.** With a SteamGridDB API key added, games Steam has no cover or banner for get the top-rated one from SteamGridDB. Turn it off in Settings › Accounts & Data › Artwork.
+
+### Changes
+
+**ReLimiter**
+- ReLimiter v4 is now the default for every game on an NVIDIA card, whatever its graphics API: 32-bit, Vulkan, DXVK, OpenGL and DirectX 9, 10 and 11 games move to v4 on their next update, like DirectX 12 games. v4 is only tested in 64-bit DirectX 12, so ReLimiter's ⚙ › Version says when it's untested in a game; pick v3 there if it doesn't work well. PCs without an NVIDIA card stay on v3.
+- Games moving between v3 and v4, and new v4 installs, get your relimiter.ini template instead of a file with only RHI's settings, without the settings only the other version uses. Deploy relimiter.ini does the same for the version installed in the game.
+- Installing ReLimiter v4 warns first in games where it won't work as intended: when Dynamic Multi Frame Generation (DMFG) is on in the game's NVIDIA driver settings (turn it off in DLSS / Streamline › Multi Frame Gen), or when Universal MFG Unlocker, MFG Ada Unlock, 20/30 FG Unlock or DLSS Enabler is installed from Extras. Choose Install anyway to go ahead. ReLimiter's ⚙ › Version shows the same warnings.
+- Allowing or removing PC Latency in Settings › Components › ReLimiter now turns it on or off straight away in every game that has ReLimiter v4, instead of at each game's next ReLimiter update. Games running at the time keep their setting until ReLimiter next updates in them.
+- Settings › Components › ReLimiter has keys for Previous / Next OSD preset, Move OSD, Blackout other monitors and OLED Care. They show what's in ReLimiter's shared presets file and save there straight away; Write to all ReLimiter games also puts them in every game's relimiter.ini.
+
+**Game Overrides is moving**
+- Game Overrides goes away in RHI 2.9.8. Each of its settings is already where you'd look for it, and until then a change in either place shows in both:
+- The game's settings ⚙ (next to its name) has Game name, Bitness, Graphics API, Launch executable and arguments, and Reset this game's settings (the same as Reset Overrides), in four groups: Game, Launching, Overlay and display, and Reset. Launch options also save when you press Enter.
+- Every component's ⚙ (ReShade, RenoDX, ReLimiter, Display Commander, OptiScaler, RE Framework, DXVK) has an Update All row, Include or Exclude, in place of Game Overrides › Update inclusion.
+- ReShade's ⚙ is reorganised into Setup (Graphics API, ReShade channel, ReShade DLL name, Load ReShade as ASI), Shaders and addons (Shaders, Addons, Select ReShade Preset), Hotkeys, Updates (Update All, Keep ReShade.ini updated) and Files.
+- The RenoDX ⚙ has a Mod matching section with the wiki mod name and wiki lookup.
+- Display Commander's ⚙ and OptiScaler's ⚙ have their DLL name.
+- What Game Overrides' summary used to list now shows where it belongs, in every layout: a component's overrides (ReShade channel, shaders and addons, DLL names, left out of Update All) on its card in Overview and Spotlight's What's installed, in brackets after its version in the Components summary, and on OptiScaler's row in Extras. A Graphics API override shows as the API tag in the game's header, marked (override), and a Launch args tag appears when launch arguments are set (hover it to see them).
+
+**General**
+- What's New now starts with what changed since the version you had, so after a beta update you can see what's different without checking GitHub. The full notes for the version follow underneath as before.
+- When GitHub stops accepting your GitHub token (it expired or was revoked), RHI tells you in a pop-up instead of only a line in the status bar, with a link to make a new token and a button to Settings. It shows once per token.
+- DLDSR's Apply warns that the graphics driver restart resets GPU overclocks and undervolts (MSI Afterburner, the NVIDIA app's Performance tuning), so you can reapply them afterwards. Applying DLDSR smoothness, which restarts the driver too, now asks first with the same warning.
+
+**Spotlight**
+- The side panel has previous and next arrows at the top, so you can move between Components and the Tune this game sections without closing it. Hover an arrow to see which section it opens.
+- Drag the side panel's left edge to make it wider or narrower (double-click the edge to go back to the automatic width). Only the width changes; text and controls stay the same size.
+- The Filters button opens the engine, mod and saved-search filters in a small pop-up beside it, so the window's layout no longer changes when you open them.
+- What's installed shows each component's version and overrides in green, like the Tune this game tiles.
+
+**Extras**
+- Extras has a Detailed / Compact switch at the top (Tabs and Spotlight). Compact shows just each item's name, status and buttons, so the list takes far less room; hover a name for its details.
+
+### Bug Fixes
+
+**Components**
+- Fixed RHI's peak brightness not applying to Unity RenoDX mods, and RHI removing a toneMapPeakNits line you added to reshade.ini yourself. Unity mods spell the setting toneMapPeakNits while other mods use ToneMapPeakNits, and RHI only wrote the second. RHI now writes the spelling the installed mod uses (from Settings, the RenoDX ⚙ and Deploy ReShade.ini) and removes the other spelling older versions added.
+- Fixed switching or removing a Neural Rendering method deleting nvngx_dlssnr.dll even when the NR Cost Scaler wasn't installed, which took the DLL away from other components still using it (such as MFG Unlock's DLSS 5).
+- Fixed RHI's VRR frame rate caps for ReLimiter (its ⚙ and Settings) and Display Commander sometimes being one higher than ReLimiter's own VRR Cap, so picking it in one showed as Custom in the other. RHI now works the caps out from your display's exact refresh rate as ReLimiter does: a 240Hz display running at 239.96Hz gives 223, not 224. The 200Hz and 500Hz caps are now 188 and 430, ReLimiter's numbers too.
+- Fixed ReLimiter's overlay key not working when set to a numpad, arrow or punctuation key (RHI wrote names like Num2 that ReLimiter doesn't recognise).
+- Fixed choosing -------- for Display Commander's DLL name not clearing the saved name when Display Commander wasn't installed.
+
+**General**
+- Fixed the Refresh button not checking for component updates when Settings › General › Background checks is Minimal (and, with it On, until the hourly check was due), so new versions such as a ReLimiter release didn't show and the last check time didn't move. Refresh now always checks, like Check for updates in Settings.
+- Fixed dropping an archive link (for example from Discord) doing nothing when it couldn't be downloaded, such as an expired Discord link. RHI now shows that it's downloading, and says why when it fails.
 - Fixed Spotlight artwork, the Steam Community link and PCGamingWiki details missing for games whose store name leaves out punctuation from the official title, such as Assassin's Creed Black Flag Resynced on Ubisoft Connect.
+- Fixed the DLSS / Streamline and Driver Settings summaries (Spotlight's Tune this game tiles, the Tabs layout's At a glance tiles and collapsed section headers) showing old values after changing a DLSS preset or render scale, VSync, FPS Limit or Smooth Motion, until you moved to another game.
+- Fixed the mouse wheel not scrolling Settings while the pointer was over the section list on the left or the space beside it.
+
+### Manifest Updates
+- Updated the description of SD Shaders by Starodubysko in Shaders & Addons to cover the whole pack.
+- Added an install warning for The Ascent: it now has native HDR, made by Pumbo of The HDR Den, so RenoDX shouldn't be used in it.
+- Support the Mod Authors: added Ostad (RenoDX and Luma mods) with a Ko-fi link.
 
 ## v2.9.5
 

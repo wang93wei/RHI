@@ -241,9 +241,19 @@ internal sealed partial class DetailLayoutHost
         {
             Text = Loc.GetString("Detail.ExecutablePrefix") + (string.IsNullOrWhiteSpace(exe) ? Loc.GetString("Detail.AutoDetect") : System.IO.Path.GetFileName(exe)),
         };
-        exeItem.Click += (s, e) => SelectTab("GameOverrides");
+        // Both are in the game's settings (⚙ beside its name): a side panel in Spotlight, a dialog otherwise
+        async void OpenLaunchSettings()
+        {
+            try
+            {
+                if (IsSpotlight) OpenPanel(GameSettingsKey);
+                else await ShowGameSettingsCogAsync(anchor.XamlRoot);
+            }
+            catch (Exception ex) { Services.CrashReporter.Log($"[DetailLayoutHost.LaunchMenu] Game settings — {ex.Message}"); }
+        }
+        exeItem.Click += (s, e) => OpenLaunchSettings();
         var argsItem = new MenuFlyoutItem { Text = Loc.GetString("Detail.LaunchArguments") };
-        argsItem.Click += (s, e) => SelectTab("GameOverrides");
+        argsItem.Click += (s, e) => OpenLaunchSettings();
         var shortcutItem = new MenuFlyoutItem { Text = Loc.GetString("Detail.CreateDesktopShortcut") };
         shortcutItem.Click += async (s, e) =>
         {
@@ -318,7 +328,13 @@ internal sealed partial class DetailLayoutHost
         }
         if (w.HeaderApiBadges.Visibility == Visibility.Visible)
             foreach (var badge in w.HeaderApiBadges.Children)
-                if (FirstText(badge) is { } api) _hChips.Children.Add(MakeChip(api, accent: false));
+                if (FirstText(badge) is { } api)
+                {
+                    // API tags, an API override and the Launch args tag: their tooltips come along
+                    var chip = MakeChip(api, accent: false);
+                    if (TooltipText(badge) is { } tip) ToolTipService.SetToolTip(chip, tip);
+                    _hChips.Children.Add(chip);
+                }
         if (card != null) _hChips.Children.Add(MakeChip(card.Is32Bit ? "32-bit" : "64-bit", accent: false));
         if (w.HeaderAuthorBadges.Visibility == Visibility.Visible)
             foreach (var badge in w.HeaderAuthorBadges.Children)

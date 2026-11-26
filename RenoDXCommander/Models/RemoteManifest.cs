@@ -437,6 +437,13 @@ public class RemoteManifest
     public Dictionary<string, string>? LegacyReShadeVersions { get; set; }
 
     /// <summary>
+    /// Games that get ReShade without add-on support (the No Addons channel) by default, e.g. anti-cheat that blocks
+    /// add-on ReShade. Applied once per game (MainViewModel.ApplyManifestNoAddonReShade); the user's later choice sticks.
+    /// </summary>
+    [JsonPropertyName("noAddonReShadeGames")]
+    public List<string>? NoAddonReShadeGames { get; set; }
+
+    /// <summary>
     /// Per-game launch executable overrides. When auto-detection picks the wrong exe
     /// or the game needs a specific executable, this provides a direct mapping.
     /// Key = game name, Value = relative exe path from InstallPath.
@@ -767,4 +774,11 @@ public class ManifestFeatureFlags
     /// <summary>ANR FG preset in the OptiScaler ⚙.</summary>
     [JsonPropertyName("anrFg")]
     public bool? AnrFg { get; set; }
+
+    /// <summary>
+    /// Items to take out of the Experimental section by id (e.g. "urti"), when one misbehaves. Hidden for new installs;
+    /// still shown in games that have it, so it can be removed.
+    /// </summary>
+    [JsonPropertyName("experimentalHidden")]
+    public List<string>? ExperimentalHidden { get; set; }
 }

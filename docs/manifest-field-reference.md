@@ -159,6 +159,12 @@ Routes XNA Framework games (e.g. Terraria) through a GAC symlink install instead
 Auto-assigns a locked legacy ReShade channel per game (e.g. `"Max Payne 3": "6.4.1"`). Never overwrites existing user overrides.
 - `MainViewModel.Init`, `BackgroundScan` → calls `SetReShadeChannelOverride(gameName, version)` if no existing override (checks both name-only and composite keys)
 
+### `noAddonReShadeGames` — `List<string>` (RHI 2.9.6.2+)
+Games that get ReShade **without add-on support** (the No Addons channel) by default, e.g. `HELLDIVERS™ 2`, whose anti-cheat blocks add-on ReShade. Names must match the detected name exactly (`™` included).
+- `MainViewModel.NoAddonReShade.cs` `ApplyManifestNoAddonReShade`, called from both init paths after the cards are built.
+- Applied **once per game** (`GameNameService.ManifestNoAddonApplied`, settings.json `ManifestNoAddonApplied`, `Game|Store` keys): a user who switches back to add-on ReShade keeps that. A game the user already set up (No Addons, or a channel / legacy / custom pick) is only marked; Vulkan games are skipped (shared layer); a running game is retried next start.
+- An add-on ReShade already installed there is swapped at once: `SetUseNormalReShade` removes it with the components that need add-ons (managed add-ons, RenoDX, ReLimiter, Display Commander), then ReShade is installed again without add-ons.
+
 ### `legacyReShadeAvailable` — `List<string>`
 List of version strings shown in the legacy ReShade version picker dialog. Server-managed.
 - `DetailPanelBuilder.Overrides.RsChannel` → RS channel picker, populates `RadioButtons` in the `"Legacy..."` selection dialog
@@ -346,11 +352,17 @@ Override base download URLs for components. Active keys:
 - `"ueExtended"` → UE-Extended addon download URL (`MainViewModel.Install.UeExtendedUrl`)
 - `"ueDofFix"` → DOF Fix URL override (`DofFixService.ManifestUrlOverride`, set at Init/BackgroundScan)
 - `"dc"` → Display Commander releases API URL (`DcReleasesApiUrlOverride`, set at Init/BackgroundScan)
+- `"latewarp"` + `"latewarpSha256"` → where FrameWarp's optional NVIDIA Latewarp (`nvngx_latewarp.dll`, a zip containing it or the DLL) is downloaded from, and the DLL's SHA256 (`FrameWarpService.ApplyManifestUrls`, all three init paths). Both are needed and the link must be https; otherwise the built-in link and hash are used. The DLL is only installed when its hash matches.
 - `"unity64"` / `"unity32"` → generic Unity addon links (`WikiService.ApplyManifestUnityUrls`, applied in the cache, Init and BackgroundScan paths; absolute http(s) only, otherwise the built-in link). `ModInstallService.ResolveSnapshotUrl` maps `renodx-unityengine.addon64/32` to these by file name, so installs, update checks, old records and per-game `snapshotOverrides` with that file name all follow them. Built-in defaults (Nov 2026): 64-bit `https://notvoosh.github.io/renodx/renodx-unityengine.addon64`, 32-bit the old release link (the Pages 32-bit file was 404).
 
 ---
 
 ## Other Fields
+
+### `featureFlags` — `ManifestFeatureFlags`
+Switches features on or off for everyone without a release (`Services/FeatureFlags.cs`, applied in the cache, Init and BackgroundScan paths). `unlock.txt` turns the boolean ones on locally.
+- `dlssNr`, `nexusMods`, `resolutionControl`, `hsf`, `anrFg`: `bool`
+- `experimentalHidden`: `string[]` of Experimental section item ids to pull (currently `"urti"`). A pulled item isn't offered for new installs; games that have it still show its row, for removal only (`FeatureFlags.IsExperimentalHidden`). Not affected by `unlock.txt`. Ids: `urti`, `framewarp`.
 
 ### `version` — `int`
 Manifest version integer. Logged on every `ApplyManifest` call for diagnostics.

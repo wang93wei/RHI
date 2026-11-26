@@ -98,6 +98,9 @@ public interface IGameNameService
     /// <summary>Games configured to use normal (non-addon) ReShade.</summary>
     HashSet<string> NormalReShadeGames { get; }
 
+    /// <summary>Games the manifest's noAddonReShadeGames default was applied to (once each).</summary>
+    HashSet<string> ManifestNoAddonApplied { get; }
+
     /// <summary>Games where reshade.ini auto-update is locked. Composite-keyed "GameName|Store".</summary>
     HashSet<string> RsIniLockedGames { get; }
 
@@ -131,6 +134,8 @@ public interface IGameNameService
     Dictionary<string, string> OsNightlyBuild { get; }
     /// <summary>Per-game pinned ReLimiter version. Key = "GameName|Store", Value = release tag. Absent = Latest.</summary>
     Dictionary<string, string> UlPinnedVersion { get; }
+    /// <summary>Per-game custom screenshot folder. Key = "GameName|Store", Value = folder path. Absent = ReShade's folder.</summary>
+    Dictionary<string, string> ScreenshotFolderOverrides { get; }
     /// <summary>Per-game ReLimiter major version choice ("3" / "4"). Absent = Automatic.</summary>
     Dictionary<string, string> UlMajorChoice { get; }
     /// <summary>Per-game NR runtime version override. Key = "GameName|Store", Value e.g. "310.8.2". Absent = default.</summary>

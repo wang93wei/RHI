@@ -125,8 +125,8 @@ public partial class DetailPanelBuilder
 
         nrHeaderRow.PointerEntered += (s, e) => nrTitle.Foreground = UIFactory.Brush(ResourceKeys.AccentTealBrush);
         nrHeaderRow.PointerExited  += (s, e) => nrTitle.Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush);
-        var nrHandCursor  = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Hand);
-        var nrArrowCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        var nrHandCursor  = HandCursor;
+        var nrArrowCursor = ArrowCursor;
         var nrCursorProp  = DetailPanelBuilder.CursorProp;
         nrHeaderRow.PointerEntered += (s, e) => nrCursorProp?.SetValue(nrHeaderRow, nrHandCursor);
         nrHeaderRow.PointerExited  += (s, e) => nrCursorProp?.SetValue(nrHeaderRow, nrArrowCursor);
@@ -1414,22 +1414,8 @@ public partial class DetailPanelBuilder
 
             try
             {
-                // Pre-seed PerGameShaderSelection before installing ReShade so the
-                // SyncGameFolder call inside InstallReShadeAsync deploys shaders correctly
-                // instead of wiping them (it reads ShaderModeOverride at call time).
-                if (selKey == NrMethodFeeder)
-                {
-                    var preGameKey = Models.GameKey.From(card.GameName, card.Source ?? "").ToKey();
-                    var preCurrent = _gameNameService.PerGameShaderSelection.TryGetValue(preGameKey, out var preSel)
-                        ? preSel.ToList() : new List<string>();
-                    if (!preCurrent.Contains("DLSS5Feeder", StringComparer.OrdinalIgnoreCase))
-                        preCurrent.Add("DLSS5Feeder");
-                    if (!preCurrent.Contains("LumeniteFX", StringComparer.OrdinalIgnoreCase))
-                        preCurrent.Add("LumeniteFX");
-                    _gameNameService.PerGameShaderSelection[preGameKey] = preCurrent;
-                    _window.ViewModel.SetPerGameShaderMode(card.GameName, "Select", card.Source ?? "");
-                    card.ShaderModeOverride = "Select";
-                }
+                // Feeder's shaders are component files (FeederShaders): the game's shader mode and selection
+                // are left alone (issue #182: switching it to Select wiped a Global game's shaders).
 
                 // Ensure ReShade is installed first — all NR methods require it
                 if (!card.IsRsInstalled)
