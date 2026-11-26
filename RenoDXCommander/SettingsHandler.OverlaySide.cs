@@ -44,22 +44,17 @@ public partial class SettingsHandler
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
             row.Children.Add(new TextBlock
             {
-                Text = "ReShade menu position",
+                Text = Loc.GetString("Settings.OverlaySide.Label"),
                 Style = FindStyle("SettingsLabelStyle"),
                 VerticalAlignment = VerticalAlignment.Center,
             });
 
             var combo = new ComboBox { Style = FindStyle("SettingsComboStyle") };
-            combo.Items.Add(new ComboBoxItem { Content = "ReShade default" });
-            combo.Items.Add(new ComboBoxItem { Content = "Left" });
-            combo.Items.Add(new ComboBoxItem { Content = "Right" });
+            combo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Settings.OverlaySide.DefaultOption") });
+            combo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Settings.OverlaySide.Left") });
+            combo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Settings.OverlaySide.Right") });
             combo.SelectedIndex = OverlaySideIndex(ViewModel.Settings.RsOverlaySide);
-            ToolTipService.SetToolTip(combo,
-                "The side of the screen ReShade's menu opens on, in every game.\n"
-              + "ReShade default: RHI leaves each game's layout alone (ReShade starts on the left).\n"
-              + "Left / Right: RHI docks the menu on that side, for example on the right so it doesn't cover a frame rate display on the left.\n"
-              + "A game where you undocked the menu or arranged it another way keeps your layout.\n"
-              + "Applies the next time RHI writes a game's reshade.ini, or straight away with Write these to all games. Close the game first: ReShade saves its own layout when it exits.");
+            ToolTipService.SetToolTip(combo, Loc.GetString("Settings.OverlaySide.Tooltip"));
             combo.SelectionChanged += (s, e) =>
             {
                 if (combo.SelectedIndex < 0) return;
@@ -75,8 +70,7 @@ public partial class SettingsHandler
             column.Children.Insert(column.Children.IndexOf(anchorRow) + 1, row);
             _overlaySideCombo = combo;
 
-            ToolTipService.SetToolTip(_window.ApplyHotkeyBtn,
-                "Writes the overlay key, screenshot key, screenshot folder, effect list style, built-in add-ons setting and ReShade menu position into every game's reshade.ini. Skips hidden games and games set to keep their own reshade.ini.");
+            ToolTipService.SetToolTip(_window.ApplyHotkeyBtn, Loc.GetString("Settings.OverlaySide.ApplyHotkey.Tooltip"));
         }
         catch (Exception ex)
         {

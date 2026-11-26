@@ -18,8 +18,22 @@ public partial class SettingsHandler
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _rvSliderTimer;
     private Func<Task>? _rvPendingSlider;
 
-    private static readonly string[] RvSrModes = { "Off", "Auto", "Very low", "Low", "Medium", "High" };
-    private static readonly string[] RvPriorities = { "Low", "Medium", "High" };
+    private static string[] RvSrModes() => new[]
+    {
+        Loc.GetString("Option.Off"),
+        Loc.GetString("Settings.RtxVideo.Mode.Auto"),
+        Loc.GetString("Settings.RtxVideo.Mode.VeryLow"),
+        Loc.GetString("Settings.RtxVideo.Mode.Low"),
+        Loc.GetString("Settings.RtxVideo.Mode.Medium"),
+        Loc.GetString("Settings.RtxVideo.Mode.High"),
+    };
+
+    private static string[] RvPriorities() => new[]
+    {
+        Loc.GetString("Settings.RtxVideo.Priority.Low"),
+        Loc.GetString("Settings.RtxVideo.Priority.Medium"),
+        Loc.GetString("Settings.RtxVideo.Priority.High"),
+    };
 
     private void EnsureRtxVideoCard()
     {
@@ -41,11 +55,10 @@ public partial class SettingsHandler
             var outer = new StackPanel { Spacing = 10 };
             card.Child = outer;
             var head = new StackPanel { Spacing = 3 };
-            head.Children.Add(new TextBlock { Text = "RTX Video", Style = FindStyle("SettingsCardTitleStyle") });
+            head.Children.Add(new TextBlock { Text = Loc.GetString("Settings.RtxVideo.Title"), Style = FindStyle("SettingsCardTitleStyle") });
             head.Children.Add(new TextBlock
             {
-                Text = "RTX Video Super Resolution and RTX Video HDR for videos in browsers and video players, not games. "
-                     + "These are the NVIDIA App's System › Video settings; changes apply straight away.",
+                Text = Loc.GetString("Settings.RtxVideo.Intro"),
                 Style = FindStyle("SettingsCardDescStyle"),
                 TextWrapping = TextWrapping.Wrap,
             });
@@ -70,7 +83,7 @@ public partial class SettingsHandler
     {
         if (_rvBody == null) return;
         int id = ++_rvLoadId;
-        if (_rvBody.Children.Count == 0) SetRtxVideoMessage("Reading the driver's settings...");
+        if (_rvBody.Children.Count == 0) SetRtxVideoMessage(Loc.GetString("Settings.RtxVideo.Reading"));
         RtxVideoState? state = null;
         bool hasApp = false;
         try
@@ -85,8 +98,8 @@ public partial class SettingsHandler
         if (state == null || (!state.SrSupported && !state.HdrSupported))
         {
             SetRtxVideoMessage(hasApp
-                ? "Not available: needs an NVIDIA RTX graphics card with a recent driver."
-                : "Needs the NVIDIA App (and an NVIDIA RTX graphics card). RHI changes these settings through the NVIDIA App's files.");
+                ? Loc.GetString("Settings.RtxVideo.NotAvailable")
+                : Loc.GetString("Settings.RtxVideo.NeedsNvidiaApp"));
             return;
         }
         BuildRtxVideoBody(state);
@@ -119,18 +132,17 @@ public partial class SettingsHandler
         _rvBody.Children.Add(grid);
 
         // ── Super Resolution ──
-        left.Children.Add(new TextBlock { Text = "Super Resolution", Style = FindStyle("SettingsHeadStyle") });
+        left.Children.Add(new TextBlock { Text = Loc.GetString("Settings.RtxVideo.SuperResolution.Heading"), Style = FindStyle("SettingsHeadStyle") });
         if (!s.SrSupported)
-            left.Children.Add(new TextBlock { Text = "Not supported on this graphics card.", Style = FindStyle("SettingsNoteStyle"), TextWrapping = TextWrapping.Wrap });
+            left.Children.Add(new TextBlock { Text = Loc.GetString("Settings.RtxVideo.SrNotSupported"), Style = FindStyle("SettingsNoteStyle"), TextWrapping = TextWrapping.Wrap });
         else
         {
             // Combo order: Off, Auto, Very low .. High  ↔  driver 0, 5, 1 .. 4
             int srIndex = s.SrMode switch { 5 => 1, >= 1 and <= 4 => s.SrMode + 1, _ => 0 };
-            var srCombo = RvCombo(RvSrModes, srIndex, "Super Resolution",
-                "Uses AI to upscale video and clean up compression artefacts in supported browsers and players. "
-                + "Auto picks the quality level from the GPU priority below; the others are fixed quality levels (Very low uses the least GPU).");
-            var prioCombo = RvCombo(RvPriorities, s.SrGpuPriority, "GPU priority",
-                "Auto mode only: how much GPU time Super Resolution may use. High allows higher quality levels.");
+            var srCombo = RvCombo(RvSrModes(), srIndex, Loc.GetString("Settings.RtxVideo.SuperResolution.Label"),
+                Loc.GetString("Settings.RtxVideo.SuperResolution.Tooltip"));
+            var prioCombo = RvCombo(RvPriorities(), s.SrGpuPriority, Loc.GetString("Settings.RtxVideo.GpuPriority.Label"),
+                Loc.GetString("Settings.RtxVideo.GpuPriority.Tooltip"));
             prioCombo.IsEnabled = srIndex == 1;
             srCombo.SelectionChanged += (_, _) =>
             {
@@ -145,46 +157,46 @@ public partial class SettingsHandler
                 int i = prioCombo.SelectedIndex;
                 if (i >= 0) _ = RtxVideoWriteAsync(() => RtxVideoService.SetGpuPriority(i), reload: false);
             };
-            left.Children.Add(SettingRow("Super Resolution", srCombo));
-            left.Children.Add(SettingRow("GPU priority", prioCombo));
-            left.Children.Add(SettingRow("Status indicator", RvIndicatorCombo(s.SrIndicator, RtxVideoService.FlagSrIndicator,
-                "Shows a small RTX VSR label on the video while Super Resolution is working.")));
+            left.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.SuperResolution.Label"), srCombo));
+            left.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.GpuPriority.Label"), prioCombo));
+            left.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.StatusIndicator.Label"), RvIndicatorCombo(s.SrIndicator, RtxVideoService.FlagSrIndicator,
+                Loc.GetString("Settings.RtxVideo.SrIndicator.Tooltip"))));
             left.Children.Add(new TextBlock
             {
-                Text = s.SrStatus is >= 1 and <= 4 ? $"Status: active (quality level {s.SrStatus})" : "Status: inactive (no video using it right now)",
+                Text = s.SrStatus is >= 1 and <= 4 ? Loc.GetString("Settings.RtxVideo.SrStatusActive", s.SrStatus) : Loc.GetString("Settings.RtxVideo.SrStatusInactive"),
                 Style = FindStyle("SettingsHelpStyle"),
                 TextWrapping = TextWrapping.Wrap,
             });
         }
 
         // ── HDR ──
-        right.Children.Add(new TextBlock { Text = "HDR", Style = FindStyle("SettingsHeadStyle") });
+        right.Children.Add(new TextBlock { Text = Loc.GetString("Settings.RtxVideo.Hdr.Heading"), Style = FindStyle("SettingsHeadStyle") });
         if (!s.HdrSupported)
         {
-            right.Children.Add(new TextBlock { Text = "Not supported on this graphics card or display.", Style = FindStyle("SettingsNoteStyle"), TextWrapping = TextWrapping.Wrap });
+            right.Children.Add(new TextBlock { Text = Loc.GetString("Settings.RtxVideo.HdrNotSupported"), Style = FindStyle("SettingsNoteStyle"), TextWrapping = TextWrapping.Wrap });
             return;
         }
-        var hdrCombo = RvCombo(new[] { "Off", "On" }, s.HdrOn ? 1 : 0, "Video HDR",
-            "Uses AI to turn SDR video into HDR in supported browsers and players. Needs Windows HDR turned on.");
-        right.Children.Add(SettingRow("HDR", hdrCombo));
+        var hdrCombo = RvCombo(new[] { Loc.GetString("Option.Off"), Loc.GetString("Option.On") }, s.HdrOn ? 1 : 0, Loc.GetString("Settings.RtxVideo.VideoHdr.Label"),
+            Loc.GetString("Settings.RtxVideo.VideoHdr.Tooltip"));
+        right.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.Hdr.Heading"), hdrCombo));
 
         int peakMin = s.HdrPeakMin > 0 ? s.HdrPeakMin : 400;
         int peakMax = s.HdrPeakMax >= peakMin ? s.HdrPeakMax : Math.Max(peakMin, 2000);
         var peak = RvSlider(peakMin, peakMax, Math.Clamp(s.HdrPeak, peakMin, peakMax), "",
-            "Brightest highlight in nits. Set it to your display's peak brightness.");
+            Loc.GetString("Settings.RtxVideo.Peak.Tooltip"));
         var mid = RvSlider(10, 100, Math.Clamp(s.HdrMiddleGrey, 10, 100), "",
-            "Brightness of mid-tones in nits. Higher makes the whole picture brighter.");
-        var contrast = RvSlider(-100, 100, Math.Clamp(s.HdrContrast, -100, 100), "%", "Contrast of the HDR picture.");
-        var saturation = RvSlider(-100, 100, Math.Clamp(s.HdrSaturation, -100, 100), "%", "Colour saturation of the HDR picture.");
-        right.Children.Add(SettingRow("Peak brightness (nits)", peak.Row));
-        right.Children.Add(SettingRow("Middle grey (nits)", mid.Row));
-        right.Children.Add(SettingRow("Contrast", contrast.Row));
-        right.Children.Add(SettingRow("Saturation", saturation.Row));
-        right.Children.Add(SettingRow("Status indicator", RvIndicatorCombo(s.HdrIndicator, RtxVideoService.FlagHdrIndicator,
-            "Shows a small RTX HDR label on the video while Video HDR is working.")));
+            Loc.GetString("Settings.RtxVideo.MiddleGrey.Tooltip"));
+        var contrast = RvSlider(-100, 100, Math.Clamp(s.HdrContrast, -100, 100), "%", Loc.GetString("Settings.RtxVideo.Contrast.Tooltip"));
+        var saturation = RvSlider(-100, 100, Math.Clamp(s.HdrSaturation, -100, 100), "%", Loc.GetString("Settings.RtxVideo.Saturation.Tooltip"));
+        right.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.Peak.Label"), peak.Row));
+        right.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.MiddleGrey.Label"), mid.Row));
+        right.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.Contrast.Label"), contrast.Row));
+        right.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.Saturation.Label"), saturation.Row));
+        right.Children.Add(SettingRow(Loc.GetString("Settings.RtxVideo.StatusIndicator.Label"), RvIndicatorCombo(s.HdrIndicator, RtxVideoService.FlagHdrIndicator,
+            Loc.GetString("Settings.RtxVideo.HdrIndicator.Tooltip"))));
         right.Children.Add(new TextBlock
         {
-            Text = "Needs Windows HDR on (Win + Alt + B). The sliders can be set while HDR is off.",
+            Text = Loc.GetString("Settings.RtxVideo.HdrHelpNote"),
             Style = FindStyle("SettingsHelpStyle"),
             TextWrapping = TextWrapping.Wrap,
         });
@@ -215,7 +227,7 @@ public partial class SettingsHandler
 
     private ComboBox RvIndicatorCombo(bool on, int flag, string tooltip)
     {
-        var combo = RvCombo(new[] { "Off", "On" }, on ? 1 : 0, "Status indicator", tooltip);
+        var combo = RvCombo(new[] { Loc.GetString("Option.Off"), Loc.GetString("Option.On") }, on ? 1 : 0, Loc.GetString("Settings.RtxVideo.StatusIndicator.Label"), tooltip);
         combo.SelectionChanged += (_, _) =>
         {
             int i = combo.SelectedIndex;
@@ -277,7 +289,7 @@ public partial class SettingsHandler
         }
         if (!ok)
         {
-            _window.ShowStatusBarMessage("RTX Video: the driver didn't accept the change. See the log for details.", TimeSpan.FromSeconds(8));
+            _window.ShowStatusBarMessage(Loc.GetString("Settings.RtxVideo.WriteFailed"), TimeSpan.FromSeconds(8));
             reload = true; // show what the driver really has
         }
         if (reload) await LoadRtxVideoCardAsync();

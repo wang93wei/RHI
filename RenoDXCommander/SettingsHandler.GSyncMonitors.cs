@@ -33,7 +33,7 @@ public partial class SettingsHandler
             Style = (Style)Application.Current.Resources["SettingsIconButtonStyle"],
             Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SettingsLabelBrush"],
         };
-        ToolTipService.SetToolTip(cog, "Allow G-SYNC on each monitor (the NVIDIA app's per-monitor G-SYNC switch).");
+        ToolTipService.SetToolTip(cog, Loc.GetString("Settings.GSync.Cog.Tooltip"));
         cog.Click += async (_, _) =>
         {
             try { await ShowGSyncMonitorsDialogAsync(); }
@@ -69,12 +69,10 @@ public partial class SettingsHandler
             return (list, saved);
         });
 
-        var cog = new CogDialog("G-SYNC Monitors", xamlRoot);
-        cog.AddIntro("Allow G-SYNC on each monitor. This is the G-SYNC switch in the NVIDIA app (System › Displays), "
-            + "which G-SYNC Compatible monitors that NVIDIA hasn't validated need before G-SYNC works on them. "
-            + "The G-Sync setting in Driver Settings can't turn it on for those monitors.");
+        var cog = new CogDialog(Loc.GetString("Settings.GSync.DialogTitle"), xamlRoot);
+        cog.AddIntro(Loc.GetString("Settings.GSync.Intro"));
         if (_gsyncRestarting)
-            cog.AddWarning("The graphics driver is restarting. Wait for it to finish before changing anything here.");
+            cog.AddWarning(Loc.GetString("Settings.GSync.RestartingWarning"));
 
         // Per monitor: the value saved in the driver profile and what the driver uses now
         var wanted = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
@@ -85,8 +83,8 @@ public partial class SettingsHandler
 
         string HelpFor(string profile) =>
             wanted[profile] == live[profile]
-                ? (live[profile] ? "G-SYNC is allowed on this monitor now." : "G-SYNC is off on this monitor now.")
-                : $"Set to {(wanted[profile] ? "allowed" : "off")}. Takes effect when the graphics driver restarts.";
+                ? (live[profile] ? Loc.GetString("Settings.GSync.Help.AllowedNow") : Loc.GetString("Settings.GSync.Help.OffNow"))
+                : (wanted[profile] ? Loc.GetString("Settings.GSync.Help.SetAllowed") : Loc.GetString("Settings.GSync.Help.SetOff"));
 
         void Refresh()
         {
@@ -95,8 +93,8 @@ public partial class SettingsHandler
             if (restartBtn != null) restartBtn.IsEnabled = isAdmin && pending && !_gsyncRestarting;
         }
 
-        cog.AddSection("Monitors");
-        if (monitors.Count == 0) cog.AddEmpty("No NVIDIA displays found.");
+        cog.AddSection(Loc.GetString("Settings.GSync.MonitorsSection"));
+        if (monitors.Count == 0) cog.AddEmpty(Loc.GetString("Settings.GSync.NoDisplays"));
         foreach (var m in monitors)
         {
             bool usable = m.VrrCapable && m.ProfileName != null;
@@ -109,10 +107,10 @@ public partial class SettingsHandler
                 if (!wanted.ContainsKey(profile!)) { wanted[profile!] = current; live[profile!] = m.LiveAllowed; }
             }
 
-            var combo = CogDialog.MakeCombo(new[] { "Allowed", "Off" }, current ? 0 : 1, isEnabled: usable && !_gsyncRestarting);
+            var combo = CogDialog.MakeCombo(new[] { Loc.GetString("Settings.GSync.AllowedOption"), Loc.GetString("Option.Off") }, current ? 0 : 1, isEnabled: usable && !_gsyncRestarting);
             string help = !m.VrrCapable
-                ? "This monitor doesn't report variable refresh rate support to the NVIDIA driver."
-                : profile == null ? "RHI couldn't read this monitor's details (EDID)." : HelpFor(profile);
+                ? Loc.GetString("Settings.GSync.Help.NoVrr")
+                : profile == null ? Loc.GetString("Settings.GSync.Help.NoEdid") : HelpFor(profile);
             var row = cog.AddRow(m.FriendlyName, combo, help);
 
             if (usable)
@@ -131,7 +129,7 @@ public partial class SettingsHandler
                     }
                     else
                     {
-                        cog.SetError("RHI couldn't save this to the NVIDIA driver settings. The log has the details.");
+                        cog.SetError(Loc.GetString("Settings.GSync.SaveFailed"));
                     }
                     Refresh();
                 };
@@ -140,16 +138,13 @@ public partial class SettingsHandler
 
         if (wanted.Count > 0)
         {
-            cog.AddSection("Apply");
-            cog.AddNote("Changes save straight away and the graphics driver uses them the next time it starts: "
-                + "restart Windows, or restart the driver now. Restarting the driver turns your screens black for "
-                + "a few seconds and running games may close, so close them first. The result shows in the status bar.");
+            cog.AddSection(Loc.GetString("Settings.GSync.ApplySection"));
+            cog.AddNote(Loc.GetString("Settings.GSync.ApplyNote"));
             cog.AddWarning(GSyncMonitorService.OverclockResetNote);
             if (!isAdmin)
-                cog.AddWarning("Restarting the driver from RHI needs admin rights (Admin Mode in Settings › General). "
-                    + "Without it, restart Windows to apply the change.");
+                cog.AddWarning(Loc.GetString("Settings.GSync.AdminWarning"));
 
-            restartBtn = cog.MakeButton("Restart driver now", CogButtonKind.Primary, async () =>
+            restartBtn = cog.MakeButton(Loc.GetString("Settings.GSync.RestartButton"), CogButtonKind.Primary, async () =>
             {
                 // Same flow as DLDSR's Apply, whose window survives the GPU restart: the dialog closes first, and
                 // nothing touches NVAPI after the restart. Reading the monitors through NVAPI in-process 6-12 s after
@@ -169,11 +164,11 @@ public partial class SettingsHandler
                     _gsyncRestarting = false;
                 }
                 var message = ok
-                    ? "The graphics driver restarted with the new G-SYNC settings. Open the G-Sync ⚙ to check each monitor."
-                    : "RHI couldn't restart the graphics driver. Restart Windows to apply the G-SYNC change.";
+                    ? Loc.GetString("Settings.GSync.RestartDone")
+                    : Loc.GetString("Settings.GSync.RestartFailed");
                 CrashReporter.Log($"[SettingsHandler.GSyncMonitors] {message}");
                 _window.ShowStatusBarMessage(message, TimeSpan.FromSeconds(15));
-            }, "Closes this window and restarts the graphics driver so it uses the new settings. Screens go black for a few seconds.");
+            }, Loc.GetString("Settings.GSync.RestartButton.Tooltip"));
             cog.AddButtons(restartBtn);
             Refresh();
         }

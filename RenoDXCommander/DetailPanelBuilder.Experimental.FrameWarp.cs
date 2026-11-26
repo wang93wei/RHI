@@ -24,12 +24,12 @@ public partial class DetailPanelBuilder
         bool isOurs      = isInstalled && FrameWarpService.IsRhiInstalled(installPath);
         bool pulled      = FeatureFlags.IsExperimentalHidden(FeatureFlags.ExperimentalFrameWarp);
         var block = pulled
-            ? ("Not offered right now", "FrameWarp has been taken out of RHI for now. You can still remove it from this game.")
+            ? (Loc.GetString("Extras.FrameWarp.NotOffered.Title"), Loc.GetString("Extras.FrameWarp.NotOffered.Body"))
             : isInstalled && isOurs ? null : vm.FrameWarpBlock(card);
 
-        string statusText  = !isInstalled ? "Ready"
-                           : !isOurs ? "Manual"
-                           : FrameWarpService.InstalledVersion(installPath) is { } v ? v : "Installed";
+        string statusText  = !isInstalled ? Loc.GetString("Status.Ready")
+                           : !isOurs ? Loc.GetString("Extras.FrameWarp.Status.Manual")
+                           : FrameWarpService.InstalledVersion(installPath) is { } v ? v : Loc.GetString("Status.Installed");
         string statusColor = !isInstalled ? "#A0AABB" : isOurs ? "#5ECB7D" : "#E8C46A";
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -47,13 +47,10 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        var tip = "FrameWarp (XPAR) by xPoiler moves the camera at your display's refresh rate whatever frame rate the game renders at: "
-            + "each refresh re-projects the game's newest frame to where the camera is now. Its XPAR frame generation shows moving characters at the refresh rate too.\n"
-            + "Game: borderless window, no frame rate limiter (ReLimiter, Display Commander or the NVIDIA limit). Uses the game's DLSS or FSR when it has them. Single player only.\n"
-            + "API: DirectX 12, DirectX 11 and Vulkan, 64-bit, with ReShade (with add-on support).";
+        var tip = Loc.GetString("Extras.FrameWarp.Tooltip");
         if (card.IsUlInstalled || card.IsDcInstalled)
-            tip += $"\nGame: {(card.IsUlInstalled ? "ReLimiter" : "Display Commander")} is installed here. FrameWarp asks for frame rate limiters to be off.";
-        if (isInstalled && !isOurs) tip += "\n\nFrameWarp is in this game's add-on folder, but RHI didn't install it. Install replaces it with the latest release (the file there is kept as a backup).";
+            tip += Loc.GetString("Extras.FrameWarp.Tooltip.LimiterInstalled", card.IsUlInstalled ? "ReLimiter" : "Display Commander");
+        if (isInstalled && !isOurs) tip += Loc.GetString("Extras.FrameWarp.Tooltip.ManualInstall");
         ToolTipService.SetToolTip(label, tip);
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
@@ -69,7 +66,7 @@ public partial class DetailPanelBuilder
         };
         if (isOurs)
         {
-            ToolTipService.SetToolTip(statusBlock, "Click to open GitHub releases");
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.FrameWarp.Releases.Tooltip"));
             statusBlock.PointerPressed += (_, _) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(FrameWarpService.ReleasesUrl));
             AttachLinkCursor(statusBlock);
         }
@@ -78,13 +75,13 @@ public partial class DetailPanelBuilder
 
         var infoBtn = new Button
         {
-            Content = "Info", FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32,
+            Content = Loc.GetString("Dialog.Info"), FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8),
         };
-        ToolTipService.SetToolTip(infoBtn, "Open FrameWarp's GitHub page");
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.FrameWarp.Info.Tooltip"));
         infoBtn.Click += (_, _) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(FrameWarpService.RepoUrl));
         Grid.SetColumn(infoBtn, 2);
         row.Children.Add(infoBtn);
@@ -93,7 +90,7 @@ public partial class DetailPanelBuilder
         var installBtn = new Button
         {
             Content = !btnEnabled ? "⚠  " + block!.Value.Item1
-                    : isOurs ? "↺  Reinstall FrameWarp" : "⬇  Install FrameWarp",
+                    : isOurs ? Loc.GetString("Extras.FrameWarp.Reinstall.Button") : Loc.GetString("Extras.FrameWarp.Install.Button"),
             FontSize = 12, Height = 32, HorizontalAlignment = HorizontalAlignment.Stretch, CornerRadius = new CornerRadius(8),
             Background  = isOurs ? UIFactory.GetBrush("#182840") : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground  = isOurs ? UIFactory.GetBrush("#7AACDD") : UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -108,8 +105,7 @@ public partial class DetailPanelBuilder
             ToolTipService.SetToolTip(label, $"{tip}\n\n{block.Value.Item2}");
         }
         else
-            ToolTipService.SetToolTip(installBtn, "Install FrameWarp in this game: the add-on and its presenter next to ReShade, and XPAR.addonfx in reshade-shaders. "
-                + "Run the game in a borderless window and open ReShade's XPAR tab to see it work.");
+            ToolTipService.SetToolTip(installBtn, Loc.GetString("Extras.FrameWarp.Install.Tooltip"));
 
         installBtn.Click += async (_, _) =>
         {
@@ -118,7 +114,7 @@ public partial class DetailPanelBuilder
             {
                 if (card.IsRunning)
                 {
-                    ToolTipService.SetToolTip(installBtn, "Close the game first: its files are in use.");
+                    ToolTipService.SetToolTip(installBtn, Loc.GetString("Extras.FrameWarp.GameRunning.Tooltip"));
                     return;
                 }
                 var xamlRoot = installBtn.XamlRoot ?? _window.Content.XamlRoot;
@@ -130,18 +126,18 @@ public partial class DetailPanelBuilder
                     if (!go) { installBtn.IsEnabled = true; return; }
                     if (turnOff) await Task.Run(() => vm.TurnOffDriverFpsLimitForGame(card));
                 }
-                installBtn.Content = "Downloading...";
+                installBtn.Content = Loc.GetString("Status.Downloading");
                 var error = await vm.InstallFrameWarpAsync(card);
                 if (error != null)
                 {
-                    installBtn.Content = "Install failed";
+                    installBtn.Content = Loc.GetString("Extras.InstallFailed.Button");
                     installBtn.IsEnabled = true;
                     ToolTipService.SetToolTip(installBtn, error);
                     await DialogService.ShowSafeAsync(new ContentDialog
                     {
-                        Title = "FrameWarp wasn't installed",
+                        Title = Loc.GetString("Extras.FrameWarp.InstallFailed.Title"),
                         Content = new TextBlock { Text = error, TextWrapping = TextWrapping.Wrap },
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = xamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     });
@@ -153,14 +149,14 @@ public partial class DetailPanelBuilder
                                           or HttpRequestException or TaskCanceledException or System.Runtime.InteropServices.COMException)
             {
                 CrashReporter.Log($"[BuildFrameWarpRow] Install failed — {ex.Message}");
-                installBtn.Content = "Install failed";
+                installBtn.Content = Loc.GetString("Extras.InstallFailed.Button");
                 installBtn.IsEnabled = true;
             }
         };
         Grid.SetColumn(installBtn, 3);
         row.Children.Add(installBtn);
 
-        var cogBtn = CogDialog.MakeCogButton("FrameWarp settings");
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.FrameWarp.Settings.Tooltip"));
         cogBtn.Click += async (_, _) =>
         {
             try { await ShowFrameWarpSettingsAsync(card); }
@@ -184,13 +180,13 @@ public partial class DetailPanelBuilder
             Opacity = isOurs ? 1.0 : 0,
             IsHitTestVisible = isOurs,
         };
-        ToolTipService.SetToolTip(removeBtn, "Remove FrameWarp from this game (the add-on, its FrameWarp folder with the presenter and logs, XPAR.addonfx, and the Engine.ini line RHI added)");
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.FrameWarp.Remove.Tooltip"));
         removeBtn.Click += async (_, _) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
             if (card.IsRunning)
             {
-                ToolTipService.SetToolTip(removeBtn, "Close the game first: its files are in use.");
+                ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.FrameWarp.GameRunning.Tooltip"));
                 return;
             }
             try
@@ -224,15 +220,15 @@ public partial class DetailPanelBuilder
         CheckBox? turnOff = null;
         if (limit > 0)
         {
-            turnOff = new CheckBox { Content = "Turn off the NVIDIA frame rate limit for this game", IsChecked = true, Margin = new Thickness(0, 4, 0, 0) };
+            turnOff = new CheckBox { Content = Loc.GetString("Extras.FrameWarp.Warnings.TurnOffLimit"), IsChecked = true, Margin = new Thickness(0, 4, 0, 0) };
             content.Children.Add(turnOff);
         }
         var dialog = new ContentDialog
         {
-            Title = "Before installing FrameWarp",
+            Title = Loc.GetString("Extras.FrameWarp.Warnings.Title"),
             Content = content,
-            PrimaryButtonText = "Install anyway",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Extras.FrameWarp.Warnings.InstallAnyway"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -251,54 +247,49 @@ public partial class DetailPanelBuilder
         bool isOurs = isInstalled && FrameWarpService.IsRhiInstalled(installPath);
         bool reopen = false;
         var cog = new CogDialog("FrameWarp", _window.Content.XamlRoot);
-        cog.AddIntro("FrameWarp (XPAR) re-projects the game's newest frame to where the camera is now on every display refresh, "
-            + "so turning and moving answer at your refresh rate even when the game renders fewer frames. It uses the game's DLSS or FSR when it has them, "
-            + "and finds depth, motion and the camera itself when it doesn't.");
-        cog.AddWarning("Single player only: FrameWarp hooks the game's rendering. Never use it online.");
-        cog.AddNote("Experimental: FrameWarp's author tests it in about 18 games (Cyberpunk 2077, DOOM Eternal, Elden Ring offline, Red Dead Redemption 2 and more). Others may work.");
+        cog.AddIntro(Loc.GetString("Extras.FrameWarp.Intro"));
+        cog.AddWarning(Loc.GetString("Extras.FrameWarp.Warning.SinglePlayer"));
+        cog.AddNote(Loc.GetString("Extras.FrameWarp.Note.Experimental"));
 
         // ── This game: what gets in FrameWarp's way ──────────────────────────
-        cog.AddSection("This game");
+        cog.AddSection(Loc.GetString("Overlay.Game.Title"));
         var (lines, limit) = await Task.Run(() => vm.FrameWarpWarnings(card));
-        if (lines.Count == 0) cog.AddNote("No frame rate limiter found in the way, GPU scheduling is on and the VC++ runtime is installed.");
+        if (lines.Count == 0) cog.AddNote(Loc.GetString("Extras.FrameWarp.NoWarnings.Note"));
         foreach (var l in lines) cog.AddWarning(l);
         if (limit > 0)
-            cog.AddButtons(cog.MakeButton("Turn off the NVIDIA limit for this game", CogButtonKind.Secondary, async () =>
+            cog.AddButtons(cog.MakeButton(Loc.GetString("Extras.FrameWarp.TurnOffNvidia.Button"), CogButtonKind.Secondary, async () =>
             {
                 bool ok = await Task.Run(() => vm.TurnOffDriverFpsLimitForGame(card));
-                if (ok) { cog.SetSuccess("NVIDIA frame rate limit off for this game."); reopen = true; cog.Hide(); }
-                else cog.SetError("Couldn't change the NVIDIA setting.");
-            }, "Sets this game's NVIDIA frame rate limit to Off (the global limit stays as it is)."));
-        cog.AddNote("Also check Background Application Max Frame Rate in the NVIDIA Control Panel (Manage 3D settings): FrameWarp's window never has focus, "
-            + "so that cap holds it back. Turn it off for all programs, or for FrameWarpPresenter.exe and the game. FrameWarp's panel warns when it's capped.");
+                if (ok) { cog.SetSuccess(Loc.GetString("Extras.FrameWarp.TurnOffNvidia.Success")); reopen = true; cog.Hide(); }
+                else cog.SetError(Loc.GetString("Extras.FrameWarp.TurnOffNvidia.Error"));
+            }, Loc.GetString("Extras.FrameWarp.TurnOffNvidia.Tooltip")));
+        cog.AddNote(Loc.GetString("Extras.FrameWarp.Note.NvidiaBackgroundCap"));
 
         // ── Unreal Engine: Engine.ini and launch options ─────────────────────
         var engineIni = isOurs && FrameWarpService.ReadMarker(installPath).TryGetValue("engine_ini", out var ei) && ei.Length > 0 ? ei
                       : FrameWarpService.FindEngineIni(installPath);
         if (engineIni != null)
         {
-            cog.AddSection("Unreal Engine");
+            cog.AddSection(Loc.GetString("Dialog.Engine.Unreal"));
             cog.AddNote(isOurs
-                ? $"RHI added {FrameWarpService.EngineCvar} to the game's Engine.ini ({engineIni}), so the game hands its DLSS data to FrameWarp. Removing FrameWarp takes it out again."
-                : $"Installing adds {FrameWarpService.EngineCvar} to the game's Engine.ini ({engineIni}), so the game hands its DLSS data to FrameWarp.");
+                ? Loc.GetString("Extras.FrameWarp.EngineIni.Added", FrameWarpService.EngineCvar, engineIni)
+                : Loc.GetString("Extras.FrameWarp.EngineIni.Adds", FrameWarpService.EngineCvar, engineIni));
             bool hasSl = card.HasStreamline || (!string.IsNullOrEmpty(installPath) && await Task.Run(() => HsfService.FindGameStreamline(installPath)));
             if (hasSl)
             {
-                cog.AddNote($"Unreal Engine games with DLSS through Streamline also need the launch options {FrameWarpService.UeLaunchOptions}. "
-                    + "Installing FrameWarp adds them to RHI's launch arguments (used when you start the game from RHI) and removing it takes them out again. "
-                    + "If you start the game from its store, add them there too (Steam: Properties > Launch Options).");
+                cog.AddNote(Loc.GetString("Extras.FrameWarp.UeLaunchOptions.Note", FrameWarpService.UeLaunchOptions));
                 cog.AddButtons(
-                    cog.MakeButton("Add to RHI's launch arguments", CogButtonKind.Secondary, () =>
+                    cog.MakeButton(Loc.GetString("Extras.FrameWarp.LaunchArgs.Add.Button"), CogButtonKind.Secondary, () =>
                     {
                         var args = vm.AddFrameWarpLaunchOptions(card);
-                        cog.SetSuccess($"Launch arguments: {args}");
+                        cog.SetSuccess(Loc.GetString("Extras.FrameWarp.LaunchArgs.Added", args));
                     }),
-                    cog.MakeButton("Copy launch options", CogButtonKind.Secondary, () =>
+                    cog.MakeButton(Loc.GetString("Extras.FrameWarp.LaunchArgs.Copy.Button"), CogButtonKind.Secondary, () =>
                     {
                         var dp = new Windows.ApplicationModel.DataTransfer.DataPackage();
                         dp.SetText(FrameWarpService.UeLaunchOptions);
                         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dp);
-                        cog.SetSuccess("Copied.");
+                        cog.SetSuccess(Loc.GetString("Extras.FrameWarp.Copied"));
                     }));
             }
         }
@@ -307,23 +298,21 @@ public partial class DetailPanelBuilder
         cog.AddSection("NVIDIA Latewarp");
         bool nvidia = GpuInfoService.Cached is { Count: > 0 };
         if (!isOurs)
-            cog.AddNote("Install FrameWarp with RHI to use NVIDIA Latewarp.");
+            cog.AddNote(Loc.GetString("Extras.FrameWarp.Latewarp.NotInstalled"));
         else if (!nvidia)
-            cog.AddNote("NVIDIA Latewarp (Reflex 2 Frame Warp) needs an NVIDIA graphics card. FrameWarp's own warp engine works on any card.");
+            cog.AddNote(Loc.GetString("Extras.FrameWarp.Latewarp.NoNvidia"));
         else
         {
             bool lwOn = FrameWarpService.IsLatewarpInstalled(installPath);
-            cog.AddNote("Optional: NVIDIA's Reflex 2 Frame Warp engine (nvngx_latewarp.dll 310.2.0.0, the build FrameWarp is tested with) as an alternative "
-                + "to FrameWarp's own engine. RHI downloads it once and only uses it when its SHA256 matches NVIDIA's file. It isn't part of FrameWarp's release.");
+            cog.AddNote(Loc.GetString("Extras.FrameWarp.Latewarp.Optional.Note"));
             ComboBox? lwCombo = null;
             bool lwReverting = false;
-            lwCombo = cog.AddCombo("NVIDIA Latewarp", "On: installs the DLL and shows FrameWarp's full settings, so you can pick NVIDIA Latewarp under Warp in the XPAR panel. "
-                + "FrameWarp goes back to its own engine after each of its updates: pick Latewarp again then.",
-                new[] { "Off", "On" }, lwOn ? 1 : 0, idx =>
+            lwCombo = cog.AddCombo("NVIDIA Latewarp", Loc.GetString("Extras.FrameWarp.Latewarp.Tooltip"),
+                new[] { LocOpt.T("Off"), LocOpt.T("On") }, lwOn ? 1 : 0, idx =>
                 {
                     if (lwReverting) return true;
-                    if (card.IsRunning) { cog.SetError("Close the game first: its files are in use."); return false; }
-                    if (idx == 1) cog.SetSuccess("Downloading NVIDIA Latewarp...");
+                    if (card.IsRunning) { cog.SetError(Loc.GetString("Extras.FrameWarp.GameRunning.Tooltip")); return false; }
+                    if (idx == 1) cog.SetSuccess(Loc.GetString("Extras.FrameWarp.Latewarp.Downloading"));
                     _ = Task.Run(async () =>
                     {
                         var err = await vm.SetFrameWarpLatewarpAsync(card, idx == 1);
@@ -331,7 +320,7 @@ public partial class DetailPanelBuilder
                         {
                             if (err == null)
                             {
-                                cog.SetSuccess(idx == 1 ? "NVIDIA Latewarp installed. In the game: ReShade > XPAR > Warp > Warp engine > NVIDIA Latewarp." : "NVIDIA Latewarp removed.");
+                                cog.SetSuccess(idx == 1 ? Loc.GetString("Extras.FrameWarp.Latewarp.Installed") : Loc.GetString("Extras.FrameWarp.Latewarp.Removed"));
                                 return;
                             }
                             // Put the dropdown back to what's really installed
@@ -346,23 +335,22 @@ public partial class DetailPanelBuilder
         }
 
         // ── Using it ─────────────────────────────────────────────────────────
-        cog.AddSection("Using it");
-        cog.AddNote("Run the game in a borderless window (or tick Force a borderless window in the XPAR panel and restart the game). "
-            + "Open ReShade's overlay (Home) and go to the XPAR tab: the presenter starts with the game, and the panel has FrameWarp's own settings and checks.");
-        cog.AddNote("FrameWarp keeps its settings in the game's ReShade.ini and puts them back to its defaults after each of its updates, which RHI installs for you.");
-        cog.AddNote("While it shows its frames the screen runs at its maximum refresh rate (VRR can't follow its window). The game's DLSS Frame Generation and FSR 3.1 frame generation work with it.");
+        cog.AddSection(Loc.GetString("Extras.FrameWarp.Section.UsingIt"));
+        cog.AddNote(Loc.GetString("Extras.FrameWarp.UsingIt.Note"));
+        cog.AddNote(Loc.GetString("Extras.FrameWarp.SettingsPersist.Note"));
+        cog.AddNote(Loc.GetString("Extras.FrameWarp.RefreshRate.Note"));
 
-        cog.AddSection("Files");
+        cog.AddSection(Loc.GetString("Dialog.SectionFiles"));
         cog.AddButtons(
-            cog.MakeButton("Open GitHub page", CogButtonKind.Secondary,
+            cog.MakeButton(Loc.GetString("Extras.FrameWarp.OpenGitHub.Button"), CogButtonKind.Secondary,
                 async () => { await Windows.System.Launcher.LaunchUriAsync(new Uri(FrameWarpService.RepoUrl)); }),
-            cog.MakeButton("Open logs folder", CogButtonKind.Secondary, () =>
+            cog.MakeButton(Loc.GetString("Extras.FrameWarp.OpenLogs.Button"), CogButtonKind.Secondary, () =>
             {
                 var logs = FrameWarpService.LogsDir(installPath);
-                if (!Directory.Exists(logs)) { cog.SetError("No FrameWarp logs yet (they're written while the game runs)."); return; }
+                if (!Directory.Exists(logs)) { cog.SetError(Loc.GetString("Extras.FrameWarp.NoLogs.Error")); return; }
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{logs}\"") { UseShellExecute = true });
             }),
-            cog.MakeOpenFileButton("Open ReShade.ini", isInstalled ? Path.Combine(installPath, "ReShade.ini") : null));
+            cog.MakeOpenFileButton(Loc.GetString("Extras.FrameWarp.OpenReShadeIni.Button"), isInstalled ? Path.Combine(installPath, "ReShade.ini") : null));
         await cog.ShowAsync();
         if (reopen) await ShowFrameWarpSettingsAsync(card);
     }

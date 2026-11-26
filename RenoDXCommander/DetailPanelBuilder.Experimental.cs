@@ -36,7 +36,7 @@ public partial class DetailPanelBuilder
         };
         var title = new TextBlock
         {
-            Text       = "Experimental",
+            Text       = Loc.GetString("Detail.Experimental"),
             FontSize   = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Foreground = UIFactory.Brush(ResourceKeys.TextPrimaryBrush),
@@ -66,12 +66,12 @@ public partial class DetailPanelBuilder
         var installPath = card.InstallPath ?? "";
         bool urtiInstalled = UrtiService.IsInstalledIn(installPath);
         var summaryEntries = new List<(string, string?)>();
-        if (urtiInstalled) summaryEntries.Add(("URTI", "On"));
+        if (urtiInstalled) summaryEntries.Add(("URTI", LocOpt.T("On")));
         bool crcgiInstalled = CrcgiService.IsInstalledIn(installPath);
-        if (crcgiInstalled) summaryEntries.Add(("CRCGI", CrcgiService.InstalledVersion(installPath) is { } cv ? "v" + cv : "On"));
+        if (crcgiInstalled) summaryEntries.Add(("CRCGI", CrcgiService.InstalledVersion(installPath) is { } cv ? "v" + cv : LocOpt.T("On")));
         bool frameWarpInstalled = FrameWarpService.IsInstalledIn(installPath);
-        if (frameWarpInstalled) summaryEntries.Add(("FrameWarp", FrameWarpService.InstalledVersion(installPath) ?? "On"));
-        var summary = MakeSectionSummaryInlines(summaryEntries, "Experimental features installed for this game.");
+        if (frameWarpInstalled) summaryEntries.Add(("FrameWarp", FrameWarpService.InstalledVersion(installPath) ?? LocOpt.T("On")));
+        var summary = MakeSectionSummaryInlines(summaryEntries, Loc.GetString("Extras.Experimental.Summary.Tooltip"));
         if (summary != null)
         {
             summary.Visibility = collapsed ? Visibility.Visible : Visibility.Collapsed;
@@ -91,7 +91,7 @@ public partial class DetailPanelBuilder
         // ── Notice (one line) ─────────────────────────────────────────────────
         var notice = new TextBlock
         {
-            Text = "New and not fully tested. Expect rough edges, and remove an item if a game misbehaves.",
+            Text = Loc.GetString("Extras.Experimental.Notice"),
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
@@ -103,26 +103,26 @@ public partial class DetailPanelBuilder
         int items = 0;
         if (!FeatureFlags.IsExperimentalHidden(FeatureFlags.ExperimentalUrti) || urtiInstalled)
         {
-            body.Children.Add(MakeExtrasSeparator("Ray Tracing", _window.ExperimentalContainer));
+            body.Children.Add(MakeExtrasSeparator(Loc.GetString("Extras.Experimental.Separator.RayTracing"), _window.ExperimentalContainer));
             BuildUrtiRow(card, body);
             items++;
         }
         if (!FeatureFlags.IsExperimentalHidden(FeatureFlags.ExperimentalCrcgi) || crcgiInstalled)
         {
-            body.Children.Add(MakeExtrasSeparator("Global Illumination", _window.ExperimentalContainer));
+            body.Children.Add(MakeExtrasSeparator(Loc.GetString("Extras.Experimental.Separator.GlobalIllumination"), _window.ExperimentalContainer));
             BuildCrcgiRow(card, body);
             items++;
         }
         if (!FeatureFlags.IsExperimentalHidden(FeatureFlags.ExperimentalFrameWarp) || frameWarpInstalled)
         {
-            body.Children.Add(MakeExtrasSeparator("Reprojection", _window.ExperimentalContainer));
+            body.Children.Add(MakeExtrasSeparator(Loc.GetString("Extras.Experimental.Separator.Reprojection"), _window.ExperimentalContainer));
             BuildFrameWarpRow(card, body);
             items++;
         }
         if (items == 0)
             body.Children.Add(new TextBlock
             {
-                Text = "Nothing to try here right now.",
+                Text = Loc.GetString("Extras.Experimental.NothingToTry"),
                 FontSize = 12,
                 Foreground = UIFactory.Brush(ResourceKeys.TextTertiaryBrush),
             });

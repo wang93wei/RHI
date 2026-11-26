@@ -52,12 +52,10 @@ public partial class SettingsHandler
             var outer = new StackPanel { Spacing = 10 };
             card.Child = outer;
             var head = new StackPanel { Spacing = 3 };
-            head.Children.Add(new TextBlock { Text = "Monitors", Style = FindStyle("SettingsCardTitleStyle") });
+            head.Children.Add(new TextBlock { Text = Loc.GetString("Settings.Monitors.Title"), Style = FindStyle("SettingsCardTitleStyle") });
             head.Children.Add(new TextBlock
             {
-                Text = "Desktop resolution, refresh rate and Windows HDR for each connected monitor. Changes apply straight away. "
-                     + $"After a resolution or refresh rate change, choose Keep within {MonRevertSeconds} seconds or it goes back, "
-                     + "so a monitor that goes blank comes back on its own.",
+                Text = Loc.GetString("Settings.Monitors.Intro", MonRevertSeconds),
                 Style = FindStyle("SettingsCardDescStyle"),
                 TextWrapping = TextWrapping.Wrap,
             });
@@ -82,7 +80,7 @@ public partial class SettingsHandler
     {
         if (_monBody == null) return;
         int id = ++_monLoadId;
-        if (_monBody.Children.Count == 0) SetMonitorsMessage("Reading your monitors...");
+        if (_monBody.Children.Count == 0) SetMonitorsMessage(Loc.GetString("Settings.Monitors.Reading"));
         List<MonitorView> views;
         try
         {
@@ -98,7 +96,7 @@ public partial class SettingsHandler
             views = new();
         }
         if (id != _monLoadId || _monBody == null) return;
-        if (views.Count == 0) { SetMonitorsMessage("Couldn't read your monitors from Windows."); return; }
+        if (views.Count == 0) { SetMonitorsMessage(Loc.GetString("Settings.Monitors.ReadFailed")); return; }
         BuildMonitorsBody(views);
     }
 
@@ -124,7 +122,7 @@ public partial class SettingsHandler
         var block = new StackPanel { Spacing = 6 };
         block.Children.Add(new TextBlock
         {
-            Text = v.Target.Name + (v.Primary ? " (main display)" : ""),
+            Text = v.Primary ? Loc.GetString("Settings.Monitors.NameWithPrimary", v.Target.Name) : v.Target.Name,
             Style = FindStyle("SettingsHeadStyle"),
         });
 
@@ -135,16 +133,15 @@ public partial class SettingsHandler
         // ── Resolution + refresh rate ──
         var sizes = v.Modes.Select(m => (m.Width, m.Height)).Distinct().ToList();
         var resCombo = new ComboBox { Style = FindStyle("SettingsComboStyle"), HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = enabled && sizes.Count > 0 };
-        foreach (var (w, h) in sizes) resCombo.Items.Add(new ComboBoxItem { Content = $"{w} x {h}" });
+        foreach (var (w, h) in sizes) resCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Settings.Monitors.ResolutionFormat", w, h) });
         int curSize = v.Current is { } c0 ? sizes.IndexOf((c0.Width, c0.Height)) : -1;
         if (curSize >= 0) resCombo.SelectedIndex = curSize;
-        ToolTipService.SetToolTip(resCombo, "The desktop resolution of this monitor.");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(resCombo, $"{v.Target.Name} resolution");
+        ToolTipService.SetToolTip(resCombo, Loc.GetString("Settings.Monitors.Resolution.Tooltip"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(resCombo, Loc.GetString("Settings.Monitors.Resolution.Automation", v.Target.Name));
 
         var rateCombo = new ComboBox { Style = FindStyle("SettingsComboStyle"), HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = enabled };
-        ToolTipService.SetToolTip(rateCombo, "The refresh rates Windows offers at the selected resolution. "
-            + "Windows lists rates such as 239.96 Hz as 239; the exact rate in use is shown below.");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(rateCombo, $"{v.Target.Name} refresh rate");
+        ToolTipService.SetToolTip(rateCombo, Loc.GetString("Settings.Monitors.RefreshRate.Tooltip"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(rateCombo, Loc.GetString("Settings.Monitors.RefreshRate.Automation", v.Target.Name));
         List<uint> rates = new();
         bool filling = false;
         void FillRates(uint want)
@@ -153,7 +150,7 @@ public partial class SettingsHandler
             rateCombo.Items.Clear();
             rates = resCombo.SelectedIndex < 0 ? new()
                 : v.Modes.Where(m => (m.Width, m.Height) == sizes[resCombo.SelectedIndex]).Select(m => m.RefreshRate).Distinct().OrderByDescending(r => r).ToList();
-            foreach (var r in rates) rateCombo.Items.Add(new ComboBoxItem { Content = $"{r} Hz" });
+            foreach (var r in rates) rateCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Settings.Monitors.HzFormat", r) });
             int at = rates.IndexOf(want);
             rateCombo.SelectedIndex = at >= 0 ? at : (rates.Count > 0 ? 0 : -1);
             filling = false;
@@ -176,26 +173,30 @@ public partial class SettingsHandler
 
         // ── HDR ──
         var hdrCombo = new ComboBox { Style = FindStyle("SettingsComboStyle"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        hdrCombo.Items.Add(new ComboBoxItem { Content = "Off" });
-        hdrCombo.Items.Add(new ComboBoxItem { Content = "On" });
+        hdrCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.Off") });
+        hdrCombo.Items.Add(new ComboBoxItem { Content = Loc.GetString("Option.On") });
         hdrCombo.SelectedIndex = v.Target.HdrOn ? 1 : 0;
         hdrCombo.IsEnabled = enabled && v.Target.HdrSupported;
         ToolTipService.SetToolTip(hdrCombo, v.Target.HdrSupported
-            ? "Windows HDR for this monitor only (Settings › System › Display › Use HDR)."
-            : "Windows says this monitor doesn't support HDR.");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(hdrCombo, $"{v.Target.Name} HDR");
+            ? Loc.GetString("Settings.Monitors.Hdr.Tooltip")
+            : Loc.GetString("Settings.Monitors.Hdr.Unsupported.Tooltip"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(hdrCombo, Loc.GetString("Settings.Monitors.Hdr.Automation", v.Target.Name));
         hdrCombo.SelectionChanged += (_, _) =>
         {
             if (hdrCombo.SelectedIndex >= 0) _ = SetMonitorHdrAsync(v, hdrCombo.SelectedIndex == 1);
         };
 
-        grid.Children.Add(MonitorCell("Resolution", resCombo, 0));
-        grid.Children.Add(MonitorCell("Refresh rate", rateCombo, 1));
-        grid.Children.Add(MonitorCell(v.Target.HdrSupported ? "HDR" : "HDR (not supported)", hdrCombo, 2));
+        grid.Children.Add(MonitorCell(Loc.GetString("Settings.Monitors.Resolution.Label"), resCombo, 0));
+        grid.Children.Add(MonitorCell(Loc.GetString("Settings.Monitors.RefreshRate.Label"), rateCombo, 1));
+        grid.Children.Add(MonitorCell(
+            v.Target.HdrSupported ? Loc.GetString("Settings.Monitors.HdrLabel") : Loc.GetString("Settings.Monitors.HdrLabelUnsupported"),
+            hdrCombo, 2));
 
         string now = v.Current is { } c
-            ? $"Now {c.Width} x {c.Height} at {FormatMonitorHz(v.Target.RefreshHz, c.RefreshRate)} Hz, HDR {(v.Target.HdrOn ? "on" : "off")}."
-            : "Windows didn't report this monitor's current mode.";
+            ? (v.Target.HdrOn
+                ? Loc.GetString("Settings.Monitors.NowFormatOn", c.Width, c.Height, FormatMonitorHz(v.Target.RefreshHz, c.RefreshRate))
+                : Loc.GetString("Settings.Monitors.NowFormatOff", c.Width, c.Height, FormatMonitorHz(v.Target.RefreshHz, c.RefreshRate)))
+            : Loc.GetString("Settings.Monitors.NoCurrentMode");
         block.Children.Add(new TextBlock { Text = now, Style = FindStyle("SettingsHelpStyle"), TextWrapping = TextWrapping.Wrap });
         return block;
     }
@@ -236,11 +237,11 @@ public partial class SettingsHandler
             VerticalAlignment = VerticalAlignment.Center,
         };
         row.Children.Add(_monCountdownText);
-        var keep = new Button { Content = "Keep", Style = FindStyle("SettingsButtonStyle") };
+        var keep = new Button { Content = Loc.GetString("Settings.Monitors.KeepButton"), Style = FindStyle("SettingsButtonStyle") };
         keep.Click += (_, _) => KeepMonitorChange();
         Grid.SetColumn(keep, 1);
         row.Children.Add(keep);
-        var revert = new Button { Content = "Revert", Style = FindStyle("SettingsButtonStyle") };
+        var revert = new Button { Content = Loc.GetString("Settings.Monitors.RevertButton"), Style = FindStyle("SettingsButtonStyle") };
         revert.Click += (_, _) => _ = RevertMonitorChangeAsync();
         Grid.SetColumn(revert, 2);
         row.Children.Add(revert);
@@ -249,7 +250,7 @@ public partial class SettingsHandler
     }
 
     private static string MonCountdownLabel(MonPendingChange p) =>
-        $"Keep these display settings for {p.Name}? Going back to {p.RevertTo.Width} x {p.RevertTo.Height} at {p.RevertTo.RefreshRate} Hz in {p.SecondsLeft} s.";
+        Loc.GetString("Settings.Monitors.CountdownFormat", p.Name, p.RevertTo.Width, p.RevertTo.Height, p.RevertTo.RefreshRate, p.SecondsLeft);
 
     private async Task ApplyMonitorModeAsync(MonitorView v, DisplayResolution target)
     {
@@ -259,7 +260,7 @@ public partial class SettingsHandler
         catch (InvalidOperationException ex) { CrashReporter.Log($"[SettingsHandler.ApplyMonitorModeAsync] {ex.Message}"); rc = -1; }
         if (rc != 0)
         {
-            _window.ShowStatusBarMessage($"Windows didn't accept {target.Width} x {target.Height} at {target.RefreshRate} Hz for {v.Target.Name} (code {rc}).", TimeSpan.FromSeconds(8));
+            _window.ShowStatusBarMessage(Loc.GetString("Settings.Monitors.ApplyFailed", target.Width, target.Height, target.RefreshRate, v.Target.Name, rc), TimeSpan.FromSeconds(8));
             await LoadMonitorsCardAsync();
             return;
         }
@@ -302,7 +303,7 @@ public partial class SettingsHandler
         catch (InvalidOperationException ex) { CrashReporter.Log($"[SettingsHandler.RevertMonitorChangeAsync] {ex.Message}"); rc = -1; }
         CrashReporter.Log($"[SettingsHandler.RevertMonitorChangeAsync] '{p.Device}' back to {p.RevertTo.Label} → rc={rc}");
         if (rc != 0)
-            _window.ShowStatusBarMessage($"Couldn't put {p.Name} back to {p.RevertTo.Width} x {p.RevertTo.Height} (code {rc}).", TimeSpan.FromSeconds(8));
+            _window.ShowStatusBarMessage(Loc.GetString("Settings.Monitors.RevertFailed", p.Name, p.RevertTo.Width, p.RevertTo.Height, rc), TimeSpan.FromSeconds(8));
         await LoadMonitorsCardAsync();
     }
 
@@ -313,7 +314,9 @@ public partial class SettingsHandler
         try { ok = await Task.Run(() => HdrToggleService.SetHdr(v.Target, on)); }
         catch (InvalidOperationException ex) { CrashReporter.Log($"[SettingsHandler.SetMonitorHdrAsync] {ex.Message}"); ok = false; }
         if (!ok)
-            _window.ShowStatusBarMessage($"Windows didn't turn HDR {(on ? "on" : "off")} for {v.Target.Name}.", TimeSpan.FromSeconds(8));
+            _window.ShowStatusBarMessage(on
+                ? Loc.GetString("Settings.Monitors.HdrSetOnFailed", v.Target.Name)
+                : Loc.GetString("Settings.Monitors.HdrSetOffFailed", v.Target.Name), TimeSpan.FromSeconds(8));
         await LoadMonitorsCardAsync();
     }
 }

@@ -14,13 +14,14 @@ namespace RenoDXCommander;
 
 public partial class DetailPanelBuilder
 {
+    /// <summary>Localizes a key, or returns the key itself when the app's services are not up (e.g. pure-logic tests).</summary>
+    private static string LocOrKey(string key, params object[] args) => App.Services is null ? key : Loc.GetString(key, args);
+
     /// <summary>The URTI / HSF clash, as a tooltip line ("Game:" lines show under the name in Tabs / Spotlight).</summary>
-    internal const string UrtiHsfClashLine =
-        "Game: URTI doesn't draw its reflections while HSF is installed in the same game. Remove HSF to use URTI.";
+    internal static string UrtiHsfClashLine => Loc.GetString("Extras.Urti.HsfClash.Line");
 
     /// <summary>The URTI / HSF clash, for dialogs and ⚙ warnings.</summary>
-    internal const string UrtiHsfClashText =
-        "URTI and HSF are both in this game. URTI doesn't draw its reflections while HSF is installed in the same game: remove HSF to use URTI.";
+    internal static string UrtiHsfClashText => Loc.GetString("Extras.Urti.HsfClash.Text");
 
     private void BuildUrtiRow(GameCardViewModel card, StackPanel body)
     {
@@ -32,12 +33,12 @@ public partial class DetailPanelBuilder
         bool pulled      = FeatureFlags.IsExperimentalHidden(FeatureFlags.ExperimentalUrti);
         // Taken out by the manifest: only shown where it's installed, and only to be removed
         var block = pulled
-            ? ("Not offered right now", "URTI has been taken out of RHI for now. You can still remove it from this game.")
+            ? (Loc.GetString("Extras.Urti.NotOffered"), Loc.GetString("Extras.Urti.NotOffered.Tooltip"))
             : isInstalled ? null : vm.UrtiBlock(card);
 
-        string statusText  = !isInstalled ? "Ready"
-                           : !isOurs ? "Manual"
-                           : UrtiService.InstalledVersion(installPath) is { } v ? "v" + v : "Installed";
+        string statusText  = !isInstalled ? Loc.GetString("Status.Ready")
+                           : !isOurs ? Loc.GetString("Extras.Urti.Status.Manual")
+                           : UrtiService.InstalledVersion(installPath) is { } v ? "v" + v : Loc.GetString("Status.Installed");
         string statusColor = !isInstalled ? "#A0AABB" : isOurs ? "#5ECB7D" : "#E8C46A";
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -55,13 +56,8 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        var tip = "URTI by Skynizz adds ray-traced reflections to DirectX 12 games that don't have them, as a ReShade add-on: "
-            + "puddles, wet streets, windows and polished floors. Only tested in Red Dead Redemption 2 so far.\n"
-            + "GPU: DirectX 12 ray tracing (DXR 1.1): NVIDIA RTX 20 or newer, AMD RX 6000 or newer.\n"
-            + "Game: single player only; never use it online.\n"
-            + (hsfHere ? UrtiHsfClashLine + "\n" : "")
-            + "API: DirectX 12, 64-bit, with ReShade 6.8 or newer (with add-on support).";
-        if (isInstalled && !isOurs) tip += "\n\nURTI is in this game's add-on folder, but RHI didn't install it. Install replaces it with the latest release (the file there is kept as a backup).";
+        var tip = Loc.GetString("Extras.Urti.Tooltip", hsfHere ? UrtiHsfClashLine + "\n" : "");
+        if (isInstalled && !isOurs) tip += Loc.GetString("Extras.Urti.Manual.Tooltip.Note");
         ToolTipService.SetToolTip(label, tip);
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
@@ -77,7 +73,7 @@ public partial class DetailPanelBuilder
         };
         if (isOurs)
         {
-            ToolTipService.SetToolTip(statusBlock, "Click to open GitHub releases");
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.OpenGithubReleases.Tooltip"));
             statusBlock.PointerPressed += (_, _) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(UrtiService.ReleasesUrl));
             AttachLinkCursor(statusBlock);
         }
@@ -86,13 +82,13 @@ public partial class DetailPanelBuilder
 
         var infoBtn = new Button
         {
-            Content = "Info", FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32,
+            Content = Loc.GetString("Dialog.Info"), FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8),
         };
-        ToolTipService.SetToolTip(infoBtn, "Open URTI's GitHub page");
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.Urti.Info.Tooltip"));
         infoBtn.Click += (_, _) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(UrtiService.RepoUrl));
         Grid.SetColumn(infoBtn, 2);
         row.Children.Add(infoBtn);
@@ -101,7 +97,7 @@ public partial class DetailPanelBuilder
         var installBtn = new Button
         {
             Content = !btnEnabled ? "⚠  " + block!.Value.Item1
-                    : isOurs ? "↺  Reinstall URTI" : "⬇  Install URTI",
+                    : isOurs ? Loc.GetString("Extras.Urti.Reinstall.Button") : Loc.GetString("Extras.Urti.Install.Button"),
             FontSize = 12, Height = 32, HorizontalAlignment = HorizontalAlignment.Stretch, CornerRadius = new CornerRadius(8),
             Background  = isOurs ? UIFactory.GetBrush("#182840") : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground  = isOurs ? UIFactory.GetBrush("#7AACDD") : UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -117,9 +113,8 @@ public partial class DetailPanelBuilder
             ToolTipService.SetToolTip(label, $"{tip}\n\n{block.Value.Item2}");
         }
         else
-            ToolTipService.SetToolTip(installBtn, "Install URTI in this game: the add-on and urti.ini next to ReShade, its effects in reshade-shaders, "
-                + "and the URTI effect turned on in the game's ReShade preset. F7 turns it on and off in the game."
-                + (hsfHere ? "\n\n" + UrtiHsfClashText : ""));
+            ToolTipService.SetToolTip(installBtn,
+                Loc.GetString("Extras.Urti.Install.Tooltip", hsfHere ? "\n\n" + UrtiHsfClashText : ""));
 
         installBtn.Click += async (_, _) =>
         {
@@ -128,24 +123,24 @@ public partial class DetailPanelBuilder
             {
                 if (card.IsRunning)
                 {
-                    ToolTipService.SetToolTip(installBtn, "Close the game first: its files are in use.");
+                    ToolTipService.SetToolTip(installBtn, Loc.GetString("Extras.Urti.CloseGameFirst"));
                     return;
                 }
                 var xamlRoot = installBtn.XamlRoot ?? _window.Content.XamlRoot;
                 if (HsfService.IsInstalledIn(installPath, card.Is32Bit) && !await ConfirmUrtiWithHsfAsync(card, xamlRoot)) return;
                 installBtn.IsEnabled = false;
-                installBtn.Content = "Downloading...";
+                installBtn.Content = Loc.GetString("Status.Downloading");
                 var error = await vm.InstallUrtiAsync(card);
                 if (error != null)
                 {
-                    installBtn.Content = "Install failed";
+                    installBtn.Content = Loc.GetString("Extras.InstallFailed.Button");
                     installBtn.IsEnabled = true;
                     ToolTipService.SetToolTip(installBtn, error);
                     await DialogService.ShowSafeAsync(new ContentDialog
                     {
-                        Title = "URTI wasn't installed",
+                        Title = Loc.GetString("Extras.Urti.InstallFailed.Title"),
                         Content = new TextBlock { Text = error, TextWrapping = TextWrapping.Wrap },
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = xamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     });
@@ -158,14 +153,14 @@ public partial class DetailPanelBuilder
                                           or HttpRequestException or TaskCanceledException or System.Runtime.InteropServices.COMException)
             {
                 CrashReporter.Log($"[BuildUrtiRow] Install failed — {ex.Message}");
-                installBtn.Content = "Install failed";
+                installBtn.Content = Loc.GetString("Extras.InstallFailed.Button");
                 installBtn.IsEnabled = true;
             }
         };
         Grid.SetColumn(installBtn, 3);
         row.Children.Add(installBtn);
 
-        var cogBtn = CogDialog.MakeCogButton("URTI settings");
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.Urti.Settings.Tooltip"));
         cogBtn.Click += async (_, _) =>
         {
             try { await ShowUrtiSettingsAsync(card); }
@@ -189,13 +184,13 @@ public partial class DetailPanelBuilder
             Opacity = isOurs ? 1.0 : 0,
             IsHitTestVisible = isOurs,
         };
-        ToolTipService.SetToolTip(removeBtn, "Remove URTI from this game (the add-on, its effects, and urti.ini if RHI put it there)");
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.Urti.Remove.Tooltip"));
         removeBtn.Click += async (_, _) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
             if (card.IsRunning)
             {
-                ToolTipService.SetToolTip(removeBtn, "Close the game first: its files are in use.");
+                ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.Urti.CloseGameFirst"));
                 return;
             }
             try
@@ -223,15 +218,15 @@ public partial class DetailPanelBuilder
         if (xamlRoot == null) return true;
         var dialog = new ContentDialog
         {
-            Title = "HSF is installed in this game",
+            Title = Loc.GetString("Extras.Urti.HsfDialog.Title"),
             Content = new TextBlock
             {
-                Text = "URTI doesn't draw its reflections while HSF is installed in the same game. Remove HSF (Extras) to use URTI.",
+                Text = Loc.GetString("Extras.Urti.HsfDialog.Body"),
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 460,
             },
-            PrimaryButtonText = "Install anyway",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Extras.Urti.HsfDialog.InstallAnyway"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -253,11 +248,11 @@ public partial class DetailPanelBuilder
 
     private static (string?, string?) UrtiInt(string text, int min, string what) =>
         int.TryParse(text.Trim(), System.Globalization.NumberStyles.Integer, UrtiInv, out var n) && n >= min
-            ? (n.ToString(UrtiInv), null) : (null, $"{what} must be a whole number, {min} or more.");
+            ? (n.ToString(UrtiInv), null) : (null, LocOrKey("Extras.Urti.Error.WholeNumber", what, min));
 
     private static (string?, string?) UrtiF0(string text) =>
         double.TryParse(text.Trim(), System.Globalization.NumberStyles.Float, UrtiInv, out var f) && f >= 0 && f <= 1
-            ? (f.ToString("0.###", UrtiInv), null) : (null, "Reflection F0 must be a number from 0 to 1, such as 0.04.");
+            ? (f.ToString("0.###", UrtiInv), null) : (null, LocOrKey("Extras.Urti.Error.ReflectionF0"));
 
     /// <summary>"x0,y0,x1,y1" fractions of the screen, left / top smaller than right / bottom; empty = no zone (key removed).</summary>
     internal static (string?, string?) UrtiZone(string text)
@@ -270,38 +265,38 @@ public partial class DetailPanelBuilder
         for (int i = 0; ok && i < 4; i++)
             ok = double.TryParse(parts[i].Trim(), System.Globalization.NumberStyles.Float, UrtiInv, out v[i]) && v[i] >= 0 && v[i] <= 1;
         if (!ok || v[0] >= v[2] || v[1] >= v[3])
-            return (null, "UI zone must be four numbers from 0 to 1 (left, top, right, bottom), such as 0.012,0.69,0.16,0.97, or empty for none.");
+            return (null, LocOrKey("Extras.Urti.Error.UiZone"));
         return (string.Join(",", v.Select(x => x.ToString("0.###", UrtiInv))), null);
     }
 
-    private static readonly UrtiSetting[] UrtiSettings =
+    private static UrtiSetting[] UrtiSettings => new[]
     {
-        new("live", "Start on",
-            "On: URTI's reflections start with the game. Off: they start off, and F7 turns them on.", "0", AtStart: true,
-            Names: new[] { "Off", "On" }, Values: new[] { "0", "1" }),
-        new("shadow_rays", "Shadow rays",
-            "Rays per pixel in URTI's shadow pass, 1 to 4. More is smoother and costs more GPU time.", "2", AtStart: false,
+        new("live", Loc.GetString("Extras.Urti.Setting.StartOn.Label"),
+            Loc.GetString("Extras.Urti.Setting.StartOn.Help"), "0", AtStart: true,
+            Names: new[] { Loc.GetString("Xaml.Off"), Loc.GetString("Xaml.On") }, Values: new[] { "0", "1" }),
+        new("shadow_rays", Loc.GetString("Extras.Urti.Setting.ShadowRays.Label"),
+            Loc.GetString("Extras.Urti.Setting.ShadowRays.Help"), "2", AtStart: false,
             Names: new[] { "1", "2", "3", "4" }, Values: new[] { "1", "2", "3", "4" }),
-        new("calibration_interval", "Calibration (frames)",
-            "How often URTI measures the game's depth and camera again, in frames (it waits longer after a measurement fails). Minimum 30; URTI's default is 180.",
-            "180", AtStart: true, Check: s => UrtiInt(s, 30, "Calibration")),
-        new("capture_presents", "Capture length",
-            "How many presented frames one geometry capture lasts (with frame generation, every other frame has no game draw). Minimum 1; URTI's default is 4.",
-            "4", AtStart: true, Check: s => UrtiInt(s, 1, "Capture length")),
-        new("reflect_f0", "Reflection F0",
-            "How much a surface reflects when seen straight on (Fresnel F0), 0 to 1. 0.04 suits water, glass and polished floors; higher makes reflections stronger.",
+        new("calibration_interval", Loc.GetString("Extras.Urti.Setting.Calibration.Label"),
+            Loc.GetString("Extras.Urti.Setting.Calibration.Help"),
+            "180", AtStart: true, Check: s => UrtiInt(s, 30, Loc.GetString("Extras.Urti.Field.Calibration"))),
+        new("capture_presents", Loc.GetString("Extras.Urti.Setting.CaptureLength.Label"),
+            Loc.GetString("Extras.Urti.Setting.CaptureLength.Help"),
+            "4", AtStart: true, Check: s => UrtiInt(s, 1, Loc.GetString("Extras.Urti.Field.CaptureLength"))),
+        new("reflect_f0", Loc.GetString("Extras.Urti.Setting.ReflectionF0.Label"),
+            Loc.GetString("Extras.Urti.Setting.ReflectionF0.Help"),
             "0.04", AtStart: false, Check: UrtiF0),
-        new("jitter", "Jitter correction",
-            "Takes the game's sub-pixel jitter (DLSS / TAA) out of URTI's motion measurements. Off: none. Frame to frame: the change between frames. Full: the change and the absolute offset (URTI's default).",
-            "2", AtStart: false, Names: new[] { "Off", "Frame to frame", "Full" }, Values: new[] { "0", "1", "2" }),
-        new("ui_photo", "UI snapshot",
-            "On: URTI keeps the game's interface clear of reflections using a copy of the image taken before the interface is drawn. Off: it doesn't (use UI zone to protect a fixed area instead).",
-            "1", AtStart: false, Names: new[] { "Off", "On" }, Values: new[] { "0", "1" }),
-        new("sun_measure", "Measure sunlight",
-            "On: URTI measures how much of the game's light comes from the sun and adjusts by that. Off: it uses a fixed amount.",
-            "1", AtStart: false, Names: new[] { "Off", "On" }, Values: new[] { "0", "1" }),
-        new("ui_zone", "UI zone",
-            "A screen area URTI never draws over, as fractions of the screen: left, top, right, bottom (Red Dead Redemption 2's minimap: 0.012,0.69,0.16,0.97). Empty: none.",
+        new("jitter", Loc.GetString("Extras.Urti.Setting.Jitter.Label"),
+            Loc.GetString("Extras.Urti.Setting.Jitter.Help"),
+            "2", AtStart: false, Names: new[] { Loc.GetString("Xaml.Off"), Loc.GetString("Extras.Urti.Jitter.OptFrameToFrame"), Loc.GetString("Extras.Urti.Jitter.OptFull") }, Values: new[] { "0", "1", "2" }),
+        new("ui_photo", Loc.GetString("Extras.Urti.Setting.UiPhoto.Label"),
+            Loc.GetString("Extras.Urti.Setting.UiPhoto.Help"),
+            "1", AtStart: false, Names: new[] { Loc.GetString("Xaml.Off"), Loc.GetString("Xaml.On") }, Values: new[] { "0", "1" }),
+        new("sun_measure", Loc.GetString("Extras.Urti.Setting.SunMeasure.Label"),
+            Loc.GetString("Extras.Urti.Setting.SunMeasure.Help"),
+            "1", AtStart: false, Names: new[] { Loc.GetString("Xaml.Off"), Loc.GetString("Xaml.On") }, Values: new[] { "0", "1" }),
+        new("ui_zone", Loc.GetString("Extras.Urti.Setting.UiZone.Label"),
+            Loc.GetString("Extras.Urti.Setting.UiZone.Help"),
             "", AtStart: false, Check: UrtiZone),
     };
 
@@ -321,9 +316,9 @@ public partial class DetailPanelBuilder
     private void AddUrtiSettings(CogDialog cog, string installPath, Action reopen)
     {
         var svc = App.Services.GetRequiredService<UrtiService>();
-        cog.AddSection("Settings");
-        cog.AddNote("Saved to the game's urti.ini as you change them. Start on, Calibration and Capture length apply the next time the game starts; "
-            + "the others apply while it runs. Hover a setting for what it does.");
+        var settings = UrtiSettings;
+        cog.AddSection(Loc.GetString("Common.Settings"));
+        cog.AddNote(Loc.GetString("Extras.Urti.Settings.Note"));
 
         var grid = new Grid { ColumnSpacing = 12, RowSpacing = 6 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -337,21 +332,25 @@ public partial class DetailPanelBuilder
             var write = s.Key == "ui_zone" && value == "" ? null : value;
             if (svc.SetSetting(installPath, s.Key, write))
             {
-                cog.SetSuccess($"{s.Label} saved{(s.AtStart ? ": applies the next time the game starts." : ".")}");
+                cog.SetSuccess(s.AtStart
+                    ? Loc.GetString("Extras.Urti.Settings.SavedAtStart", s.Label)
+                    : Loc.GetString("Extras.Urti.Settings.Saved", s.Label));
                 return true;
             }
-            cog.SetError("Couldn't write urti.ini. Check the folder's permissions, or try Admin Mode.");
+            cog.SetError(Loc.GetString("Extras.Urti.Error.WriteIni"));
             return false;
         }
 
-        for (int i = 0; i < UrtiSettings.Length; i++)
+        for (int i = 0; i < settings.Length; i++)
         {
-            var s = UrtiSettings[i];
+            var s = settings[i];
             int row = i / 2, col = (i % 2) * 2;
             // The last setting (UI zone, a longer value) takes the rest of its row
-            bool wide = i == UrtiSettings.Length - 1 && i % 2 == 0;
+            bool wide = i == settings.Length - 1 && i % 2 == 0;
             if (col == 0) grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var help = s.Help + (s.AtStart ? " Applies the next time the game starts." : " Applies straight away while the game runs.");
+            var help = s.Help + (s.AtStart
+                ? " " + Loc.GetString("Extras.Urti.Settings.AppliesAtStart")
+                : " " + Loc.GetString("Extras.Urti.Settings.AppliesNow"));
             var current = UrtiService.GetSetting(installPath, s.Key) ?? s.UrtiDefault;
 
             var label = new TextBlock
@@ -381,14 +380,14 @@ public partial class DetailPanelBuilder
             }
             else
             {
-                var box = CogDialog.MakeTextBox(current, s.Key == "ui_zone" ? "none" : s.UrtiDefault);
+                var box = CogDialog.MakeTextBox(current, s.Key == "ui_zone" ? Loc.GetString("Extras.Urti.UiZone.Placeholder") : s.UrtiDefault);
                 string saved = current;
                 // Saved on Enter and when the box loses focus; an invalid value is put back
                 void Commit()
                 {
                     if (box.Text.Trim() == saved.Trim()) return;
                     var (value, error) = s.Check!(box.Text);
-                    if (value == null) { cog.SetError(error ?? "Not a valid value."); box.Text = saved; return; }
+                    if (value == null) { cog.SetError(error ?? Loc.GetString("Extras.Urti.Error.NotValid")); box.Text = saved; return; }
                     if (Save(s, value)) { saved = value; box.Text = value; }
                     else box.Text = saved;
                 }
@@ -405,13 +404,13 @@ public partial class DetailPanelBuilder
         }
         cog.AddContent(grid);
 
-        cog.AddButtons(cog.MakeButton("Use RHI's profile", CogButtonKind.Secondary, () =>
+        cog.AddButtons(cog.MakeButton(Loc.GetString("Extras.Urti.UseProfile.Button"), CogButtonKind.Secondary, () =>
         {
             // The values in the urti.ini RHI installs (the author's Red Dead Redemption 2 profile); keys it doesn't set are removed
-            bool ok = UrtiSettings.All(s => svc.SetSetting(installPath, s.Key, UrtiService.GetProfileValue(s.Key)));
-            if (!ok) { cog.SetError("Couldn't write urti.ini. Check the folder's permissions, or try Admin Mode."); return; }
+            bool ok = settings.All(s => svc.SetSetting(installPath, s.Key, UrtiService.GetProfileValue(s.Key)));
+            if (!ok) { cog.SetError(Loc.GetString("Extras.Urti.Error.WriteIni")); return; }
             reopen();
-        }, "Put these settings back to the urti.ini RHI installs (the author's Red Dead Redemption 2 profile). Other lines in urti.ini are kept."));
+        }, Loc.GetString("Extras.Urti.UseProfile.Tooltip")));
     }
 
     internal async Task ShowUrtiSettingsAsync(GameCardViewModel card)
@@ -420,33 +419,31 @@ public partial class DetailPanelBuilder
         bool isInstalled = UrtiService.IsInstalledIn(installPath);
         bool reopen = false;
         var cog = new CogDialog("URTI", _window.Content.XamlRoot);
-        cog.AddIntro("URTI adds ray-traced reflections to DirectX 12 games: puddles, wet streets, windows and polished floors. "
-            + "It rebuilds the scene from the game's draws and casts real rays into it, so it costs GPU time.");
-        cog.AddWarning("Single player only: URTI hooks the game's rendering. Never use it online.");
+        cog.AddIntro(Loc.GetString("Extras.Urti.Intro"));
+        cog.AddWarning(Loc.GetString("Extras.Urti.Warning.SinglePlayer"));
         if (!string.IsNullOrEmpty(installPath) && HsfService.IsInstalledIn(installPath, card.Is32Bit)) cog.AddWarning(UrtiHsfClashText);
-        cog.AddNote("Experimental: only tested in Red Dead Redemption 2 so far. In other games it may show nothing, show wrong reflections or crash.");
+        cog.AddNote(Loc.GetString("Extras.Urti.Note.Experimental"));
         if (MainViewModel.UrtiReShadeVersionNote(card) is { } rsNote) cog.AddWarning(rsNote);
 
-        cog.AddSection("Using it");
-        cog.AddNote("RHI turns on the URTI effect (ReShade's Home tab) and ReShade's Generic Depth add-on, which URTI reads the game's depth through. "
-            + "F7 turns URTI on and off in the game, F4 shows before / after full screen, F5 shows a split screen without and with URTI, F8 saves a measurement burst.");
+        cog.AddSection(Loc.GetString("Extras.Urti.Section.UsingIt"));
+        cog.AddNote(Loc.GetString("Extras.Urti.Note.UsingIt"));
 
         if (isInstalled && File.Exists(UrtiService.IniPath(installPath)))
             AddUrtiSettings(cog, installPath, () => { reopen = true; cog.Hide(); });
         else
         {
-            cog.AddSection("Settings");
-            cog.AddNote(isInstalled ? "This game has no urti.ini. Reinstall URTI to get one." : "Install URTI to change its settings.");
+            cog.AddSection(Loc.GetString("Common.Settings"));
+            cog.AddNote(isInstalled ? Loc.GetString("Extras.Urti.Note.NoIni") : Loc.GetString("Extras.Urti.Note.NotInstalled"));
         }
 
-        cog.AddSection("Files");
-        cog.AddNote("RHI never replaces urti.ini once it's there. URTI's other settings (reflection time budget, glossy floors and more) are listed in its README.");
+        cog.AddSection(Loc.GetString("Dialog.SectionFiles"));
+        cog.AddNote(Loc.GetString("Extras.Urti.Note.Files"));
         var addonDir = UrtiService.AddonDir(installPath);
         cog.AddButtons(
-            cog.MakeButton("Open GitHub page", CogButtonKind.Secondary,
+            cog.MakeButton(Loc.GetString("Extras.Urti.OpenGithub.Button"), CogButtonKind.Secondary,
                 async () => { await Windows.System.Launcher.LaunchUriAsync(new Uri(UrtiService.RepoUrl)); }),
-            cog.MakeOpenFileButton("Open urti.ini", isInstalled ? UrtiService.IniPath(installPath) : null),
-            cog.MakeOpenFileButton("Open log", isInstalled ? Path.Combine(addonDir, UrtiService.LogName) : null));
+            cog.MakeOpenFileButton(Loc.GetString("Extras.Urti.OpenIni.Button"), isInstalled ? UrtiService.IniPath(installPath) : null),
+            cog.MakeOpenFileButton(Loc.GetString("Extras.Urti.OpenLog.Button"), isInstalled ? Path.Combine(addonDir, UrtiService.LogName) : null));
         await cog.ShowAsync();
         // "Use RHI's profile" closes the ⚙ so it opens again with the new values
         if (reopen) await ShowUrtiSettingsAsync(card);

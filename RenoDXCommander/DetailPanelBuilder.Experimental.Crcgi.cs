@@ -22,12 +22,12 @@ public partial class DetailPanelBuilder
         bool pulled      = FeatureFlags.IsExperimentalHidden(FeatureFlags.ExperimentalCrcgi);
         // Taken out by the manifest: only shown where it's installed, and only to be removed
         var block = pulled
-            ? ("Not offered right now", "CRCGI has been taken out of RHI for now. You can still remove it from this game.")
+            ? (Loc.GetString("Extras.Crcgi.NotOffered"), Loc.GetString("Extras.Crcgi.NotOffered.Tooltip"))
             : isInstalled ? null : vm.CrcgiBlock(card);
 
-        string statusText  = !isInstalled ? "Ready"
-                           : !isOurs ? "Manual"
-                           : CrcgiService.InstalledVersion(installPath) is { } v ? "v" + v : "Installed";
+        string statusText  = !isInstalled ? Loc.GetString("Status.Ready")
+                           : !isOurs ? Loc.GetString("Extras.Crcgi.Status.Manual")
+                           : CrcgiService.InstalledVersion(installPath) is { } v ? "v" + v : Loc.GetString("Status.Installed");
         string statusColor = !isInstalled ? "#A0AABB" : isOurs ? "#5ECB7D" : "#E8C46A";
 
         var row = new Grid { ColumnSpacing = 8 };
@@ -45,12 +45,8 @@ public partial class DetailPanelBuilder
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        var tip = "CRCGI by FlibbertigibbetLollygagger adds global illumination (bounced light and soft contact shadows) to the game "
-            + "as a ReShade effect, built on radiance cascades. Its CRCGI Injector add-on hands it the game's own normals, colours, "
-            + "motion and depth, and keeps the UI and fog out of it.\n"
-            + "Game: single player only; never use it online.\n"
-            + "API: DirectX 10, 11 or 12, Vulkan or OpenGL (DirectX 9 through DXVK), 32 or 64-bit, with ReShade with add-on support.";
-        if (isInstalled && !isOurs) tip += "\n\nCRCGI's add-on is in this game's add-on folder, but RHI didn't install it. Install replaces it with the latest release (the file there is kept as a backup).";
+        var tip = Loc.GetString("Extras.Crcgi.Tooltip");
+        if (isInstalled && !isOurs) tip += Loc.GetString("Extras.Crcgi.Manual.Tooltip.Note");
         ToolTipService.SetToolTip(label, tip);
         Grid.SetColumn(label, 0);
         row.Children.Add(label);
@@ -66,7 +62,7 @@ public partial class DetailPanelBuilder
         };
         if (isOurs)
         {
-            ToolTipService.SetToolTip(statusBlock, "Click to open GitHub releases");
+            ToolTipService.SetToolTip(statusBlock, Loc.GetString("Extras.OpenGithubReleases.Tooltip"));
             statusBlock.PointerPressed += (_, _) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(CrcgiService.ReleasesUrl));
             AttachLinkCursor(statusBlock);
         }
@@ -75,13 +71,13 @@ public partial class DetailPanelBuilder
 
         var infoBtn = new Button
         {
-            Content = "Info", FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32,
+            Content = Loc.GetString("Dialog.Info"), FontSize = 11, Padding = new Thickness(6, 2, 6, 2), Width = 36, Height = 32,
             Background = UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground = UIFactory.Brush(ResourceKeys.AccentBlueBrush),
             BorderBrush = UIFactory.Brush(ResourceKeys.AccentBlueBorderBrush),
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8),
         };
-        ToolTipService.SetToolTip(infoBtn, "Open CRCGI's GitHub page");
+        ToolTipService.SetToolTip(infoBtn, Loc.GetString("Extras.Crcgi.Info.Tooltip"));
         infoBtn.Click += (_, _) => _ = Windows.System.Launcher.LaunchUriAsync(new Uri(CrcgiService.RepoUrl));
         Grid.SetColumn(infoBtn, 2);
         row.Children.Add(infoBtn);
@@ -90,7 +86,7 @@ public partial class DetailPanelBuilder
         var installBtn = new Button
         {
             Content = !btnEnabled ? "⚠  " + block!.Value.Item1
-                    : isOurs ? "↺  Reinstall CRCGI" : "⬇  Install CRCGI",
+                    : isOurs ? Loc.GetString("Extras.Crcgi.Reinstall.Button") : Loc.GetString("Extras.Crcgi.Install.Button"),
             FontSize = 12, Height = 32, HorizontalAlignment = HorizontalAlignment.Stretch, CornerRadius = new CornerRadius(8),
             Background  = isOurs ? UIFactory.GetBrush("#182840") : UIFactory.Brush(ResourceKeys.AccentBlueBgBrush),
             Foreground  = isOurs ? UIFactory.GetBrush("#7AACDD") : UIFactory.Brush(ResourceKeys.AccentBlueBrush),
@@ -106,8 +102,7 @@ public partial class DetailPanelBuilder
             ToolTipService.SetToolTip(label, $"{tip}\n\n{block.Value.Item2}");
         }
         else
-            ToolTipService.SetToolTip(installBtn, "Install CRCGI in this game: the CRCGI Injector add-on next to ReShade, the effect in reshade-shaders, "
-                + "ReShade's Generic Depth add-on on, and the effect turned on in the game's ReShade preset.");
+            ToolTipService.SetToolTip(installBtn, Loc.GetString("Extras.Crcgi.Install.Tooltip"));
 
         installBtn.Click += async (_, _) =>
         {
@@ -116,23 +111,23 @@ public partial class DetailPanelBuilder
             {
                 if (card.IsRunning)
                 {
-                    ToolTipService.SetToolTip(installBtn, "Close the game first: its files are in use.");
+                    ToolTipService.SetToolTip(installBtn, Loc.GetString("Extras.Crcgi.CloseGameFirst"));
                     return;
                 }
                 var xamlRoot = installBtn.XamlRoot ?? _window.Content.XamlRoot;
                 installBtn.IsEnabled = false;
-                installBtn.Content = "Downloading...";
+                installBtn.Content = Loc.GetString("Status.Downloading");
                 var error = await vm.InstallCrcgiAsync(card);
                 if (error != null)
                 {
-                    installBtn.Content = "Install failed";
+                    installBtn.Content = Loc.GetString("Extras.InstallFailed.Button");
                     installBtn.IsEnabled = true;
                     ToolTipService.SetToolTip(installBtn, error);
                     await DialogService.ShowSafeAsync(new ContentDialog
                     {
-                        Title = "CRCGI wasn't installed",
+                        Title = Loc.GetString("Extras.Crcgi.InstallFailed.Title"),
                         Content = new TextBlock { Text = error, TextWrapping = TextWrapping.Wrap },
-                        CloseButtonText = "OK",
+                        CloseButtonText = Loc.GetString("Dialog.Ok"),
                         XamlRoot = xamlRoot,
                         RequestedTheme = ElementTheme.Dark,
                     });
@@ -144,14 +139,14 @@ public partial class DetailPanelBuilder
                                           or HttpRequestException or TaskCanceledException or System.Runtime.InteropServices.COMException)
             {
                 CrashReporter.Log($"[BuildCrcgiRow] Install failed — {ex.Message}");
-                installBtn.Content = "Install failed";
+                installBtn.Content = Loc.GetString("Extras.InstallFailed.Button");
                 installBtn.IsEnabled = true;
             }
         };
         Grid.SetColumn(installBtn, 3);
         row.Children.Add(installBtn);
 
-        var cogBtn = CogDialog.MakeCogButton("CRCGI settings");
+        var cogBtn = CogDialog.MakeCogButton(Loc.GetString("Extras.Crcgi.Settings.Tooltip"));
         cogBtn.Click += async (_, _) =>
         {
             try { await ShowCrcgiSettingsAsync(card); }
@@ -175,13 +170,13 @@ public partial class DetailPanelBuilder
             Opacity = isOurs ? 1.0 : 0,
             IsHitTestVisible = isOurs,
         };
-        ToolTipService.SetToolTip(removeBtn, "Remove CRCGI from this game (the add-on and the effect)");
+        ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.Crcgi.Remove.Tooltip"));
         removeBtn.Click += async (_, _) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
             if (card.IsRunning)
             {
-                ToolTipService.SetToolTip(removeBtn, "Close the game first: its files are in use.");
+                ToolTipService.SetToolTip(removeBtn, Loc.GetString("Extras.Crcgi.CloseGameFirst"));
                 return;
             }
             try

@@ -17,38 +17,38 @@ public partial class DetailPanelBuilder
     private sealed record CrcgiSetting(string Label, string Help, string Key, bool IsDefine, string[] Displays, string[] Values, string Default);
 
     private static string F(double v) => v.ToString("0.000000", CultureInfo.InvariantCulture);
-    private static readonly string[] CrcgiOffOn = { "Off", "On" };
+    private static string[] CrcgiOffOn => new[] { Loc.GetString("Xaml.Off"), Loc.GetString("Xaml.On") };
     private static readonly string[] CrcgiZeroOne = { "0", "1" };
 
     /// <summary>Defaults and ranges from CRCGI_v2.fx (README: every setting at 1 or half its range).</summary>
-    private static readonly CrcgiSetting[] CrcgiSettings =
+    private static CrcgiSetting[] CrcgiSettings => new[]
     {
-        new("GI Intensity", "How strong the bounced light is. 1 is CRCGI's default; above 2 is very strong.",
-            "Intensity", false, new[] { "0.5", "0.75", "1 (default)", "1.25", "1.5", "2", "3" },
+        new(Loc.GetString("Extras.Crcgi.Setting.GiIntensity.Label"), Loc.GetString("Extras.Crcgi.Setting.GiIntensity.Help"),
+            "Intensity", false, new[] { "0.5", "0.75", Loc.GetString("Extras.Crcgi.Opt.OneDefault"), "1.25", "1.5", "2", "3" },
             new[] { F(0.5), F(0.75), F(1), F(1.25), F(1.5), F(2), F(3) }, F(1)),
-        new("Shadow Amount", "Soft contact shadows in crevices and corners. Below 0 lights them instead of darkening them.",
-            "ShadowAmount", false, new[] { "-0.5 (lighter)", "0 (off)", "0.5", "1 (default)" },
+        new(Loc.GetString("Extras.Crcgi.Setting.ShadowAmount.Label"), Loc.GetString("Extras.Crcgi.Setting.ShadowAmount.Help"),
+            "ShadowAmount", false, new[] { Loc.GetString("Extras.Crcgi.Opt.MinusHalfLighter"), Loc.GetString("Extras.Crcgi.Opt.ZeroOff"), "0.5", Loc.GetString("Extras.Crcgi.Opt.OneDefault") },
             new[] { F(-0.5), F(0), F(0.5), F(1) }, F(1)),
-        new("Multibounce", "Light keeps bouncing from surface to surface over a few frames, filling rooms more evenly.",
+        new(Loc.GetString("Extras.Crcgi.Setting.Multibounce.Label"), Loc.GetString("Extras.Crcgi.Setting.Multibounce.Help"),
             "Multibounce", false, CrcgiOffOn, CrcgiZeroOne, "1"),
-        new("Multibounce strength", "How much light each extra bounce passes on.",
-            "MultibounceAmount", false, new[] { "0.5", "1 (default)", "1.5", "2" },
+        new(Loc.GetString("Extras.Crcgi.Setting.MultibounceStrength.Label"), Loc.GetString("Extras.Crcgi.Setting.MultibounceStrength.Help"),
+            "MultibounceAmount", false, new[] { "0.5", Loc.GetString("Extras.Crcgi.Opt.OneDefault"), "1.5", "2" },
             new[] { F(0.5), F(1), F(1.5), F(2) }, F(1)),
-        new("Sky Light", "Adds ambient light from the sky to open areas (its strength and colour are in the Sky settings in the overlay).",
+        new(Loc.GetString("Extras.Crcgi.Setting.SkyLight.Label"), Loc.GetString("Extras.Crcgi.Setting.SkyLight.Help"),
             "ProcessSkyColor", false, CrcgiOffOn, CrcgiZeroOne, "0"),
-        new("Dark Area Boost", "Lifts the bounced light in dark scenes.",
-            "DarkAreaBoost", false, new[] { "0 (default)", "0.5", "1", "2" },
+        new(Loc.GetString("Extras.Crcgi.Setting.DarkAreaBoost.Label"), Loc.GetString("Extras.Crcgi.Setting.DarkAreaBoost.Help"),
+            "DarkAreaBoost", false, new[] { Loc.GetString("Extras.Crcgi.Opt.ZeroDefault"), "0.5", "1", "2" },
             new[] { F(0), F(0.5), F(1), F(2) }, F(0)),
-        new("Frames Accumulated", "How many frames the light is averaged over: more is smoother and less noisy, fewer reacts faster with less trailing.",
-            "TemporalFrames", false, new[] { "8", "16 (default)", "32", "64" },
+        new(Loc.GetString("Extras.Crcgi.Setting.FramesAccumulated.Label"), Loc.GetString("Extras.Crcgi.Setting.FramesAccumulated.Help"),
+            "TemporalFrames", false, new[] { "8", Loc.GetString("Extras.Crcgi.Opt.SixteenDefault"), "32", "64" },
             new[] { F(8), F(16), F(32), F(64) }, F(16)),
-        new("Far cascades at half rate", "Traces half of the far light per frame: faster, with a little more noise far away.",
+        new(Loc.GetString("Extras.Crcgi.Setting.FarCascadesHalfRate.Label"), Loc.GetString("Extras.Crcgi.Setting.FarCascadesHalfRate.Help"),
             "FarHalfRate", false, CrcgiOffOn, CrcgiZeroOne, "0"),
-        new("Effect resolution", "The resolution the light is worked out at (the biggest performance lever). Higher costs much more GPU time.",
-            "CRCGI_RESOLUTION_DIVISOR", true, new[] { "Full", "Half", "Third", "Quarter (default)", "Fifth", "Sixth" },
+        new(Loc.GetString("Extras.Crcgi.Setting.EffectResolution.Label"), Loc.GetString("Extras.Crcgi.Setting.EffectResolution.Help"),
+            "CRCGI_RESOLUTION_DIVISOR", true, new[] { Loc.GetString("Extras.Crcgi.Opt.Full"), Loc.GetString("Extras.Crcgi.Opt.Half"), Loc.GetString("Extras.Crcgi.Opt.Third"), Loc.GetString("Extras.Crcgi.Opt.QuarterDefault"), Loc.GetString("Extras.Crcgi.Opt.Fifth"), Loc.GetString("Extras.Crcgi.Opt.Sixth") },
             new[] { "1", "2", "3", "4", "5", "6" }, "4"),
-        new("Cascades", "How far the light reaches: each extra cascade adds a longer range, more rays and more memory.",
-            "CRCGI_CASCADES", true, new[] { "4", "5 (default)", "6" },
+        new(Loc.GetString("Extras.Crcgi.Setting.Cascades.Label"), Loc.GetString("Extras.Crcgi.Setting.Cascades.Help"),
+            "CRCGI_CASCADES", true, new[] { "4", Loc.GetString("Extras.Crcgi.Opt.FiveDefault"), "6" },
             new[] { "4", "5", "6" }, "5"),
     };
 
@@ -87,38 +87,35 @@ public partial class DetailPanelBuilder
         }
 
         var cog = new CogDialog("CRCGI", _window.Content.XamlRoot);
-        cog.AddIntro("CRCGI adds global illumination: light bouncing off lit surfaces onto nearby ones, and soft contact shadows. "
-            + "It's a ReShade effect built on radiance cascades; its CRCGI Injector add-on hands it the game's own normals, colours, motion and depth "
-            + "and keeps the UI and fog out of it. It costs GPU time.");
-        cog.AddWarning("Single player only: the add-on hooks the game's rendering. Never use it online.");
+        cog.AddIntro(Loc.GetString("Extras.Crcgi.Intro"));
+        cog.AddWarning(Loc.GetString("Extras.Crcgi.Warning.SinglePlayer"));
         if (card.IsRunning)
-            cog.AddWarning("The game is running: ReShade reads these at the next start (or reload the preset in ReShade). Saving in ReShade's overlay overwrites them.");
+            cog.AddWarning(Loc.GetString("Extras.Crcgi.Warning.GameRunning"));
 
-        cog.AddSection("This game");
-        cog.AddNote(!isInstalled ? "Not installed. Install CRCGI to change its settings here."
-            : !isOurs ? "Installed by hand (not by RHI). Install replaces it with the latest release and RHI keeps it updated."
-            : $"Installed: v{CrcgiService.InstalledVersion(installPath) ?? "?"}, {section} and the {(card.Is32Bit ? "32" : "64")}-bit add-on. "
-              + "RHI turned the effect on in the game's ReShade preset and turned on ReShade's Generic Depth add-on, which it reads depth through.");
+        cog.AddSection(Loc.GetString("Extras.Crcgi.Section.ThisGame"));
+        cog.AddNote(!isInstalled ? Loc.GetString("Extras.Crcgi.Note.NotInstalled")
+            : !isOurs ? Loc.GetString("Extras.Crcgi.Note.Manual")
+            : Loc.GetString("Extras.Crcgi.Note.Installed",
+                CrcgiService.InstalledVersion(installPath) ?? "?", section, card.Is32Bit ? "32" : "64"));
 
         // ── Author's preset ───────────────────────────────────────────────────
         if (authorSet != null)
         {
-            cog.AddSection("Author's preset");
-            cog.AddNote($"CRCGI's author made a preset for this game ({authorSet.Folder}). It sets every CRCGI value in this game's ReShade preset "
-                + "(RHI backs the preset up once first); your other effects stay as they are."
-                + (authorSet.Targets != null ? $" It also copies {authorSet.Targets.Name} next to the game's exe: import it in ReShade › Add-ons › CRCGI Injector › Options › Import." : ""));
+            cog.AddSection(Loc.GetString("Extras.Crcgi.Section.AuthorPreset"));
+            cog.AddNote(Loc.GetString("Extras.Crcgi.Note.AuthorPreset", authorSet.Folder,
+                authorSet.Targets != null ? Loc.GetString("Extras.Crcgi.Note.AuthorPresetTargets", authorSet.Targets.Name) : ""));
             int pick = 0;
             var names = authorSet.Presets.Select(p => Path.GetFileNameWithoutExtension(p.Name)).ToList();
             if (names.Count > 1)
-                cog.AddCompactGrid(cog.CompactCombo("Preset", "The author's presets for this CRCGI version.", names, 0, i => { pick = i; return true; }));
+                cog.AddCompactGrid(cog.CompactCombo(Loc.GetString("Dialog.Preset"), Loc.GetString("Extras.Crcgi.AuthorPreset.Preset.Help"), names, 0, i => { pick = i; return true; }));
             else
                 cog.AddNote(names[0]);
             var buttons = new List<Microsoft.UI.Xaml.Controls.Button>();
             Microsoft.UI.Xaml.Controls.Button? applyBtn = null;
-            applyBtn = cog.MakeButton("Use the author's preset", CogButtonKind.Primary, async () =>
+            applyBtn = cog.MakeButton(Loc.GetString("Extras.Crcgi.AuthorPreset.Use.Button"), CogButtonKind.Primary, async () =>
             {
                 applyBtn!.IsEnabled = false;
-                cog.SetStatus("Downloading the preset...");
+                cog.SetStatus(Loc.GetString("Extras.Crcgi.AuthorPreset.Downloading"));
                 var err = await svc.ApplyAuthorPresetAsync(installPath, authorSet.Presets[pick], authorSet.Targets, exeDir,
                     App.Services.GetRequiredService<UpliftService>());
                 applyBtn.IsEnabled = true;
@@ -128,7 +125,7 @@ public partial class DetailPanelBuilder
             });
             buttons.Add(applyBtn);
             if (authorSet.ReadmeUrl != null)
-                buttons.Add(cog.MakeButton("Preset notes", CogButtonKind.Secondary,
+                buttons.Add(cog.MakeButton(Loc.GetString("Extras.Crcgi.AuthorPreset.Notes.Button"), CogButtonKind.Secondary,
                     async () => { await Windows.System.Launcher.LaunchUriAsync(new Uri(authorSet.ReadmeUrl)); }));
             cog.AddButtons(buttons.ToArray());
         }
@@ -157,40 +154,36 @@ public partial class DetailPanelBuilder
                 bool ok = svc.EditPreset(installPath,
                     t => s.IsDefine ? CrcgiPreset.SetDefine(t, section!, s.Key, value) : CrcgiPreset.SetValue(t, section!, s.Key, value),
                     $"{s.Key}={value}");
-                if (ok) cog.SetSuccess(card.IsRunning ? "Saved. Reload the preset in ReShade (or restart the game) to see it." : "Saved.");
-                else cog.SetError("Couldn't write the game's ReShade preset. Close the game and try again.");
+                if (ok) cog.SetSuccess(card.IsRunning ? Loc.GetString("Extras.Crcgi.Saved.Reload") : Loc.GetString("Extras.Crcgi.Saved"));
+                else cog.SetError(Loc.GetString("Extras.Crcgi.Error.WritePreset"));
                 return ok;
             }, isEnabled: canEdit);
         }
 
-        cog.AddSection("Light");
+        cog.AddSection(Loc.GetString("Extras.Crcgi.Section.Light"));
         cog.AddCompactGrid(CrcgiSettings.Where(s => !s.IsDefine && s.Key is not ("TemporalFrames" or "FarHalfRate")).Select(Cell).ToArray());
-        cog.AddSection("Quality and speed");
-        cog.AddNote("Changing these makes ReShade recompile the effect (a short pause).");
+        cog.AddSection(Loc.GetString("Extras.Crcgi.Section.QualitySpeed"));
+        cog.AddNote(Loc.GetString("Extras.Crcgi.Note.QualitySpeed"));
         cog.AddCompactGrid(CrcgiSettings.Where(s => s.IsDefine || s.Key is "TemporalFrames" or "FarHalfRate").Select(Cell).ToArray());
 
         // ── Add-on ────────────────────────────────────────────────────────────
-        cog.AddSection("CRCGI Injector (add-on)");
-        cog.AddCompactGrid(cog.CompactCombo("Level",
-            "A: the effect runs at the end of the frame like any ReShade effect (safest; the add-on changes nothing). "
-            + "B: the add-on runs it inside the frame, before the UI and fog, with the game's exact depth and camera. "
-            + "C: B plus the game's own normals, colours, motion vectors and HDR light, picked in ReShade › Add-ons › CRCGI Injector. "
-            + "Saved in crcgi_injector.ini next to the game's exe; the add-on reads it at game start.",
-            new[] { "A (default)", "B", "C" }, level, i =>
+        cog.AddSection(Loc.GetString("Extras.Crcgi.Section.Injector"));
+        cog.AddCompactGrid(cog.CompactCombo(Loc.GetString("Extras.Crcgi.Injector.Level.Label"),
+            Loc.GetString("Extras.Crcgi.Injector.Level.Help"),
+            new[] { Loc.GetString("Extras.Crcgi.Opt.ADefault"), "B", "C" }, level, i =>
             {
                 if (!isInstalled) return false;
                 bool ok = svc.WriteInjectorLevel(exeDir, i);
-                if (ok) cog.SetSuccess("Saved. The add-on uses it from the next game start.");
-                else cog.SetError("Couldn't write crcgi_injector.ini next to the game's exe.");
+                if (ok) cog.SetSuccess(Loc.GetString("Extras.Crcgi.Injector.Saved"));
+                else cog.SetError(Loc.GetString("Extras.Crcgi.Injector.WriteError"));
                 return ok;
             }, isEnabled: isInstalled));
-        cog.AddNote("Which of the game's buffers feed the effect is picked in the game (ReShade › Add-ons › CRCGI Injector); the README's first-run steps walk through it.");
+        cog.AddNote(Loc.GetString("Extras.Crcgi.Note.Injector"));
 
         // ── Files / reset ─────────────────────────────────────────────────────
-        cog.AddSection("More");
-        cog.AddNote("The other settings (about 140, mostly Expert: hit detection, depth, sky, colours, denoise) are in ReShade's overlay under CRCGI v2. "
-            + "Reset puts every value RHI can change back to CRCGI's defaults; values you set in the overlay that RHI doesn't show are kept.");
-        var resetBtn = cog.MakeButton("Reset to CRCGI's defaults", CogButtonKind.Secondary, () =>
+        cog.AddSection(Loc.GetString("Extras.Crcgi.Section.More"));
+        cog.AddNote(Loc.GetString("Extras.Crcgi.Note.More"));
+        var resetBtn = cog.MakeButton(Loc.GetString("Extras.Crcgi.Reset.Button"), CogButtonKind.Secondary, () =>
         {
             if (!canEdit) return;
             bool ok = svc.EditPreset(installPath, t =>
@@ -200,12 +193,12 @@ public partial class DetailPanelBuilder
                 return r;
             }, "Reset to defaults");
             if (ok) { reopen = true; cog.Hide(); }
-            else cog.SetError("Couldn't write the game's ReShade preset. Close the game and try again.");
+            else cog.SetError(Loc.GetString("Extras.Crcgi.Error.WritePreset"));
         });
         resetBtn.IsEnabled = canEdit;
         cog.AddButtons(resetBtn,
-            cog.MakeOpenFileButton("Open ReShade preset", canEdit ? CrcgiService.PresetFile(installPath) : null),
-            cog.MakeButton("Open README", CogButtonKind.Secondary,
+            cog.MakeOpenFileButton(Loc.GetString("Extras.Crcgi.OpenPreset.Button"), canEdit ? CrcgiService.PresetFile(installPath) : null),
+            cog.MakeButton(Loc.GetString("Extras.Crcgi.OpenReadme.Button"), CogButtonKind.Secondary,
                 async () => { await Windows.System.Launcher.LaunchUriAsync(new Uri(CrcgiService.ReadmeUrl)); }));
 
         await cog.ShowAsync();
