@@ -269,7 +269,7 @@ public partial class DetailPanelBuilder
         return (string.Join(",", v.Select(x => x.ToString("0.###", UrtiInv))), null);
     }
 
-    private static UrtiSetting[] UrtiSettings => new[]
+    private static UrtiSetting[] UrtiSettings => new UrtiSetting[]
     {
         new("live", Loc.GetString("Extras.Urti.Setting.StartOn.Label"),
             Loc.GetString("Extras.Urti.Setting.StartOn.Help"), "0", AtStart: true,

@@ -21,7 +21,7 @@ public partial class DetailPanelBuilder
     private static readonly string[] CrcgiZeroOne = { "0", "1" };
 
     /// <summary>Defaults and ranges from CRCGI_v2.fx (README: every setting at 1 or half its range).</summary>
-    private static CrcgiSetting[] CrcgiSettings => new[]
+    private static CrcgiSetting[] CrcgiSettings => new CrcgiSetting[]
     {
         new(Loc.GetString("Extras.Crcgi.Setting.GiIntensity.Label"), Loc.GetString("Extras.Crcgi.Setting.GiIntensity.Help"),
             "Intensity", false, new[] { "0.5", "0.75", Loc.GetString("Extras.Crcgi.Opt.OneDefault"), "1.25", "1.5", "2", "3" },
