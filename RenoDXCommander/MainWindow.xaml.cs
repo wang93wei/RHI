@@ -46,7 +46,7 @@ public sealed partial class MainWindow : Window
     internal DetailPanelBuilder DetailPanelBuilderInstance => _detailPanelBuilder;
 
     /// <summary>Localization service for i18n string lookups (shared across all MainWindow partials).</summary>
-    private ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
+    private static ILocalizationService Loc => App.Services.GetRequiredService<ILocalizationService>();
 
     private string? _pendingReselect;
     private bool _forceClose;
