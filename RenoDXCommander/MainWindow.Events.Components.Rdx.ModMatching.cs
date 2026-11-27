@@ -15,8 +15,8 @@ public sealed partial class MainWindow
         if (dp == null) return;
         var gameName = card.GameName;
 
-        cog.AddSection("Mod matching");
-        var wikiBox = CogDialog.MakeTextBox(dp.GetWikiName(gameName), "Exact wiki name (blank = the game name)");
+        cog.AddSection(Loc.GetString("Rdx.ModMatching.Section"));
+        var wikiBox = CogDialog.MakeTextBox(dp.GetWikiName(gameName), Loc.GetString("Rdx.ModMatching.WikiName.Placeholder"));
         void SaveWiki()
         {
             var text = wikiBox.Text?.Trim() ?? "";
@@ -24,24 +24,23 @@ public sealed partial class MainWindow
             dp.SetWikiName(gameName, text);
             dp.QueueOverridesRebuild(gameName);
             cog.SetSuccess(text.Length > 0
-                ? $"Saved: RHI looks this game up as \"{text}\". Refresh to find its mod."
-                : "Saved: RHI looks this game up by its own name. Refresh to find its mod.");
+                ? Loc.GetString("Rdx.ModMatching.SavedWithName", text)
+                : Loc.GetString("Rdx.ModMatching.SavedOwnName"));
         }
         wikiBox.KeyDown += (s, e) => { if (e.Key == Windows.System.VirtualKey.Enter) { e.Handled = true; SaveWiki(); } };
         wikiBox.LostFocus += (s, e) => SaveWiki();
-        cog.AddRow("Wiki mod name", wikiBox,
-            "The name this game is listed under on the RenoDX / Luma wiki, when it differs from the game's name. Leave blank to use the game's name. "
-            + "Saved when you press Enter or leave the box.");
+        cog.AddRow(Loc.GetString("Overrides.WikiName.Header"), wikiBox,
+            Loc.GetString("Rdx.ModMatching.WikiName.Help"));
 
-        cog.AddCombo("Wiki lookup",
-            "Use wiki: look this game up on the RenoDX and Luma wikis to find its mod. Ignore wiki: skip wiki lookups for this game.",
+        cog.AddCombo(Loc.GetString("Rdx.ModMatching.Lookup.Label"),
+            Loc.GetString("Rdx.ModMatching.Lookup.Help"),
             new[] { DetailPanelBuilder.WikiIncludedItem, DetailPanelBuilder.WikiExcludedItem },
             dp.GetWikiLookupDisplay(gameName) == DetailPanelBuilder.WikiExcludedItem ? 1 : 0,
             i =>
             {
                 dp.SetWikiLookup(gameName, i == 1 ? DetailPanelBuilder.WikiExcludedItem : DetailPanelBuilder.WikiIncludedItem);
                 dp.QueueOverridesRebuild(gameName);
-                cog.SetSuccess(i == 1 ? "RHI skips wiki lookups for this game." : "RHI looks this game up on the wikis.");
+                cog.SetSuccess(i == 1 ? Loc.GetString("Rdx.ModMatching.LookupExcluded.Status") : Loc.GetString("Rdx.ModMatching.LookupIncluded.Status"));
             });
     }
 }

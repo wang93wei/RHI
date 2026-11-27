@@ -210,10 +210,10 @@ public class InstallEventHandler
         {
             var dmfgDialog = new ContentDialog
             {
-                Title = "Dynamic MFG is on",
+                Title = Loc.GetString("Dialog.DynamicMfgIsOn.Title"),
                 Content = new TextBlock { Text = MainViewModel.UlDmfgWarning, TextWrapping = TextWrapping.Wrap, MaxWidth = 460 },
-                PrimaryButtonText = "Install anyway",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Extras.FrameWarp.Warnings.InstallAnyway"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = xamlRoot,
                 RequestedTheme = ElementTheme.Dark,
@@ -226,14 +226,14 @@ public class InstallEventHandler
         if (mods.Count == 0) return true;
         var content = new StackPanel { Spacing = 8, MaxWidth = 460 };
         content.Children.Add(new TextBlock { Text = MainViewModel.UlMfgModsNotice, TextWrapping = TextWrapping.Wrap });
-        var dontShow = new CheckBox { Content = "Don't show this again", FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
+        var dontShow = new CheckBox { Content = Loc.GetString("Dialog.DonTShowThisAgain"), FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
         content.Children.Add(dontShow);
         var dialog = new ContentDialog
         {
-            Title = "ReLimiter and frame generation mods",
+            Title = Loc.GetString("Dialog.ReLimiterFrameGenMods.Title"),
             Content = content,
-            PrimaryButtonText = "Continue",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Continue"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -260,16 +260,15 @@ public class InstallEventHandler
         if (xamlRoot == null) return true;
         var dialog = new ContentDialog
         {
-            Title = "FrameWarp is installed in this game",
+            Title = Loc.GetString("Dialog.FrameWarpInstalled.Title"),
             Content = new TextBlock
             {
-                Text = $"FrameWarp paces the game itself and asks for frame rate limiters to be off. With {limiter}, reprojection may not reach your refresh rate: "
-                     + $"keep {limiter}'s frame rate cap off, or remove FrameWarp (Experimental).",
+                Text = Loc.GetString("Dialog.FrameWarpInstalled.Content", limiter),
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 460,
             },
-            PrimaryButtonText = "Install anyway",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Extras.FrameWarp.Warnings.InstallAnyway"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,

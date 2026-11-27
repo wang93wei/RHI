@@ -146,8 +146,8 @@ internal sealed partial class DetailLayoutHost
     private FrameworkElement BuildExtrasDensitySwitch()
     {
         var host = new Border { Width = 200, HorizontalAlignment = HorizontalAlignment.Right };
-        ToolTipService.SetToolTip(host, "Compact shows just the names and buttons, to save space. Hover a name for its details.");
-        void Fill() => host.Child = TabsTheme.MakeSegmented(new[] { "Detailed", "Compact" },
+        ToolTipService.SetToolTip(host, Loc.GetString("Detail.Sections.CompactTooltip"));
+        void Fill() => host.Child = TabsTheme.MakeSegmented(new[] { Loc.GetString("Detail.Sections.Detailed"), Loc.GetString("Detail.Sections.Compact") },
             _window.ViewModel.Settings.ExtrasCompact ? 1 : 0, i =>
             {
                 _window.ViewModel.Settings.ExtrasCompact = i == 1;
@@ -635,7 +635,7 @@ internal sealed partial class DetailLayoutHost
                 // The heading names the component, so the first (version) dropdown is just "Version";
                 // an unlabelled button under the others (Multi Frame Gen, Deploy DLL) stays unlabelled
                 string label = f.Label == null || (first && GenericLabels.Contains(f.Label))
-                    ? (first ? "Version" : "")
+                    ? (first ? Loc.GetString("Dialog.Version") : "")
                     : f.Label;
                 // An unlabelled button keeps a blank label row, so it lines up with the dropdowns
                 // beside it (Multi Frame Gen next to Render Scale)

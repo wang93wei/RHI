@@ -62,9 +62,7 @@ public partial class SettingsHandler
 
     private Grid MakeUlPresetKeyRow(ReLimiterPresetKeys.Bind bind)
     {
-        var tip = bind.Help + " Click the box and press a key (Ctrl, Alt and Shift combinations work); "
-            + "Backspace or ↺ clears it.\n\nSaved in ReLimiter's shared presets file straight away, which games with "
-            + "Shared presets on read. Write to all ReLimiter games also puts it in every game's relimiter.ini.";
+        var tip = Loc.GetString("Settings.ReLimiterKeys.Tooltip", bind.Help);
         var row = new Grid { ColumnSpacing = 10 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
@@ -79,7 +77,7 @@ public partial class SettingsHandler
         {
             Style = FindStyle("SettingsTextBoxStyle"),
             IsReadOnly = true,
-            PlaceholderText = "None",
+            PlaceholderText = Loc.GetString("Option.None"),
             FontFamily = new FontFamily("Consolas"),
         };
         ToolTipService.SetToolTip(box, tip);
@@ -88,7 +86,7 @@ public partial class SettingsHandler
         inner.Children.Add(box);
 
         var clear = new Button { Content = "↺", Style = FindStyle("SettingsIconButtonStyle") };
-        ToolTipService.SetToolTip(clear, "Clear this key");
+        ToolTipService.SetToolTip(clear, Loc.GetString("Settings.ReLimiterKeys.ClearTooltip"));
         clear.Click += (s, e) => SaveUlPresetKey(bind, box, "");
         Grid.SetColumn(clear, 1);
         inner.Children.Add(clear);

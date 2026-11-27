@@ -25,9 +25,7 @@ public partial class DetailPanelBuilder
         var installPath = card.InstallPath ?? "";
         const string Owner = Rtx40MfgService.MfgUnlockNrOwnerName;
         cog.AddSection("DLSS 5");
-        cog.AddIntro("MFG Unlock can run NVIDIA's DLSS 5 neural rendering on the game's frames in DirectX 12 and Vulkan games, "
-            + "together with frame generation and HDR. It works best in games with DLSS Super Resolution or Ray Reconstruction. "
-            + "It needs NVIDIA's nvngx_dlssnr.dll beside the game's exe: RHI installs it when you turn DLSS 5 on.");
+        cog.AddIntro(Loc.GetString("Extras.MfgDlss5.Intro"));
         if (string.IsNullOrEmpty(installPath)) return;
 
         // DirectX 11 and older aren't supported (an unknown API is let through)
@@ -59,24 +57,24 @@ public partial class DetailPanelBuilder
 
         if (!apiOk)
         {
-            cog.AddNote($"This game uses {ApiDisplayName(card.GraphicsApi, apis)}: MFG Unlock's DLSS 5 works in DirectX 12 and Vulkan games only.");
+            cog.AddNote(Loc.GetString("Extras.MfgDlss5.Note.ApiUnsupported", ApiDisplayName(card.GraphicsApi, apis)));
             return;
         }
         if (family is GpuFamily.NotRtx)
         {
-            cog.AddNote("DLSS 5 needs an NVIDIA RTX card, so it isn't offered on this PC.");
+            cog.AddNote(Loc.GetString("Extras.MfgDlss5.Note.NoRtx"));
             return;
         }
         if (!isInstalled)
         {
-            cog.AddNote("Install MFG Unlock first to use DLSS 5.");
+            cog.AddNote(Loc.GetString("Extras.MfgDlss5.Note.InstallFirst"));
             return;
         }
 
-        cog.AddNote(!present ? "nvngx_dlssnr.dll: not beside the game's exe yet."
-            : gamesOwn ? $"nvngx_dlssnr.dll{verText}: the game's own (left as it is)."
-            : owners.Count > 0 ? $"nvngx_dlssnr.dll{verText}: installed by RHI ({string.Join(", ", owners)})."
-            : $"nvngx_dlssnr.dll{verText}: installed by RHI.");
+        cog.AddNote(!present ? Loc.GetString("Extras.MfgDlss5.Note.DllNotPresent")
+            : gamesOwn ? $"nvngx_dlssnr.dll{verText}" + Loc.GetString("Extras.MfgDlss5.Note.DllOwn")
+            : owners.Count > 0 ? $"nvngx_dlssnr.dll{verText}" + Loc.GetString("Extras.MfgDlss5.Note.DllInstalledBy", string.Join(", ", owners))
+            : $"nvngx_dlssnr.dll{verText}" + Loc.GetString("Extras.MfgDlss5.Note.DllInstalled"));
 
         // Another DLSS 5 add-on in the game: MFG Unlock's NR stands aside while it's loaded
         var rdx5Svc = App.Services.GetRequiredService<Renodx5AddonService>();
@@ -95,7 +93,7 @@ public partial class DetailPanelBuilder
         // On in the ini but the DLL is gone (deleted by antivirus or another tool): show Off, so On installs it again
         bool on = enabled && present;
         if (enabled && !present)
-            cog.AddWarning("DLSS 5 is on in MFGAdaUnlock.ini, but nvngx_dlssnr.dll is missing, so it can't run. Choose On to install it again.");
+            cog.AddWarning(Loc.GetString("Extras.MfgDlss5.Warning.DllMissing"));
         bool suppress = false;
         Microsoft.UI.Xaml.Controls.ComboBox? combo = null;
         void Revert()
@@ -115,7 +113,7 @@ public partial class DetailPanelBuilder
                 await Task.Run(() => mfgSvc.RemoveNrDll(installPath, Owner));
                 on = false;
                 CrashReporter.Log($"[MfgAdaCog] '{card.GameName}': DLSS 5 = Off");
-                cog.SetSuccess("DLSS 5 off. Restart the game if it's running.");
+                cog.SetSuccess(Loc.GetString("Extras.MfgDlss5.Success.Off"));
                 RequestExtrasRebuild(card);
                 await RefreshDlssAfterNrDllChangeAsync(card);
                 return;
@@ -129,20 +127,20 @@ public partial class DetailPanelBuilder
                     var cached = ResolveCachedNrDllPath(version);
                     if (cached == null)
                     {
-                        cog.SetStatus($"Downloading nvngx_dlssnr.dll {version}...");
+                        cog.SetStatus(Loc.GetString("Extras.RtxEncore.Nr.Downloading", version));
                         cached = await dlssS.EnsureSpecificDlssnrCachedAsync(version);
                     }
                     if (cached == null)
                     {
                         Revert();
-                        cog.SetError($"Couldn't download nvngx_dlssnr.dll {version}, so DLSS 5 stays off.");
+                        cog.SetError(Loc.GetString("Extras.MfgDlss5.Error.DownloadFailed", version));
                         return;
                     }
                     var result = await Task.Run(() => mfgSvc.DeployNrDll(installPath, cached, Owner));
                     if (result == Rtx40MfgService.NrDeployResult.Failed)
                     {
                         Revert();
-                        cog.SetError("Couldn't copy nvngx_dlssnr.dll beside the game's exe, so DLSS 5 stays off. Check that the game folder is writable.");
+                        cog.SetError(Loc.GetString("Extras.MfgDlss5.Error.CopyFailed"));
                         return;
                     }
                     // A game with no DLSS of its own may be in the scan skip cache: un-skip it so the NR DLL shows
@@ -151,7 +149,7 @@ public partial class DetailPanelBuilder
                 Dlssg20_30Service.WriteIniValue(iniPath, "DLSS5", "Enabled", "1");
                 on = true;
                 CrashReporter.Log($"[MfgAdaCog] '{card.GameName}': DLSS 5 = On");
-                cog.SetSuccess("DLSS 5 on. Restart the game once (it has to be on when the game starts); then Ctrl+F8 turns it on and off.");
+                cog.SetSuccess(Loc.GetString("Extras.MfgDlss5.Success.On"));
                 RequestExtrasRebuild(card);
                 await RefreshDlssAfterNrDllChangeAsync(card);
             }
@@ -169,16 +167,13 @@ public partial class DetailPanelBuilder
             {
                 CrashReporter.Log($"[MfgAdaCog] DLSS 5 change failed — {ex.Message}");
                 Revert();
-                cog.SetError($"Couldn't change DLSS 5: {ex.Message}");
+                cog.SetError(Loc.GetString("Extras.MfgDlss5.Error.ChangeFailed", ex.Message));
             }
         }
 
-        combo = cog.AddCombo("DLSS 5 neural rendering",
-            "On writes Enabled=1 under [DLSS5] in MFGAdaUnlock.ini and installs nvngx_dlssnr.dll "
-            + $"{version} beside the game's exe if it isn't there (kept while another component still uses it). "
-            + "Restart the game once after turning it on. In the game, Ctrl+F8 turns it on and off and Ctrl+F7 compares (left half without it). "
-            + "Look, resolution, passes and the rest are in the DLSS 5 tab of the mod's panel in the ReShade overlay.",
-            new[] { "Off", "On" }, on ? 1 : 0, i =>
+        combo = cog.AddCombo(Loc.GetString("Extras.MfgDlss5.Enable.Label"),
+            Loc.GetString("Extras.MfgDlss5.Enable.Desc", version),
+            new[] { Loc.GetString("Xaml.Off"), Loc.GetString("Xaml.On") }, on ? 1 : 0, i =>
             {
                 if (suppress) return true;
                 _ = ApplySafeAsync(i == 1);
@@ -186,9 +181,8 @@ public partial class DetailPanelBuilder
             });
 
         if (otherAddons.Count > 0)
-            cog.AddWarning($"{string.Join(" and ", otherAddons)} is also installed in this game. While another DLSS 5 add-on is loaded, "
-                + "MFG Unlock's DLSS 5 stands aside (Coexist in the DLSS 5 tab changes that). Use one or the other.");
+            cog.AddWarning(Loc.GetString("Extras.MfgDlss5.Warning.OtherAddons", string.Join(Loc.GetString("Extras.MfgDlss5.AddonJoin"), otherAddons)));
         if (apis.Contains(GraphicsApiType.Vulkan) && !apis.Contains(GraphicsApiType.DirectX12))
-            cog.AddNote("In Vulkan games, restart the game after turning DLSS 5 on: MFG Unlock adds what it needs to the game's device when the game starts.");
+            cog.AddNote(Loc.GetString("Extras.MfgDlss5.Note.VulkanRestart"));
     }
 }

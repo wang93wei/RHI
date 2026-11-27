@@ -23,8 +23,8 @@ public partial class DragDropHandler
             .ToList();
         if (games.Count == 0)
         {
-            await ShowDropMessageAsync("No game can take HSF",
-                "HSF needs a game with ReShade (add-ons on) and no anti-cheat. Install ReShade in the game first, then drop the file again.");
+            await ShowDropMessageAsync(Loc.GetString("DragDrop.Hsf.NoGame.Title"),
+                Loc.GetString("DragDrop.Hsf.NoGame.Body"));
             return false;
         }
 
@@ -36,19 +36,17 @@ public partial class DragDropHandler
         var content = new StackPanel { Spacing = 10 };
         content.Children.Add(new TextBlock
         {
-            Text = $"'{archiveName}' is an HSF build. RHI installs it like a release (your HSF settings are kept) and leaves it "
-                 + "in place until the next HSF release comes out, then updates the game to that. Reinstall HSF in the game's "
-                 + "Extras section to go back to the release sooner.",
+            Text = Loc.GetString("DragDrop.Hsf.BuildIntro", archiveName),
             TextWrapping = TextWrapping.Wrap, FontSize = 13,
         });
-        content.Children.Add(new TextBlock { Text = "Install it in:", FontSize = 12 });
+        content.Children.Add(new TextBlock { Text = Loc.GetString("DragDrop.Hsf.InstallIn"), FontSize = 12 });
         content.Children.Add(combo);
         var dialog = new ContentDialog
         {
-            Title = "Install this HSF build?",
+            Title = Loc.GetString("DragDrop.Hsf.Confirm.Title"),
             Content = content,
-            PrimaryButtonText = "Install",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Install"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = xamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -56,12 +54,12 @@ public partial class DragDropHandler
         if (await DialogService.ShowSafeAsync(dialog) != ContentDialogResult.Primary) return false;
         var card = games[Math.Max(0, combo.SelectedIndex)];
 
-        _window.ShowStatusBarMessage($"Installing HSF build {label} in {card.GameName}...", TimeSpan.FromSeconds(30));
+        _window.ShowStatusBarMessage(Loc.GetString("DragDrop.Hsf.Installing", label, card.GameName), TimeSpan.FromSeconds(30));
         var error = await _window.ViewModel.InstallHsfBetaAsync(card, packageRoot, label);
         if (error != null)
         {
-            _window.ShowStatusBarMessage("The HSF build wasn't installed", TimeSpan.FromSeconds(6));
-            await ShowDropMessageAsync("The HSF build wasn't installed", error);
+            _window.ShowStatusBarMessage(Loc.GetString("DragDrop.Hsf.NotInstalled"), TimeSpan.FromSeconds(6));
+            await ShowDropMessageAsync(Loc.GetString("DragDrop.Hsf.NotInstalled"), error);
             return false;
         }
 
@@ -71,10 +69,10 @@ public partial class DragDropHandler
             var builder = _window.DetailPanelBuilderInstance;
             var mfg = await builder.AskHsfMfgUnlockerAsync(card, xamlRoot);
             if (mfg.Install && await _window.ViewModel.InstallMfgForHsfAsync(card, mfg.ProxyName) is { } mfgError)
-                await ShowDropMessageAsync("Universal MFG Unlocker wasn't installed", mfgError);
+                await ShowDropMessageAsync(Loc.GetString("Extras.Hsf.MfgNotInstalled.Title"), mfgError);
         }
 
-        _window.ShowStatusBarMessage($"HSF build {label} installed in {card.GameName}", TimeSpan.FromSeconds(8));
+        _window.ShowStatusBarMessage(Loc.GetString("DragDrop.Hsf.Installed", label, card.GameName), TimeSpan.FromSeconds(8));
         if (ReferenceEquals(_window.ViewModel.SelectedGame, card)) _window.DetailPanelBuilderInstance.RequestExtrasRebuild(card);
         return true;
     }
@@ -85,7 +83,7 @@ public partial class DragDropHandler
         {
             Title = title,
             Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13 },
-            CloseButtonText = "OK",
+            CloseButtonText = Loc.GetString("Dialog.Ok"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };

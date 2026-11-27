@@ -14,7 +14,7 @@ public sealed partial class MainWindow
     /// <summary>Adds an "Updates" section with the component's Update All row.</summary>
     private void AddUpdateAllSection(CogDialog cog, GameCardViewModel card, UpdateAllComponent component)
     {
-        cog.AddSection("Updates");
+        cog.AddSection(Loc.GetString("Xaml.Updates"));
         AddUpdateAllRow(cog, card, component);
     }
 
@@ -44,18 +44,18 @@ public sealed partial class MainWindow
         };
 
         string help = globallyOff
-            ? $"Updates for {name} are off for every game in Settings › General › Updates (Components to check)."
-            : $"Include: Update All and automatic updates update {name} in this game. Exclude: they leave it as it is."
+            ? Loc.GetString("Dialog.UpdateAll.GloballyOff", name)
+            : Loc.GetString("Dialog.UpdateAll.Included", name)
               + (component == UpdateAllComponent.ReShade && card.RequiresVulkanInstall
-                  ? " Vulkan games share one ReShade, so this applies to every Vulkan game." : "");
-        return cog.AddCombo("Update All", help, new[] { "Include", "Exclude" }, isExcluded() || globallyOff ? 1 : 0,
+                  ? Loc.GetString("Dialog.UpdateAll.VulkanNote") : "");
+        return cog.AddCombo(Loc.GetString("Common.UpdateAll"), help, new[] { Loc.GetString("Dialog.UpdateAll.Include"), Loc.GetString("Dialog.UpdateAll.Exclude") }, isExcluded() || globallyOff ? 1 : 0,
             i =>
             {
                 bool exclude = i == 1;
                 if (isExcluded() != exclude) toggle();
                 _detailPanelBuilder?.UpdateDetailComponentRows(card);
                 _detailPanelBuilder?.QueueOverridesRebuild(gameName); // the component notes show "not in Update All"
-                cog.SetSuccess(exclude ? $"Update All leaves {name} alone in this game." : $"Update All updates {name} in this game.");
+                cog.SetSuccess(exclude ? Loc.GetString("Dialog.UpdateAll.LeftAlone", name) : Loc.GetString("Dialog.UpdateAll.Updated", name));
             },
             isEnabled: !globallyOff);
     }

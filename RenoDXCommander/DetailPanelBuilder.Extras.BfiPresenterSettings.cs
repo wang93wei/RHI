@@ -190,39 +190,37 @@ public partial class DetailPanelBuilder
                     "ShowOverlays", BfiOffOn, BfiZeroOne, "0"));
 
         // ── GPU priority (the BFI Presenter Manager's GPU priority row) ─────────
-        cog.AddSection("GPU priority");
+        cog.AddSection(Loc.GetString("Settings.RtxVideo.GpuPriority.Label"));
         cog.AddCompactGrid(
-            Choice("Presenter GPU priority", "How urgently the graphics card treats the flashes. Realtime (default) runs the presenter's small amount of GPU work ahead of the game's, so flashes stay on time however busy the GPU is; it needs the Windows right below, otherwise it falls back to High. Lower to High or Normal if the game freezes with BFI Presenter. Applies at the next game start."
-                    + (vulkan ? " Vulkan games get realtime only when they leave the compute queue family free (BFIPresenterVK.log says so)." : ""),
-                "PresenterQueuePriority", new[] { "Normal", "High", "Realtime" }, new[] { "0", "1", "2" }, "2"));
+            Choice(Loc.GetString("Extras.Bfi.GpuPriority.Label"), Loc.GetString("Extras.Bfi.GpuPriority.Help")
+                    + (vulkan ? Loc.GetString("Extras.Bfi.GpuPriority.HelpVulkan") : ""),
+                "PresenterQueuePriority", new[] { Loc.GetString("Extras.Bfi.GpuPriority.Normal"), Loc.GetString("Option.High"), Loc.GetString("Extras.Bfi.GpuPriority.Realtime") }, new[] { "0", "1", "2" }, "2"));
         var prio = await Task.Run(RealtimeGpuPriorityService.GetStatus);
         string PrioStatus(RealtimeGpuPriorityService.Status s) => s switch
         {
-            { Granted: true, InToken: false } => "Allowed for your Windows account. Sign out of Windows and back in, then games get the realtime GPU queue.",
-            { Granted: true } => "Allowed: games get the realtime GPU queue.",
-            { Granted: false, InToken: true } => "Removed from your account. Games keep realtime until you sign out of Windows.",
-            { Granted: false } => "Not allowed: games use the high-priority GPU queue unless they run as administrator. Allow it if BFI Presenter flashes or flickers in GPU-heavy moments.",
-            _ => "Not allowed yet as far as RHI knows (Windows only shows this setting to administrators). If you allowed it with BFI Presenter's Manager, sign out and back in and this updates; otherwise Allow it here.",
+            { Granted: true, InToken: false } => Loc.GetString("Extras.Bfi.GpuPriority.Status.SignOut"),
+            { Granted: true } => Loc.GetString("Extras.Bfi.GpuPriority.Status.Allowed"),
+            { Granted: false, InToken: true } => Loc.GetString("Extras.Bfi.GpuPriority.Status.RemovedFromAccount"),
+            { Granted: false } => Loc.GetString("Extras.Bfi.GpuPriority.Status.NotAllowed"),
+            _ => Loc.GetString("Extras.Bfi.GpuPriority.Status.Unknown"),
         };
         var prioNote = cog.AddNote(PrioStatus(prio));
         bool prioGranted = prio.Granted == true;
         Button? prioBtn = null;
-        prioBtn = cog.MakeButton(prioGranted ? "Remove from my account" : "Allow for my account", CogButtonKind.Secondary, async () =>
+        prioBtn = cog.MakeButton(prioGranted ? Loc.GetString("Extras.Bfi.GpuPriority.RemoveButton") : Loc.GetString("Extras.Bfi.GpuPriority.AllowButton"), CogButtonKind.Secondary, async () =>
         {
             prioBtn!.IsEnabled = false;
             var (ok, err) = await RealtimeGpuPriorityService.SetAsync(grant: !prioGranted);
             var now = await Task.Run(RealtimeGpuPriorityService.GetStatus);
             prioGranted = now.Granted == true;
             prioNote.Text = PrioStatus(now);
-            prioBtn.Content = prioGranted ? "Remove from my account" : "Allow for my account";
+            prioBtn.Content = prioGranted ? Loc.GetString("Extras.Bfi.GpuPriority.RemoveButton") : Loc.GetString("Extras.Bfi.GpuPriority.AllowButton");
             prioBtn.IsEnabled = true;
             if (ok) cog.SetSuccess(prioGranted
-                ? "Added. Sign out of Windows and back in, then start the game: its log says the realtime GPU priority privilege is enabled."
-                : "Removed. It stays in effect until you sign out of Windows.");
-            else cog.SetError(err ?? "Not changed.");
-        }, "Gives your Windows account the right 'Increase scheduling priority' (one administrator prompt), as BFI Presenter's Manager does, "
-         + "so games can run the presenter's GPU queue at realtime priority without being run as administrator. Windows grants rights to accounts, "
-         + "not programs, so any program you run can then raise its own priority too. Remove takes it away again.");
+                ? Loc.GetString("Extras.Bfi.GpuPriority.Added")
+                : Loc.GetString("Extras.Bfi.GpuPriority.Removed"));
+            else cog.SetError(err ?? Loc.GetString("Extras.Bfi.GpuPriority.NotChanged"));
+        }, Loc.GetString("Extras.Bfi.GpuPriority.Button.Tooltip"));
         cog.AddButtons(prioBtn);
 
         // ── Vulkan layer ────────────────────────────────────────────────────────

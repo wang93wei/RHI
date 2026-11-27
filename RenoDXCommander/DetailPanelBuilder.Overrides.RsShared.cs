@@ -116,10 +116,10 @@ public partial class DetailPanelBuilder
     {
         var dialog = new ContentDialog
         {
-            Title = "Vulkan ReShade Channel Override",
-            Content = "Vulkan games share a global ReShade layer.\n\n" + message,
-            PrimaryButtonText = "Apply to All Vulkan Games",
-            CloseButtonText = "Cancel",
+            Title = Loc.GetString("Dialog.VulkanReshadeChannelOverride"),
+            Content = Loc.GetString("Extras.RsShared.VulkanChannel.Prefix") + "\n\n" + message,
+            PrimaryButtonText = Loc.GetString("Dialog.ApplyToAllVulkanGames"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -148,7 +148,7 @@ public partial class DetailPanelBuilder
             var pickerContent = new StackPanel { Spacing = 12 };
             pickerContent.Children.Add(new TextBlock
             {
-                Text = "⚠ Older ReShade versions may not support newer addons.\nThe game will be excluded from automatic ReShade updates.",
+                Text = Loc.GetString("Dialog.OlderReshadeVersionsMayNot"),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
                 FontSize = 12,
@@ -157,10 +157,10 @@ public partial class DetailPanelBuilder
 
             var pickerDialog = new ContentDialog
             {
-                Title = "Select Legacy ReShade Version",
+                Title = Loc.GetString("Dialog.SelectLegacyReshadeVersion"),
                 Content = new ScrollViewer { Content = pickerContent, MaxHeight = 400 },
-                PrimaryButtonText = "Confirm",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = Loc.GetString("Dialog.Confirm"),
+                CloseButtonText = Loc.GetString("Dialog.Cancel"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             };
@@ -171,7 +171,7 @@ public partial class DetailPanelBuilder
 
             bool legacyIsVulkan = card.RequiresVulkanInstall;
             if (legacyIsVulkan
-                && !await ConfirmVulkanChannelAsync($"Switching to ReShade {pickedVersion} will change it for ALL Vulkan games."))
+                && !await ConfirmVulkanChannelAsync(Loc.GetString("Extras.RsShared.VulkanChannel.SwitchAll", pickedVersion)))
                 return false;
 
             if (!AuxInstallService.IsLegacyVersionCached(pickedVersion)
@@ -258,7 +258,7 @@ public partial class DetailPanelBuilder
         {
             // ── Vulkan game: affects ALL Vulkan games ──
             if (channelValue != null
-                && !await ConfirmVulkanChannelAsync("Changing the channel for this game will change it for ALL Vulkan games."))
+                && !await ConfirmVulkanChannelAsync(Loc.GetString("Extras.RsShared.VulkanChannel.ChangeAll")))
                 return false;
 
             foreach (var vCard in _window.ViewModel.AllCards.Where(c => c.RequiresVulkanInstall))
@@ -311,9 +311,7 @@ public partial class DetailPanelBuilder
         var pickerContent = new StackPanel { Spacing = 12 };
         pickerContent.Children.Add(new TextBlock
         {
-            Text = "An older ReShade version without add-on support, for games whose anti-cheat blocks add-ons.\n"
-                 + "RenoDX, ReLimiter and Display Commander need add-ons and are removed from this game.\n"
-                 + "The game will be excluded from automatic ReShade updates.",
+            Text = Loc.GetString("Extras.RsShared.LegacyNoAddon.Body"),
             TextWrapping = TextWrapping.Wrap,
             Foreground = UIFactory.Brush(ResourceKeys.TextSecondaryBrush),
             FontSize = 12,
@@ -322,10 +320,10 @@ public partial class DetailPanelBuilder
 
         var pickerDialog = new ContentDialog
         {
-            Title = "Select Legacy ReShade Version (No Addons)",
+            Title = Loc.GetString("Extras.RsShared.SelectLegacyNoAddon.Title"),
             Content = new ScrollViewer { Content = pickerContent, MaxHeight = 400 },
-            PrimaryButtonText = "Confirm",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = Loc.GetString("Dialog.Confirm"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         };
@@ -402,16 +400,16 @@ public partial class DetailPanelBuilder
             var warnContent = new StackPanel { Spacing = 8 };
             warnContent.Children.Add(new TextBlock
             {
-                Text = "No custom ReShade DLLs found.\n\nPlace your .dll files in:",
+                Text = Loc.GetString("Dialog.CustomReshadeNotFound.Content"),
                 TextWrapping = TextWrapping.Wrap,
             });
             warnContent.Children.Add(MakeFolderLink(12));
 
             await DialogService.ShowSafeAsync(new ContentDialog
             {
-                Title = "Custom ReShade Not Found",
+                Title = Loc.GetString("Dialog.CustomReshadeNotFound"),
                 Content = warnContent,
-                CloseButtonText = "OK",
+                CloseButtonText = Loc.GetString("Dialog.Ok"),
                 XamlRoot = _window.Content.XamlRoot,
                 RequestedTheme = ElementTheme.Dark,
             });
@@ -439,9 +437,9 @@ public partial class DetailPanelBuilder
 
         var pickerResult = await DialogService.ShowSafeAsync(new ContentDialog
         {
-            Title = "Select Custom ReShade",
-            PrimaryButtonText = "Deploy",
-            CloseButtonText = "Cancel",
+            Title = Loc.GetString("Dialog.SelectCustomReshade"),
+            PrimaryButtonText = Loc.GetString("Dialog.Deploy"),
+            CloseButtonText = Loc.GetString("Dialog.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
@@ -456,7 +454,7 @@ public partial class DetailPanelBuilder
         if (targetCardCustom?.RequiresVulkanInstall == true)
         {
             // Vulkan game: affects ALL Vulkan games
-            if (!await ConfirmVulkanChannelAsync("Changing the channel for this game will change it for ALL Vulkan games."))
+            if (!await ConfirmVulkanChannelAsync(Loc.GetString("Extras.RsShared.VulkanChannel.ChangeAll")))
                 return false;
 
             _gameNameService.CustomReShadeSelection[customKey] = selectedFilename;
@@ -603,10 +601,10 @@ public partial class DetailPanelBuilder
 
         var shaderResult = await DialogService.ShowSafeAsync(new ContentDialog
         {
-            Title = "Install Shaders?",
-            Content = "Also install the required shaders and textures?",
-            PrimaryButtonText = "Yes",
-            CloseButtonText = "No",
+            Title = Loc.GetString("Extras.RsShared.InstallShaders.Title"),
+            Content = Loc.GetString("Dialog.AlsoInstallTheRequiredShaders"),
+            PrimaryButtonText = Loc.GetString("Dialog.Yes"),
+            CloseButtonText = Loc.GetString("Dialog.No"),
             XamlRoot = _window.Content.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
         });

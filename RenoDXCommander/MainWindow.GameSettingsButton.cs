@@ -33,8 +33,8 @@ public sealed partial class MainWindow
             Margin = new Thickness(6, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
         };
-        ToolTipService.SetToolTip(btn, "Game settings");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(btn, "Game settings");
+        ToolTipService.SetToolTip(btn, Loc.GetString("Detail.GameSettings"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(btn, Loc.GetString("Detail.GameSettings"));
         btn.Click += async (s, e) =>
         {
             try { await _detailPanelBuilder.Layout.ShowGameSettingsCogAsync(btn.XamlRoot); }

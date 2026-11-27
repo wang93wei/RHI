@@ -31,19 +31,14 @@ public partial class SettingsHandler
                     return;
                 }
 
-                const string tip = "ReLimiter v4's pacing preference (64-bit DirectX 12 games).\n"
-                    + "Lower latency: keeps less work waiting for the GPU, for slightly lower latency.\n"
-                    + "Balanced (ReLimiter's default): the recommended behaviour.\n"
-                    + "Smoother: more even frames for slightly more latency, mainly with DLSS frame generation.\n\n"
-                    + "Saved for new ReLimiter v4 installs and by Save to global relimiter.ini. Write to all ReLimiter games "
-                    + "also puts it in every game with ReLimiter v4 (v3 doesn't have it). You can still change it per game in ReLimiter's overlay.";
+                var tip = Loc.GetString("Settings.ReLimiterPacing.Tooltip");
 
                 var row = new Grid { ColumnSpacing = 10 };
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 210 });
                 var label = new TextBlock
                 {
-                    Text = "Pacing preference (v4)",
+                    Text = Loc.GetString("Settings.ReLimiterPacing.Title"),
                     Style = FindStyle("SettingsLabelStyle"),
                     VerticalAlignment = VerticalAlignment.Center,
                 };
@@ -53,7 +48,7 @@ public partial class SettingsHandler
                 var combo = new ComboBox { Style = FindStyle("SettingsComboStyle"), HorizontalAlignment = HorizontalAlignment.Stretch };
                 foreach (var l in UlV4Rules.PacingLabels) combo.Items.Add(new ComboBoxItem { Content = l });
                 ToolTipService.SetToolTip(combo, tip);
-                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(combo, "Pacing preference");
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(combo, Loc.GetString("Settings.ReLimiterPacing.AutomationName"));
                 combo.SelectionChanged += UlPacingCombo_SelectionChanged;
                 Grid.SetColumn(combo, 1);
                 row.Children.Add(combo);

@@ -93,16 +93,14 @@ public partial class SettingsHandler
             int at = column.Children.IndexOf(writeAll);
             column.Children.RemoveAt(at);
 
-            var btn = new Button { Content = "Save to global relimiter.ini", Style = FindStyle("SettingsButtonStyle") };
+            var btn = new Button { Content = Loc.GetString("Settings.ReLimiterTemplate.SaveButton"), Style = FindStyle("SettingsButtonStyle") };
             if (Application.Current.Resources.TryGetValue(ResourceKeys.SettingsLabelBrush, out var v) && v is Microsoft.UI.Xaml.Media.Brush brush)
             {
                 btn.Foreground = brush;
                 btn.Resources["ButtonForegroundPointerOver"] = brush;
                 btn.Resources["ButtonForegroundPressed"] = brush;
             }
-            ToolTipService.SetToolTip(btn, "Saves the settings above into RHI's global relimiter.ini only "
-                + "(%LocalAppData%\\RHI\\inis\\relimiter.ini), the file new ReLimiter installs are set up from. "
-                + "Games that already have ReLimiter keep their own relimiter.ini. These boxes always show what the global file holds.");
+            ToolTipService.SetToolTip(btn, Loc.GetString("Settings.ReLimiterTemplate.SaveTooltip"));
             btn.Click += UlSaveTemplate_Click;
             _ulSaveTemplateBtn = btn;
 
@@ -162,12 +160,12 @@ public partial class SettingsHandler
             ReLimiterPresetKeys.WriteToGameIni(path, presetKeys);
             AuxInstallService.ApplyUlPacingPreference(path, s.UlPacingPreference);
             CrashReporter.Log($"[SettingsHandler.UlSaveTemplate_Click] Saved to '{path}': osd={_currentUlHotkeyString}, shared={s.UlSharedPresets}, hooks={s.UlDlssHooks}, fps={s.UlTargetFps}, pacing={s.UlPacingPreference}");
-            SetUlSaveTemplateStatus($"Saved to the global relimiter.ini at {DateTime.Now:HH:mm}. Games' relimiter.ini files weren't changed.", false);
+            SetUlSaveTemplateStatus(Loc.GetString("Settings.ReLimiterTemplate.Saved", DateTime.Now.ToString("HH:mm")), false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             CrashReporter.Log($"[SettingsHandler.UlSaveTemplate_Click] Failed — {ex.Message}");
-            SetUlSaveTemplateStatus($"Couldn't save the global relimiter.ini: {ex.Message}", true);
+            SetUlSaveTemplateStatus(Loc.GetString("Settings.ReLimiterTemplate.SaveFailed", ex.Message), true);
         }
     }
 

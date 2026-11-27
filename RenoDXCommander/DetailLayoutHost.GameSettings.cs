@@ -65,10 +65,10 @@ internal sealed partial class DetailLayoutHost
 
         return new()
         {
-            ("Game", game),
-            ("Launching", launching),
-            ("Overlay and display", overlay),
-            ("Reset", reset),
+            (Loc.GetString("Option.Game"), game),
+            (Loc.GetString("Detail.GameSettings.Group.Launching"), launching),
+            (Loc.GetString("Detail.GameSettings.Group.OverlayAndDisplay"), overlay),
+            (Loc.GetString("Xaml.Reset"), reset),
         };
     }
 
@@ -130,11 +130,11 @@ internal sealed partial class DetailLayoutHost
         var exeBox = new TextBox
         {
             Text = vm.GetLaunchExeOverride(name),
-            PlaceholderText = "Auto-detect (or paste path)",
+            PlaceholderText = Loc.GetString("Dialog.AutoDetectOrPastePath"),
             FontSize = 12,
             Width = boxWidth,
         };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(exeBox, "Launch executable");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(exeBox, Loc.GetString("Overrides.LaunchExe"));
         void SaveExe()
         {
             if (exeBox.Text.Trim() == vm.GetLaunchExeOverride(name)) return;
@@ -144,7 +144,7 @@ internal sealed partial class DetailLayoutHost
         exeBox.LostFocus += (s, e) => SaveExe();
         exeBox.KeyDown += (s, e) => { if (e.Key == Windows.System.VirtualKey.Enter) SaveExe(); };
 
-        var browseBtn = new Button { Content = "Browse", Padding = new Thickness(14, 0, 14, 0) };
+        var browseBtn = new Button { Content = Loc.GetString("Common.Browse"), Padding = new Thickness(14, 0, 14, 0) };
         TabsTheme.Apply(browseBtn, TabsTheme.BlueButton, height: 32, fontSize: 12);
         browseBtn.Click += async (s, e) =>
         {
@@ -157,7 +157,7 @@ internal sealed partial class DetailLayoutHost
             }
             catch (Exception ex) { CrashReporter.Log($"[DetailLayoutHost.GameSettings] Browse for launch exe failed — {ex.Message}"); }
         };
-        var resetBtn = new Button { Content = "Reset launch options", Padding = new Thickness(14, 0, 14, 0) };
+        var resetBtn = new Button { Content = Loc.GetString("Overrides.LaunchExe.ResetButton"), Padding = new Thickness(14, 0, 14, 0) };
         TabsTheme.Apply(resetBtn, TabsTheme.DangerButton, height: 32, fontSize: 12);
 
         var exePanel = new StackPanel { Spacing = 8, Width = boxWidth };
@@ -166,18 +166,18 @@ internal sealed partial class DetailLayoutHost
         btnRow.Children.Add(browseBtn);
         btnRow.Children.Add(resetBtn);
         exePanel.Children.Add(btnRow);
-        AddGameSettingRow(rows, "Launch executable",
-            "The program RHI starts when you launch this game. Leave blank to detect it automatically.", exePanel);
+        AddGameSettingRow(rows, Loc.GetString("Overrides.LaunchExe"),
+            Loc.GetString("Detail.GameSettings.LaunchExe.Desc"), exePanel);
 
         // ── Launch arguments ──
         var argsBox = new TextBox
         {
             Text = vm.GetLaunchArgsOverride(name),
-            PlaceholderText = "Launch arguments",
+            PlaceholderText = Loc.GetString("Dialog.LaunchArguments"),
             FontSize = 12,
             Width = boxWidth,
         };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(argsBox, "Launch arguments");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(argsBox, Loc.GetString("Dialog.LaunchArguments"));
         void SaveArgs()
         {
             if (argsBox.Text.Trim() == vm.GetLaunchArgsOverride(name)) return;
@@ -186,10 +186,10 @@ internal sealed partial class DetailLayoutHost
         }
         argsBox.LostFocus += (s, e) => SaveArgs();
         argsBox.KeyDown += (s, e) => { if (e.Key == Windows.System.VirtualKey.Enter) SaveArgs(); };
-        string argsDesc = "Command-line arguments passed to the game when RHI launches it.";
+        string argsDesc = Loc.GetString("Detail.GameSettings.LaunchArgs.Desc");
         if (string.Equals(card.Source, "Epic", StringComparison.OrdinalIgnoreCase))
-            argsDesc += " Setting arguments turns off Epic's own launch link; games with Epic's anti-cheat may not start with them.";
-        AddGameSettingRow(rows, "Launch arguments", argsDesc, argsBox);
+            argsDesc += Loc.GetString("Detail.GameSettings.LaunchArgs.EpicNote");
+        AddGameSettingRow(rows, Loc.GetString("Dialog.LaunchArguments"), argsDesc, argsBox);
 
         resetBtn.Click += (s, e) =>
         {

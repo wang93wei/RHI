@@ -86,9 +86,9 @@ public sealed partial class MainWindow
             if (_detailPanelBuilder is { } dp)
             {
                 var capturedName = card.GameName;
-                cog.AddSection("Setup");
-                AddSharedOverrideCombo(cog, "DLL name",
-                    "Renames Display Commander's DLL in this game's folder. -------- uses the default name. Names used by ReShade or OptiScaler aren't listed.",
+                cog.AddSection(Loc.GetString("Detail.Setup"));
+                AddSharedOverrideCombo(cog, Loc.GetString("Dialog.Dc.DllName.Label"),
+                    Loc.GetString("Dialog.Dc.DllName.Help"),
                     () => { var (items, sel) = dp.GetDcDllNameChoices(card); return (items, sel); },
                     sel => DetailPanelBuilder.DcNamePickNeedsDialog(card, sel),
                     async sel =>
