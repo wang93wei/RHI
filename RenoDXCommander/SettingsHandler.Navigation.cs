@@ -386,6 +386,7 @@ public partial class SettingsHandler
         EnsureNvAppLimitsPanel();
         EnsureCustomFoldersCard();   // Game library card, which holds the Removed games button
         EnsureRemovedGamesButton();
+        EnsureCustomDllFolderButton(); // Tools › Folders and logs, after Custom
         EnsureBackupCard();           // after the Game library card, in Tools & Maintenance
         EnsureOsCustomBuildsCard();
         EnsureControllerSetting();
@@ -401,6 +402,7 @@ public partial class SettingsHandler
         EnsureLaunchButtonRows();
         EnsureShaderCompileRow();
         EnsureSteamGridDbCard();
+        EnsureTunePresetsSection();  // before the nav, so it gets a jump button (just before Components)
         EnsureRhiOverlaySection();   // before the nav, so it gets a jump button (just before Tools)
         EnsureAchievementsSection(); // a card in the overlay section, so after it
         EnsureSettingsNavigation();

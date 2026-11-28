@@ -259,23 +259,6 @@ public partial class MainViewModel
             try { System.IO.File.Delete(uncleanMarkerPath); } catch (Exception ex) { CrashReporter.Log($"[MainViewModel.InitializeCoreAsync] Failed to delete unclean-restart marker — {ex.Message}"); }
         }
 
-        // Check for pending-dump marker — written by the dump task before MiniDumpWriteDump starts.
-        // If present, the previous session froze and wrote (or attempted) a dump. Log path and size.
-        var pendingDumpMarker = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "RHI", "rhi_pending_dump");
-        if (System.IO.File.Exists(pendingDumpMarker))
-        {
-            string dumpInfo = "";
-            try { dumpInfo = System.IO.File.ReadAllText(pendingDumpMarker).Trim(); } catch (Exception ex) { CrashReporter.Log($"[MainViewModel.InitializeCoreAsync] Failed to read pending-dump marker — {ex.Message}"); }
-            // dumpInfo is either "path" (write started but log line may be lost) or "path|SizeMB" (write confirmed)
-            var dumpPath = dumpInfo.Contains('|') ? dumpInfo.Split('|')[0] : dumpInfo;
-            var dumpSize = dumpInfo.Contains('|') ? dumpInfo.Split('|')[1] : "size unknown";
-            bool dumpExists = !string.IsNullOrEmpty(dumpPath) && System.IO.File.Exists(dumpPath);
-            _crashReporter.Log($"[MainViewModel.InitializeAsync] Previous session freeze dump: '{System.IO.Path.GetFileName(dumpPath)}' ({dumpSize}) — {(dumpExists ? "EXISTS on disk" : "NOT FOUND on disk")}");
-            try { System.IO.File.Delete(pendingDumpMarker); } catch (Exception ex) { CrashReporter.Log($"[MainViewModel.InitializeCoreAsync] Failed to delete pending-dump marker — {ex.Message}"); }
-        }
-
         // Sync global peak nits setting for INI deploys
         AuxInstallService.GlobalPeakNits = _settingsViewModel.PeakNits;
         AuxInstallService.GlobalPeakNitsEnabled = _settingsViewModel.PeakNitsEnabled;
@@ -429,9 +412,6 @@ public partial class MainViewModel
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] HDR database fetch failed — {ex.Message}"); }
             });
 
-            // One-time migration: move nightly DLLs from old shared folder to new nightly folder
-            MigrateNightlyStagingFolder();
-
             // One-time migration: wipe stale DLSS5Feeder shader staging folder.
             // The DLSS5Feeder pack was previously downloaded from the repo zip (which no longer
             // contains DLSS5_Feed.fx). The file is now extracted from the Feeder addon zip.
@@ -543,8 +523,6 @@ public partial class MainViewModel
                         _ => DxvkVariant.Development,
                     };
 
-                    // Migrate legacy shared staging folder to variant-specific folders
-                    MigrateDxvkStagingFolder();
 
                     // Only download the globally selected variant at startup, and only when a
                     // game uses DXVK. Other variants, and first installs, download on demand.
@@ -831,7 +809,6 @@ public partial class MainViewModel
             SaveGameApiCache();
 
             // Auto-reinstall ReShade for WindowsApps games whose path changed during this build
-            ReinstallPendingWindowsAppsReShade("InitializeAsync");
             // Manifest noAddonReShadeGames: ReShade without add-ons by default (once per game)
             ApplyManifestNoAddonReShade("InitializeAsync");
 
@@ -879,6 +856,9 @@ public partial class MainViewModel
                 {
                     _crashReporter.Log($"[MainViewModel.InitializeAsync] Background update check failed — {ex}");
                 }
+                // Custom DLLs: newer files from Custom\DLLs\ over RHI's copies, then watch the folder
+                RedeployCustomDlls("InitializeAsync");
+                StartCustomDllWatcher();
                 // The cached-library path starts the 4 h timer after its background scan; a first
                 // launch (no saved library) only takes this path, so start it here too. No-op if running.
                 StartPeriodicUpdateCheckTimer();
@@ -1001,7 +981,8 @@ public partial class MainViewModel
                             return Task.Run(() => _addonPackService.DeployAddonsForGame(
                                 card.GameName, card.InstallPath, card.Is32Bit, useGlobalSet, selection));
                         });
-                    await Task.WhenAll(addonTasks);
+                    var copiedPerGame = await Task.WhenAll(addonTasks);
+                    _crashReporter.Log($"[MainViewModel.InitializeAsync] SyncAddons: {copiedPerGame.Length} games checked, {copiedPerGame.Sum()} file(s) copied");
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel.InitializeAsync] SyncAddons failed — {ex.Message}"); }
 

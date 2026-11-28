@@ -1,6 +1,7 @@
 // MainViewModel.BackgroundScan.cs -- Background scanning, card merging, and staging migrations.
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -168,10 +169,11 @@ public partial class MainViewModel
             // EnsureStagingAsync clears HasUpdate, so remember whether an update was staged
             // for the deploy step after the scan (it used to check HasUpdate and never fired).
             bool nrCostScalerUpdated = false;
+            bool nrWasReady = _nrCostScalerService.IsStagingReady;
             var nrCostScalerTask = Task.Run(async () => {
                 try
                 {
-                    await _nrCostScalerService.CheckForUpdateAsync(forceRefresh: true);
+                    await _nrCostScalerService.CheckForUpdateAsync();
                     if (!_nrCostScalerService.IsStagingReady || _nrCostScalerService.HasUpdate)
                     {
                         bool hadUpdate = _nrCostScalerService.HasUpdate;
@@ -187,7 +189,7 @@ public partial class MainViewModel
                     // Only kept up to date while a game uses it: installing downloads it.
                     if (ShouldAutoStageRtx40Mfg("RunBackgroundScanAndMergeAsync"))
                     {
-                        await _rtx40MfgService.CheckForUpdateAsync(forceRefresh: true);
+                        await _rtx40MfgService.CheckForUpdateAsync();
                         if ((!_rtx40MfgService.IsStagingReady || _rtx40MfgService.HasUpdate)
                             && !AntivirusGuard.IsBlocked(Rtx40MfgService.AntivirusComponentName, _rtx40MfgService.LatestVersion))
                             await _rtx40MfgService.EnsureStagingAsync();
@@ -236,7 +238,7 @@ public partial class MainViewModel
             try { await addonPackTask; } catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Addon pack await failed — {ex.Message}"); }
             try { await nrCostScalerTask; } catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] NR Cost Scaler staging await failed — {ex.Message}"); }
             // If Cost Scaler staging just became ready, rebuild the selected card's NR section so the toggle un-greys
-            if (_nrCostScalerService.IsStagingReady)
+            if (!nrWasReady && _nrCostScalerService.IsStagingReady)
             {
                 var sel = SelectedGame;
                 if (sel != null)
@@ -477,7 +479,6 @@ public partial class MainViewModel
             await MergeCardsAsync(freshCards);
             await addonCheckTask; // never throws (both steps catch their own errors)
             PublishFolderMigrationNotices();
-            ReinstallPendingWindowsAppsReShade("RunBackgroundScanAndMergeAsync"); // marked by BuildCards above
             ApplyManifestNoAddonReShade("RunBackgroundScanAndMergeAsync"); // manifest noAddonReShadeGames, once per game
 
             // Save updated library
@@ -521,6 +522,14 @@ public partial class MainViewModel
                 }
                 catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Cost Scaler/RTX40MFG auto-deploy failed — {ex.Message}"); }
 
+                // Custom DLLs: newer files from Custom\DLLs\ over RHI's copies, then watch the folder
+                try
+                {
+                    RedeployCustomDlls("RunBackgroundScanAndMergeAsync");
+                    StartCustomDllWatcher();
+                }
+                catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] Custom DLL redeploy failed — {ex.Message}"); }
+
                 // GITC Uplift: check for a new release and update the games that have it
                 await RefreshUpliftInstallsAsync("RunBackgroundScanAndMergeAsync");
 
@@ -535,6 +544,8 @@ public partial class MainViewModel
             // CRCGI: same for the global illumination effect + add-on
             await RefreshCrcgiInstallsAsync("RunBackgroundScanAndMergeAsync");
                 await RefreshFrameWarpInstallsAsync("RunBackgroundScanAndMergeAsync");
+                // ZeroHook (system-wide tool): silent in-place update, only when downloaded and not running
+                await App.Services.GetRequiredService<IZeroHookService>().UpdateIfNewerAsync("RunBackgroundScanAndMergeAsync");
 
                 // Start periodic update check timer (fires every 4h while app is running)
                 StartPeriodicUpdateCheckTimer();
@@ -735,7 +746,8 @@ public partial class MainViewModel
                             return Task.Run(() => _addonPackService.DeployAddonsForGame(
                                 card.GameName, card.InstallPath, card.Is32Bit, useGlobalSet, selection));
                         });
-                    await Task.WhenAll(addonTasks);
+                    var copiedPerGame = await Task.WhenAll(addonTasks);
+                    _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] SyncAddons: {copiedPerGame.Length} games checked, {copiedPerGame.Sum()} file(s) copied");
                 }
                 catch (Exception ex) { _crashReporter.Log($"[RunBackgroundScanAndMergeAsync] SyncAddons failed — {ex.Message}"); }
 
@@ -765,39 +777,6 @@ public partial class MainViewModel
     /// cached cards. Updates existing cards in-place (so WinUI bindings fire),
     /// adds new games, and removes stale games.
     /// </summary>
-    /// <summary>
-    /// Reinstalls ReShade for WindowsApps (Game Pass) games whose folder changed during this BuildCards (it marks them in
-    /// <c>_pendingRsReinstall</c>). Windows deletes the old folder on a game update, so the DLL can't be moved across.
-    /// Both card paths call it: the full scan (InitializeAsync, Refresh) and the background merge after a cached start,
-    /// which until Nov 2026 marked the games and never reinstalled (Installed shown, no DLL, until Refresh).
-    /// </summary>
-    private void ReinstallPendingWindowsAppsReShade(string caller)
-    {
-        if (_pendingRsReinstall.Count == 0) return;
-        var toReinstall = _allCards
-            .Where(c => _pendingRsReinstall.Contains(GameKey.FromCard(c.GameName, c.Source).ToKey())
-                     && !string.IsNullOrEmpty(c.InstallPath))
-            .ToList();
-        _pendingRsReinstall.Clear();
-        if (toReinstall.Count == 0) return;
-        _crashReporter.Log($"[MainViewModel.{caller}] Auto-reinstalling ReShade for {toReinstall.Count} WindowsApps game(s) after path update");
-        _ = Task.Run(async () =>
-        {
-            foreach (var card in toReinstall)
-            {
-                try
-                {
-                    _crashReporter.Log($"[MainViewModel.{caller}] Auto-reinstalling ReShade for '{card.GameName}' at new path '{card.InstallPath}'");
-                    await InstallReShadeInternalAsync(card, forceFilename: null);
-                }
-                catch (Exception ex)
-                {
-                    _crashReporter.Log($"[MainViewModel.{caller}] Auto-reinstall failed for '{card.GameName}' — {ex.Message}");
-                }
-            }
-        });
-    }
-
     private async Task MergeCardsAsync(List<GameCardViewModel> freshCards)
     {
         _crashReporter.Log($"[MergeCards] Merging {freshCards.Count} fresh cards into {_allCards.Count} existing cards...");
@@ -1036,66 +1015,6 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// One-time migration: if the user was on Nightly channel and DLLs exist in the old
-    /// shared staging folder (%LocalAppData%\RHI\reshade\), move them to the new dedicated
-    /// nightly folder (%LocalAppData%\RHI\reshade-nightly\). This runs silently with no user input.
-    /// </summary>
-    private void MigrateNightlyStagingFolder()
-    {
-        try
-        {
-            // Only migrate if user was on Nightly and the new nightly folder doesn't already have valid DLLs
-            if (!IsReShadeNightly) return;
-
-            var nightlyDir = AuxInstallService.RsNightlyStagingDir;
-            var nightlyPath64 = AuxInstallService.RsNightlyStagedPath64;
-            var nightlyPath32 = AuxInstallService.RsNightlyStagedPath32;
-
-            // If nightly folder already has valid DLLs, no migration needed
-            if (File.Exists(nightlyPath64) && new FileInfo(nightlyPath64).Length > AuxInstallService.MinReShadeSize
-                && File.Exists(nightlyPath32) && new FileInfo(nightlyPath32).Length > AuxInstallService.MinReShadeSize)
-                return;
-
-            var oldPath64 = AuxInstallService.RsStagedPath64;
-            var oldPath32 = AuxInstallService.RsStagedPath32;
-            var oldVersionFile = Path.Combine(AuxInstallService.RsStagingDir, "reshade_version.txt");
-
-            // Check if old shared folder has nightly DLLs (version file starts with "nightly-")
-            if (!File.Exists(oldVersionFile)) return;
-            var oldVersion = File.ReadAllText(oldVersionFile).Trim();
-            if (!oldVersion.StartsWith("nightly-", StringComparison.OrdinalIgnoreCase)) return;
-
-            // Old folder has nightly DLLs — move them to the new nightly folder
-            Directory.CreateDirectory(nightlyDir);
-
-            if (File.Exists(oldPath64) && new FileInfo(oldPath64).Length > AuxInstallService.MinReShadeSize)
-            {
-                File.Copy(oldPath64, nightlyPath64, overwrite: true);
-                File.Delete(oldPath64);
-            }
-            if (File.Exists(oldPath32) && new FileInfo(oldPath32).Length > AuxInstallService.MinReShadeSize)
-            {
-                File.Copy(oldPath32, nightlyPath32, overwrite: true);
-                File.Delete(oldPath32);
-            }
-
-            // Move the version file too
-            var newVersionFile = Path.Combine(nightlyDir, "reshade_version.txt");
-            if (File.Exists(oldVersionFile))
-            {
-                File.Copy(oldVersionFile, newVersionFile, overwrite: true);
-                File.Delete(oldVersionFile);
-            }
-
-            _crashReporter.Log($"[MigrateNightlyStagingFolder] Migrated nightly DLLs from shared folder to {nightlyDir}");
-        }
-        catch (Exception ex)
-        {
-            _crashReporter.Log($"[MigrateNightlyStagingFolder] Migration failed (non-fatal) — {ex.Message}");
-        }
-    }
-
-    /// <summary>
     /// Cleanup: scan all installed OptiScaler game folders for orphaned <c>.original</c> sentinel
     /// files whose base filename no longer matches the current installed DLL name. These were
     /// left behind by earlier versions when the DLL naming override renamed the DLL without also
@@ -1162,62 +1081,6 @@ public partial class MainViewModel
         catch (Exception ex)
         {
             _crashReporter.Log($"[CleanOrphanedOptiScalerSentinels] Failed (non-fatal) — {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// One-time migration: if the legacy shared DXVK staging folder (%LocalAppData%\RHI\dxvk\)
-    /// has DLLs, move them to the correct variant-specific folder based on the global setting.
-    /// </summary>
-    private void MigrateDxvkStagingFolder()
-    {
-        try
-        {
-            var legacyDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "RHI", "dxvk");
-            var legacyVersionFile = Path.Combine(legacyDir, "version.txt");
-            var legacyX64 = Path.Combine(legacyDir, "x64");
-
-            // Only migrate if legacy folder has content
-            if (!Directory.Exists(legacyX64) || !File.Exists(legacyVersionFile)) return;
-
-            // Determine which variant the legacy folder belongs to based on global setting
-            var targetVariant = _dxvkService.SelectedVariant;
-            var targetDir = DxvkService.GetStagingDirForVariant(targetVariant);
-            var targetVersionFile = DxvkService.GetVersionFileForVariant(targetVariant);
-
-            // If target already has valid staging, skip
-            if (DxvkService.IsStagingReadyForVariant(targetVariant)) return;
-
-            // Move contents to the target variant folder
-            Directory.CreateDirectory(targetDir);
-
-            // Copy x64 and x32 folders
-            foreach (var subDir in new[] { "x64", "x32" })
-            {
-                var srcDir = Path.Combine(legacyDir, subDir);
-                var destDir = Path.Combine(targetDir, subDir);
-                if (Directory.Exists(srcDir))
-                {
-                    Directory.CreateDirectory(destDir);
-                    foreach (var file in Directory.GetFiles(srcDir))
-                        File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)), overwrite: true);
-                }
-            }
-
-            // Copy version file
-            if (File.Exists(legacyVersionFile))
-                File.Copy(legacyVersionFile, targetVersionFile, overwrite: true);
-
-            // Clean up legacy folder
-            try { Directory.Delete(legacyDir, recursive: true); } catch (Exception ex) { CrashReporter.Log($"[MainViewModel.MigrateDxvkStagingFolder] Failed to delete legacy folder — {ex.Message}"); }
-
-            _crashReporter.Log($"[MigrateDxvkStagingFolder] Migrated legacy DXVK staging to {targetDir} (variant={targetVariant})");
-        }
-        catch (Exception ex)
-        {
-            _crashReporter.Log($"[MigrateDxvkStagingFolder] Migration failed (non-fatal) — {ex.Message}");
         }
     }
 }

@@ -87,6 +87,7 @@ public partial class DetailPanelBuilder
         if (card.IsDxvkInstalled)                                                           exSummaryEntries.Add((Loc.GetString("Detail.DXVK"), card.DxvkInstalledVersion ?? LocOpt.T("On")));
         if (dgvInstalled)                                                                   exSummaryEntries.Add((Loc.GetString("Extras.DgVoodoo2"), vm.GetDgVoodooVersion(gn, gs) ?? _window.ViewModel.Manifest?.DgVoodooVersions?.Keys.FirstOrDefault()));
         if (vm.GetBfiPresenterInstalledAs(gn, gs) != null)                                  exSummaryEntries.Add((Loc.GetString("Extras.BfiPresenter"), LocOpt.T("On")));
+        if (vm.CustomDlls.GetRecords(gn, gs) is { Count: > 0 } customDllRecs)               exSummaryEntries.Add((Loc.GetString("Extras.CustomDlls.Label"), customDllRecs.Count.ToString()));
         var exSummary = DetailPanelBuilder.MakeSectionSummaryInlines(exSummaryEntries, Loc.GetString("Extras.Summary.Tooltip"));
         if (exSummary != null)
         {
@@ -175,6 +176,12 @@ public partial class DetailPanelBuilder
             BuildDgVoodooRow(card, exBody);
             CrashReporter.Log($"[BuildExtrasSection] DgVoodooRow: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
         }
+
+        // ── Other: the user's own DLLs from Custom\DLLs\ (every game) ─────────
+        exBody.Children.Add(MakeExtrasSeparator("Other"));
+        __t0 = __exSw.ElapsedMilliseconds;
+        BuildCustomDllsRow(card, exBody);
+        CrashReporter.Log($"[BuildExtrasSection] CustomDllsRow: {__exSw.ElapsedMilliseconds - __t0}ms '{card.GameName}'");
 
         // Tabs (mockup A): the same rows as one list card
         if (Layout.IsTabs) Layout.ArrangeExtras(exBody);

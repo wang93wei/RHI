@@ -76,6 +76,43 @@ public partial class SettingsHandler
             int at = column.Children.IndexOf(anchorRow) + 1;
             column.Children.Insert(at, row);
             column.Children.Insert(at + 1, help);
+
+            // "Back to stable" — only relevant on a beta build, only visible when beta opt-in is on
+            if (AppVersionInfo.IsBeta)
+            {
+                var backBtn = new Button
+                {
+                    Content = Loc.GetString("Settings.BetaUpdates.BackToStable"),
+                    Margin  = new Thickness(0, 4, 0, 0),
+                    Style   = FindStyle("SettingsPrimaryButtonStyle"),
+                    Foreground = Application.Current.Resources.TryGetValue("SettingsButtonBlueBrush", out var br) ? br as Microsoft.UI.Xaml.Media.Brush : null,
+                    Visibility = ViewModel.BetaOptIn ? Visibility.Visible : Visibility.Collapsed,
+                };
+                ToolTipService.SetToolTip(backBtn,
+                    Loc.GetString("Settings.BetaUpdates.BackToStable.Tooltip", AppVersionInfo.Display));
+                backBtn.Click += async (s, e) =>
+                {
+                    try
+                    {
+                        backBtn.IsEnabled = false;
+                        backBtn.Content   = Loc.GetString("Settings.SteamGridDb.Button.Checking");
+                        await _window.BackToStableAsync();
+                    }
+                    catch (Exception ex) { CrashReporter.Log($"[SettingsHandler.BackToStable] Failed — {ex.Message}"); }
+                    finally
+                    {
+                        backBtn.IsEnabled = true;
+                        backBtn.Content   = Loc.GetString("Settings.BetaUpdates.BackToStable");
+                    }
+                };
+                combo.SelectionChanged += (s, e) =>
+                {
+                    if (combo.SelectedIndex >= 0)
+                        backBtn.Visibility = combo.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+                };
+                column.Children.Insert(at + 2, backBtn);
+            }
+
             _betaUpdatesCombo = combo;
         }
         catch (Exception ex)

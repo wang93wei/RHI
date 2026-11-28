@@ -150,39 +150,7 @@ public partial class DetailPanelBuilder
             var chosen = await ShowUalDllPickerAsync(card, ualRecord?.InstalledAs);
             if (chosen == null) return;
 
-            installBtn.IsEnabled = false;
-            installBtn.Content = Loc.GetString("Status.Installing");
-            try
-            {
-                var previousName = ualRecord?.InstalledAs;
-                var (success, hookedOriginal) = await ualSvc.InstallAsync(card, chosen);
-                if (success)
-                {
-                    _window.ViewModel.SetUalInstalledAs(gameName, chosen, store);
-                    // Moving to a new name put the old name's XHooked.dll back; an extra there follows it
-                    if (!string.IsNullOrEmpty(previousName) && !previousName.Equals(chosen, StringComparison.OrdinalIgnoreCase))
-                        _window.ViewModel.OnUalReleasedName(card, previousName);
-                    if (hookedOriginal != null)
-                    {
-                        var chainedExtra = _window.ViewModel.OnUalChainedFile(card, chosen, hookedOriginal);
-                        _ = DialogService.ShowSafeAsync(new ContentDialog
-                        {
-                            Title = chainedExtra != null ? Loc.GetString("Extras.OriginalDllChained.ExtraRenamedTitle") : Loc.GetString("Extras.OriginalDllChained.Title"),
-                            Content = chainedExtra != null
-                                ? Loc.GetString("Extras.OriginalDllChained.ExtraRenamedContent", chainedExtra, hookedOriginal)
-                                : Loc.GetString("Extras.OriginalDllChained.Content", chosen, hookedOriginal),
-                            CloseButtonText = Loc.GetString("Dialog.Ok"),
-                            XamlRoot = _window.Content.XamlRoot,
-                        });
-                    }
-                    RequestExtrasRebuild(card);
-                }
-                else
-                {
-                    installBtn.Content = Loc.GetString("Dialog.InstallFailed");
-                }
-            }
-            finally { installBtn.IsEnabled = true; }
+            await InstallUalCoreAsync(card, chosen, ualRecord?.InstalledAs, installBtn);
         };
         Grid.SetColumn(installBtn, 3);
         row.Children.Add(installBtn);
@@ -225,16 +193,69 @@ public partial class DetailPanelBuilder
         removeBtn.Click += (s, e) =>
         {
             if (string.IsNullOrEmpty(installPath)) return;
-            var removedName = ualRecord?.InstalledAs ?? _window.ViewModel.GetUalInstalledAs(gameName, store);
-            ualSvc.Uninstall(card);
-            _window.ViewModel.SetUalInstalledAs(gameName, null, store);
-            _window.ViewModel.OnUalReleasedName(card, removedName);
-            RequestExtrasRebuild(card);
+            UninstallUalCore(card, ualRecord?.InstalledAs);
         };
         Grid.SetColumn(removeBtn, 5);
         row.Children.Add(removeBtn);
 
         body.Children.Add(row);
+    }
+
+    /// <summary>
+    /// The ASI Loader install button's work after the name is chosen (shared with Tune presets).
+    /// <paramref name="installBtn"/> is the row's button (null from Tune). Returns null on success, else an error.
+    /// </summary>
+    private async Task<string?> InstallUalCoreAsync(GameCardViewModel card, string chosen, string? previousName, Button? installBtn)
+    {
+        var ualSvc   = _window.ViewModel.UalServiceInstance;
+        var gameName = card.GameName;
+        var store    = card.Source ?? "";
+        if (installBtn != null)
+        {
+            installBtn.IsEnabled = false;
+            installBtn.Content = Loc.GetString("Status.Installing");
+        }
+        try
+        {
+            var (success, hookedOriginal) = await ualSvc.InstallAsync(card, chosen);
+            if (success)
+            {
+                _window.ViewModel.SetUalInstalledAs(gameName, chosen, store);
+                // Moving to a new name put the old name's XHooked.dll back; an extra there follows it
+                if (!string.IsNullOrEmpty(previousName) && !previousName.Equals(chosen, StringComparison.OrdinalIgnoreCase))
+                    _window.ViewModel.OnUalReleasedName(card, previousName);
+                if (hookedOriginal != null)
+                {
+                    var chainedExtra = _window.ViewModel.OnUalChainedFile(card, chosen, hookedOriginal);
+                    _ = DialogService.ShowSafeAsync(new ContentDialog
+                    {
+                        Title = chainedExtra != null ? Loc.GetString("Extras.OriginalDllChained.ExtraRenamedTitle") : Loc.GetString("Extras.OriginalDllChained.Title"),
+                        Content = chainedExtra != null
+                            ? Loc.GetString("Extras.OriginalDllChained.ExtraRenamedContent", chainedExtra, hookedOriginal)
+                            : Loc.GetString("Extras.OriginalDllChained.Content", chosen, hookedOriginal),
+                        CloseButtonText = Loc.GetString("Dialog.Ok"),
+                        XamlRoot = _window.Content.XamlRoot,
+                    });
+                }
+                RequestExtrasRebuild(card);
+                return null;
+            }
+            if (installBtn != null) installBtn.Content = Loc.GetString("Extras.Asi.InstallFailed.Button");
+            return Loc.GetString("Extras.Asi.Install.Error");
+        }
+        finally { if (installBtn != null) installBtn.IsEnabled = true; }
+    }
+
+    /// <summary>The ASI Loader remove button's work (shared with Tune presets).</summary>
+    private void UninstallUalCore(GameCardViewModel card, string? recordName)
+    {
+        var gameName = card.GameName;
+        var store    = card.Source ?? "";
+        var removedName = recordName ?? _window.ViewModel.GetUalInstalledAs(gameName, store);
+        _window.ViewModel.UalServiceInstance.Uninstall(card);
+        _window.ViewModel.SetUalInstalledAs(gameName, null, store);
+        _window.ViewModel.OnUalReleasedName(card, removedName);
+        RequestExtrasRebuild(card);
     }
 
     private async Task<string?> ShowUalDllPickerAsync(GameCardViewModel card, string? currentDllName)
@@ -426,64 +447,7 @@ public partial class DetailPanelBuilder
                 return;
             var chosen = await ShowRtxEncoreDllPickerAsync(card, currentDllName);
             if (chosen == null) return;
-            installBtn.IsEnabled = false; installBtn.Content = Loc.GetString("Status.Installing");
-            try
-            {
-                var oldModDir = string.IsNullOrEmpty(currentDllName) ? null : svc.ModDir(installPath, currentDllName);
-                bool ok = await svc.InstallAsync(installPath, chosen, currentDllName);
-                if (ok)
-                {
-                    _window.ViewModel.SetRtxEncoreInstalledAs(gameName, chosen, store);
-
-                    // If the user had NR DLL deployment enabled in the cog, deploy it now
-                    if (_window.ViewModel.GetRtxEncoreNrDllDeployed(gameName, store))
-                    {
-                        var dlssS = App.Services.GetRequiredService<IDlssStreamlineService>();
-                        if (await svc.EnsureNrDllCachedAsync(dlssS) != null)
-                        {
-                            // A game with no DLSS of its own may be in the scan skip cache: un-skip it so the NR DLL shows
-                            if (await Task.Run(() => svc.DeployNrDll(installPath, chosen)))
-                                dlssS.RecordDlssFound(gameName);
-                        }
-                        else
-                            CrashReporter.Log($"[RtxEncoreInstall] NR DLL {RtxEncoreService.NrRequiredVer} not available — skipping NR deploy");
-                    }
-
-                    // Intel XeSS SDK files for the XeSS upscaler and XeFG engine: the game's own copies are
-                    // replaced in place, the rest go in RTX Encore's runtime folder. Not fatal: everything else works without them.
-                    var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
-                    var newModDir = svc.ModDir(installPath, chosen);
-                    installBtn.Content = mfgSvc.IsEncoreIntelStagingReady
-                        ? Loc.GetString("Extras.RtxEncore.InstallingXess")
-                        : Loc.GetString("Extras.RtxEncore.DownloadingXess");
-                    bool staged = await mfgSvc.EnsureEncoreIntelStagingAsync();
-                    installBtn.Content = Loc.GetString("Extras.RtxEncore.InstallingXess");
-                    bool xessOk = staged && await Task.Run(() =>
-                    {
-                        if (oldModDir != null && !string.Equals(oldModDir, newModDir, StringComparison.OrdinalIgnoreCase))
-                            mfgSvc.RemoveEncoreIntelFiles(installPath, oldModDir); // moved between the game folder and plugins\
-                        return mfgSvc.DeployEncoreIntelFiles(installPath, newModDir);
-                    });
-                    if (!xessOk)
-                        CrashReporter.Log($"[RtxEncoreInstall] XeSS files not deployed for '{installPath}' (download failed or folder not writable)");
-
-                    // NVIDIA files for games without DLSS (DLSS upscaling + frame generation), only where the game has
-                    // none of its own; never over an existing file. Not fatal. Deliberately no RecordDlssFound: these
-                    // are RTX Encore's pinned builds, hidden from DLSS detection so swaps / auto-update never touch them.
-                    installBtn.Content = Loc.GetString("Extras.RtxEncore.InstallingNvidiaFiles");
-                    var noDlss = await Task.Run(() => svc.DeployNoDlssRuntimesAsync(installPath, card.Is32Bit, card.IsOsInstalled,
-                        App.Services.GetRequiredService<IDlssStreamlineService>()));
-                    CrashReporter.Log($"[RtxEncoreInstall] NVIDIA files for games without DLSS in '{installPath}': upscaling {(noDlss.Upscaling.Installed ? "installed" : noDlss.Upscaling.Reason)}, frame generation {(noDlss.FrameGeneration.Installed ? "installed" : noDlss.FrameGeneration.Reason)}");
-
-                    RequestExtrasRebuild(card);
-
-                    // DLSS-FG with ReShade as dxgi.dll crashes the game at startup (RTX Encore #133): warn, don't block
-                    if (noDlss.FrameGeneration.Installed && IsReShadeDxgi(card))
-                        await ShowEncoreDlssFgReShadeWarningAsync(installBtn.XamlRoot);
-                }
-                else { installBtn.Content = Loc.GetString("Extras.InstallFailed.Button"); installBtn.IsEnabled = true; }
-            }
-            catch (Exception ex) { CrashReporter.Log($"[BuildRtxEncoreRow] Install failed — {ex.Message}"); installBtn.Content = Loc.GetString("Extras.InstallFailed.Button"); installBtn.IsEnabled = true; }
+            await InstallRtxEncoreCoreAsync(card, chosen, currentDllName, installBtn, installBtn.XamlRoot);
         };
         Grid.SetColumn(installBtn, 3); row.Children.Add(installBtn);
 
@@ -500,19 +464,106 @@ public partial class DetailPanelBuilder
         removeBtn2.Click += (s, e) =>
         {
             if (string.IsNullOrEmpty(installPath) || string.IsNullOrEmpty(currentDllName)) return;
-            var modDir = svc.ModDir(installPath, currentDllName); // before the DLL is gone
-            svc.Uninstall(installPath, currentDllName, removeNrDll: nrDeployed);
-            var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
-            _ = Task.Run(() => mfgSvc.RemoveEncoreIntelFiles(installPath, modDir));
-            _ = Task.Run(() => svc.RemoveNoDlssRuntimes(installPath));
-            _window.ViewModel.SetRtxEncoreInstalledAs(gameName, null, store);
-            if (nrDeployed) _window.ViewModel.SetRtxEncoreNrDllDeployed(gameName, false, store);
-            RequestExtrasRebuild(card);
+            UninstallRtxEncoreCore(card, currentDllName, nrDeployed);
         };
         Grid.SetColumn(removeBtn2, 5); row.Children.Add(removeBtn2);
 
         body.Children.Add(row);
         _window.ViewModel.SetLastUiAction($"BuildRtxEncoreRow:Done({card.GameName})");
+    }
+
+    /// <summary>
+    /// The RTX Encore install button's work after the closed-source notice and the name pick (shared with Tune presets).
+    /// <paramref name="installBtn"/> is the row's button (null from Tune). Returns null on success, else an error.
+    /// </summary>
+    private async Task<string?> InstallRtxEncoreCoreAsync(GameCardViewModel card, string chosen, string? currentDllName,
+        Button? installBtn, XamlRoot? xamlRoot)
+    {
+        var svc         = App.Services.GetRequiredService<RtxEncoreService>();
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+        var installPath = card.InstallPath ?? "";
+        void Show(string text) { if (installBtn != null) installBtn.Content = text; }
+        void Failed() { if (installBtn != null) { installBtn.Content = Loc.GetString("Extras.InstallFailed.Button"); installBtn.IsEnabled = true; } }
+
+        if (installBtn != null) installBtn.IsEnabled = false;
+        Show(Loc.GetString("Status.Installing"));
+        try
+        {
+            var oldModDir = string.IsNullOrEmpty(currentDllName) ? null : svc.ModDir(installPath, currentDllName);
+            bool ok = await svc.InstallAsync(installPath, chosen, currentDllName);
+            if (!ok) { Failed(); return Loc.GetString("Extras.RtxEncore.Install.Error"); }
+
+            _window.ViewModel.SetRtxEncoreInstalledAs(gameName, chosen, store);
+
+            // If the user had NR DLL deployment enabled in the cog, deploy it now
+            if (_window.ViewModel.GetRtxEncoreNrDllDeployed(gameName, store))
+            {
+                var dlssS = App.Services.GetRequiredService<IDlssStreamlineService>();
+                if (await svc.EnsureNrDllCachedAsync(dlssS) != null)
+                {
+                    // A game with no DLSS of its own may be in the scan skip cache: un-skip it so the NR DLL shows
+                    if (await Task.Run(() => svc.DeployNrDll(installPath, chosen)))
+                        dlssS.RecordDlssFound(gameName);
+                }
+                else
+                    CrashReporter.Log($"[RtxEncoreInstall] NR DLL {RtxEncoreService.NrRequiredVer} not available — skipping NR deploy");
+            }
+
+            // Intel XeSS SDK files for the XeSS upscaler and XeFG engine: the game's own copies are
+            // replaced in place, the rest go in RTX Encore's runtime folder. Not fatal: everything else works without them.
+            var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
+            var newModDir = svc.ModDir(installPath, chosen);
+            Show(mfgSvc.IsEncoreIntelStagingReady ? Loc.GetString("Extras.RtxEncore.InstallingXess") : Loc.GetString("Extras.RtxEncore.DownloadingXess"));
+            bool staged = await mfgSvc.EnsureEncoreIntelStagingAsync();
+            Show(Loc.GetString("Extras.RtxEncore.InstallingXess"));
+            bool xessOk = staged && await Task.Run(() =>
+            {
+                if (oldModDir != null && !string.Equals(oldModDir, newModDir, StringComparison.OrdinalIgnoreCase))
+                    mfgSvc.RemoveEncoreIntelFiles(installPath, oldModDir); // moved between the game folder and plugins\
+                return mfgSvc.DeployEncoreIntelFiles(installPath, newModDir);
+            });
+            if (!xessOk)
+                CrashReporter.Log($"[RtxEncoreInstall] XeSS files not deployed for '{installPath}' (download failed or folder not writable)");
+
+            // NVIDIA files for games without DLSS (DLSS upscaling + frame generation), only where the game has
+            // none of its own; never over an existing file. Not fatal. Deliberately no RecordDlssFound: these
+            // are RTX Encore's pinned builds, hidden from DLSS detection so swaps / auto-update never touch them.
+            Show(Loc.GetString("Extras.RtxEncore.InstallingNvidiaFiles"));
+            var noDlss = await Task.Run(() => svc.DeployNoDlssRuntimesAsync(installPath, card.Is32Bit, card.IsOsInstalled,
+                App.Services.GetRequiredService<IDlssStreamlineService>()));
+            CrashReporter.Log($"[RtxEncoreInstall] NVIDIA files for games without DLSS in '{installPath}': upscaling {(noDlss.Upscaling.Installed ? "installed" : noDlss.Upscaling.Reason)}, frame generation {(noDlss.FrameGeneration.Installed ? "installed" : noDlss.FrameGeneration.Reason)}");
+
+            RequestExtrasRebuild(card);
+
+            // DLSS-FG with ReShade as dxgi.dll crashes the game at startup (RTX Encore #133): warn, don't block
+            if (noDlss.FrameGeneration.Installed && IsReShadeDxgi(card))
+                await ShowEncoreDlssFgReShadeWarningAsync(xamlRoot);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            CrashReporter.Log($"[BuildRtxEncoreRow] Install failed — {ex.Message}");
+            Failed();
+            return Loc.GetString("Extras.RtxEncore.Install.ErrorDetail", ex.Message);
+        }
+    }
+
+    /// <summary>The RTX Encore remove button's work (shared with Tune presets).</summary>
+    private void UninstallRtxEncoreCore(GameCardViewModel card, string currentDllName, bool nrDeployed)
+    {
+        var svc         = App.Services.GetRequiredService<RtxEncoreService>();
+        var gameName    = card.GameName;
+        var store       = card.Source ?? "";
+        var installPath = card.InstallPath ?? "";
+        var modDir = svc.ModDir(installPath, currentDllName); // before the DLL is gone
+        svc.Uninstall(installPath, currentDllName, removeNrDll: nrDeployed);
+        var mfgSvc = App.Services.GetRequiredService<Rtx40MfgService>();
+        _ = Task.Run(() => mfgSvc.RemoveEncoreIntelFiles(installPath, modDir));
+        _ = Task.Run(() => svc.RemoveNoDlssRuntimes(installPath));
+        _window.ViewModel.SetRtxEncoreInstalledAs(gameName, null, store);
+        if (nrDeployed) _window.ViewModel.SetRtxEncoreNrDllDeployed(gameName, false, store);
+        RequestExtrasRebuild(card);
     }
 
     private async Task<string?> ShowRtxEncoreDllPickerAsync(GameCardViewModel card, string? currentDllName)

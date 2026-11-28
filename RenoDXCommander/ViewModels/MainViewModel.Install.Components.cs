@@ -380,12 +380,14 @@ public partial class MainViewModel
             else
             {
                 // Force fresh download on reinstall (but not update — the check already cached the new file)
-                // A v4 test build placed in the cache by hand is kept (it's newer than any release)
+                // A v4 test build placed in the cache by hand is kept (it's newer than any release).
+                // The cached file is replaced only once the new download is complete (never deleted first),
+                // so a reinstall offline or rate-limited still installs from the cache.
+                bool forceDownload = false;
                 if (card.UlStatus == GameStatus.Installed && File.Exists(GetUlCachePath(card.Is32Bit)))
                 {
                     if (string.IsNullOrEmpty(_latestUlVersion)) await FetchLatestUlReleaseInfoAsync(card.Is32Bit);
-                    if (!await Task.Run(() => IsUlCacheNewerThanLatest(card.Is32Bit)))
-                        File.Delete(GetUlCachePath(card.Is32Bit));
+                    forceDownload = !await Task.Run(() => IsUlCacheNewerThanLatest(card.Is32Bit));
                 }
 
                 // Download to cache if not already cached (dev test build: copy that instead)
@@ -396,7 +398,15 @@ public partial class MainViewModel
                 }
                 else
                 {
-                    await EnsureUlCachedAsync(card.Is32Bit, ulProgress);
+                    try
+                    {
+                        await EnsureUlCachedAsync(card.Is32Bit, ulProgress, forceDownload);
+                    }
+                    catch (Exception ex) when (forceDownload && File.Exists(GetUlCachePath(card.Is32Bit))
+                        && ex is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+                    {
+                        CrashReporter.Log($"[MainViewModel.InstallUlAsync] Fresh download failed — installing the cached build — {ex.Message}");
+                    }
                     sourcePath = GetUlCachePath(card.Is32Bit);
                 }
             }
@@ -448,7 +458,20 @@ public partial class MainViewModel
                 // Disable driver FPS limiter for this game (conflicts with ReLimiter)
                 try { _dlssPresetService.SetPerGameFpsLimit(card.GameName, card.InstallPath, 0); }
                 catch (Exception ex) { CrashReporter.Log($"[MainViewModel.InstallUlAsync] Failed to disable driver FPS limiter — {ex.Message}"); }
-                DriverProfileChanged?.Invoke(card); // Driver Settings re-reads the FPS limit
+
+                // Disable driver Low Latency Mode for this game (conflicts with ReLimiter — causes stutters/issues)
+                try
+                {
+                    uint llMode = _dlssPresetService.GetLowLatencyMode(card.GameName, card.InstallPath);
+                    if (llMode != 0)
+                    {
+                        _dlssPresetService.SetLowLatencyMode(card.GameName, card.InstallPath, 0);
+                        CrashReporter.Log($"[MainViewModel.InstallUlAsync] Disabled Low Latency Mode (was {llMode}) for '{card.GameName}'");
+                    }
+                }
+                catch (Exception ex) { CrashReporter.Log($"[MainViewModel.InstallUlAsync] Failed to disable Low Latency Mode — {ex.Message}"); }
+
+                DriverProfileChanged?.Invoke(card); // Driver Settings re-reads the FPS limit and Low Latency
 
                 // Apply shared presets setting to the newly deployed INI if enabled
                 if (_settingsViewModel.UlSharedPresets)
@@ -513,9 +536,10 @@ public partial class MainViewModel
     /// Downloads ReLimiter to the cache directory if not already present.
     /// Fetches the latest release info from GitHub if not already cached from an update check.
     /// </summary>
-    private async Task EnsureUlCachedAsync(bool is32Bit, IProgress<(string msg, double pct)>? progress = null)
+    private async Task EnsureUlCachedAsync(bool is32Bit, IProgress<(string msg, double pct)>? progress = null, bool forceDownload = false)
     {
-        if (File.Exists(GetUlCachePath(is32Bit)))
+        // forceDownload (reinstall): download again; the cached file is only replaced once the download is complete
+        if (!forceDownload && File.Exists(GetUlCachePath(is32Bit)))
         {
             // The cache must hold the latest release when that's known: once v4 is out, games staying on v3
             // no longer trigger the update pre-cache, so an older build could otherwise sit here as "latest"
@@ -710,8 +734,6 @@ public partial class MainViewModel
     // Legacy filenames for migration from DC Lite
     private const string LegacyDcFileName64 = "zzz_display_commander_lite.addon64";
     private const string LegacyDcFileName32 = "zzz_display_commander_lite.addon32";
-    private const string DcReleasesUrl =
-        "https://github.com/pmnoxx/display-commander/releases/tag/latest";
     private const string DcReleasesApiUrl =
         "https://api.github.com/repos/pmnoxx/display-commander/releases/tags/latest";
 
@@ -758,7 +780,7 @@ public partial class MainViewModel
     /// Downloads Display Commander to the cache directory if not already present.
     /// Fetches the latest release info from GitHub if not already cached from an update check.
     /// </summary>
-    private async Task EnsureDcCachedAsync(bool is32Bit, IProgress<(string msg, double pct)>? progress = null)
+    private async Task EnsureDcCachedAsync(bool is32Bit, IProgress<(string msg, double pct)>? progress = null, bool forceDownload = false)
     {
         // Clean up legacy DC Lite cache files
         var legacyCachePath64 = Path.Combine(DownloadPaths.FrameLimiter, LegacyDcFileName64);
@@ -766,7 +788,8 @@ public partial class MainViewModel
         if (File.Exists(legacyCachePath64)) { File.Delete(legacyCachePath64); _crashReporter.Log("[DC] Cleaned up legacy lite cache (64-bit)"); }
         if (File.Exists(legacyCachePath32)) { File.Delete(legacyCachePath32); _crashReporter.Log("[DC] Cleaned up legacy lite cache (32-bit)"); }
 
-        if (File.Exists(GetDcCachePath(is32Bit)))
+        // forceDownload (reinstall): download again; the cached file is only replaced once the download is complete
+        if (!forceDownload && File.Exists(GetDcCachePath(is32Bit)))
         {
             progress?.Report((Loc.GetString("Status.InstallingFromCache"), 50));
             return;
@@ -897,21 +920,28 @@ public partial class MainViewModel
         card.DcProgress = 0;
         try
         {
-            // Force fresh download on reinstall (but not update — the check already cached the new file)
-            if (card.DcStatus == GameStatus.Installed)
-            {
-                if (File.Exists(GetDcCachePath(card.Is32Bit))) File.Delete(GetDcCachePath(card.Is32Bit));
-            }
+            // Force fresh download on reinstall (but not update — the check already cached the new file).
+            // The cached file is replaced only once the new download is complete (never deleted first),
+            // so a reinstall offline or rate-limited still installs from the cache.
+            bool forceDownload = card.DcStatus == GameStatus.Installed && File.Exists(GetDcCachePath(card.Is32Bit));
 
             // Download to cache if not already cached
-            await EnsureDcCachedAsync(card.Is32Bit, new Progress<(string msg, double pct)>(p =>
+            try
             {
-                DispatcherQueue?.TryEnqueue(() =>
+                await EnsureDcCachedAsync(card.Is32Bit, new Progress<(string msg, double pct)>(p =>
                 {
-                    card.DcActionMessage = p.msg;
-                    card.DcProgress = p.pct;
-                });
-            }));
+                    DispatcherQueue?.TryEnqueue(() =>
+                    {
+                        card.DcActionMessage = p.msg;
+                        card.DcProgress = p.pct;
+                    });
+                }), forceDownload);
+            }
+            catch (Exception ex) when (forceDownload && File.Exists(GetDcCachePath(card.Is32Bit))
+                && ex is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+            {
+                _crashReporter.Log($"[MainViewModel.InstallDcAsync] Fresh download failed — installing the cached build — {ex.Message}");
+            }
 
             // Resolve the target filename using the priority chain
             var targetFileName = ResolveDcFileName(card);

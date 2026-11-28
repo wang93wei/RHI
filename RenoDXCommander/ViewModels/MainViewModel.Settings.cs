@@ -255,6 +255,23 @@ public partial class MainViewModel
 
     // ── OptiScaler Nightly cleanup ────────────────────────────────────────────
 
+    /// <summary>Install folders of hidden games (background syncs leave them alone). Snapshot; safe off the UI thread.</summary>
+    internal IReadOnlyCollection<string>? HiddenInstallPaths()
+    {
+        try
+        {
+            return _allCards.ToArray()
+                .Where(c => c.IsHidden && !string.IsNullOrEmpty(c.InstallPath))
+                .Select(c => c.InstallPath!)
+                .ToList();
+        }
+        catch (InvalidOperationException ex) // list changed while copying
+        {
+            _crashReporter.Log($"[MainViewModel.HiddenInstallPaths] {ex.Message}");
+            return null;
+        }
+    }
+
     /// <summary>
     /// The nightly builds to keep when old ones are removed: every build a game is pinned to (its
     /// OptiScaler ⚙, Control's UE fix). Null when Settings › Remove old Nightly builds is off.
@@ -2070,7 +2087,6 @@ public partial class MainViewModel
             _gameNameService.LoadNameMappings(
                 _dllOverrideService,
                 _settingsViewModel,
-                layout => CurrentViewLayout = layout,
                 val => _filterViewModel.RestoreFilterMode(val),
                 filters =>
                 {
@@ -2095,7 +2111,19 @@ public partial class MainViewModel
     /// </summary>
     public void RenameGame(string oldName, string newName)
     {
+        var renamed = _allCards.FirstOrDefault(c => c.GameName.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+        bool otherCopy = renamed != null && _allCards.Count(c => c.GameName.Equals(oldName, StringComparison.OrdinalIgnoreCase)) > 1;
         _gameNameService.RenameGame(oldName, newName, _allCards, _manualGames, _dllOverrideService);
+        if (!oldName.Equals(newName, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(newName))
+        {
+            // DXVK, RE Framework and custom DLL records are looked up by name too: move them, or the game loses them
+            string? recordPath = otherCopy ? renamed?.InstallPath : null;
+            _dxvkService.RenameRecords(oldName, newName, recordPath);
+            _refService.RenameRecords(oldName, newName, recordPath);
+            CustomDlls.RenameRecords(oldName, newName, recordPath);
+            if (renamed?.DxvkRecord != null) renamed.DxvkRecord.GameName = newName;
+            if (renamed?.RefRecord != null) renamed.RefRecord.GameName = newName;
+        }
         SaveNameMappings();
         SaveLibrary();
         var card = _allCards.FirstOrDefault(c =>
@@ -2312,7 +2340,6 @@ public partial class MainViewModel
         _gameNameService.SaveNameMappings(
             _dllOverrideService,
             _settingsViewModel,
-            CurrentViewLayout,
             _isLoadingSettings,
             _filterViewModel.FilterMode,
             _filterViewModel.CustomFilters.ToList());

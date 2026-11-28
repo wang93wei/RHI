@@ -22,6 +22,8 @@ internal sealed partial class DetailLayoutHost
     private Button? _hHide;
     private Button? _hShots;
     private Button? _hGameSettings;
+    private Button? _hTune;       // Tune / Tuned (MainWindow.Tune.cs)
+    private bool? _hTuneTuned;
     private WrapPanel? _hChips;
     private TextBlock? _hPath;
     private HyperlinkButton? _hConfig;
@@ -92,6 +94,17 @@ internal sealed partial class DetailLayoutHost
         titleRow.Children.Add(_hHide);
         titleRow.Children.Add(_hShots);
         titleRow.Children.Add(_hGameSettings);
+
+        // Tune: one-click preset for this game (MainWindow.Tune.cs decides what it shows and does)
+        _hTune = new Button { Content = Loc.GetString("Tune.Button"), Padding = new Thickness(14, 0, 14, 0), Visibility = Visibility.Collapsed };
+        TabsTheme.Apply(_hTune, MainWindow.TuneLook, height: 36, fontSize: 12);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_hTune, Loc.GetString("Tune.Button"));
+        _hTune.Click += async (s, e) =>
+        {
+            try { if (_hTune.Tag is ViewModels.GameCardViewModel c) await w.TuneButtonClickAsync(_hTune, c); }
+            catch (Exception ex) { CrashReporter.Log($"[DetailLayoutHost.Header] Tune — {ex.GetType().Name}: {ex.Message}"); }
+        };
+        titleRow.Children.Add(_hTune);
 
         _hChips = new WrapPanel { HorizontalSpacing = 6, VerticalSpacing = 6 };
 
@@ -335,7 +348,7 @@ internal sealed partial class DetailLayoutHost
                     if (TooltipText(badge) is { } tip) ToolTipService.SetToolTip(chip, tip);
                     _hChips.Children.Add(chip);
                 }
-        if (card != null) _hChips.Children.Add(MakeChip(card.Is32Bit ? "32-bit" : "64-bit", accent: false));
+        if (card != null) _hChips.Children.Add(MakeChip(card.Is32Bit ? Loc.GetString("Card.Bitness32") : Loc.GetString("Card.Bitness64"), accent: false));
         if (w.HeaderAuthorBadges.Visibility == Visibility.Visible)
             foreach (var badge in w.HeaderAuthorBadges.Children)
                 if (FirstText(badge) is { } author)
@@ -368,7 +381,7 @@ internal sealed partial class DetailLayoutHost
         Link(w.HeaderNexusButton, Loc.GetString("Xaml.NexusMods"), e => w.HeaderNexus(e));
         Link(w.HeaderPcgwButton, "PCGamingWiki", e => w.HeaderPcgw(e));
         Link(w.HeaderUwButton, Loc.GetString("Detail.UltrawideFix"), e => w.HeaderUwFix(e));
-        Link(w.HeaderUltraPlusButton, "Ultra+", e => w.HeaderUltraPlus(e));
+        Link(w.HeaderUltraPlusButton, Loc.GetString("Xaml.Ultra"), e => w.HeaderUltraPlus(e));
         _hLinks.Visibility = _hLinks.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         _hLaunchText!.Text = card?.IsRunning == true ? Loc.GetString("Detail.Running") : Loc.GetString("Common.Launch");
@@ -391,9 +404,28 @@ internal sealed partial class DetailLayoutHost
         _hToggles!.Visibility = hdrShown || resShown ? Visibility.Visible : Visibility.Collapsed;
 
         RefreshHeaderDisplayModes(card);
+        RefreshHeaderTune(card);
 
         if (IsSpotlight) RefreshHeroArt();
         RefreshAchievements();
+    }
+
+    /// <summary>Shows the Tune / Tuned button for the game (state from MainWindow.TuneButtonState).</summary>
+    internal void RefreshHeaderTune(ViewModels.GameCardViewModel? card)
+    {
+        if (_hTune == null || !IsTabs) return;
+        var (visible, text, tip, tuned, busy) = _window.TuneButtonState(card);
+        _hTune.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (!visible) return;
+        _hTune.Tag = card;
+        _hTune.Content = text;
+        _hTune.IsEnabled = !busy;
+        if (_hTuneTuned != tuned)
+        {
+            _hTuneTuned = tuned;
+            TabsTheme.Apply(_hTune, tuned ? MainWindow.TunedLook : MainWindow.TuneLook, height: 36, fontSize: 12);
+        }
+        ToolTipService.SetToolTip(_hTune, tip);
     }
 
     /// <summary>Rebuilds the display mode row only when what it shows changed (keeps controller focus otherwise).</summary>

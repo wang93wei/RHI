@@ -347,7 +347,6 @@ public partial class GameNameService : IGameNameService
     private volatile bool _settingsLoadFailed;
     private IDllOverrideService? _pendingDllOverride;
     private SettingsViewModel? _pendingSettings;
-    private ViewLayout _pendingViewLayout;
     private string _pendingFilterMode = "";
     private List<CustomFilter> _pendingCustomFilters = new();
 
@@ -372,7 +371,6 @@ public partial class GameNameService : IGameNameService
     public Dictionary<string, string> LoadNameMappings(
         IDllOverrideService dllOverrideService,
         SettingsViewModel settingsViewModel,
-        Action<ViewLayout> setViewLayout,
         Action<string> setFilterMode,
         Action<List<CustomFilter>> setCustomFilters)
     {
@@ -730,6 +728,7 @@ public partial class GameNameService : IGameNameService
             StringComparer.OrdinalIgnoreCase);
         LoadGameCollections(s);
         LoadDisplayModes(s);
+        LoadTunePresets(s);
 
         _rtxHdrGames = new HashSet<string>(
             Load<List<string>>("RtxHdrGames", _rtxHdrGames?.ToList() ?? new()), StringComparer.OrdinalIgnoreCase);
@@ -823,9 +822,6 @@ public partial class GameNameService : IGameNameService
         _rtxEncoreNrDllDeployed = new HashSet<string>(
             Load<List<string>>("RtxEncoreNrDllDeployed", new()), StringComparer.OrdinalIgnoreCase);
 
-        // Always force Detail view — Simple view has been removed
-        setViewLayout(ViewLayout.Detail);
-
         if (s.TryGetValue("FilterMode", out var fmVal) && !string.IsNullOrWhiteSpace(fmVal))
             setFilterMode(fmVal);
 
@@ -841,7 +837,6 @@ public partial class GameNameService : IGameNameService
     public void SaveNameMappings(
         IDllOverrideService dllOverrideService,
         SettingsViewModel settingsViewModel,
-        ViewLayout currentViewLayout,
         bool isLoadingSettings,
         string filterMode,
         List<CustomFilter> customFilters)
@@ -853,7 +848,6 @@ public partial class GameNameService : IGameNameService
         {
             _pendingDllOverride = dllOverrideService;
             _pendingSettings = settingsViewModel;
-            _pendingViewLayout = currentViewLayout;
             _pendingFilterMode = filterMode;
             _pendingCustomFilters = customFilters.ToList();
 
@@ -892,7 +886,6 @@ public partial class GameNameService : IGameNameService
     {
         IDllOverrideService? dllOverride;
         SettingsViewModel? settings;
-        ViewLayout viewLayout;
         string filterMode;
         List<CustomFilter> customFilters;
 
@@ -900,20 +893,18 @@ public partial class GameNameService : IGameNameService
         {
             dllOverride = _pendingDllOverride;
             settings = _pendingSettings;
-            viewLayout = _pendingViewLayout;
             filterMode = _pendingFilterMode;
             customFilters = _pendingCustomFilters;
         }
 
         if (dllOverride == null || settings == null) return;
 
-        DoSaveNameMappingsInternal(dllOverride, settings, viewLayout, filterMode, customFilters);
+        DoSaveNameMappingsInternal(dllOverride, settings, filterMode, customFilters);
     }
 
     private void DoSaveNameMappingsInternal(
         IDllOverrideService dllOverrideService,
         SettingsViewModel settingsViewModel,
-        ViewLayout currentViewLayout,
         string filterMode,
         List<CustomFilter> customFilters)
     {
@@ -1001,6 +992,7 @@ public partial class GameNameService : IGameNameService
                 s["FavouriteGames"]      = JsonSerializer.Serialize(_favouriteGames?.ToList() ?? new List<string>());
                 SaveGameCollections(s);
                 SaveDisplayModes(s);
+                SaveTunePresets(s);
                 s["RemovedGames"]        = JsonSerializer.Serialize(_removedGames?.ToList() ?? new List<string>());
                 SaveCustomGameFolders(s);
                 s["RtxHdrGames"]         = JsonSerializer.Serialize(_rtxHdrGames?.ToList() ?? new List<string>());
@@ -1056,7 +1048,7 @@ public partial class GameNameService : IGameNameService
                 else s.Remove("RtxEncoreNrDllDeployed");
                 s.Remove("Rtx40MfgInstalled"); // remove legacy key
                 s.Remove("SfAutoConfigDisabled"); // legacy — no longer written
-                s["ViewLayout"]          = ((int)currentViewLayout).ToString();
+                s.Remove("ViewLayout"); // legacy — Compact view was removed, nothing reads it
                 s["FilterMode"]          = filterMode;
                 s["CustomFilters"]       = JsonSerializer.Serialize(customFilters);
                 }, "GameNameService.SaveNameMappings");
@@ -1169,6 +1161,7 @@ public partial class GameNameService : IGameNameService
         MigrateCompositeHashSet(_favouriteGames, oldName, newName);
         _collections.MigrateGameRename(oldName, newName);
         _displayModes.MigrateGameRename(oldName, newName);
+        _tunePresets.MigrateGameRename(oldName, newName);
         GameJournalStore.MigrateGameRename(oldName, newName); // overlay notes and playtime
         MigrateCompositeHashSet(_removedGames, oldName, newName);
         MigrateCompositeHashSet(_updateAllExcludedReShade, oldName, newName);
@@ -1277,6 +1270,12 @@ public partial class GameNameService : IGameNameService
             card.RsRecord.GameName = newName;
             _auxInstaller.SaveAuxRecord(card.RsRecord);
         }
+
+        // Every other aux record (OptiScaler, Display Commander, ASI Loader...). Only this copy's folder
+        // when the same game is still listed under the old name from another store.
+        bool otherCopy = allCards.Any(c => !ReferenceEquals(c, card) && c.GameName.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+        string? recordPath = otherCopy ? card?.InstallPath : null;
+        _auxInstaller.RenameRecords(oldName, newName, recordPath);
 
         // Update persisted Luma record
         if (card?.LumaRecord != null)

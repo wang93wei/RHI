@@ -54,6 +54,15 @@ public interface IOptiScalerService
     Task<bool> CheckOptiPatcherUpdateAsync();
 
     /// <summary>
+    /// Copies the staged OptiPatcher into games that have it where their copy differs from staging
+    /// (skips hidden games and games where it was removed). Returns how many were updated.
+    /// </summary>
+    int SyncOptiPatcherToGames();
+
+    /// <summary>Install folders of hidden games (left alone by the OptiPatcher sync). Set by MainViewModel.</summary>
+    Func<IReadOnlyCollection<string>?>? HiddenGamePathsProvider { get; set; }
+
+    /// <summary>
     /// Moves OptiPatcher.asi from &lt;game&gt;\plugins into OptiScaler\plugins for every game with an
     /// OptiScaler 10 build (nightly, F5, DLSS NR), where older RHI versions put it in the wrong place.
     /// </summary>
@@ -124,9 +133,6 @@ public interface IOptiScalerService
     /// <summary>Checks the DLSS NR GitHub releases API for a newer version. Sets <see cref="HasUpdateDlssNr"/>.</summary>
     Task CheckForDlssNrUpdateAsync();
 
-    /// <summary>Removes the DLSS NR staging folder contents.</summary>
-    void ClearDlssNrStaging();
-
     /// <summary>Whether the F5 DLSSNR staging folder contains a valid release.</summary>
     bool IsStagingReadyF5 { get; }
 
@@ -141,9 +147,6 @@ public interface IOptiScalerService
 
     /// <summary>Checks the F5 DLSSNR GitHub releases API for a newer version. Sets <see cref="HasUpdateF5"/>.</summary>
     Task CheckForF5UpdateAsync();
-
-    /// <summary>Removes the F5 staging folder contents.</summary>
-    void ClearF5Staging();
 
     // ── DLSS DLL staging ──────────────────────────────────────────────────────
 
@@ -233,11 +236,6 @@ public interface IOptiScalerService
     /// Writes the ShortcutKey= value to the OptiScaler.ini in the INIs_Folder.
     /// </summary>
     void SetHotkey(string hotkeyValue);
-
-    /// <summary>
-    /// Updates ShortcutKey= in all game folders where OptiScaler is installed.
-    /// </summary>
-    void ApplyHotkeyToAllGames(string hotkeyValue);
 
     /// <summary>
     /// Copies all Streamline DLLs from the RHI Streamline staging folder to

@@ -31,6 +31,7 @@ public interface IGameNameService
 
     /// <summary>Display modes (Monitor / TV / ...): the modes, the default swap list and each game's state ("GameName|Store").</summary>
     DisplayModeStore DisplayModes { get; }
+    TunePresetStore TunePresets { get; }
 
     /// <summary>Games removed from RHI ("GameName|Store"); left out of the game list until restored.</summary>
     HashSet<string> RemovedGames { get; }
@@ -261,7 +262,6 @@ public interface IGameNameService
     Dictionary<string, string> LoadNameMappings(
         IDllOverrideService dllOverrideService,
         SettingsViewModel settingsViewModel,
-        Action<ViewLayout> setViewLayout,
         Action<string> setFilterMode,
         Action<List<CustomFilter>> setCustomFilters);
 
@@ -269,7 +269,6 @@ public interface IGameNameService
     void SaveNameMappings(
         IDllOverrideService dllOverrideService,
         SettingsViewModel settingsViewModel,
-        ViewLayout currentViewLayout,
         bool isLoadingSettings,
         string filterMode,
         List<CustomFilter> customFilters);

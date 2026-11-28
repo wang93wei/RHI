@@ -84,7 +84,7 @@ public partial class MainViewModel
             computedStamps.GetOrAdd(rootKey, _ => EngineFolderStamp.Compute(root));
         bool UnknownStillValid(string rootKey, string root) =>
             _engineFolderStamps.TryGetValue(rootKey, out var saved) && saved == StampFor(rootKey, root);
-        int engineScans = 0, unknownReused = 0, pcgwSkips = 0;
+        int engineScans = 0, unknownReused = 0, pcgwSkips = 0, wikiUnmatched = 0;
 
         // True when PCGW names an engine other than the ones detection looks for. Unreal (any
         // version), Unity and RE Engine — or no PCGW entry — still get the full scan, so a wrong
@@ -215,6 +215,7 @@ public partial class MainViewModel
             newBitnessCache[resolvedKey] = machineType;
 
             var mod      = _gameDetectionService.MatchGame(game, _allMods, _nameMappings);
+            if (mod == null) Interlocked.Increment(ref wikiUnmatched);
             // Wiki unlink: completely disconnect the game from wiki — no mod, no generic fallback
             bool isWikiUnlinked = _manifestWikiUnlinks.Contains(game.Name);
             if (isWikiUnlinked) mod = null;
@@ -260,7 +261,7 @@ public partial class MainViewModel
         _engineFolderStamps = new Dictionary<string, string>(newEngineFolderStamps, StringComparer.OrdinalIgnoreCase);
         _crashReporter.Log($"[BuildCards] Engine detection: {detectTimer.ElapsedMilliseconds} ms for {gameInfos.Count} games — "
             + $"{engineScans} folder scans ({engineScanMs} ms total), {unknownReused} unchanged Unknown reused, "
-            + $"{pcgwSkips} skipped via PCGW engine");
+            + $"{pcgwSkips} skipped via PCGW engine; {wikiUnmatched} games with no wiki match");
         var newAddonFileCache = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var safeAddonCache = new ConcurrentDictionary<string, bool>(addonCache, StringComparer.OrdinalIgnoreCase);
         var cardBag = new ConcurrentBag<GameCardViewModel>();
@@ -643,10 +644,6 @@ public partial class MainViewModel
                 else
                 {
                     _crashReporter.Log($"[BuildCards] RS path reconciliation: '{game.Name}' path changed '{oldRsPath}' → '{installPath}', ReShade not found at either path");
-                    // For WindowsApps games: the old folder is deleted by Windows on update so
-                    // the DLL can never be copied across. Mark for auto-reinstall after build.
-                    if (installPath.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase))
-                        _pendingRsReinstall.Add(GameKey.FromCard(game.Name, game.Source).ToKey());
                 }
 
                 rsRec.InstallPath = installPath;
@@ -657,8 +654,7 @@ public partial class MainViewModel
             // This handles the case where the user manually deleted files without using RDXC.
             // Exception: WindowsApps games pending auto-reinstall — keep the record so the card
             // still shows as installed and the reinstall can proceed.
-            if (rsRec != null && !File.Exists(Path.Combine(rsRec.InstallPath, rsRec.InstalledAs))
-                && !_pendingRsReinstall.Contains(GameKey.FromCard(game.Name, game.Source).ToKey()))
+            if (rsRec != null && !File.Exists(Path.Combine(rsRec.InstallPath, rsRec.InstalledAs)))
             {
                 _auxInstaller.RemoveRecord(rsRec);
                 rsRec = null;
@@ -683,12 +679,14 @@ public partial class MainViewModel
 
             if (rsRec == null)
             {
+                // Custom DLLs the user installed through RHI are never ReShade (a ReShade fork dropped in Custom\DLLs\ would match)
+                var customDllNames = CustomDllService.OwnersInFolder(installPath);
                 // dxgi.dll — only attribute to ReShade if positively identified as ReShade
                 // AND not already claimed by DC
                 var dxgiPath = Path.Combine(installPath, AuxInstallService.RsNormalName);
                 bool dxgiClaimedByDc = dcClaimedFileName != null &&
                     dcClaimedFileName.Equals(AuxInstallService.RsNormalName, StringComparison.OrdinalIgnoreCase);
-                if (!dxgiClaimedByDc && File.Exists(dxgiPath) && AuxInstallService.IsReShadeFile(dxgiPath))
+                if (!dxgiClaimedByDc && !customDllNames.ContainsKey(AuxInstallService.RsNormalName) && File.Exists(dxgiPath) && AuxInstallService.IsReShadeFile(dxgiPath))
                 {
                     rsRec = new AuxInstalledRecord
                     {
@@ -706,8 +704,7 @@ public partial class MainViewModel
                     // ReShade can only inject via specific Windows system DLL proxies, so we only
                     // check those names rather than every DLL in the folder.
                     // Skip WindowsApps paths — always access-denied
-                    bool isWinAppsRs = installPath.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase)
-                                    || installPath.Contains(@"/WindowsApps/", StringComparison.OrdinalIgnoreCase);
+                    bool isWinAppsRs = XboxPaths.IsWindowsApps(installPath);
                     if (!isWinAppsRs)
                     try
                     {
@@ -720,6 +717,9 @@ public partial class MainViewModel
                             // Skip filenames claimed by DC via override
                             if (dcClaimedFileName != null &&
                                 proxyName.Equals(dcClaimedFileName, StringComparison.OrdinalIgnoreCase))
+                                continue;
+
+                            if (customDllNames.ContainsKey(proxyName))
                                 continue;
 
                             var candidatePath = Path.Combine(installPath, proxyName);
@@ -825,6 +825,7 @@ public partial class MainViewModel
                 RsInstalledVersion     = rsRec != null ? AuxInstallService.ReadInstalledVersion(rsRec.InstallPath, rsRec.InstalledAs) : null,
                 IsREEngineGame         = engine == EngineType.REEngine,
             };
+            LogPhase("CardInit"); // audit P9(b): marks inside the old "ReLimiter" span
 
             // ── Emulator detection ─────────────────────────────────────────────────
             if (game.Name.Equals("Ryubing", StringComparison.OrdinalIgnoreCase))
@@ -1013,6 +1014,7 @@ public partial class MainViewModel
             // never does filesystem I/O when painting the detail panel (AppData button visibility).
             newCard.GameConfigRootPath = AuxInstallService.ResolveGameConfigRoot(
                 newCard.InstallPath, newCard.EngineIniProjectOverride, newCard.GameName);
+            LogPhase("ApiAndConfigRoot");
 
             // For Vulkan games, RS is installed when reshade.ini exists in the game folder.
             if (newCard.RequiresVulkanInstall)
@@ -1029,6 +1031,7 @@ public partial class MainViewModel
             // Populate cached INI/backup state — must run on background thread (does I/O).
             // Games without DLSS never call ApplyDlssDetection so this is the only guaranteed path.
             newCard.RefreshBackupState();
+            LogPhase("BackupState");
 
             // ── ReLimiter detection ────────────────────────────────────────────
             if (!string.IsNullOrEmpty(installPath) && Directory.Exists(installPath))
@@ -1285,8 +1288,7 @@ public partial class MainViewModel
                 {
                     // No tracking record — try binary signature detection
                     // Skip WindowsApps paths — always access-denied, wastes time on retries
-                    bool isWindowsApps = installPath.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase)
-                                      || installPath.Contains(@"/WindowsApps/", StringComparison.OrdinalIgnoreCase);
+                    bool isWindowsApps = XboxPaths.IsWindowsApps(installPath);
                     var detectedDll = isWindowsApps ? null : _optiScalerService.DetectInstallation(installPath);
                     if (detectedDll != null)
                     {
@@ -1403,8 +1405,7 @@ public partial class MainViewModel
                 else
                 {
                     // No tracking record — try binary signature detection
-                    bool isWindowsApps = installPath.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase)
-                                      || installPath.Contains(@"/WindowsApps/", StringComparison.OrdinalIgnoreCase);
+                    bool isWindowsApps = XboxPaths.IsWindowsApps(installPath);
                     if (!isWindowsApps)
                     {
                         var detectedVersion = _dxvkService.DetectInstallation(installPath, newCard.GraphicsApi);

@@ -237,7 +237,7 @@ public sealed partial class MainWindow
             RefreshDlssDefaultsSummary();
 
             // Rebuild the detail panel so Quick Apply button reflects new defaults state
-            if (ViewModel.SelectedGame is { } selectedCard && ViewModel.CurrentViewLayout == Models.ViewLayout.Detail)
+            if (ViewModel.SelectedGame is { } selectedCard)
             {
                 PopulateDetailPanel(selectedCard);
                 BuildOverridesPanel(selectedCard);
@@ -1524,7 +1524,7 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(DetailHdrToggleBtn, DetailPanelBuilder.HdrToggleTooltip(hdrActive, isOverride: true));
     }
 
-    // ── Resolution Auto-Toggle handlers (dev-only) ────────────────────────────
+    // ── Resolution Auto-Toggle handlers ───────────────────────────────────────
 
     private void ResAutoToggleCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

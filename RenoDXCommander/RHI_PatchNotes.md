@@ -3,11 +3,15 @@
 1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) and choose **Generate new token (classic)**. Any name and expiry will do; leave every box unticked.
 2. In RHI open **Settings → Accounts & Data → GitHub token**, paste it and click **Save**.
 
-## v2.9.6.3 Beta 1
+## v2.9.6.3 Beta 3
 
 ### New
+- **Tune presets.** A Tune button next to the game's name (in every layout) sets a game up in one click: it installs and applies everything in a preset, and clicking the game's Tuned button later removes it again. RHI comes with one preset, RHI Tuned: ReShade, RenoDX, ReLimiter, the newest DLSS (Super Resolution, Ray Reconstruction, Frame Generation) and Streamline files, and DLSS presets M (Super Resolution), F (Ray Reconstruction) and B (Frame Generation). Before anything changes you see what Tune will do in that game and what it skips and why (no RenoDX mod for the game, no DLSS file, already installed...). Removing tuning only takes out what Tune added and puts back the DLSS files and NVIDIA settings it changed; anything you installed yourself stays. Make your own presets in Settings › Tune presets: ReShade, an HDR mod (RenoDX, Luma, or RenoDX with Luma for games without a RenoDX mod), a frame limiter (ReLimiter or Display Commander), the Extras (OptiScaler, Ultimate ASI Loader, HSF, RTX Encore, DLSS Enabler, Universal MFG Unlocker, MFG Unlock, 20/30 FG Unlock, BFI Presenter, DXVK and dgVoodoo2) with the DLL name, DXVK variant or dgVoodoo2 version to use, a Neural Rendering method (or Auto, the method RHI picks for the game) with its add-on and NR DLL versions, DLSS and Streamline versions, DLSS presets and render scale, and every driver setting from a game's Driver Settings section. Presets can be edited, renamed, reordered, hidden and deleted (RHI Tuned can be reset instead), and the Tune button can be turned off there. With several presets shown, the Tune button opens a menu to pick one.
+- **Back to stable.** A "Back to stable" button appears below the Get beta updates toggle in Settings when beta updates are on and you are on a beta. Clicking it downloads and installs the latest stable release.
 - **ReShade menu position.** Settings › ReShade › Keys and screenshots has a new ReShade menu position setting: ReShade default, Left or Right. Left or Right docks ReShade's menu on that side of the screen in every game, for example on the right so it doesn't cover a frame rate display on the left. It applies whenever RHI writes a game's reshade.ini, or to every game at once with Write these to all games (close the games first). A game where you undocked the menu or arranged it another way keeps your layout.
 - **Legacy No Addons ReShade channel.** The ReShade ⚙ › ReShade channel list has a new choice, Legacy No Addons..., for an older ReShade version without add-on support (for games whose anti-cheat blocks add-ons and that need an older ReShade). Pick a version and RHI downloads it, installs it and keeps the game on it: it is left out of ReShade updates, like the other legacy versions. As with the No Addons channel, RenoDX, ReLimiter and Display Commander need add-ons and are removed from the game. Not available for Vulkan games.
+- **Custom DLLs.** Put your own DLLs (mods RHI doesn't install, such as Special K) into games through RHI. Drop them into the custom DLL folder (Settings › Tools › Custom DLLs, or the Custom DLLs row's ⚙ in Extras), then in a game's Extras › Custom DLLs pick which ones go in and the name each is installed as (for example SpecialK64.dll as dxgi.dll). Several can go into one game. RHI keeps the game's own file and puts it back when you remove one, and no other component overwrites a custom DLL. Drop a newer file with the same name into the folder and RHI updates it in every game it's in (copies you replaced or deleted by hand are left alone). Single DLL files only for now.
+- **ZeroHook (Experimental).** The Experimental section now starts with ZeroHook, a third-party tool by GS that blocks overlay hooks (Steam, Discord, NVIDIA and AMD capture, RTSS and others) and background bloat system-wide, and shows which DLLs are loaded in a running game. Download and open it from the row; RHI checks the download against GitHub's checksum and keeps ZeroHook up to date (never while it's open). It opens as administrator, its changes apply to every game and are undone with ZeroHook's own Restore buttons, and blocking NVIDIA's capture DLL also turns off NVIDIA's overlay and most likely RTX HDR. While ZeroHook's Auto-Run is on, RHI won't remove it (turn Auto-Run off in ZeroHook first).
 
 ### Changes
 - **Game Overrides is gone.** Its settings have been in their new places since 2.9.6, and those are now the only places:
@@ -25,21 +29,45 @@
 - Update checks are several seconds quicker, both the background ones and Check for updates: checks that don't depend on each other now run at the same time, and each shader pack is checked once per pass rather than once for every game that uses it.
 - Add-on update checks use fewer of GitHub's hourly requests (an unchanged release costs none) and keep working from the last answer while GitHub's limit is used up.
 - Launching RHI no longer rewrites files that haven't changed: OptiScaler's Streamline files in game folders, HSF's list of installed files and RHI's add-on record are only written when something is different.
+- Update checks download less from GitHub and finish about a second sooner: GitHub's answers now come compressed, Luma's release list is fetched for its newest release only (240 KB instead of 1.2 MB), and the DLSS5 add-on version lists are fetched together.
+- The status bar now says what a slow update check is waiting for, for example "Checking for updates: downloading renodx-ue-extended.addon64 (12 of 65 MB)", instead of showing only "Checking for updates..." for minutes on a slow connection.
+- Only one update check runs at a time. Clicking Check for updates while one is running now says so instead of starting a second check that downloaded the same add-ons again, and the hourly check waits its turn.
 
 ### Bug Fixes
+- Fixed searching the patch notes in What's New sometimes showing one version's full notes instead of the search results.
+- Fixed removing a Neural Rendering method (DLSS5 Tool, ShortFuse...) while the game was running leaving its DLSS files in the game for good: RHI lost track of them. It now removes them the next time.
+- Fixed renaming a game losing track of its DXVK, RE Framework, OptiScaler, Display Commander and ASI Loader installs, so they could no longer be updated or removed properly.
+- Fixed Write these to all games, Write peak brightness to all games, the ReShade ⚙ hotkey Apply and Display modes also writing into ReShadePreset.ini, which put your screenshot folder (with your Windows user name) into presets you might share.
+- Fixed removing ReShade while the game was running taking out its shaders and add-ons and then failing. RHI now says the game is running and changes nothing.
+- Fixed a new Custom ReShade build never reaching a game that was running when it was copied, and Custom ReShade putting back a ReShade DLL you had deleted from a game.
+- Fixed removing Ultimate ASI Loader deleting the settings file of the mod it was chained to (for example Special K's dxgi.ini).
+- Fixed reinstalling ReLimiter or Display Commander while offline (or with GitHub's hourly limit used up) failing, and every later install failing too: the downloaded copy was deleted before the new download.
+- Fixed a crash or power cut while OptiPatcher, DLSS Enabler or DOF Fix was downloading leaving a cut-off file that later installs copied into games.
+- Fixed an OptiPatcher update never reaching a game that was running at the time, and OptiPatcher updates being copied into hidden games.
+- Fixed a quick double-click on ReLimiter's Install starting two installs.
+- Fixed the selected game's page being built twice at every launch.
+- Fixed a game owned on two stores jumping to the other store's copy when you filtered or searched the game list, and Spotlight keeping the first copy's banner when you switched between the two copies.
+- Fixed every Settings visit adding another copy of the DLDSR smoothness slider's update, which piled up while RHI sat in the tray for days.
+- Fixed a game's own file being lost when RHI couldn't back it up before replacing it (for example while antivirus briefly held it): the install now stops with a message and leaves the game's file alone.
 - Fixed new RE Framework versions not being noticed until RHI was restarted, which mattered when RHI sat in the tray for days.
 - Fixed Luma mods that are only on Luma's releases page (not its wiki) no longer matching their games after the first background update check, until the next Refresh.
+- ReLimiter install now automatically disables NVIDIA Low Latency Mode in the driver profile for the game. Low Latency conflicts with ReLimiter's frame pacing and can cause stutters; RHI was already doing this for the driver FPS limiter.
 - Fixed RHI sometimes losing track of an add-on it put in a game when several games changed in the same pass, which could leave an old add-on file behind in that game.
 - Fixed a RenoDX install record staying behind when the game's name or folder differed from the record only in upper and lower case.
 - Fixed session logs missing their first lines when RHI was started with Admin Mode on.
 - Several of RHI's saved files (add-on versions, Nexus update baselines, new-mod markers, chosen artwork, window position and others) could be left cut off by a crash or power cut mid-save. They are now saved in one step.
 
 ### Maintenance
+- The installer and app folder are about 370 KB smaller: a duplicate copy of RHI's icon is no longer included.
+- Startup logs are about 40% smaller: the per-game add-on and wiki-match lines are only written with verbose logging on, replaced by one summary line each.
 - Session logs are about 20% smaller: large diagnostic dumps are only written with verbose logging on.
 - Folder paths that come from the online manifest (DLSS and Streamline locations, games split into several entries) are checked to stay inside the game's folder.
 - DLSS detection's saved paths are now safe to use from several scans at once.
 - The installer no longer picks up leftover .old, .tmp or .bak files.
 - RHI's saved GitHub answers (several MB) are loaded in the background at launch and only saved again when something changed.
+
+### Manifest Updates
+- CRCGI is no longer offered in Experimental for now. Games that already have it keep it and can still remove it.
 
 ## v2.9.6.2
 

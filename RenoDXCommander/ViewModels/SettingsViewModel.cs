@@ -41,7 +41,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _customThemeColors = "";
     [ObservableProperty] private bool _osDlssInputs = true;
     [ObservableProperty] private bool _osFirstTimeWarningDismissed;
-    [ObservableProperty] private bool _ueExtendedWarningDismissed;
     [ObservableProperty] private bool _perGameScreenshotFolders;
     [ObservableProperty] private bool _rsVariableListUseTabs = true; // Group effect files with tabs instead of a tree
     [ObservableProperty] private string _rsOverlaySide = "Default"; // ReShade menu position in every game: Default (leave alone) | Left | Right
@@ -118,10 +117,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private List<uint> _hdrTargetDisplays = new();
     /// <summary>Display modes (Monitor / TV / ...): shows the mode switch on game pages. Modes and per-game state: GameNameService.DisplayModes.</summary>
     [ObservableProperty] private bool _displayModesEnabled;
+    /// <summary>Tune button next to the game's name (Settings › Tune presets). On by default.</summary>
+    [ObservableProperty] private bool _tunePresetsEnabled = true;
     // Show the HDR / Resolution launch buttons on game pages (hidden = still applied at launch)
     [ObservableProperty] private bool _showHdrLaunchButton = true;
     [ObservableProperty] private bool _showResLaunchButton = true;
-    // ── Resolution Auto-Toggle (dev-only) ─────────────────────────────────────
+    // ── Resolution Auto-Toggle ────────────────────────────────────────────────
     [ObservableProperty] private bool _resolutionAutoToggle;
     /// <summary>Target resolution key in "WxH@Hz" format. Empty = no override.</summary>
     [ObservableProperty] private string _resolutionTarget = "";
@@ -389,9 +390,6 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("OsFirstTimeWarningDismissed", out var osftwVal))
             OsFirstTimeWarningDismissed = osftwVal == "true";
 
-        if (s.TryGetValue("UeExtendedWarningDismissed", out var uewdVal))
-            UeExtendedWarningDismissed = uewdVal == "true";
-
         if (s.TryGetValue("PerGameScreenshotFolders", out var pgsfVal))
             PerGameScreenshotFolders = pgsfVal == "true";
 
@@ -494,6 +492,7 @@ public partial class SettingsViewModel : ObservableObject
         if (s.TryGetValue("LastKnownNewestStreamline", out var lknsVal)) LastKnownNewestStreamline = lknsVal ?? "";
         if (s.TryGetValue("HdrAutoToggle", out var hatVal)) HdrAutoToggle = hatVal == "true";
         if (s.TryGetValue("DisplayModesEnabled", out var dmeVal)) DisplayModesEnabled = dmeVal == "true";
+        TunePresetsEnabled = !s.TryGetValue("TunePresetsEnabled", out var tpeVal) || tpeVal != "false";
         ShowHdrLaunchButton = !s.TryGetValue("ShowHdrLaunchButton", out var shlbVal) || shlbVal != "false";
         ShowResLaunchButton = !s.TryGetValue("ShowResLaunchButton", out var srlbVal) || srlbVal != "false";
         if (s.TryGetValue("HdrTargetDisplays", out var htdVal))
@@ -684,7 +683,6 @@ public partial class SettingsViewModel : ObservableObject
         s["UiScale"] = UiScale.ToString(System.Globalization.CultureInfo.InvariantCulture);
         s["OsDlssInputs"] = OsDlssInputs ? "true" : "false";
         s["OsFirstTimeWarningDismissed"] = OsFirstTimeWarningDismissed ? "true" : "false";
-        s["UeExtendedWarningDismissed"] = UeExtendedWarningDismissed ? "true" : "false";
         s["PerGameScreenshotFolders"] = PerGameScreenshotFolders ? "true" : "false";
         s["RsVariableListUseTabs"]    = RsVariableListUseTabs ? "true" : "false";
         s["RsShippedAddonsEnabled"]   = RsShippedAddonsEnabled ? "true" : "false";
@@ -737,6 +735,7 @@ public partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrEmpty(LastKnownNewestStreamline)) s["LastKnownNewestStreamline"] = LastKnownNewestStreamline;
         s["HdrAutoToggle"] = HdrAutoToggle ? "true" : "false";
         s["DisplayModesEnabled"] = DisplayModesEnabled ? "true" : "false";
+        s["TunePresetsEnabled"] = TunePresetsEnabled ? "true" : "false";
         s["ShowHdrLaunchButton"] = ShowHdrLaunchButton ? "true" : "false";
         s["ShowResLaunchButton"] = ShowResLaunchButton ? "true" : "false";
         if (HdrTargetDisplays.Count > 0) s["HdrTargetDisplays"] = System.Text.Json.JsonSerializer.Serialize(HdrTargetDisplays);

@@ -1151,6 +1151,7 @@ public sealed partial class MainWindow
         if (!string.IsNullOrEmpty(selectedName))
         {
             _pendingReselect = selectedName;
+            _pendingReselectCard = null;
             DispatcherQueue.TryEnqueue(TryRestoreSelection);
         }
     }

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "game_count": 56160,
-  "generated": "2026-11-26T15:17:44Z",
+  "game_count": 56170,
+  "generated": "2026-11-28T03:17:49Z",
   "name_overrides": {
     "ACE COMBAT 8: WINGS OF THEVE": "Ace Combat 8: Wings of Theve",
     "AFOP": "Avatar: Frontiers of Pandora",
@@ -902,7 +902,7 @@
     },
     "2XKO": {
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\Lion\\Saved\\Config\\",
+      "config_path": "%LOCALAPPDATA%\\Lion\\Saved\\Config",
       "engine": "Unreal Engine 5"
     },
     "2XL Supercross": {
@@ -4873,7 +4873,7 @@
     "After Us": {
       "steam_appid": 1406810,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\AfterUs\\Saved\\Config\\",
+      "config_path": "%LOCALAPPDATA%\\AfterUs\\Saved\\Config",
       "engine": "Unreal Engine 4"
     },
     "AFTER-H": {
@@ -7657,6 +7657,8 @@
     },
     "Am I Nima": {
       "steam_appid": 3224600,
+      "dx11": true,
+      "config_path": "HKEY_CURRENT_USER\\Software\\HO! Games\\Am I Nima",
       "engine": "Unity"
     },
     "AMA Superbike": {
@@ -14010,6 +14012,12 @@
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\DarkPigeonGames\\AWAKEN - Astral Blade\\GameSave\\",
       "engine": "Unity"
     },
+    "Awaken: Astral Blade": {
+      "steam_appid": 1716310,
+      "dx11": true,
+      "config_path": "%USERPROFILE%\\AppData\\LocalLow\\DarkPigeonGames\\AWAKEN - Astral Blade\\GameSave\\",
+      "engine": "Unity"
+    },
     "Awaken: Gunpowder Adventurer Day.Dream": {
       "steam_appid": 760000,
       "engine": "Unity"
@@ -14913,7 +14921,6 @@
     "Bad Mojo": {},
     "Bad Mojo Redux": {
       "steam_appid": 255960,
-      "dx9": true,
       "config_path": "<path-to-game>\\SAVE\\badmojo.ini"
     },
     "Bad Mojos": {
@@ -19423,6 +19430,7 @@
     "Birds Are Real": {
       "steam_appid": 1218400
     },
+    "Birds of Prey": {},
     "Birdsketball": {
       "steam_appid": 470470
     },
@@ -23712,6 +23720,7 @@
     },
     "Bread & Fred": {
       "steam_appid": 1607680,
+      "dx11": true,
       "config_path": "HKEY_CURRENT_USER\\Software\\SandCastles\\Bread_Fred\\",
       "engine": "Unity"
     },
@@ -39111,6 +39120,9 @@
     "DAISENRYAKU PERFECT 4.0/大戦略パーフェクト4.0": {
       "steam_appid": 868410
     },
+    "Daisenryaku SSB 2": {
+      "steam_appid": 3941780
+    },
     "Daisy's Garden": {},
     "Daisy's Garden 2": {},
     "Daka Dara": {
@@ -45759,7 +45771,9 @@
       "steam_appid": 613270
     },
     "DinoSystem": {
-      "steam_appid": 373750
+      "steam_appid": 373750,
+      "dx11": true,
+      "engine": "Construct 3"
     },
     "Dinotopia": {
       "engine": "SAGA"
@@ -50829,6 +50843,7 @@
       "steam_appid": 682590
     },
     "Dungeon Master": {},
+    "Dungeon Master II: The Legend of Skullkeep": {},
     "Dungeon Maze": {
       "steam_appid": 997770
     },
@@ -60514,7 +60529,7 @@
       "steam_appid": 538920
     },
     "Fiesta Online": {
-      "steam_appid": 280620
+      "steam_appid": 300970
     },
     "FIFA 06": {},
     "FIFA 07": {
@@ -82353,6 +82368,9 @@
     },
     "IHF Handball Challenge 14": {
       "steam_appid": 279460
+    },
+    "IHRA Drag Racing: Sportsman Edition": {
+      "engine": "Gamebryo"
     },
     "IHRA Motorsports": {},
     "IHRA Motorsports Drag Racing": {},
@@ -134241,6 +134259,9 @@
     "Resfort": {
       "steam_appid": 514710
     },
+    "Reshine": {
+      "steam_appid": 4253570
+    },
     "Resident Evil": {
       "steam_appid": 4249100,
       "config_path": "HKEY_LOCAL_MACHINE\\SOFTWARE\\CAPCOM\\RESIDENT EVIL, HKEY_CURRENT_USER\\SOFTWARE\\CAPCOM\\STEAM_R EVIL1, HKEY_LOCAL_MACHINE\\SOFTWARE\\CAPCOM\\BIO HAZARD"
@@ -136818,7 +136839,7 @@
       "vulkan": true,
       "opengl": true,
       "config_path": "%LOCALAPPDATA%\\Roblox\\GlobalBasicSettings_13.xml",
-      "config_path_xbox": "%LOCALAPPDATA%\\Packages\\ROBLOXCORPORATION.ROBLOX_55nm5eh3cm0pr\\LocalState\\GlobalBasicSettings_13.xml",
+      "config_path_xbox": "%LOCALAPPDATA%\\RobloxPCGDK\\GlobalBasicSettings_13.xml",
       "engine": "G3D Innovation Engine"
     },
     "Robo Army": {},
@@ -137186,7 +137207,7 @@
     "Rock of Ages 3: Make & Break": {
       "steam_appid": 1101360,
       "dx11": true,
-      "config_path": "%LOCALAPPDATA%\\ROA3\\Saved\\Config\\WindowsNoEditor\\",
+      "config_path": "%LOCALAPPDATA%\\ROA3\\Saved\\Config\\WindowsNoEditor",
       "engine": "Unreal Engine 4"
     },
     "Rock of Ages II: Bigger & Boulder": {
@@ -142441,6 +142462,12 @@
     "Search & Rescue: Vietnam Med Evac": {
       "config_path": "<path-to-game>\\Config.dat",
       "engine": "RenderWare"
+    },
+    "Search and Rescue 2": {
+      "config_path": "<path-to-game>\\dat"
+    },
+    "Search and Rescue 3": {
+      "config_path": "<path-to-game>\\dat"
     },
     "Search and Rescue: Coastal Heroes": {
       "config_path": "<path-to-game>\\Config.dat",
@@ -153349,6 +153376,9 @@
       "engine": "Unity"
     },
     "Spirit: Stallion of the Cimarron - Forever Free": {},
+    "Spirited Drive": {
+      "config_path": "%APPDATA%\\Spirited Drive\\"
+    },
     "Spirited Heart Deluxe": {
       "steam_appid": 293920,
       "engine": "Ren'Py"
@@ -157115,6 +157145,10 @@
     "Strange and weird museum": {
       "steam_appid": 996140
     },
+    "Strange Antiquities": {
+      "steam_appid": 2885870,
+      "engine": "Unity"
+    },
     "Strange Brigade": {
       "steam_appid": 312670,
       "dx12": true,
@@ -157130,6 +157164,7 @@
     },
     "Strange Horticulture": {
       "steam_appid": 1574580,
+      "dx11": true,
       "engine": "Unity"
     },
     "Strange Night": {
@@ -158022,6 +158057,7 @@
     },
     "Subject 13": {
       "steam_appid": 322970,
+      "dx9": true,
       "config_path": "%USERPROFILE%\\AppData\\LocalLow\\Microids\\Subject13",
       "engine": "Unity"
     },

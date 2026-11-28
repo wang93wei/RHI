@@ -41,10 +41,6 @@ public partial class MainViewModel
     /// </summary>
     private int _consecutiveProbeFailures;
 
-    /// <summary>Set to true by dev test buttons (IDLE, PEGGED, Native Block, Known Sig) so the
-    /// dump path writes test_*.dmp to a separate folder, never affecting real freeze dumps.</summary>
-    internal bool IsTestFreezeActive;
-
     /// <summary>Logs process resource counters — private bytes, GC heap, handles, GDI/USER objects, system memory.</summary>
     private static void LogResourceCounters(string context)
     {
@@ -221,12 +217,27 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>1 while a periodic check runs; a tick that finds the last one still going is skipped.</summary>
+    private int _periodicCheckRunning;
+
     private System.Threading.Timer CreatePeriodicUpdateCheckTimer(TimeSpan firstDelay)
     {
         var interval = PeriodicUpdateCheckInterval;
         return new System.Threading.Timer(async _ =>
         {
             if (_backgroundStopped) return;
+            // The previous run is still going (slow connection): skip this one rather than run two side by side
+            if (Interlocked.Exchange(ref _periodicCheckRunning, 1) == 1)
+            {
+                _crashReporter.Log("[MainViewModel] Periodic update check skipped — the previous one is still running");
+                return;
+            }
+            try { await RunPeriodicCheckAsync(); }
+            finally { Interlocked.Exchange(ref _periodicCheckRunning, 0); }
+        }, null, firstDelay, interval);
+
+        async Task RunPeriodicCheckAsync()
+        {
             // Follow a token added or removed since the timer started (1h with a token, 4h without)
             var current = PeriodicUpdateCheckInterval;
             if (current != interval)
@@ -351,7 +362,7 @@ public partial class MainViewModel
                 // Check and re-stage Cost Scaler + RTX40MFG, auto-deploy to installed games
                 try
                 {
-                    await _nrCostScalerService.CheckForUpdateAsync(forceRefresh: true);
+                    await _nrCostScalerService.CheckForUpdateAsync();
                     if (_nrCostScalerService.HasUpdate)
                     {
                         await _nrCostScalerService.EnsureStagingAsync();
@@ -368,12 +379,13 @@ public partial class MainViewModel
                 await RefreshUrtiInstallsAsync("MainViewModel.Periodic");
                 await RefreshCrcgiInstallsAsync("MainViewModel.Periodic");
                 await RefreshFrameWarpInstallsAsync("MainViewModel.Periodic");
+                await App.Services.GetRequiredService<IZeroHookService>().UpdateIfNewerAsync("MainViewModel.Periodic");
 
                 try
                 {
                     if (ShouldAutoStageRtx40Mfg("PeriodicRefresh"))
                     {
-                        await _rtx40MfgService.CheckForUpdateAsync(forceRefresh: true);
+                        await _rtx40MfgService.CheckForUpdateAsync();
                         if (_rtx40MfgService.HasUpdate
                             && !AntivirusGuard.IsBlocked(Rtx40MfgService.AntivirusComponentName, _rtx40MfgService.LatestVersion))
                             await _rtx40MfgService.EnsureStagingAsync();
@@ -396,7 +408,7 @@ public partial class MainViewModel
                 try
                 {
                     var rtxEncoreSvc = App.Services.GetRequiredService<RtxEncoreService>();
-                    await rtxEncoreSvc.CheckForUpdateAsync(forceRefresh: true);
+                    await rtxEncoreSvc.CheckForUpdateAsync();
                     if (rtxEncoreSvc.HasUpdate)
                     {
                         await rtxEncoreSvc.EnsureStagingAsync();
@@ -431,6 +443,9 @@ public partial class MainViewModel
                 }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Custom ReShade hash check failed — {ex.Message}"); }
 
+                // Custom DLLs: newer files from Custom\DLLs\ over RHI's copies (the watcher normally gets there first)
+                RedeployCustomDlls("MainViewModel.Periodic");
+
                 // Silent component auto-update (runs after update check flags pending updates)
                 try { _autoUpdateService.TriggerAsync(); }
                 catch (Exception ex) { _crashReporter.Log($"[MainViewModel] Periodic component auto-update trigger failed — {ex.Message}"); }
@@ -446,7 +461,7 @@ public partial class MainViewModel
                 CrashReporter.Log("[RefreshTrigger] Periodic timer — PeriodicAppUpdateCheck dispatched to UI thread");
                 PeriodicAppUpdateCheck?.Invoke();
             });
-        }, null, firstDelay, interval);
+        }
     }
 
     /// <summary>Callback set by MainWindow to trigger app update check from the periodic timer.</summary>

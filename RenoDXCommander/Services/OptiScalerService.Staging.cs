@@ -504,7 +504,7 @@ public partial class OptiScalerService
                 }
 
                 var bytes = await dlResp.Content.ReadAsByteArrayAsync();
-                await File.WriteAllBytesAsync(stagedAsiPath, bytes);
+                await FileHelper.WriteBytesAtomicAsync(stagedAsiPath, bytes); // temp file + move: never a cut-off staged file
                 CrashReporter.Log($"[OptiScalerService.EnsureOptiPatcherStagingAsync] Downloaded {bytes.Length} bytes");
             }
             catch (Exception ex)
@@ -525,38 +525,7 @@ public partial class OptiScalerService
             }
 
             // ── 6. Auto-deploy to all games that have OptiPatcher installed ──
-            // Silently copy the new .asi to every game's plugins/ folder.
-            try
-            {
-                var records = LoadAllRecords()
-                    .Where(r => !string.IsNullOrEmpty(r.InstallPath))
-                    .ToList();
-                int deployed = 0;
-                foreach (var rec in records)
-                {
-                    MoveOptiPatcherToPluginsDir(rec.InstallPath); // older RHI put it where OptiScaler 10 never looks
-                    var pluginsDir = GetPluginsDir(rec.InstallPath);
-                    var destAsi = Path.Combine(pluginsDir, OptiPatcherFileName);
-                    if (File.Exists(destAsi))
-                    {
-                        try
-                        {
-                            File.Copy(stagedAsiPath, destAsi, overwrite: true);
-                            deployed++;
-                        }
-                        catch (Exception ex)
-                        {
-                            CrashReporter.Log($"[OptiScalerService.EnsureOptiPatcherStagingAsync] Auto-deploy failed for '{rec.GameName}' — {ex.Message}");
-                        }
-                    }
-                }
-                if (deployed > 0)
-                    CrashReporter.Log($"[OptiScalerService.EnsureOptiPatcherStagingAsync] Auto-deployed OptiPatcher to {deployed} game(s)");
-            }
-            catch (Exception ex)
-            {
-                CrashReporter.Log($"[OptiScalerService.EnsureOptiPatcherStagingAsync] Auto-deploy pass failed — {ex.Message}");
-            }
+            SyncOptiPatcherToGames();
 
             progress?.Report((L("OptiScaler.Progress.OptiPatcherStagingReady"), 100));
             CrashReporter.Log("[OptiScalerService.EnsureOptiPatcherStagingAsync] Staging complete");
@@ -573,6 +542,59 @@ public partial class OptiScalerService
         {
             CrashReporter.Log($"[OptiScalerService.EnsureOptiPatcherStagingAsync] Unexpected error — {ex.Message}");
         }
+    }
+
+    /// <inheritdoc/>
+    public Func<IReadOnlyCollection<string>?>? HiddenGamePathsProvider { get; set; }
+
+    /// <summary>
+    /// Copies the staged OptiPatcher.asi into every OptiScaler game that already has it, where the game's copy
+    /// differs from staging (size or modified time; File.Copy keeps the time, so RHI's own copies match).
+    /// Runs after a download and on every update check, so a game that was running during an update gets
+    /// it later. Hidden games are left alone; a game where the user removed it keeps it removed.
+    /// Returns how many games got the new file.
+    /// </summary>
+    public int SyncOptiPatcherToGames()
+    {
+        var stagedAsiPath = Path.Combine(OptiPatcherStagingDir, OptiPatcherFileName);
+        if (!File.Exists(stagedAsiPath)) return 0;
+        int deployed = 0;
+        try
+        {
+            var staged = new FileInfo(stagedAsiPath);
+            // Provider set but couldn't say which games are hidden: skip this pass (the next check retries)
+            var hidden = HiddenGamePathsProvider == null ? Array.Empty<string>() : HiddenGamePathsProvider();
+            if (hidden == null) return 0;
+            var records = LoadAllRecords()
+                .Where(r => !string.IsNullOrEmpty(r.InstallPath))
+                .ToList();
+            foreach (var rec in records)
+            {
+                if (hidden.Any(h => RecordRename.SamePath(h, rec.InstallPath)))
+                    continue; // hidden games are left alone
+                MoveOptiPatcherToPluginsDir(rec.InstallPath); // older RHI put it where OptiScaler 10 never looks
+                var destAsi = Path.Combine(GetPluginsDir(rec.InstallPath), OptiPatcherFileName);
+                if (!File.Exists(destAsi)) continue; // not installed there (or removed by the user)
+                try
+                {
+                    var dest = new FileInfo(destAsi);
+                    if (dest.Length == staged.Length && dest.LastWriteTimeUtc == staged.LastWriteTimeUtc) continue;
+                    File.Copy(stagedAsiPath, destAsi, overwrite: true);
+                    deployed++;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    CrashReporter.Log($"[OptiScalerService.SyncOptiPatcherToGames] Copy failed for '{rec.GameName}' (retried next check) — {ex.Message}");
+                }
+            }
+            if (deployed > 0)
+                CrashReporter.Log($"[OptiScalerService.SyncOptiPatcherToGames] Deployed OptiPatcher to {deployed} game(s)");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            CrashReporter.Log($"[OptiScalerService.SyncOptiPatcherToGames] Pass failed — {ex.Message}");
+        }
+        return deployed;
     }
 
     /// <summary>
@@ -1668,22 +1690,6 @@ public partial class OptiScalerService
         }
     }
 
-    /// <inheritdoc />
-    public void ClearDlssNrStaging()
-    {
-        RememberClearedVersion("DlssNr", StagedVersionDlssNr);
-        try
-        {
-            if (Directory.Exists(DlssNrStagingDir))
-                Directory.Delete(DlssNrStagingDir, true);
-            CrashReporter.Log("[OptiScalerService.ClearDlssNrStaging] DLSS NR staging folder cleared");
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[OptiScalerService.ClearDlssNrStaging] Failed — {ex.Message}");
-        }
-    }
-
     // ── F5 DLSSNR variant staging ─────────────────────────────────────────────
 
     /// <inheritdoc />
@@ -1871,22 +1877,6 @@ public partial class OptiScalerService
         catch (Exception ex)
         {
             CrashReporter.Log($"[OptiScalerService.CheckForF5UpdateAsync] Failed — {ex.Message}");
-        }
-    }
-
-    /// <inheritdoc />
-    public void ClearF5Staging()
-    {
-        RememberClearedVersion("F5", StagedVersionF5);
-        try
-        {
-            if (Directory.Exists(F5StagingDir))
-                Directory.Delete(F5StagingDir, true);
-            CrashReporter.Log("[OptiScalerService.ClearF5Staging] F5 staging folder cleared");
-        }
-        catch (Exception ex)
-        {
-            CrashReporter.Log($"[OptiScalerService.ClearF5Staging] Failed — {ex.Message}");
         }
     }
 

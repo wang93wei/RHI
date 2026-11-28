@@ -191,7 +191,9 @@ public class Renodx5AddonService
             if (info.Length == 0)
             {
                 TryDelete(nrDllPath, "Renodx5AddonService.Uninstall (sentinel cleanup)");
-                TryDelete(sentinel,  "Renodx5AddonService.Uninstall (sentinel delete)");
+                // Keep the marker while the DLL is still there (locked by a running game), or RHI loses track of it
+                if (!File.Exists(nrDllPath)) TryDelete(sentinel, "Renodx5AddonService.Uninstall (sentinel delete)");
+                else _crashReporter.Log($"[Renodx5AddonService.Uninstall] '{nrDllPath}' couldn't be deleted (is the game running?) — sentinel kept");
             }
             else
             {
@@ -240,7 +242,8 @@ public class Renodx5AddonService
         if (info.Length == 0)
         {
             TryDelete(nrDllPath, "Renodx5AddonService.RemoveNrDll (sentinel cleanup)");
-            TryDelete(sentinel,  "Renodx5AddonService.RemoveNrDll (sentinel delete)");
+            if (!File.Exists(nrDllPath)) TryDelete(sentinel, "Renodx5AddonService.RemoveNrDll (sentinel delete)");
+            else _crashReporter.Log($"[Renodx5AddonService.RemoveNrDll] '{nrDllPath}' couldn't be deleted (is the game running?) — sentinel kept");
         }
         else
         {
@@ -474,7 +477,8 @@ public class Renodx5AddonService
             {
                 // Sentinel — RHI placed this file, game had nothing
                 TryDelete(dest, logPrefix + " (sentinel cleanup)");
-                TryDelete(backup, logPrefix + " (sentinel delete)");
+                if (!File.Exists(dest)) TryDelete(backup, logPrefix + " (sentinel delete)");
+                else _crashReporter.Log($"{logPrefix} '{dest}' couldn't be deleted (is the game running?) — sentinel kept");
             }
             else
             {
@@ -899,10 +903,14 @@ public class Renodx5AddonService
             _dlssToolVersions  = dlssSf.OrderByDescending(e => e.Parsed).ThenByDescending(e => ExtractRcNumber(e.Version)).Select(e => (e.Version, e.DownloadUrl)).ToList();
 
             // ── Fetch Feeder and Bridge versions from their own repos ─────────
-            _feederVersions = await FetchSimpleRepoVersionsAsync(FeederApiUrl, FeederStagedFileName).ConfigureAwait(false);
-            _bridgeVersions = await FetchSimpleRepoVersionsAsync(BridgeApiUrl, BridgeStagedFileName).ConfigureAwait(false);
+            // Started together (each only fetches and parses its own list), awaited in the same order
+            var feederTask   = FetchSimpleRepoVersionsAsync(FeederApiUrl, FeederStagedFileName);
+            var bridgeTask   = FetchSimpleRepoVersionsAsync(BridgeApiUrl, BridgeStagedFileName);
+            var foveatedTask = FetchSimpleRepoVersionsAsync(FoveatedApiUrl, StagedFileName);
+            _feederVersions = await feederTask.ConfigureAwait(false);
+            _bridgeVersions = await bridgeTask.ConfigureAwait(false);
             // Keep the old list if the Foveated fetch fails (it's a separate repo)
-            var foveated = await FetchSimpleRepoVersionsAsync(FoveatedApiUrl, StagedFileName).ConfigureAwait(false);
+            var foveated = await foveatedTask.ConfigureAwait(false);
             if (foveated.Count > 0) _foveatedVersions = foveated;
 
             // Persist cache

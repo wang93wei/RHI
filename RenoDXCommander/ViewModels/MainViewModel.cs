@@ -61,8 +61,6 @@ public partial class MainViewModel : ObservableObject
     public IAddonPackService AddonPackServiceInstance => _addonPackService;
     public UltimateAsiLoaderService UalServiceInstance => _ualService;
     public SettingsViewModel Settings => _settingsViewModel;
-    /// <summary>True when the user has selected the Nightly ReShade build channel.</summary>
-    public bool IsReShadeNightly => string.Equals(_settingsViewModel.ReShadeChannel, "Nightly", StringComparison.OrdinalIgnoreCase);
     public FilterViewModel Filter => _filterViewModel;
     public IGameNameService GameNameServiceInstance => _gameNameService;
     public RemoteManifest? Manifest => _manifest;
@@ -100,7 +98,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private AppPage currentPage = AppPage.GameView;
     [ObservableProperty] private GameCardViewModel? selectedGame;
     [ObservableProperty] private bool hasUpdatesAvailable;
-    [ObservableProperty] private ViewLayout _currentViewLayout = ViewLayout.Detail;
 
     /// <summary>List of new wiki mods detected since last dismiss.</summary>
     [ObservableProperty] private List<string> _newWikiMods = new();
@@ -129,20 +126,10 @@ public partial class MainViewModel : ObservableObject
     partial void OnNewLumaModsChanged(List<string> value)
         => OnPropertyChanged(nameof(NewWikiModsButtonVisibility));
 
-    public Visibility DetailPanelVisibility => Visibility.Visible;
-
-    public Visibility DetailOrCompactVisibility => Visibility.Visible;
-
     /// <summary>Re-raises locale-dependent chrome properties after a live language switch.</summary>
     public void RefreshLocalizedChrome()
     {
         OnPropertyChanged(nameof(UpdateButtonTooltip));
-    }
-
-    partial void OnCurrentViewLayoutChanged(ViewLayout value)
-    {
-        OnPropertyChanged(nameof(DetailPanelVisibility));
-        OnPropertyChanged(nameof(DetailOrCompactVisibility));
     }
 
     /// <summary>
@@ -696,10 +683,6 @@ public partial class MainViewModel : ObservableObject
     private Dictionary<string, string> _engineTypeCache = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string> _resolvedPathCache = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string> _addonFileCache = new(StringComparer.OrdinalIgnoreCase);
-    /// <summary>Game keys queued for ReShade auto-reinstall after BuildCards — WindowsApps games
-    /// whose path changed and the DLL couldn't be copied (old folder deleted by Windows on update).</summary>
-    private readonly HashSet<string> _pendingRsReinstall = new(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>Transient — stores Control UE install options between dialog and post-install step.</summary>
     private Services.ControlUeInstallOptions? _controlUeInstallOptions;
     private Dictionary<string, MachineType> _bitnessCache = new(StringComparer.OrdinalIgnoreCase);
@@ -846,6 +829,8 @@ public partial class MainViewModel : ObservableObject
         _optiScalerService = optiScalerService;
         // Old nightly builds are removed after a new one downloads when the setting is on
         _optiScalerService.NightlyCleanupKeepProvider = NightlyBuildsToKeep;
+        // Hidden games are left alone by the OptiPatcher sync
+        _optiScalerService.HiddenGamePathsProvider = HiddenInstallPaths;
         // OptiScaler installs / updates deploy the NR runtime picked in the game's ⚙
         OptiScalerService.NrRuntimeProvider = c => GetOsNrRuntime(c.GameName, c.Source ?? "");
         _dxvkService = dxvkService;
